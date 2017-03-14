@@ -1,10 +1,8 @@
 ---
 title: Arduino for Visual Thinkers - Hello World from Nano, Leonardo, and Pi!
 date: 2015-06-15 11:09:00 -0700
-status: draft
 category: InternetOfThings
 tags: programming, visual, arduino, arduino nano, arduino leonardo, raspberry pi, microcontrollers, science, electricity
-REMOVEME_status: draft 
 ---
 
 <img

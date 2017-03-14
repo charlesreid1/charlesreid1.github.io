@@ -1,25 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- #
 from __future__ import unicode_literals
-import re
-import os
+import re, os
 
 SITEURL = ''
 AUTHOR = u'charlesreid1'
 SITENAME = u'charlesreid1'
 
 PATH = 'content'
-TIMEZONE = 'America/Los_Angeles'
-DEFAULT_LANG = u'en'
-
-# the theme 
 THEME = 'cmr-theme'
 
 
-
-# ------------
-# iPython Notebooks:
-
+# -------------------
+# Plugins:
 HOME = os.environ.get('HOME')
 PLUGIN_PATHS = [HOME+'/codes/pelican-plugins/']
 PLUGINS = ['render_math']
@@ -31,7 +24,7 @@ PLUGINS = ['render_math']
 
 
 # --------------------
-# Static stuff
+# Static content
 
 STATIC_PATHS = ['images']
 
@@ -99,8 +92,7 @@ JINJA_FILTERS = {'month_name':int_to_month}
 ### TEMPLATE_PAGES['auto.html'] = 'about/auto.html'
 
 
-
-DEFAULT_PAGINATION = 10
+DEFAULT_PAGINATION = 3
 
 #ARTICLE_URL = 'blog/{slug}'
 #ARTICLE_SAVE_AS = 'blog/{slug}/index.html'
@@ -128,5 +120,9 @@ TRANSLATION_FEED_ATOM = None
 AUTHOR_FEED_ATOM = None
 AUTHOR_FEED_RSS = None
 
+TIMEZONE = 'America/Los_Angeles'
+DEFAULT_LANG = u'en'
+
 # Uncomment following line if you want document-relative URLs when developing
 #RELATIVE_URLS = True
+

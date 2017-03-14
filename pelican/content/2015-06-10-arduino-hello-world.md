@@ -1,7 +1,6 @@
 ---
 title: Arduino for Visual Thinkers - Hello World!
 date: 2015-06-10 20:53:59 -0700
-status: draft
 category: InternetOfThings
 tags: programming, visual, arduino, arduino nano, microcontrollers, science, electricity
 ---

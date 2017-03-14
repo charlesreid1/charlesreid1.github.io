@@ -1,7 +1,6 @@
 ---
 title: Algorithm for Battery Capacity
 date: 2015-03-10 20:53:59 -0700
-status: draft
 category: Personal
 tags: programming, algorithms, math, science
 ---
