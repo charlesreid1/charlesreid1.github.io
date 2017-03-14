@@ -20,25 +20,20 @@ THEME = 'cmr-theme'
 # ------------
 # iPython Notebooks:
 
-### HOME = os.environ.get('HOME')
-### 
-### PLUGIN_PATHS = [HOME+'/codes/pelican-plugins/']
-### 
-### PLUGINS = ['liquid_tags','render_math']
-### 
-### MARKUP = ('md')
-### 
-### # Don't try to turn HTML files into pages
-### READERS = {'html': None}
+HOME = os.environ.get('HOME')
+PLUGIN_PATHS = [HOME+'/codes/pelican-plugins/']
+PLUGINS = ['render_math']
 
+#MARKUP = ('md')
 
+# Don't try to turn HTML files into pages
+#READERS = {'html': None}
 
 
 # --------------------
 # Static stuff
 
-STATIC_PATHS = ['img']
-
+STATIC_PATHS = ['images']
 
 
 
@@ -49,14 +44,11 @@ STATIC_PATHS = ['img']
 EXTRA_TEMPLATES_PATHS = []
 TEMPLATE_PAGES = {}
 
-
-
 ### # index 
 ### EXTRA_TEMPLATES_PATHS.append('angular')
 
-
-# The index will become some kind of blog index.
-TEMPLATE_PAGES['index.html'] = 'index.html'
+### # The index will become some kind of blog index.
+### TEMPLATE_PAGES['index.html'] = 'index.html'
 
 # No contact page on charlesreid1.github.io
 #TEMPLATE_PAGES['contact.html'] = 'contact/index.html'
@@ -90,7 +82,7 @@ JINJA_FILTERS = {'month_name':int_to_month}
 
 
 
-# projects
+### # projects
 ### EXTRA_TEMPLATES_PATHS.append('projects')
 ### TEMPLATE_PAGES['projects.html'] = 'projects/index.html'
 ### TEMPLATE_PAGES['projects.json'] = 'projects/projects.json'
@@ -109,10 +101,11 @@ JINJA_FILTERS = {'month_name':int_to_month}
 
 
 DEFAULT_PAGINATION = 10
-ARTICLE_URL = 'blog/{slug}'
-ARTICLE_SAVE_AS = 'blog/{slug}/index.html'
-DIRECT_TEMPLATES = ['blog']
-PAGINATED_DIRECT_TEMPLATES = ['blog']
+
+#ARTICLE_URL = 'blog/{slug}'
+#ARTICLE_SAVE_AS = 'blog/{slug}/index.html'
+#DIRECT_TEMPLATES = ['blog']
+#PAGINATED_DIRECT_TEMPLATES = ['blog']
 
 
 
