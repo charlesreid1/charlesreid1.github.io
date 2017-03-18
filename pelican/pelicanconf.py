@@ -37,33 +37,30 @@ STATIC_PATHS = ['images']
 EXTRA_TEMPLATES_PATHS = []
 TEMPLATE_PAGES = {}
 
-### # index 
-### EXTRA_TEMPLATES_PATHS.append('angular')
 
-### # The index will become some kind of blog index.
-### TEMPLATE_PAGES['index.html'] = 'index.html'
+######################
+# To add paths:
+#EXTRA_TEMPLATES_PATHS.append('mydir')
 
-# No contact page on charlesreid1.github.io
-#TEMPLATE_PAGES['contact.html'] = 'contact/index.html'
-
-# No pgp page
-#TEMPLATE_PAGES['pgp.html'] = 'pgp/index.html'
+# To add template pages in those directories:
+### TEMPLATE_PAGES['mydirpage.html'] = 'mydirpage.html'
 
 
 
-# writing
-# a.k.a.
-# blaaaaaaaaarg
-### #EXTRA_TEMPLATES_PATHS.append('writing')
-### #TEMPLATE_PAGES['writing.html'] = 'writing/index.html'
-### 
-# summary length
+
+# ----------------------------
+# Blog stuff
+
+# Pagination: posts per page
+DEFAULT_PAGINATION = 3
+
+# Length of summary:
 SUMMARY_MAX_LENGTH = 100
 
-# time formats for blaaaarg
+# Time formats 
 DATE_FORMATS = {'en': '%A %m/%d/%Y',}
 
-# month formatting filter for blaaaaaaarg
+# Month formatting filter 
 from datetime import datetime
 def int_to_month (m_int):
     """Turns an integer month into a long month."""
@@ -72,39 +69,11 @@ def int_to_month (m_int):
 
 JINJA_FILTERS = {'month_name':int_to_month}
 
-
-
-
-### # projects
-### EXTRA_TEMPLATES_PATHS.append('projects')
-### TEMPLATE_PAGES['projects.html'] = 'projects/index.html'
-### TEMPLATE_PAGES['projects.json'] = 'projects/projects.json'
-### TEMPLATE_PAGES['projects.css']  = 'projects/projects.css'
-### TEMPLATE_PAGES['projects_modcontrol.js'] = 'projects/projects_modcontrol.js'
-###  
-### # about
-### EXTRA_TEMPLATES_PATHS.append('about')
-### TEMPLATE_PAGES['about.html'] = 'about/index.html'
-### TEMPLATE_PAGES['about.css']  = 'about/about.css'
-### TEMPLATE_PAGES['about.json'] = 'about/about.json'
-### TEMPLATE_PAGES['about_modcontrol.js'] = 'about/about_modcontrol.js'
-### 
-### TEMPLATE_PAGES['auto.html'] = 'about/auto.html'
-
-
-DEFAULT_PAGINATION = 3
-
+## Not sure if these are necessary, or... what.
 #ARTICLE_URL = 'blog/{slug}'
 #ARTICLE_SAVE_AS = 'blog/{slug}/index.html'
 #DIRECT_TEMPLATES = ['blog']
 #PAGINATED_DIRECT_TEMPLATES = ['blog']
-
-
-
-
-
-
-
 
 
 
