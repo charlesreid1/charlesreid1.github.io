@@ -1,7 +1,7 @@
 Title: Enigma Cipher Implementation: Part 2: Pseudocode
-Date: 2017-03-18 16:00
-Category: Crypto
-Tags: crypto, enigma, programming
+Date: 2017-03-21 14:00
+Category: Enigma
+Tags: ciphers, enigma, encryption
 
 This is the second of several posts walking through an implementation of the Enigma cipher in code.
 
@@ -250,7 +250,11 @@ for each character in message:
 
 Again, no need for a reverse version, since the reflector is a symmetric transformation.
 
-## Enigma Pseudocode
+
+## Nearing a Complete Enigma Pseudocode
+
+Almost there. We have one more thing going on - those rotor wheels are moving.
+Add the "increment rotor wheels" verb, and define that below.
 
 ```
 define plaintext message
@@ -264,7 +268,7 @@ for each character in plaintext message:
         if character in swap pair, swap its value
 
     # Apply forward rotor transformation
-    for each scrambled alphabet:
+    for each rotor/scrambled alphabet:
         get index of character in normal alphabet
         get new character at that index in scrambled alphabet
         replace character with new character 
@@ -284,9 +288,83 @@ for each character in plaintext message:
         if character in swap pair, swap its value
 
     concatenate transformed input character to ciphertext message 
+
+    increment rotor wheels
+```
+
+## Incrementing the Rotor Wheels
+
+Each rotor wheel has a notch located at a particular letter.
+The wheels were identified by the letter on which the notch was located 
+(Rotor I was "Royal" because the notch was located at "R", and so on).
+
+The notches were designed to catch on the notches of other rotor wheels,
+in such a way that the wheels would turn together periodically.
+The right-most wheel would rotate once per keypress. 
+Once per 26 letters (if S = 26), the notch would catch the notch of the next rotor over
+and advance it forward by 1 letter. It was this mechanism that kept the machine
+constantly skipping through the space of possible keys, mapping each character to each other character,
+with one distinct key (alphabet scramble) used per letter of the message.
+
+To increment the wheels in pseudocode:
+
+```
+function increment rotors:
+    for each rotor/scrambled alphabet, left to right:
+        get index of left notch in left alphabet
+        get index of right notch in right alphabet
+        if left index equals right index:
+            cycle left alphabet forward 1 character
+    cycle right-most alphabet forward 1 character
 ```
 
 
+## Enigma Pseudocode
+
+Almost there. We have one more thing going on - those rotor wheels are moving.
+Add the "increment rotor wheels" verb, and define that below.
+
+```
+define plaintext message
+define normal alphabet and scrambled alphabets
+define list of switchboard swap pairs
+define list of reflector swap pairs
+for each character in plaintext message:
+
+    # Apply switchboard transformation
+    for each pair in switchboard swap pairs:
+        if character in swap pair, swap its value
+
+    # Apply forward rotor transformation
+    for each rotor/scrambled alphabet:
+        get index of character in normal alphabet
+        get new character at that index in scrambled alphabet
+        replace character with new character 
+
+    # Apply reflector transformation
+    for each pair in reflector swap pairs:
+        if character in swap pair, swap its value
+
+    # Apply reverse rotor transformation
+    for each scrambled alphabet:
+        get index of input character in scrambled alphabet
+        get new character at that index in normal alphabet
+        replace character with new character 
+
+    # Apply switchboard transformation
+    for each pair in switchboard swap pairs:
+        if character in swap pair, swap its value
+
+    concatenate transformed input character to ciphertext message 
+
+    # Increment rotor wheels
+    for each rotor/scrambled alphabet, left to right:
+        get index of left notch in left alphabet
+        get index of right notch in right alphabet
+        if left index equals right index:
+            cycle left alphabet forward 1 character
+    cycle right-most alphabet forward 1 character
+```
 
 
 
@@ -294,12 +372,7 @@ for each character in plaintext message:
 ## Sources
 
 1. "The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-<[http://www.codesandciphers.org.uk/enigma/index.htm](http://www.codesandciphers.org.uk/enigma/index.htm)>
-
-2. Copeland, B.J. "Alan Turing". Encyclopedia Britannica, Inc. Published 23 February 2016. Accessed 18 March 2017.
-
-3. "Cryptanalysis of the Enigma". Wikipedia: The Free Encyclopedia. Wikimedia Foundation, Inc. Edited 11 January 2017. Accessed 18 March 2017.
-<[https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma](https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma)>
+<[https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm](https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm)>
 
 
 

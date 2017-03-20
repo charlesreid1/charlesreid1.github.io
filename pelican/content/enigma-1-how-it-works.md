@@ -1,7 +1,7 @@
 Title: Enigma Cipher Implementation: Part 1: How It Works 
-Date: 2017-03-18 14:00
-Category: Crypto
-Tags: crypto, enigma, programming
+Date: 2017-03-21 13:00
+Category: Enigma
+Tags: ciphers, enigma, encryption
 
 This is the first of several posts that will walk through an implementation of the Enigma cipher in code.
 
@@ -137,7 +137,7 @@ but in a fixed and deterministic way that would allow others to take the same ra
 ## Sources
 
 1. "The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-<[http://www.codesandciphers.org.uk/enigma/index.htm](http://www.codesandciphers.org.uk/enigma/index.htm)>
+<[https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm](https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm)>
 
 2. Copeland, B.J. "Alan Turing". Encyclopedia Britannica, Inc. Published 23 February 2016. Accessed 18 March 2017.
 
