@@ -4,11 +4,20 @@
 
 <s>Fix the category page so it doesn't double-include navbar.</s>
 
+<s>Add mini blog archive on the right. Fix it up</s>
+
+<s>Fix spacing between blog posts (a little too much).</s>
+
 Check if responsive on phones. If not, add bootstrap to make it responsive.
-
-Add mini blog archive on the right. Fix it up, but not *too* up.
-
-Fix spacing between blog posts (a little too much).
 
 Fix Next button to be a bootstrap item.
 
+fix navbar links to be absolute urls
+
+fix charlesreid1 to be consistent
+
+fix publication dates
+
+remove any unused images from theme
+
+how to copy over the theme, and/or extricate the theme into its own repository, for re-use across sites/servers
