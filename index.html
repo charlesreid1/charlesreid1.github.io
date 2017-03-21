@@ -104,12 +104,240 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Enigma Cipher Implementation: Part 1: How It Works
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-03-20T00:00:00-07:00" pubdate>Monday 03/20/2017</time>
+                in 
+                <a href="/category/enigma.html">Enigma</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/enigma-cipher-implementation-part-1-how-it-works.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>This is the first of several posts that will walk through an implementation of the Enigma cipher in code.</p>
+<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
+detailed, accurate information entirely free of graduate level mathematics, 
+and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
+<p>There is also a Wikipedia article offering detailed information about the mathematical cryptanalysis of the Enigma,
+and covering some of the strengths and weaknesses of the machine: <a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">Cryptanalysis of the Enigma</a>.</p>
+<h2>Background</h2>
+<p>The Enigma machine was a device used by the German military to encrypt communications during World War II.
+The machine was essentially a large electronic circuit implementing a black-box encrypt/decrypt function.
+By design, the circuitry of the machine could be used for both encryption and decryption. </p>
+<p>The Enigma played an important role in the development of the first electronic computer. 
+Alan Turing led a team at Bletchley Park, in England, that constructed machines that could crack the Enigma code.
+This led to the development of the conceptual Turing machine and the creation of the first electronic computers.
+By narrowing the space of possible keys using Enigma's weaknesses, 
+these electronic computers could be used to explore the remaining key space.</p>
+<p>There were several variations of the Enigma. Each operated on the same basic principle:
+the operator entered a letter, which was transformed into a signal. 
+That signal was passed through several components of the Enigma machine,
+and underwent a series of linear transformations until its ciphertext was output.
+The encrypted output character would light up on a second keyboard, and the operator could transcribe the message.</p>
+<h2>Black Box Representation</h2>
+<p>The following diagram lays out the Enigma circuitry using black boxes. 
+The signal starts at the keyboard, where the operator types a letter.
+That letter is transformed into an electrical signal, which is sent through a series of components.
+First is the switchboard in the front, which swaps a few letter pairs.
+Next, the signal passes through three rotor wheels, each of which scrambles the alphabet.
+The signal is then passed into a reflector, which swaps every character with some other character.
+The reflector made the Enigma a symmetric machine. The signal was sent out of the reflector and passed through each rotor in reverse order.
+Finally, the signal passed through the switchboard at the front, and the resulting letter lit up, allowing the operator to transcribe the message.</p>
+<p><img alt="Image: Enigma Black Box Representation" src="/images/enigma_blackbox.jpg" /></p>
+<h2>Components</h2>
+<p>There were three principal components of the machine: a <strong>switchboard</strong>, a set of <strong>rotor wheels</strong>, and a <strong>reflector</strong>.</p>
+<h3>Switchboard</h3>
+<p>When the operator entered a key on the input keyboard, the key pressed was transformed into a signal.
+On the front of the Enigma machine was a set of plugs, one for each letter. Operators would connect
+pairs of letters using plugs, which would swap letters. If an operator connected the A and K ports, 
+and typed "A" on the keyboard, the signal representing "A" would travel to the switchboard, 
+where it would be transformed into the signal representing "K". </p>
+<p>Typically the Enigma operators would only connect 7-10 pairs of letters, with the remaining 6-12 letters untransformed by the switchboard. 
+The switchboard led to a huge number of possible encryption schemes, and was the single component that made the Enigma diffficult to crack.
+Commercial versions of the Enigma, without the plugboard, were sold to banks and other entities in Germany, but without the plugboard,
+the key space was reduced dramatically, making these codes "easy" to crack.</p>
+<p><img alt="Enigma switchboard illustration" src="/images/enigma_switchboard.jpg" /></p>
+<p>The image above illustrates how a switchboard would work for a simple 8-symbol alphabet "ABCDEFGH". 
+Only 3 of 4 pairings are made in this example. </p>
+<h3>Rotor Wheels</h3>
+<p>The rotor wheels were a set of interchangeable wheels that would perform a substitution cipher. 
+Each wheel corresponded to a particular alphabet in scrambled order (these rotors were not performing simple shift Caesar ciphers).
+Based on the order of the wheels, the signal, representing the letter the operator typed on the keyboard, 
+that came out of the switchboard would undergo three alphabet scrambles (also called affine ciphers).</p>
+<p>Because the wheels rotated with each keypress, the actual Affine cipher used by each wheel changed at each step.</p>
+<p>To complicate the way the rotors turned, the designer of the Enigma added clasps and notches to each rotor at different letters.
+When the notch of one rotor and the clasp of the rotor to the left matched, they would turn together. 
+The right-most wheel rotated once each key press, the center wheel rotated once every 26 key presses, and the left wheel rotated once every 676 key presses.
+Although these rates remained the same due to the number of notches, the exact locations of the notches dictated the timing of the rotations.
+The ordering of the wheels and their initial settings were therefore important to how the message was encrypted or decrypted.</p>
+<p>The German military distributed code books that contained daily settings for the Enigma machines, so that all Enigma operators had the same settings.
+These code books specified which wheels to load into the Enigma (three out of five possible rotors I II III IV and V), as well as the initial rotation to apply to each.</p>
+<p><img alt="Enigma rotor wheels illustration" src="/images/enigma_rotor.jpg" /></p>
+<p>The image above shows how the rotor would work for the 8-character alphabet "ABCDEFGH".
+The wheel has a set arrangement of scrambled letters, but the scramble shifts each time the rotor is advanced.
+This allows 1 wheel to provide as many different scrambles as there are symbols in the alphabet.</p>
+<h3>Reflector</h3>
+<p>Having passed through the three rotor wheels, each scrambling the original character signal input by the operator into the keyboard, the signal then entered the reflector. 
+It did precisely what the name suggests - it reflected a signal back through the machine. 
+Its design was very similar to the switchboard in the front of the machine, except it created 13 pairs of letters, so that every letter was paired with some other letter.
+The reflector, like the rotor wheels, was removable and could be selected from a set. </p>
+<p>The reflector is a curious part of the Enigma design, because it represents an attempt at convenience, which led to a gaping security flaw that Bletchley Park was able to exploit. 
+The nature of the reflector is that it is symmetric: it pairs each letter with some other letter, and the pairings are mutual. 
+If the reflector turns every "P" into "H", it also turns every "H" into "P". 
+This symmetry gives the Enigma the property that you no longer need an "encrypt" or "decrypt" mode: if you take a plaintext message and run it through the Enigma machine once, you'll get the cipher text back. 
+If you run it through the Enigma machine twice, you'll get the same plaintext back. 
+This obviated the need for a switch on the Enigma, to go between "encrypt" and "decrypt" modes.</p>
+<p>However, this property also means that no letter can ever be encoded as itself - a property called derangement. 
+While the switch board at the front and the rotor wheel scrambles would sometimes encode a letter as itself 
+(for example, Rotor I encodes "S" as "S", Rotor II encodes "A" as "A" and "Q" as "Q", and Rotor III encodes "N" as "N"),
+the reflector would never do so. 
+Thus, despite an astronomical number of possible settings, and complicated machinery and circuitry, 
+no matter what the Enigma's settings, no letter would ever be encoded as itself.
+This property can be exploited to rule out the location of certain words or phrases at certain locations in the message,
+which is precisely how Bletchley Park attacked the Enigma cipher.</p>
+<p><img alt="Enigma reflector illustration" src="/images/enigma_reflector.jpg" /></p>
+<p>The image above illustrates a reflector for the 8-symbol alphabet "ABCDEFGH".
+Each of the 4 possible pairings are made, so no letter will be encoded to itself by the reflector.</p>
+<h2>The Enigma and Random Number Generators</h2>
+<p>Had the middle rotor wheels remained stationary, multiple wheels would have been redundant - 
+any arbitrary sequence of alphabet scrambles can be collapsed into a single scramble.
+However, the wheels were designed to rotate at various rates. Each time the wheels rotated,
+it changed the scramble provided by the wheel that had rotated. </p>
+<p>This means the Enigma worked by using a totally different scramble for each character in a message,
+with the scrambles constantly changing, each character, over and over. 
+Because the number of possible scrambles with a 26 character alphabet is <span class="math">\(26! = 403,291,461,126,605,635,584,000,000\)</span>,
+which is a trillion trillions.</p>
+<p>But by using a mechanical device with the same construction and the same common initial settings, 
+operators were able to skip around through the vast key space of possible scrambles as each character was typed into the machine,
+but in a fixed and deterministic way that would allow others to take the same random walk through key space as well.</p>
+<h2>Sources</h2>
+<ol>
+<li>
+<p>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</p>
+</li>
+<li>
+<p>Copeland, B.J. "Alan Turing". Encyclopedia Britannica, Inc. Published 23 February 2016. Accessed 18 March 2017.</p>
+</li>
+<li>
+<p>"Cryptanalysis of the Enigma". Wikipedia: The Free Encyclopedia. Wikimedia Foundation, Inc. Edited 11 January 2017. Accessed 18 March 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    var location_protocol = (false) ? 'https' : document.location.protocol;
+    if (location_protocol !== 'http' && location_protocol !== 'https') location_protocol = 'https:';
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = location_protocol + '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/ciphers.html">ciphers</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/enigma.html">enigma</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/encryption.html">encryption</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Perl vs. Java: N Queens Problem
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2017-03-24T16:00:00-07:00" pubdate>Friday 03/24/2017</time>
+                <time datetime="2017-03-19T00:00:00-07:00" pubdate>Sunday 03/19/2017</time>
                 in 
                 <a href="/category/javaversusperl.html">JavaVersusPerl</a>
                 </p>
@@ -681,1006 +909,6 @@ The "velocity" at which calculations will scale? </p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Enigma Cipher Implementation: Part 3: Enigma in Java Without Objects
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-03-21T15:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
-                in 
-                <a href="/category/enigma.html">Enigma</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/enigma-cipher-implementation-part-3-enigma-in-java-without-objects.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>As the title suggests, we're continuing with the third in a series of posts 
-exploring a verb-oriented approach to programming - 
-in an attempt to free ourselves from the fetishization of objects,
-we are attempting to learn how to use languages against their will.</p>
-<p>This is all inspired by <a href="http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html">Steve Yegge's 2006 blog post</a>,
-"Execution in the Kingdom of Nouns," an excellent read that inspired me to 
-explore the subject more deeply. </p>
-<h2>Java Pseudocode</h2>
-<p>In the last post, we ran through the pseudocode for an Enigma machine 
-based entirely upon Strings, iterators, and integer indexes, 
-leading to a vastly simpler abstraction of the Enigma machine
-than would have resulted if we had implicitly chosen a noun-centric approach,
-divided the entire Enigma encryption process into its component nouns like rotor wheels and reflectors,
-and implemented each as an object.</p>
-<p>Here was the pseudocode:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply forward rotor transformation
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    concatenate transformed input character to ciphertext message 
-
-    # Increment rotor wheels
-    for each rotor/scrambled alphabet, left to right:
-        get index of left notch in left alphabet
-        get index of right notch in right alphabet
-        if left index equals right index:
-            cycle left alphabet forward 1 character
-    cycle right-most alphabet forward 1 character
-</pre></div>
-
-
-<h2>Java Code</h2>
-<p>The Enigma code is defined in the Java program as follows:</p>
-<ul>
-<li>The Enigma class defines a set of constants for historically accurate cipher settings.</li>
-<li>The main method contains the encryption procedure.</li>
-<li>There is one static helper method called rotateString.</li>
-</ul>
-<p>Everything is in a public class. Starting with the definitions of constants:</p>
-<div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Enigma</span> <span class="o">{</span>
-
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">ALPHA</span> <span class="o">=</span> <span class="s">&quot;ABCDEFGHIJKLMNOPQRSTUVWXYZ&quot;</span><span class="o">;</span>
-
-    <span class="c1">// Historically accurate rotor scrambles</span>
-    <span class="c1">// See http://www.codesandciphers.org.uk/enigma/rotorspec.htm</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span><span class="o">[]</span> <span class="n">WHEEL</span> <span class="o">=</span> <span class="o">{</span> <span class="n">ALPHA</span><span class="o">,</span>
-                        <span class="s">&quot;EKMFLGDQVZNTOWYHXUSPAIBRCJ&quot;</span><span class="o">,</span> <span class="c1">// Rotor I    - Royal</span>
-                        <span class="s">&quot;AJDKSIRUXBLHWTMCQGZNPYFVOE&quot;</span><span class="o">,</span> <span class="c1">// Rotor II   - Flags</span>
-                        <span class="s">&quot;BDFHJLCPRTXVZNYEIWGAKMUSQO&quot;</span><span class="o">,</span> <span class="c1">// Rotor III  - Wave</span>
-                        <span class="s">&quot;ESOVPZJAYQUIRHXLNFTGKDCMWB&quot;</span><span class="o">,</span> <span class="c1">// Rotor IV   - Kings</span>
-                        <span class="s">&quot;VZBRGITYUPSDNHLXAWMJQOFECK&quot;</span><span class="o">,</span> <span class="c1">// Rotor V    - Above</span>
-                        <span class="s">&quot;JPGVOUMFYQBENHZRDKASXLICTW&quot;</span><span class="o">,</span>
-                        <span class="s">&quot;NZJHGRCXMYSWBOUFAIVLPEKQDT&quot;</span><span class="o">,</span>
-                        <span class="s">&quot;FKQHTLXOCBJSPDZRAMEWNIUYGV&quot;</span><span class="o">};</span>
-
-    <span class="c1">// Knocking (notch and clasp) advances the wheel to the left</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span><span class="o">[]</span> <span class="n">NOTCH</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;&quot;</span><span class="o">,</span>  <span class="c1">// No notch</span>
-                                          <span class="s">&quot;R&quot;</span><span class="o">,</span> <span class="c1">// Royal</span>
-                                          <span class="s">&quot;F&quot;</span><span class="o">,</span> <span class="c1">// Flags</span>
-                                          <span class="s">&quot;W&quot;</span><span class="o">,</span> <span class="c1">// Wave</span>
-                                          <span class="s">&quot;K&quot;</span><span class="o">,</span> <span class="c1">// Kings</span>
-                                          <span class="s">&quot;A&quot;</span><span class="o">,</span> <span class="c1">// Above</span>
-                                          <span class="s">&quot;AN&quot;</span><span class="o">,</span>
-                                          <span class="s">&quot;AN&quot;</span><span class="o">,</span>
-                                          <span class="s">&quot;AN&quot;</span><span class="o">};</span>
-
-    <span class="c1">// Reflectors</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">REFLECTOR_ALPHA</span> <span class="o">=</span> <span class="s">&quot;AY:BR:CU:DH:EQ:FS:GL:IP:JX:KN:MO:TZ:VW&quot;</span><span class="o">;</span>
-</pre></div>
-
-
-<h2>Main Method: User Settings</h2>
-<p>The next part of the code is the main method, where we begin by defining variables 
-that correspond to settings that the Enigma operator would set from the daily Enigma code book.
-These included:</p>
-<ul>
-<li>The numbering and ordering of wheels (e.g., <code>IV II I</code>)</li>
-<li>The initial rotor settings for each wheel (position 0-25)</li>
-<li>The pairs of letters connected on the switch board</li>
-</ul>
-<p>The wheels are specified using the <code>WHEEL</code> array of Strings, above.
-Each element of the WHEEL array contains a different scrambled alphabet, 
-corresponding to the alphabet scrambles hard-coded into the historical rotor wheels.
-These go into <code>rotorAlpha</code>, which stores each rotor's alphabet in a String.</p>
-<p>The locations of the notches that advance neighboring wheels are fixed by the choice of wheels, 
-and are available through the <code>NOTCH</code> array.
-The notch locations implemented in <code>NOTCH</code> are historically accurate for each rotor wheel. </p>
-<p>The initial rotor settings were also contained in the code book as a sequence of 3 numbers,
-each 0-25, indicating how many turns each wheel was rotated before starting.</p>
-<p>The plugboard pairs specify the wired connections on the front of the machine.
-These plugboard pairs were also daily machine settings specified in the daily Enigma code book.
-The plugboard pairs are input as a single string, with pairs of letters separated by a ":", like this: <code>AB:CD:EF:GH</code>.
-Pairs must be unique (no letter can connect to itself). 
-Letters cannot be repeated (no letter can connect to more than 1 other letter).</p>
-<div class="highlight"><pre><span></span>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span> 
-
-        <span class="c1">// These two strings should encrypt/decrypt to each other when you run them through the Enigma.</span>
-        <span class="c1">//String message = &quot;ABCDE FG HIJKL MNOP QRS TUVWXYZ&quot;; </span>
-        <span class="n">String</span> <span class="n">message</span> <span class="o">=</span> <span class="s">&quot;TVVFT KS UNVYJ FAFV NPC DZJPWEJ&quot;</span><span class="o">;</span>
-
-
-        <span class="c1">//////////////////////////////////</span>
-        <span class="c1">// Operator Settings</span>
-        <span class="c1">// </span>
-        <span class="c1">// Enigma operators have code sheets that specify: </span>
-        <span class="c1">//  - The numbering/ordering of wheels </span>
-        <span class="c1">//  - The initial rotor settings</span>
-        <span class="c1">//  - The plugboard pairs</span>
-
-        <span class="c1">// Rotor scrambles are applied right-to-left</span>
-        <span class="c1">//              {LAST, MIDDLE, FIRST}</span>
-        <span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha</span> <span class="o">=</span> <span class="o">{</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-        <span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch</span> <span class="o">=</span> <span class="o">{</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-        <span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit</span> <span class="o">=</span> <span class="o">{</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">};</span>
-
-        <span class="n">String</span> <span class="n">plugboardPairs</span> <span class="o">=</span> <span class="s">&quot;IR:HQ:NT:WZ:VC:OY:GP:LF:BX:AK&quot;</span><span class="o">;</span>
-
-        <span class="n">String</span> <span class="n">coded</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">message</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">coded</span><span class="o">);</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<h2>Cipher Procedure</h2>
-<p>The next bit of code is the meat of the Enigma method.
-Notice that this is purely procedural code, and makes no use of objects other than the built-in String type. 
-This is the kind of verb-oriented code we are striving for
-when we write noun-free Java code.</p>
-<p>We also pass in any information that's required. 
-Normally we would wrap all of these quantities in an object,
-to keep the list of parameters short, but this implementation is entirely object-free.</p>
-<div class="highlight"><pre><span></span>    <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">enigma</span><span class="o">(</span><span class="n">String</span> <span class="n">message</span><span class="o">,</span>
-                                <span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha</span><span class="o">,</span>
-                                <span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch</span><span class="o">,</span>
-                                <span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit</span><span class="o">,</span>
-                                <span class="n">String</span><span class="o">[]</span> <span class="n">plugboardPairs</span><span class="o">)</span> <span class="o">{</span> 
-
-        <span class="n">StringBuilder</span> <span class="n">message_final</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
-
-        <span class="c1">//////////////////////////////////////</span>
-        <span class="c1">// Enigma Cipher</span>
-
-        <span class="c1">// Apply each transformation in sequence</span>
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">message</span><span class="o">.</span><span class="na">length</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-
-            <span class="c1">// Starting char</span>
-            <span class="kt">char</span> <span class="n">c_orig</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
-            <span class="kt">char</span> <span class="n">c</span> <span class="o">=</span> <span class="n">c_orig</span><span class="o">;</span>
-
-            <span class="c1">// Perform plugboard swap</span>
-            <span class="k">for</span><span class="o">(</span><span class="n">String</span> <span class="n">pair</span> <span class="o">:</span> <span class="n">plugboardPairs</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">))</span> <span class="o">{</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
-                <span class="o">}</span> <span class="k">else</span> <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-
-            <span class="c1">// Perform rotor letter substitutions</span>
-            <span class="c1">// (forward order: right-to-left)</span>
-            <span class="kt">int</span> <span class="n">ix</span> <span class="o">=</span> <span class="o">-</span><span class="mi">100</span><span class="o">;</span>
-            <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=(</span><span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">-</span><span class="mi">1</span><span class="o">);</span> <span class="n">j</span><span class="o">&gt;=</span><span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">--)</span> <span class="o">{</span> 
-                <span class="n">ix</span> <span class="o">=</span> <span class="n">ALPHA</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
-                <span class="n">String</span> <span class="n">thisAlpha</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">ix</span><span class="o">&gt;=</span><span class="mi">0</span><span class="o">)</span> <span class="o">{</span> 
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">thisAlpha</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">ix</span><span class="o">);</span>
-                <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">c_orig</span><span class="o">;</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-
-            <span class="c1">// Perform reflection</span>
-            <span class="k">for</span><span class="o">(</span><span class="n">String</span> <span class="n">pair</span> <span class="o">:</span> <span class="n">REFLECTOR_ALPHA</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">))</span> <span class="o">{</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
-                <span class="o">}</span> <span class="k">else</span> <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-
-            <span class="c1">// Perform rotor letter substitutions</span>
-            <span class="c1">// (backwards order: left-to-right) </span>
-            <span class="n">ix</span> <span class="o">=</span> <span class="o">-</span><span class="mi">100</span><span class="o">;</span>
-            <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">&lt;</span><span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span> 
-                <span class="n">String</span> <span class="n">thisAlpha</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
-                <span class="n">ix</span> <span class="o">=</span> <span class="n">thisAlpha</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">ix</span><span class="o">&gt;=</span><span class="mi">0</span><span class="o">)</span> <span class="o">{</span> 
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">ALPHA</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">ix</span><span class="o">);</span>
-                <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">c_orig</span><span class="o">;</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-
-
-            <span class="c1">// Perform plugboard swap</span>
-            <span class="k">for</span><span class="o">(</span><span class="n">String</span> <span class="n">pair</span> <span class="o">:</span> <span class="n">plugboardPairs</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">))</span> <span class="o">{</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
-                <span class="o">}</span> <span class="k">else</span> <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-
-
-            <span class="c1">// Final text</span>
-            <span class="k">if</span><span class="o">(</span> <span class="n">c</span><span class="o">&gt;=</span><span class="sc">&#39;A&#39;</span> <span class="o">&amp;&amp;</span> <span class="n">c</span><span class="o">&lt;=</span><span class="sc">&#39;Z&#39;</span><span class="o">)</span> <span class="o">{</span> 
-                <span class="n">message_final</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
-            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-                <span class="c1">// Could not resolve </span>
-                <span class="n">message_final</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">c_orig</span><span class="o">);</span>
-            <span class="o">}</span>
-
-            <span class="c1">// Increment rotors</span>
-            <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">&lt;(</span><span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">-</span><span class="mi">1</span><span class="o">);</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
-                <span class="n">String</span> <span class="n">alphaL</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
-                <span class="kt">int</span> <span class="n">ixL</span> <span class="o">=</span> <span class="n">alphaL</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">rotorNotch</span><span class="o">[</span><span class="n">j</span><span class="o">]);</span>
-                <span class="n">String</span> <span class="n">alphaR</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="o">];</span>
-                <span class="kt">int</span> <span class="n">ixR</span> <span class="o">=</span> <span class="n">alphaR</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">rotorNotch</span><span class="o">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="o">]);</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">ixL</span><span class="o">!=</span><span class="n">ixR</span><span class="o">)</span> <span class="o">{</span> 
-                    <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">rotateString</span><span class="o">(</span><span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">]);</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-            <span class="c1">// Always increment the right-most rotor</span>
-            <span class="kt">int</span> <span class="n">lenny</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
-            <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">]</span> <span class="o">=</span> <span class="n">rotateString</span><span class="o">(</span><span class="n">rotorAlpha</span><span class="o">[</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">]);</span>
-        <span class="o">}</span>
-
-        <span class="k">return</span> <span class="n">message_final</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<h2>Utility Method: String Rotator</h2>
-<p>One last piece that's needed to emulate the rotation of the rotor wheels 
-is a method to rotate strings forward 1 character. Here's that method:</p>
-<div class="highlight"><pre><span></span>    <span class="c1">/// Rotate a string forward by 1 character, so &quot;ABCDEF&quot; becomes &quot;FABCDE&quot;</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">rotateString</span><span class="o">(</span><span class="n">String</span> <span class="n">original</span><span class="o">)</span> <span class="o">{</span>
-        <span class="kt">int</span> <span class="n">lenny</span> <span class="o">=</span> <span class="n">original</span><span class="o">.</span><span class="na">length</span><span class="o">();</span>
-        <span class="n">StringBuilder</span> <span class="n">rotated</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
-        <span class="n">rotated</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">original</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">));</span>
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span><span class="n">i</span><span class="o">&lt;</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">;</span><span class="n">i</span><span class="o">++)</span> <span class="o">{</span> 
-            <span class="n">rotated</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">original</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">));</span>
-        <span class="o">}</span>
-        <span class="k">return</span> <span class="n">rotated</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
-    <span class="o">}</span>
-
-<span class="o">}</span> <span class="c1">// end Enigma class</span>
-</pre></div>
-
-
-<h2>Complete Enigma Implementation</h2>
-<p>(ADD LINK TO GITHUB CODE HERE)</p>
-<p>Here is a link to the complete Enigma code on Github: <a href="">Enigma.java</a></p>
-<p>Now that the Enigma machine implementation is finished, we can test it out.
-One feature of the Enigma that makes it easy to test is, it is symmetric.
-If we feed a plain text into the Enigma and get the corresponding ciphertext,
-we can feed that ciphertext through the Enigma (with the same initial settings) 
-and recover the original plain text.</p>
-<p>Running the alphabet through the Enigma yields:</p>
-<div class="highlight"><pre><span></span>$ java Enigma
-IN:  ABCDE FG HIJKL MNOP QRS TUVWXYZ
-OUT: TVVFT KS UNVYJ FAFV NPC DZJPWEJ
-</pre></div>
-
-
-<p>Running this back through the Enigma yields:</p>
-<div class="highlight"><pre><span></span>$ java Enigma
-IN:  TVVFT KS UNVYJ FAFV NPC DZJPWEJ
-OUT: ABCDE FG HIJKL MNOP QRS TUVWXYZ
-</pre></div>
-
-
-<p><strong>NOTE:</strong> This code modifies the Enigma machine's settings in-place.
-This means multiple sequential calls to the <code>enigma()</code> method will not reset the rotors.
-The following code will not recover the original plain text <code>message</code>:</p>
-<div class="highlight"><pre><span></span><span class="c1">// This won&#39;t work:</span>
-<span class="n">String</span> <span class="n">coded</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">message</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
-<span class="n">String</span> <span class="n">original2</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">coded</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
-</pre></div>
-
-
-<p>To do this correctly, we would need multiple copies of the input arrays <code>rotorAlpha</code>, <code>rotorNotch</code>, and <code>rotorInit</code>:</p>
-<div class="highlight"><pre><span></span><span class="n">String</span> <span class="n">plugboardPairs</span> <span class="o">=</span> <span class="s">&quot;IR:HQ:NT:WZ:VC:OY:GP:LF:BX:AK&quot;</span><span class="o">;</span>
-
-<span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha</span> <span class="o">=</span> <span class="o">{</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-<span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch</span> <span class="o">=</span> <span class="o">{</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-<span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit</span> <span class="o">=</span> <span class="o">{</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">};</span>
-<span class="n">String</span> <span class="n">coded</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">message</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
-
-<span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha2</span> <span class="o">=</span> <span class="o">{</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-<span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch2</span> <span class="o">=</span> <span class="o">{</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-<span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit2</span> <span class="o">=</span> <span class="o">{</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">};</span>
-<span class="n">String</span> <span class="n">original</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">coded</span><span class="o">,</span> <span class="n">rotorAlpha2</span><span class="o">,</span> <span class="n">rotorNotch2</span><span class="o">,</span> <span class="n">rotorInit2</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
-
-<span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;ORIGINAL:  &quot;</span><span class="o">+</span><span class="n">message</span><span class="o">);</span>
-<span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;RECOVERED: &quot;</span><span class="o">+</span><span class="n">original</span><span class="o">);</span>
-</pre></div>
-
-
-<p>This works fine:</p>
-<div class="highlight"><pre><span></span><span class="n">ORIGINAL</span><span class="o">:</span>  <span class="n">ABCDE</span> <span class="n">FG</span> <span class="n">HIJKL</span> <span class="n">MNOP</span> <span class="n">QRS</span> <span class="n">TUVWXYZ</span>
-<span class="n">RECOVERED</span><span class="o">:</span> <span class="n">ABCDE</span> <span class="n">FG</span> <span class="n">HIJKL</span> <span class="n">MNOP</span> <span class="n">QRS</span> <span class="n">TUVWXYZ</span> 
-</pre></div>
-
-
-<h2>Sources</h2>
-<ol>
-<li>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</li>
-</ol></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/ciphers.html">ciphers</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/enigma.html">enigma</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/encryption.html">encryption</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/java.html">java</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Enigma Cipher Implementation: Part 2: Pseudocode
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-03-21T14:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
-                in 
-                <a href="/category/enigma.html">Enigma</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/enigma-cipher-implementation-part-2-pseudocode.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is the second of several posts walking through an implementation of the Enigma cipher in code.</p>
-<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
-detailed, accurate information entirely free of graduate level mathematics, 
-and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
-<h2>The Goal</h2>
-<p>The goal of analyzing the Enigma machine is to better understand the workings of a device that played an important role in the history of computing.
-It is also an excellent system to better understand some of the design decisions we make when creating a code representation of a problem. </p>
-<p>The intention is to replicate some of the encryption mechanisms of the original Enigma. 
-From the Part 1 post, which covered more about how Enigma works, we have built up a basic understanding of what each step does.
-In this post we discuss how to implement this functionality.</p>
-<p>The basic idea is to start with a plaintext input (typed by the operator) and apply a rotating cripher to encrypt it, resulting in a ciphertext output:</p>
-<div class="highlight"><pre><span></span>                _________
-               |         |
-PLAINTEXT ---&gt; | ENIGMA  | ----&gt; CIPHERTEXT
-               |_________|
-</pre></div>
-
-
-<h2>Function or Object?</h2>
-<p>One of the first decisions typically made (sometimes implicitly) is whether to implement the Enigma as a function or an object.
-Is the Enigma a noun, or a verb?</p>
-<h3>The Noun Approach</h3>
-<p>Programming in a language like Java or C++, the noun approach seems perfectly natural:
-start with an Enigma object (the noun), and create more objects to represent more of the nouns (the switchboard, the rotor wheels, and the reflector). 
-Each component is modeled as a black box function taking a character in and returning a character out. 
-Each component stores and organizes information important for it to perform its particular transformation.
-For example, the rotors would store the scrambled version of the alphabet that they implement, 
-while the switchboard and the reflector would store the connected letter pairs.</p>
-<p>This approach reflects the kind of engineering approach that was taken to the design of the Enigma: 
-many simple components, working together in concert, result in a more complex integrated system.</p>
-<p>But one of the reasons the Enigma machine is an interesting system for implementing in code 
-is because of the simplicity of the mechanical operations performed. 
-This can help identify where a person actually begins the software design process. 
-If the design process starts with one foot in the world of objects already, the object approach will be adopted by default.</p>
-<p>With this approach, we are reshaping our data structures to fit the problem. 
-This makes the implementation more modular and the driver easier to read at a high level. 
-However, reshaping the data structures to fit the problem and our abstraction of it 
-can lead to more inefficient code and implementations.</p>
-<h3>The Verb Approach</h3>
-<p>Instead, we can start by examining the encryption process itself - the verb of encryption. 
-The action of encryption consists of elementary steps - swapping out two characters. 
-Each of these actions is simple enough that it can be implemented using built-in string manipulation methods,
-and all of the quantities being stored are likewise simple enough that no exotic data structures are required. </p>
-<p>The verb approach requires considering the problem up-front (possibly recasting it in different terms),
-and thinking through the actions involved in order to best utilize simple, built-in data structures and functionality.</p>
-<p>With this approach we essentially reshape the problem to fit our data structures, rather than the other way around.</p>
-<h2>Applying the Verb Approach to the Rotors</h2>
-<h3>Rotors</h3>
-<p>To get a better sense of what the verb approach looks like, let's look at the Enigma rotors.</p>
-<p>Each rotor implements a particular permutations of the 26 letters of the alphabet: </p>
-<p><img alt="Enigma rotor" src="/images/enigma_rotor.jpg" /></p>
-<p>This is equivalent to matching up two strings. To make things slightly more concrete, let's look at Rotor I, nicknamed Royal
-(due to the location of its notch at the letter R), implemented the scrambled alphabet "EKMFLGDQVZNTOWYHXUSPAIBRCJ".
-With an offset of 0, this would therefore implement the following shift:</p>
-<div class="highlight"><pre><span></span>ABCDEFGHIJKLMNOPQRSTUVWXYZ
-||||||||||||||||||||||||||
-EKMFLGDQVZNTOWYHXUSPAIBRCJ
-</pre></div>
-
-
-<p>This operation, when broken down, is trivial: we are matching two characters from two strings, both at a particular location.</p>
-<p>Starting with a char, representing the character coming into the rotor,
-we can perform a two-step operation: 
-1. Get the index of the incoming character in the normal alphabet <code>ABCDEF...</code>.
-2. Get the corresponding character at that index in the scrambled alphabet <code>EKMFLG...</code>.</p>
-<p>We will also need to perform the reverse operation when we return the signal back through the machine from the reflector.
-In that case, we're actually performing the opposite lookup, for the same wheel:</p>
-<div class="highlight"><pre><span></span>EKMFLGDQVZNTOWYHXUSPAIBRCJ
-||||||||||||||||||||||||||
-ABCDEFGHIJKLMNOPQRSTUVWXYZ
-</pre></div>
-
-
-<p>When we were going through Rotor I the first time, A became E, and E became L;
-when going through in reverse, E now becomes A, and L now becomes E.</p>
-<p>The procedure can also be reversed:
-1. Get the index of the incoming character in the scrambled alphabet <code>EKMFLG...</code>.
-2. Get the corresponding character at that index in the normal alphabet <code>ABCDEF...</code>.</p>
-<p>Applying this multiple times in sequence applies multiple scrambles
-and replicates multiple rotors.</p>
-<h3>Example of Verb Approach: Rotor Rotation</h3>
-<p>One of the reasons an object-oriented approach may seem natural,
-besides the chosen language suggesting it, 
-is because the Enigma is an object with a <em>state</em>.
-Objects provide a natural way of representing things with an internal state, 
-or information specific to that entity and required for its operation.</p>
-<p>For this reason, it may seem at first blush that the Engima <em>requires</em> an object-oriented implementation.
-However, we can continue with our verb-centric thinking, and examine how the operations change when the wheels are rotated.</p>
-<div class="highlight"><pre><span></span>After 2 rotations:
-
-ABCDEFGHIJKLMNOPQRSTUVWXYZAB
-  ||||||||||||||||||||||||||
-  EKMFLGDQVZNTOWYHXUSPAIBRCJ
-
-After 4 rotations:
-
-ABCDEFGHIJKLMNOPQRSTUVWXYZABCD
-    ||||||||||||||||||||||||||
-    EKMFLGDQVZNTOWYHXUSPAIBRCJ
-</pre></div>
-
-
-<p>As the wheels rotate, we are still performing the same index lookup operations, 
-we are just rotating each scrambled alphabet by one character. 
-Again, this is a trivial operation that is probably built in for string types. </p>
-<h3>Rotor Pseudocode</h3>
-<p>Putting all of this together, here's pseudocode for a single forward transformation by an Engima rotor: </p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabet 
-for each character in plaintext message:
-    get index of input character in normal alphabet
-    get new character at that index in scrambled alphabet
-    concatenate transformed character to ciphertext message 
-</pre></div>
-
-
-<p>Because the Enigma has multiple rotors, we also want pseudocode for multiple rotors:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-    concatenate transformed character to ciphertext message 
-</pre></div>
-
-
-<p>Likewise, to apply multiple rotations in reverse, we just swap the alphabets out:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
-    for each scrambled alphabet:
-        get index of character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-    concatenate transformed character to ciphertext message 
-</pre></div>
-
-
-<h3>A More Complete Enigma Pseudocode</h3>
-<p>To combine these operations, or add additional operations, we just add them before concatenating the final transformed character to the ciphertext message.
-Thus, a more complete pseudocode would include other steps:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-
-    # Apply forward rotor transformation
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-
-    concatenate transformed character to ciphertext message 
-</pre></div>
-
-
-<p>Now let's cover the switchboard and reflector transformations.</p>
-<h2>The Switchboard</h2>
-<p>We can take the same verb-based approach to the switchboard as we took for the rotors.
-When we think through the actual operation being performed by the switchboard, 
-it is even simpler than the operation performed by the rotor wheels.
-We have pairs of letters, and we are simply looking for one letter in a pair, and swapping it out with the other letter in the pair.
-In the case of the switchboard, Enigma operators utilized 7-10 wires to connect pairs of letters; the remaining letters were unchanged.
-So the switchboard step is very simple:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define list of switchboard swap pairs
-for each character in message:
-    for each pair in swap pairs:
-        if character in swap pair, swap its value
-    add character to ciphertext
-</pre></div>
-
-
-<p>That's it! No need for a reverse function, since the swap procedure is symmetric. 
-(Note that if there is no wire connecting a letter to another letter, there is no swap operation, and the character is added to the ciphertext directly.)</p>
-<h2>The Reflector</h2>
-<p>The reflector pseudocode looks identical to the switchboard pseudocode,
-except the reflector defines pairings for all 13 posible letter pairs, instead of only 7-10.</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define list of reflector swap pairs
-for each character in message:
-    for each pair in swap pairs:
-        if character in swap pair, swap its value
-    add character to ciphertext
-</pre></div>
-
-
-<p>Again, no need for a reverse version, since the reflector is a symmetric transformation.</p>
-<h2>Nearing a Complete Enigma Pseudocode</h2>
-<p>Almost there. We have one more thing going on - those rotor wheels are moving.
-Add the "increment rotor wheels" verb, and define that below.</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply forward rotor transformation
-    for each rotor/scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    concatenate transformed input character to ciphertext message 
-
-    increment rotor wheels
-</pre></div>
-
-
-<h2>Incrementing the Rotor Wheels</h2>
-<p>Each rotor wheel has a notch located at a particular letter.
-The wheels were identified by the letter on which the notch was located 
-(Rotor I was "Royal" because the notch was located at "R", and so on).</p>
-<p>The notches were designed to catch on the notches of other rotor wheels,
-in such a way that the wheels would turn together periodically.
-The right-most wheel would rotate once per keypress. 
-Once per 26 letters (if S = 26), the notch would catch the notch of the next rotor over
-and advance it forward by 1 letter. It was this mechanism that kept the machine
-constantly skipping through the space of possible keys, mapping each character to each other character,
-with one distinct key (alphabet scramble) used per letter of the message.</p>
-<p>To increment the wheels in pseudocode:</p>
-<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">increment</span> <span class="nx">rotors</span>:
-    <span class="kt">for</span> <span class="nx">each</span> <span class="nx">rotor</span><span class="o">/</span><span class="nx">scrambled</span> <span class="nx">alphabet</span><span class="p">,</span> <span class="nx">left</span> <span class="nx">to</span> <span class="nx">right</span>:
-        <span class="kt">get</span> <span class="nx">index</span> <span class="nx">of</span> <span class="nx">left</span> <span class="nx">notch</span> <span class="k">in</span> <span class="nx">left</span> <span class="nx">alphabet</span>
-        <span class="nx">get</span> <span class="nx">index</span> <span class="nx">of</span> <span class="nx">right</span> <span class="nx">notch</span> <span class="k">in</span> <span class="nx">right</span> <span class="nx">alphabet</span>
-        <span class="k">if</span> <span class="nx">left</span> <span class="nx">index</span> <span class="nx">equals</span> <span class="nx">right</span> <span class="nx">index</span>:
-            <span class="kt">cycle</span> <span class="nx">left</span> <span class="nx">alphabet</span> <span class="nx">forward</span> <span class="mi">1</span> <span class="nx">character</span>
-    <span class="nx">cycle</span> <span class="nx">right</span><span class="o">-</span><span class="nx">most</span> <span class="nx">alphabet</span> <span class="nx">forward</span> <span class="mi">1</span> <span class="nx">character</span>
-</pre></div>
-
-
-<h2>Enigma Pseudocode</h2>
-<p>Almost there. We have one more thing going on - those rotor wheels are moving.
-Add the "increment rotor wheels" verb, and define that below.</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply forward rotor transformation
-    for each rotor/scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    concatenate transformed input character to ciphertext message 
-
-    # Increment rotor wheels
-    for each rotor/scrambled alphabet, left to right:
-        get index of left notch in left alphabet
-        get index of right notch in right alphabet
-        if left index equals right index:
-            cycle left alphabet forward 1 character
-    cycle right-most alphabet forward 1 character
-</pre></div>
-
-
-<h2>Sources</h2>
-<ol>
-<li>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</li>
-</ol></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/ciphers.html">ciphers</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/enigma.html">enigma</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/encryption.html">encryption</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Enigma Cipher Implementation: Part 1: How It Works
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-03-21T13:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
-                in 
-                <a href="/category/enigma.html">Enigma</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/enigma-cipher-implementation-part-1-how-it-works.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is the first of several posts that will walk through an implementation of the Enigma cipher in code.</p>
-<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
-detailed, accurate information entirely free of graduate level mathematics, 
-and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
-<p>There is also a Wikipedia article offering detailed information about the mathematical cryptanalysis of the Enigma,
-and covering some of the strengths and weaknesses of the machine: <a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">Cryptanalysis of the Enigma</a>.</p>
-<h2>Background</h2>
-<p>The Enigma machine was a device used by the German military to encrypt communications during World War II.
-The machine was essentially a large electronic circuit implementing a black-box encrypt/decrypt function.
-By design, the circuitry of the machine could be used for both encryption and decryption. </p>
-<p>The Enigma played an important role in the development of the first electronic computer. 
-Alan Turing led a team at Bletchley Park, in England, that constructed machines that could crack the Enigma code.
-This led to the development of the conceptual Turing machine and the creation of the first electronic computers.
-By narrowing the space of possible keys using Enigma's weaknesses, 
-these electronic computers could be used to explore the remaining key space.</p>
-<p>There were several variations of the Enigma. Each operated on the same basic principle:
-the operator entered a letter, which was transformed into a signal. 
-That signal was passed through several components of the Enigma machine,
-and underwent a series of linear transformations until its ciphertext was output.
-The encrypted output character would light up on a second keyboard, and the operator could transcribe the message.</p>
-<h2>Black Box Representation</h2>
-<p>The following diagram lays out the Enigma circuitry using black boxes. 
-The signal starts at the keyboard, where the operator types a letter.
-That letter is transformed into an electrical signal, which is sent through a series of components.
-First is the switchboard in the front, which swaps a few letter pairs.
-Next, the signal passes through three rotor wheels, each of which scrambles the alphabet.
-The signal is then passed into a reflector, which swaps every character with some other character.
-The reflector made the Enigma a symmetric machine. The signal was sent out of the reflector and passed through each rotor in reverse order.
-Finally, the signal passed through the switchboard at the front, and the resulting letter lit up, allowing the operator to transcribe the message.</p>
-<p><img alt="Image: Enigma Black Box Representation" src="/images/enigma_blackbox.jpg" /></p>
-<h2>Components</h2>
-<p>There were three principal components of the machine: a <strong>switchboard</strong>, a set of <strong>rotor wheels</strong>, and a <strong>reflector</strong>.</p>
-<h3>Switchboard</h3>
-<p>When the operator entered a key on the input keyboard, the key pressed was transformed into a signal.
-On the front of the Enigma machine was a set of plugs, one for each letter. Operators would connect
-pairs of letters using plugs, which would swap letters. If an operator connected the A and K ports, 
-and typed "A" on the keyboard, the signal representing "A" would travel to the switchboard, 
-where it would be transformed into the signal representing "K". </p>
-<p>Typically the Enigma operators would only connect 7-10 pairs of letters, with the remaining 6-12 letters untransformed by the switchboard. 
-The switchboard led to a huge number of possible encryption schemes, and was the single component that made the Enigma diffficult to crack.
-Commercial versions of the Enigma, without the plugboard, were sold to banks and other entities in Germany, but without the plugboard,
-the key space was reduced dramatically, making these codes "easy" to crack.</p>
-<p><img alt="Enigma switchboard illustration" src="/images/enigma_switchboard.jpg" /></p>
-<p>The image above illustrates how a switchboard would work for a simple 8-symbol alphabet "ABCDEFGH". 
-Only 3 of 4 pairings are made in this example. </p>
-<h3>Rotor Wheels</h3>
-<p>The rotor wheels were a set of interchangeable wheels that would perform a substitution cipher. 
-Each wheel corresponded to a particular alphabet in scrambled order (these rotors were not performing simple shift Caesar ciphers).
-Based on the order of the wheels, the signal, representing the letter the operator typed on the keyboard, 
-that came out of the switchboard would undergo three alphabet scrambles (also called affine ciphers).</p>
-<p>Because the wheels rotated with each keypress, the actual Affine cipher used by each wheel changed at each step.</p>
-<p>To complicate the way the rotors turned, the designer of the Enigma added clasps and notches to each rotor at different letters.
-When the notch of one rotor and the clasp of the rotor to the left matched, they would turn together. 
-The right-most wheel rotated once each key press, the center wheel rotated once every 26 key presses, and the left wheel rotated once every 676 key presses.
-Although these rates remained the same due to the number of notches, the exact locations of the notches dictated the timing of the rotations.
-The ordering of the wheels and their initial settings were therefore important to how the message was encrypted or decrypted.</p>
-<p>The German military distributed code books that contained daily settings for the Enigma machines, so that all Enigma operators had the same settings.
-These code books specified which wheels to load into the Enigma (three out of five possible rotors I II III IV and V), as well as the initial rotation to apply to each.</p>
-<p><img alt="Enigma rotor wheels illustration" src="/images/enigma_rotor.jpg" /></p>
-<p>The image above shows how the rotor would work for the 8-character alphabet "ABCDEFGH".
-The wheel has a set arrangement of scrambled letters, but the scramble shifts each time the rotor is advanced.
-This allows 1 wheel to provide as many different scrambles as there are symbols in the alphabet.</p>
-<h3>Reflector</h3>
-<p>Having passed through the three rotor wheels, each scrambling the original character signal input by the operator into the keyboard, the signal then entered the reflector. 
-It did precisely what the name suggests - it reflected a signal back through the machine. 
-Its design was very similar to the switchboard in the front of the machine, except it created 13 pairs of letters, so that every letter was paired with some other letter.
-The reflector, like the rotor wheels, was removable and could be selected from a set. </p>
-<p>The reflector is a curious part of the Enigma design, because it represents an attempt at convenience, which led to a gaping security flaw that Bletchley Park was able to exploit. 
-The nature of the reflector is that it is symmetric: it pairs each letter with some other letter, and the pairings are mutual. 
-If the reflector turns every "P" into "H", it also turns every "H" into "P". 
-This symmetry gives the Enigma the property that you no longer need an "encrypt" or "decrypt" mode: if you take a plaintext message and run it through the Enigma machine once, you'll get the cipher text back. 
-If you run it through the Enigma machine twice, you'll get the same plaintext back. 
-This obviated the need for a switch on the Enigma, to go between "encrypt" and "decrypt" modes.</p>
-<p>However, this property also means that no letter can ever be encoded as itself - a property called derangement. 
-While the switch board at the front and the rotor wheel scrambles would sometimes encode a letter as itself 
-(for example, Rotor I encodes "S" as "S", Rotor II encodes "A" as "A" and "Q" as "Q", and Rotor III encodes "N" as "N"),
-the reflector would never do so. 
-Thus, despite an astronomical number of possible settings, and complicated machinery and circuitry, 
-no matter what the Enigma's settings, no letter would ever be encoded as itself.
-This property can be exploited to rule out the location of certain words or phrases at certain locations in the message,
-which is precisely how Bletchley Park attacked the Enigma cipher.</p>
-<p><img alt="Enigma reflector illustration" src="/images/enigma_reflector.jpg" /></p>
-<p>The image above illustrates a reflector for the 8-symbol alphabet "ABCDEFGH".
-Each of the 4 possible pairings are made, so no letter will be encoded to itself by the reflector.</p>
-<h2>The Enigma and Random Number Generators</h2>
-<p>Had the middle rotor wheels remained stationary, multiple wheels would have been redundant - 
-any arbitrary sequence of alphabet scrambles can be collapsed into a single scramble.
-However, the wheels were designed to rotate at various rates. Each time the wheels rotated,
-it changed the scramble provided by the wheel that had rotated. </p>
-<p>This means the Enigma worked by using a totally different scramble for each character in a message,
-with the scrambles constantly changing, each character, over and over. 
-Because the number of possible scrambles with a 26 character alphabet is <span class="math">\(26! = 403,291,461,126,605,635,584,000,000\)</span>,
-which is a trillion trillions.</p>
-<p>But by using a mechanical device with the same construction and the same common initial settings, 
-operators were able to skip around through the vast key space of possible scrambles as each character was typed into the machine,
-but in a fixed and deterministic way that would allow others to take the same random walk through key space as well.</p>
-<h2>Sources</h2>
-<ol>
-<li>
-<p>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</p>
-</li>
-<li>
-<p>Copeland, B.J. "Alan Turing". Encyclopedia Britannica, Inc. Published 23 February 2016. Accessed 18 March 2017.</p>
-</li>
-<li>
-<p>"Cryptanalysis of the Enigma". Wikipedia: The Free Encyclopedia. Wikimedia Foundation, Inc. Edited 11 January 2017. Accessed 18 March 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma</a>&gt;</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    var location_protocol = (false) ? 'https' : document.location.protocol;
-    if (location_protocol !== 'http' && location_protocol !== 'https') location_protocol = 'https:';
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = location_protocol + '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/ciphers.html">ciphers</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/enigma.html">enigma</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/encryption.html">encryption</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
                 Math Sample
             </b></h1>
         
@@ -1824,16 +1052,10 @@ $$</div>
             <h2>March 2017</h2>
 
             <p class="archive">
-            <a href="/perl-vs-java-n-queens-problem.html">Perl vs. Java: N Queens Problem</a>
-            </p>
-            <p class="archive">
-            <a href="/enigma-cipher-implementation-part-3-enigma-in-java-without-objects.html">Enigma Cipher Implementation: Part 3: Enigma in Java Without Objects</a>
-            </p>
-            <p class="archive">
-            <a href="/enigma-cipher-implementation-part-2-pseudocode.html">Enigma Cipher Implementation: Part 2: Pseudocode</a>
-            </p>
-            <p class="archive">
             <a href="/enigma-cipher-implementation-part-1-how-it-works.html">Enigma Cipher Implementation: Part 1: How It Works</a>
+            </p>
+            <p class="archive">
+            <a href="/perl-vs-java-n-queens-problem.html">Perl vs. Java: N Queens Problem</a>
             </p>
 
         </div>
