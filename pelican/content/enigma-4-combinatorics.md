@@ -1,5 +1,6 @@
 Title: Enigma Cipher Implementation: Part 4: Combinatorics
-Date: 2017-03-23
+Status: draft
+Date: 2017-03-24
 Category: Enigma
 Tags: ciphers, enigma, encryption, java
 
