@@ -5,7 +5,7 @@ Tags: java, perl, algorithms, recursion, n-queens
 
 ## TOC 
 
-* [Background](#background)
+* [Background: Huh?](#background)
 * [N Queens Problem](#nqueensproblem)
 * [N Queens Solution](#nqueenssoln)
   * [Perl Solution](#perlsoln)
@@ -15,14 +15,14 @@ Tags: java, perl, algorithms, recursion, n-queens
 * [Perl Profiling Results](#perlprofresults)
 * [Java Profiling](#javaprof)
 * [Java Profiling Results](#javaprofresults)
-* [Why Java Beat Perl](#whyjavabeatperl)
+* [Apples and Oranges](#applesoranges)
 
 ## Summary
 
 
 
 <a name="background"></a>
-## Background 
+## Background: Huh?
 
 Recently I read an [(11 year old) article](http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html) 
 by Steve Yegge entitled "Execution in the Kingdom of Nouns." In it, Steve describes the way that in Java, 
@@ -482,25 +482,24 @@ Here is a table of the number of solutions found, and number of solutions tried,
 ```
 
 When the wall time for Java and Perl are plotted against the number of solutions tested,
-an interesting trend emerges: the two scale the same way, but Perl has a significant vertical offset.
+an interesting trend emerges: the two scale the same way, with a fixed vertical offset.
 
 ![Graph of walltime versus number of solutions tested](/images/perl-vs-java-2.png)
 
-This seems to be definitive evidence of Java's per-operation performance advantage over Perl
-in solving a problem that primarily consists of arrays and integer math.
+While this is proving what we already knew, 
+that a compiled language beats a scripted language every time,
+it also provides proof Perl can scale as well as Java - 
+it just takes significantly more overhead and time per statement.
 
-<a name="whyjavabeatperl"></a>
+<a name="applesoranges"></a>
 ## Why Java Beat Perl 
 
-Now the real questions emerge... 
+Compiled languages are turned into bytecode and pre-optimized for the processor.
 
-Why did Java beat Perl? Is the JVM just plain faster than the Perl core?
-How deep does the rabbit hole go?
+Perl is a scripted and interpreted language, like Python, evaluated piece by piece.
 
-Also, what is this kind of analysis (log-log plot of walltime versus calculations) called? 
-And what does the slope (a rate of change, or "velocity", of walltime versus number of computations) represent?
-The "velocity" at which calculations will scale? 
-
+So, we didn't learn anything surprising. But we did find an interesting result - 
+Perl can scale as well as Java in its implementation of the N queens recursive backtracking algorithm.
 
 ## Sources
 
