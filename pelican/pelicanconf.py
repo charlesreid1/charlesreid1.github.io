@@ -52,7 +52,7 @@ TEMPLATE_PAGES = {}
 # Blog stuff
 
 # Pagination: posts per page
-DEFAULT_PAGINATION = 3
+DEFAULT_PAGINATION = 10
 
 # Length of summary:
 SUMMARY_MAX_LENGTH = 100
