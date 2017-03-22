@@ -94,7 +94,7 @@
         
             <p class="lead">
                 Posted 
-                <time datetime="2017-03-21T16:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
+                <time datetime="2017-03-24T00:00:00-07:00" pubdate>Friday 03/24/2017</time>
                 in 
                 <a href="/category/enigma.html">Enigma</a>
                 </p>
@@ -120,6 +120,15 @@
         <div class="entry-content"><p>In this, the fourth article in a series on implementing the Enigma cipher in Java,
 we use some big number libraries to explore the combinatorics of the Enigma encryption scheme
 and better understand the Enigma's strengths and weaknesses. </p>
+<h2>Table of Contents</h2>
+<ul>
+<li>The Keyspace</li>
+<li>The Switchboard</li>
+<li>One Cable</li>
+<li>Many Cables</li>
+<li>Accounting for Duplicates</li>
+<li>Final Combination Count Switchboard</li>
+</ul>
 <h2>The Keyspace</h2>
 <p>Basically, what the Enigma did was to encrypt each character of a message one at a time, using a different, unique key for each character. 
 One key corresponded to one particular scrambled version of the alphabet (one possible set of substitutions). 
@@ -139,7 +148,7 @@ Letters could not be connected to themselves, and a wire could only connect two 
 <p>From these constraints, we can get the total number of cable configurations on the front of the machine.
 For a machine with <span class="math">\(S\)</span> symbols (typically 26) and <span class="math">\(N\)</span> patch cables, the total number of configurations is:</p>
 <div class="math">$$
-C = \dfrac{ S! }{ N! \times (S - 2N)! \times 2^N }
+C_{sw} = \dfrac{ S! }{ N! \times (S - 2N)! \times 2^N }
 $$</div>
 <p>Let's break down where those terms are coming from.</p>
 <h3>One Cable</h3>
@@ -166,7 +175,7 @@ S \times (S-1) \times (S-2) \times \dots \times (S - 2N + 1) = \dfrac{ S! }{ (S 
 $$</div>
 <h3>Accounting for Duplicates</h3>
 <p>But where did the <span class="math">\(2^N\)</span> and <span class="math">\(N!\)</span> terms come from? They come from the fact that many choices of wiring configurations are duplicates.</p>
-<p>The <span class="math">\(2^N\)</span> term comes from the fact that the wires are doubled up, so that if A connects to B, B connects to A.
+<p>Dividing by <span class="math">\(2^N\)</span> comes from the fact that the wires are doubled up: if A connects to B, B connects to A.
 This means that when we choose our pair and connect A to B using a wire, we also connect B to A. 
 Even though it looks like two choices, it is only one!</p>
 <p>Meanwhile, the <span class="math">\(N!\)</span> term accounts for the fact that order is not important when we select pairs and place wires -
@@ -174,22 +183,32 @@ making the choice to connect A to B and then making the choice to connect C to D
 is entirely equivalent to connecting C to D, then connecting A to B.
 This means that <span class="math">\(N!\)</span> of the <span class="math">\(S!\)</span> possible solutions are duplicate configurations 
 with the same connections chosen in a different order.</p>
+<h3>Final Combination Count Switchboard</h3>
+<p>For a switchboard with holes for each of <span class="math">\(S\)</span> symbols, with <span class="math">\(N\)</span> unique pairs of letters chosen from among the symbols to be swapped by the switchboard,
+the number of possible combinations of ciphers with <span class="math">\(N\)</span> wires is:</p>
+<div class="math">$$
+C_{sw} = \dfrac{ S! }{ N! \times (S - 2N)! \times 2^N }
+$$</div>
 <h2>The Rotors</h2>
 <p>Typical Enigma machines had three rotors, with each rotor implementing a different scrambled alphabet.
 Assuming there are P possible rotors to choose from, the number of choices
 when selecting R rotors from P possible rotors is given by:</p>
 <div class="math">$$
-C = \dfrac{P!}{(P-R)!}
+C_{rot} = \dfrac{P!}{(P-R)!}
 $$</div>
 <p>If the rotors are known, <span class="math">\(P\)</span> and <span class="math">\(R\)</span> are small numbers like 8 and 3, 
 yielding a modest number of possible rotor combinations (336).
 If the number of rotors is unknown, however, P becomes the set of all possible rotors
 (the set of all possible alphabet scrambles), which is S!. Then we take the factorial of this number,</p>
 <div class="math">$$
-C = \frac{(S!)!}{(S!-R)!}
+C_{rot} = \frac{(S!)!}{(S!-R)!}
 $$</div>
-<p>Note that the numerator <span class="math">\((S!)!\)</span> is a double factorial. For <span class="math">\(S=26\)</span>, the numerator can be written as 
-<span class="math">\(403291461126605635584000000!\)</span>, which is <em>probably</em> the biggest number you've ever seen in your life. 
+<p>Note that the numerator <span class="math">\((S!)!\)</span> is a double factorial. <a href="http://www.wolframalpha.com/input/?i=(26!)!">Here's how Wolfram Alpha describes 26 double-factorial (26!)!</a></p>
+<div class="math">$$
+10^{10^{28}}
+$$</div>
+<p>This can also be written as <span class="math">\(403291461126605635584000000!\)</span>.
+This is a number with 10^28 digits. That's <em>probably</em> the biggest number you've ever seen in your life. 
 The denominator is also pretty big, though. For small values of R, this is approximately <span class="math">\((S!)^R\)</span>.
 For a 26-character alphabet with 3 rotors, that's</p>
 <div class="math">$$
@@ -198,11 +217,35 @@ $$</div>
 <p>which is a keyspace with more keys than there are <a href="https://en.wikipedia.org/wiki/Eddington_number">protons in the universe (the Eddington number)</a>.</p>
 <p>In addition, each wheel had notches at different locations. The notches change the path the Enigma takes through the key space. 
 For <span class="math">\(R\)</span> rotors containing <span class="math">\(S\)</span> symbols, the total combinations increases by a factor of <span class="math">\({S}^{R-1}\)</span>.
-If there are <span class="math">\(M\)</span> notches, that factor is <span class="math">\({MS}^{R-1}\)</span>.
+If each wheel has <span class="math">\(M\)</span> notches, that factor is <span class="math">\({(MS)}^{R-1}\)</span>.
 (The <span class="math">\(R-1\)</span> comes from the fact that the location of the notch on the last wheel has no effect.)</p>
-<p>This makes the total number of rotor combinations:</p>
+<h3>Final Combination Count for Rotors</h3>
+<p>The total number of combinations for <span class="math">\(R\)</span> rotors with <span class="math">\(S\)</span> symbols and <span class="math">\(M\)</span> notches (which advance the neighboring left wheel by one), 
+chosen from among <span class="math">\(P\)</span> possible choices of rotors, is given by:</p>
 <div class="math">$$
-C = S^{R-1} \dfrac{P!}{(P-R)!}
+C_{rot} = S^{R-1} \dfrac{P!}{(P-R)!}
+$$</div>
+<p><strong>NOTE:</strong> For a very large set of possible rotors <span class="math">\(P\)</span>, (<span class="math">\(P &gt;&gt; R\)</span>), </p>
+<div class="math">$$
+\dfrac{P!}{(P-R}!} \approx P^R
+$$</div>
+<p>so it follows that </p>
+<div class="math">$$
+C_{rot} \approx S^{R-1} P^R \for P &gt;&gt; R
+$$</div>
+<p>(For example, if <span class="math">\(P = S!\)</span>, the set of all possible rotors.)</p>
+<h2>Reflector</h2>
+<p>Like the switchboard on the front of the Enigma, the reflector connected pairs of letters.
+It could only be changed by swapping it out like a rotor, so there were a small number of mechanically produced reflectors
+chosen from the set of all possible reflectors.</p>
+<p>If a reflector pairs all letters with another letter, it makes <span class="math">\(N = \frac{S}{2}\)</span> possible pairs. 
+Using the analysis we performed above for the switchboard, and plugging that in, and using <span class="math">\(0!=1\)</span>:</p>
+<div class="math">$$
+C_{ref} = \dfrac{ S! }{ (\frac{S}{2})! \times (S - 2(\frac{S}{2}))! \times 2^S } = \dfrac{S!}{(\frac{S}{2})! 2^S}
+$$</div>
+<p>For the 26 characters in the English alphabet, that's:</p>
+<div class="math">$$
+\frac{26!}{13!} = 64,764,752,532,480,000
 $$</div>
 <h2>Sources</h2>
 <ol>
@@ -219,11 +262,13 @@ $$</div>
         indent = (screen.width < 768) ? "0em" : indent;
         linebreak = (screen.width < 768) ? 'true' : linebreak;
     }
-    
+
     var mathjaxscript = document.createElement('script');
+    var location_protocol = (false) ? 'https' : document.location.protocol;
+    if (location_protocol !== 'http' && location_protocol !== 'https') location_protocol = 'https:';
     mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
     mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript.src = location_protocol + '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
     mathjaxscript[(window.opera ? "innerHTML" : "text")] =
         "MathJax.Hub.Config({" +
         "    config: ['MMLorHTML.js']," +
@@ -233,6 +278,7 @@ $$</div>
         "    displayAlign: '"+ align +"'," +
         "    displayIndent: '"+ indent +"'," +
         "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
         "    tex2jax: { " +
         "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
         "        displayMath: [ ['$$','$$'] ]," +
