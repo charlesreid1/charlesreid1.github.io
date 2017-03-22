@@ -1,12 +1,21 @@
 Title: Enigma Cipher Implementation: Part 4: Combinatorics
-Status: draft
-Date: 2017-03-21 16:00
+Date: 2017-03-23
 Category: Enigma
 Tags: ciphers, enigma, encryption, java
 
 In this, the fourth article in a series on implementing the Enigma cipher in Java,
 we use some big number libraries to explore the combinatorics of the Enigma encryption scheme
 and better understand the Enigma's strengths and weaknesses. 
+
+## Table of Contents
+
+* The Keyspace
+* The Switchboard
+  * One Cable
+  * Many Cables
+  * Accounting for Duplicates
+  * Final Combination Count Switchboard
+
 
 ## The Keyspace
 
@@ -33,8 +42,9 @@ From these constraints, we can get the total number of cable configurations on t
 For a machine with $S$ symbols (typically 26) and $N$ patch cables, the total number of configurations is:
 
 $$
-C = \dfrac{ S! }{ N! \times (S - 2N)! \times 2^N }
+C_{sw} = \dfrac{ S! }{ N! \times (S - 2N)! \times 2^N }
 $$
+
 
 Let's break down where those terms are coming from.
 
@@ -75,7 +85,7 @@ $$
 
 But where did the $2^N$ and $N!$ terms come from? They come from the fact that many choices of wiring configurations are duplicates.
 
-The $2^N$ term comes from the fact that the wires are doubled up, so that if A connects to B, B connects to A.
+Dividing by $2^N$ comes from the fact that the wires are doubled up: if A connects to B, B connects to A.
 This means that when we choose our pair and connect A to B using a wire, we also connect B to A. 
 Even though it looks like two choices, it is only one!
 
@@ -85,6 +95,14 @@ is entirely equivalent to connecting C to D, then connecting A to B.
 This means that $N!$ of the $S!$ possible solutions are duplicate configurations 
 with the same connections chosen in a different order.
 
+### Final Combination Count Switchboard
+
+For a switchboard with holes for each of $S$ symbols, with $N$ unique pairs of letters chosen from among the symbols to be swapped by the switchboard,
+the number of possible combinations of ciphers with $N$ wires is:
+
+$$
+C_{sw} = \dfrac{ S! }{ N! \times (S - 2N)! \times 2^N }
+$$
 
 ## The Rotors
 
@@ -93,8 +111,9 @@ Assuming there are P possible rotors to choose from, the number of choices
 when selecting R rotors from P possible rotors is given by:
 
 $$
-C = \dfrac{P!}{(P-R)!}
+C_{rot} = \dfrac{P!}{(P-R)!}
 $$
+
 
 If the rotors are known, $P$ and $R$ are small numbers like 8 and 3, 
 yielding a modest number of possible rotor combinations (336).
@@ -102,11 +121,17 @@ If the number of rotors is unknown, however, P becomes the set of all possible r
 (the set of all possible alphabet scrambles), which is S!. Then we take the factorial of this number,
 
 $$
-C = \frac{(S!)!}{(S!-R)!}
+C_{rot} = \frac{(S!)!}{(S!-R)!}
 $$
 
-Note that the numerator $(S!)!$ is a double factorial. For $S=26$, the numerator can be written as 
-$403291461126605635584000000!$, which is *probably* the biggest number you've ever seen in your life. 
+Note that the numerator $(S!)!$ is a double factorial. [Here's how Wolfram Alpha describes 26 double-factorial (26!)!](http://www.wolframalpha.com/input/?i=(26!)!)
+
+$$
+10^{10^{28}}
+$$
+
+This can also be written as $403291461126605635584000000!$.
+This is a number with 10^28 digits. That's *probably* the biggest number you've ever seen in your life. 
 The denominator is also pretty big, though. For small values of R, this is approximately $(S!)^R$.
 For a 26-character alphabet with 3 rotors, that's
 
@@ -118,19 +143,58 @@ which is a keyspace with more keys than there are [protons in the universe (the 
 
 In addition, each wheel had notches at different locations. The notches change the path the Enigma takes through the key space. 
 For $R$ rotors containing $S$ symbols, the total combinations increases by a factor of ${S}^{R-1}$.
-If there are $M$ notches, that factor is ${MS}^{R-1}$.
+If each wheel has $M$ notches, that factor is ${(MS)}^{R-1}$.
 (The $R-1$ comes from the fact that the location of the notch on the last wheel has no effect.)
 
-This makes the total number of rotor combinations:
+### Final Combination Count for Rotors
+
+The total number of combinations for $R$ rotors with $S$ symbols and $M$ notches (which advance the neighboring left wheel by one), 
+chosen from among $P$ possible choices of rotors, is given by:
 
 $$
-C = S^{R-1} \dfrac{P!}{(P-R)!}
+C_{rot} = S^{R-1} \dfrac{P!}{(P-R)!}
 $$
 
+**NOTE:** For a very large set of possible rotors $P$, ($P >> R$), 
 
+$$
+\dfrac{P!}{(P-R}!} \approx P^R
+$$
+
+so it follows that 
+
+$$
+C_{rot} \approx S^{R-1} P^R \for P >> R
+$$
+
+(For example, if $P = S!$, the set of all possible rotors.)
+
+
+
+## Reflector 
+
+Like the switchboard on the front of the Enigma, the reflector connected pairs of letters.
+It could only be changed by swapping it out like a rotor, so there were a small number of mechanically produced reflectors
+chosen from the set of all possible reflectors.
+
+If a reflector pairs all letters with another letter, it makes $N = \frac{S}{2}$ possible pairs. 
+Using the analysis we performed above for the switchboard, and plugging that in, and using $0!=1$:
+
+$$
+C_{ref} = \dfrac{ S! }{ (\frac{S}{2})! \times (S - 2(\frac{S}{2}))! \times 2^S } = \dfrac{S!}{(\frac{S}{2})! 2^S}
+$$
+
+For the 26 characters in the English alphabet, that's:
+
+$$
+\frac{26!}{13!} = 64,764,752,532,480,000
+$$
 
 ## Sources
 
 1. "The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
 <[https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm](https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm)>
+
+
+
 

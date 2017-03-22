@@ -1,5 +1,5 @@
 Title: Enigma Cipher Implementation: Part 1: How It Works 
-Date: 2017-03-21 13:00
+Date: 2017-03-20 
 Category: Enigma
 Tags: ciphers, enigma, encryption
 
@@ -117,9 +117,6 @@ which is precisely how Bletchley Park attacked the Enigma cipher.
 The image above illustrates a reflector for the 8-symbol alphabet "ABCDEFGH".
 Each of the 4 possible pairings are made, so no letter will be encoded to itself by the reflector.
 
-
-## The Enigma and Random Number Generators
-
 Had the middle rotor wheels remained stationary, multiple wheels would have been redundant - 
 any arbitrary sequence of alphabet scrambles can be collapsed into a single scramble.
 However, the wheels were designed to rotate at various rates. Each time the wheels rotated,
@@ -130,9 +127,20 @@ with the scrambles constantly changing, each character, over and over.
 Because the number of possible scrambles with a 26 character alphabet is $26! = 403,291,461,126,605,635,584,000,000$,
 which is a trillion trillions.
 
-But by using a mechanical device with the same construction and the same common initial settings, 
-operators were able to skip around through the vast key space of possible scrambles as each character was typed into the machine,
-but in a fixed and deterministic way that would allow others to take the same random walk through key space as well.
+## The Enigma and Random Number Generators
+
+By using a mechanical device with the same construction and the same common initial settings, 
+operators were able to generate random keys from an astronomical range of permutations, 
+but in a mechanically reproducible way. 
+
+This makes Enigmas much like a random number generator, with the initial settings being the seed.
+If there are 32 or 64 bits used to store a number, that's 32 or 64 bits of randomness. 
+Large numbers of combinations indeed.
+
+
+
+
+
 
 ## Sources
 
