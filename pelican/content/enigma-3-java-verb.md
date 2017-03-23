@@ -1,5 +1,5 @@
 Title: Enigma Cipher Implementation: Part 3: Enigma in Java Without Objects
-Date: 2017-03-23
+Date: 2017-03-22 18:00
 Category: Enigma
 Tags: ciphers, enigma, encryption, java
 

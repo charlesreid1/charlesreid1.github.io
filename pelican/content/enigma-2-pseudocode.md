@@ -1,5 +1,5 @@
 Title: Enigma Cipher Implementation: Part 2: Pseudocode
-Date: 2017-03-22
+Date: 2017-03-21 21:00
 Category: Enigma
 Tags: ciphers, enigma, encryption
 
