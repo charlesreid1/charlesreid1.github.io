@@ -1,5 +1,5 @@
 Title: Enigma Cipher Implementation: Part 1: How It Works 
-Date: 2017-03-20 
+Date: 2017-03-21 
 Category: Enigma
 Tags: ciphers, enigma, encryption
 

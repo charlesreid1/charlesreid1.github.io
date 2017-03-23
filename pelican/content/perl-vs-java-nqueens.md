@@ -1,5 +1,5 @@
 Title: Perl vs. Java: N Queens Problem
-Date: 2017-03-23
+Date: 2017-03-24
 Category: Java
 Tags: java, perl, algorithms, recursion, n-queens
 
