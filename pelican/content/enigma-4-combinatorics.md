@@ -22,6 +22,7 @@ and better understand the Enigma's strengths and weaknesses.
 	* [Final Combination Count for Reflector](#finalreflector)
 * [Final Enigma Combination Count](#finalcount)
 	* [Java BigInteger Combinations Program](#javabigint)
+* [Sources](#sources)
 
 
 <a name="keyspace"></a>
@@ -357,6 +358,8 @@ Supposing there were Q reflectors in use, that would make for Q possible sets of
 Since the reflectors did not rotate, this would lead to only 1 possible reflector position, meaning a choice from among
 Q reflectors only multiplied the number of possible combinations by Q.
 
+<a name="finalreflector"></a>
+
 ### Final Combination Count for Reflector
 
 Here is the final expression for the total number of combinations resulting from all possible rotors:
@@ -371,6 +374,8 @@ $$
 C_{rfl} = Q
 $$
 
+
+<a name="finalcount"></a>
 
 ## Final Enigma Combination Count
 
@@ -420,6 +425,9 @@ that made cracking via frequency analysis much more difficult.
 But that's enough for one post!
 
 Below you can find a Java program that uses the BigInteger class, part of the Java API, to perform calculations with extremely large numbers.
+
+
+<a name="javabigint"></a>
 
 ### Java BigInteger Program
 
@@ -598,13 +606,13 @@ Final number of (big) Enigma combinations:
 ```
 
 
-
+<a name="sources"></a>
 
 ## Sources
 
 1. "The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
 <[https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm](https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm)>
 
-
-
+2. "BigInteger". Oracle Corporation. Copyright 1993-2016, Publication date unknown. Accessed 22 March 2017.
+<[https://docs.oracle.com/javase/8/docs/api/java/math/BigInteger.html](https://docs.oracle.com/javase/8/docs/api/java/math/BigInteger.html)>
 
