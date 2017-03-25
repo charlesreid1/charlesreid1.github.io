@@ -588,6 +588,15 @@ public class Combos {
 
 ```
 
+Output of the program:
+
+```
+Final number of (small) Enigma combinations:
+537,293,436,636,253,096,800,000
+Final number of (big) Enigma combinations:
+422,732,921,460,335,478,939,047,043,039,799,222,455,533,136,281,221,092,624,796,865,514,111,348,059,884,989,972,480,000,000,000,000,000,000,000,000
+```
+
 
 
 
