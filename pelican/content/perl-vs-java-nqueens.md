@@ -1,6 +1,6 @@
 Title: Perl vs. Java: N Queens Problem
 Date: 2017-03-22 22:00
-Category: Java
+Category: Computer Science
 Tags: java, perl, algorithms, recursion, n-queens
 
 ## TOC 
@@ -15,7 +15,9 @@ Tags: java, perl, algorithms, recursion, n-queens
 * [Perl Profiling Results](#perlprofresults)
 * [Java Profiling](#javaprof)
 * [Java Profiling Results](#javaprofresults)
+* [Head to Head: Walltime vs. Number of Solutions Tested](#h2hntested)
 * [Apples and Oranges](#applesoranges)
+* [Soures](#sources)
 
 ## Summary
 
@@ -243,7 +245,7 @@ This is the only use of non-array objects and has a trivial impact on the soluti
 <a name="h2hnqueens"></a>
 ## Head to Head: Walltime vs. Number of Queens 
 
-![Graph of walltime versus number of queens](/images/perl-vs-java.png)
+![Graph of walltime versus number of queens](/images/perl-vs-java-nqueens.png)
 
 ```
 -----------------------------------------------
@@ -458,7 +460,9 @@ SITES END
 HPROF tells us that over 86% of the time spent on this program was spent accessing integer arrays.
 Again, confirmation that we are getting a fair measurement of Java's performance with a core data type, the integer array.
 
-## Head to Head: Walltime vs. Operation Count
+<a name="h2hntested"></a>
+
+## Head to Head: Walltime vs. Number of Solutions Tested
 
 Using the results of the profilers from each N queens problem, `N = 8 .. 15`, 
 I extracted the total number of solutions tried, and confirmed that these numbers were the same 
@@ -484,7 +488,7 @@ Here is a table of the number of solutions found, and number of solutions tried,
 When the wall time for Java and Perl are plotted against the number of solutions tested,
 an interesting trend emerges: the two scale the same way, with a fixed vertical offset.
 
-![Graph of walltime versus number of solutions tested](/images/perl-vs-java-2.png)
+![Graph of walltime versus number of solutions tested](/images/perl-vs-java-ntested.png)
 
 While this is proving what we already knew, 
 that a compiled language beats a scripted language every time,
@@ -501,6 +505,9 @@ Perl is a scripted and interpreted language, like Python, evaluated piece by pie
 So, we didn't learn anything surprising. But we did find an interesting result - 
 Perl can scale as well as Java in its implementation of the N queens recursive backtracking algorithm.
 
+
+<a name="sources"></a>
+
 ## Sources
 
 1. "Execution in the Kingdom of Nouns". Steve Yegge. March 2006. Accessed 18 March 2017.
@@ -509,10 +516,10 @@ Perl can scale as well as Java in its implementation of the N queens recursive b
 2. "N-Queens Problem". Rosetta Code, GNU Free Documentation License. Edited 6 March 2017. Accessed 21 March 2017.
 <[https://web.archive.org/web/20170320081421/http://rosettacode.org/wiki/N-queens_problem](https://web.archive.org/web/20170320081421/http://rosettacode.org/wiki/N-queens_problem)>
 
-3. "nqueens.pl". Github Gist. Edited 20 March 2017. Acessed 20 March 2017.
+3. "nqueens.pl". Charles Reid. Github Gist, Github Inc. Edited 20 March 2017. Accessed 20 March 2017.
 <[https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535](https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535)>
 
-4. "NQueens.java". Github Gist. Edited 20 March 2017. Acessed 20 March 2017.
+4. "NQueens.java". Charles Reid. Github Gist, Github Inc. Edited 20 March 2017. Accessed 20 March 2017.
 <[https://gist.github.com/charlesreid1/7b8d7b9dffb7b3090039849d72c5fff5](https://gist.github.com/charlesreid1/7b8d7b9dffb7b3090039849d72c5fff5)>
 
 5. "Devel::NYTProf". Adam Kaplan, Tim Bunce. Copyright 2008-2016, Tim Bunce. Published 4 March 2008. Accessed 20 March 2017.
