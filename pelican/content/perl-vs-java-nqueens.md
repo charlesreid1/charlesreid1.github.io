@@ -17,7 +17,7 @@ Tags: java, perl, algorithms, recursion, n-queens
 * [Java Profiling Results](#javaprofresults)
 * [Head to Head: Walltime vs. Number of Solutions Tested](#h2hntested)
 * [Apples and Oranges](#applesoranges)
-* [Soures](#sources)
+* [Sources](#sources)
 
 ## Summary
 

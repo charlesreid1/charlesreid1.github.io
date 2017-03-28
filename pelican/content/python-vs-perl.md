@@ -16,7 +16,7 @@ Tags: python, perl, java, algorithms, recursion, n-queens
 * [Comparing Python to Perl](#pythonperl)
 * [Python vs. Perl: Walltime vs. Number of Solutions Tested](#h2hops)
 * [The Winner: Perl for Small Problems, Python for Big Ones](#winner)
-* [Soures](#sources)
+* [Sources](#sources)
 
 ## Summary
 

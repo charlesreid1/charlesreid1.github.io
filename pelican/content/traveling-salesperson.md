@@ -1,7 +1,7 @@
 Title: Solving the Traveling Salesperson Problem with Java and Guava
 Date: 2017-03-23 11:00
 Category: Java
-Tags: computer science, guava, graph, traveling salesperson problem
+Tags: computer science, guava, graph, TSP
 
 
 * [Background: Traveling Salesperson Problem (TSP)](#bkg)
