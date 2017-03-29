@@ -291,10 +291,16 @@ $$
 This can also be written as $403291461126605635584000000!$.
 This is a number with 10^28 digits. That's *probably* the biggest number you've ever seen in your life. 
 The denominator is also pretty big, though. For small values of R, this is approximately $(S!)^R$.
-For a 26-character alphabet with 3 rotors, that's approximately
+For a 26-character alphabet with 3 rotors, that is approximately
 
 $$
-(403,291,461,126,605,635,584,000,000)^3 = 65,592,937,459,144,468,297,405,473,968,303,761,468,794,234,820,105,359,750,856,704,000,000,000,000,000,000
+(403,291,461,126,605,635,584,000,000)^3 
+$$
+
+or
+
+$$
+65,592,937,459,144,468,297,405,473,968,303,761,468,794,234,820,105,359,750,856,704,000,000,000,000,000,000
 $$
 
 which is a key space with more keys than there are [protons in the universe (the Eddington number)](https://en.wikipedia.org/wiki/Eddington_number).
