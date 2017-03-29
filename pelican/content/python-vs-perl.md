@@ -3,25 +3,24 @@ Date: 2017-03-25 20:00
 Category: Computer Science
 Tags: python, perl, java, algorithms, recursion, n-queens
 
-## TOC 
+## Table of Contents
 
-* [Background](#background)
-* [N Queens Revisited](#nqueens)
-* [Perl Solution](#perlsoln)
-* [Python Solution](#pythonsoln)
-* [Python vs. Perl: Walltime vs. Number of Queens](#h2hnqueens)
-* [Perl Profiling and Results](#perlprof)
-* [Python Profiling](#pythonprof)
-* [Python Profiling Results](#pythonprofresults)
-* [Comparing Python to Perl](#pythonperl)
-* [Python vs. Perl: Walltime vs. Number of Solutions Tested](#h2hops)
-* [The Winner: Perl for Small Problems, Python for Big Ones](#winner)
-* [Sources](#sources)
-
-## Summary
+* [Background](#pvp-background)
+* [N Queens Revisited](#pvp-nqueens)
+* [Perl Solution](#pvp-perlsoln)
+* [Python Solution](#pvp-pythonsoln)
+* [Python vs. Perl: Walltime vs. Number of Queens](#pvp-h2hnqueens)
+* [Perl Profiling and Results](#pvp-perlprof)
+* [Python Profiling](#pvp-pythonprof)
+* [Python Profiling Results](#pvp-pythonprofresults)
+* [Comparing Python to Perl](#pvp-pythonperl)
+* [Python vs. Perl: Walltime vs. Number of Solutions Tested](#pvp-h2hops)
+* [The Winner: Perl for Small Problems, Python for Big Ones](#pvp-winner)
+* [Sources](#pvp-sources)
 
 
-<a name="background"></a>
+
+<a name="pvp-background"></a>
 
 ## Background 
 
@@ -33,7 +32,7 @@ More fair comparison - both are interpreted languages, not compiled languages
 
 Compare Python and Perl, ease of implementation, speed, flexibility
 
-<a name="nqueensproblem"></a>
+<a name="pvp-nqueensproblem"></a>
 
 ## N Queens Problem
 
@@ -45,7 +44,7 @@ This is a popular problem in computer science because solutions often implement 
 
 See [the Wikipedia article](https://en.wikipedia.org/wiki/N_Queens_Problem) for details.
 
-<a name="nqueenssoln"></a>
+<a name="pvp-nqueenssoln"></a>
 
 ## N Queens Solution
 
@@ -69,7 +68,7 @@ This solution implements recursive backtracking to explore choices of where to p
 It keeps solutions simple, and can be implemented using only primitive built-in data types.
 Solutions are stringified version of these arrays, consisting of 8 digits, so they are likewise very simple.
 
-<a name="perlsoln"></a>
+<a name="pvp-perlsoln"></a>
 
 ### Perl Solution
 
@@ -78,7 +77,7 @@ Here's another link to the Perl solution on Github.
 
 [Github gist: nqueens.pl](https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535)
 
-<a name="pythonsoln"></a>
+<a name="pvp-pythonsoln"></a>
 
 ### Python Solution
 
@@ -93,7 +92,7 @@ It utilizes buit-in methods for the list data type to append and pop, or add and
 [Github gist: nqueens.py](https://gist.github.com/charlesreid1/1a2ecb3a83284290d4a9daf747d0d7e4)
 
 
-<a name="h2hnqueens"></a>
+<a name="pvp-h2hnqueens"></a>
 
 ## Head to Head: Walltime vs. Number of Queens 
 
@@ -117,7 +116,7 @@ It utilizes buit-in methods for the list data type to append and pop, or add and
 The results of this test show that Python and Perl
 are fairly closely matched.
 
-<a name="perlprof"></a>
+<a name="pvp-perlprof"></a>
 
 ## Perl Profiling 
 
@@ -150,7 +149,7 @@ for the 11 queens problem:
 ```
 
 
-<a name="pythonprof"></a>
+<a name="pvp-pythonprof"></a>
 
 ## Python Profiling
 
@@ -163,7 +162,7 @@ The `line_profiler` tool is designed to profile Python code line-by-line, which 
 breakdown of where the code spent all of its time. It is also helpful because this can be compared one-to-one
 with the results from Perl, and we can get an equal basis for comparing the two languages.
 
-<a name="pythonprofresults"></a>
+<a name="pvp-pythonprofresults"></a>
 
 ## Python Profiling Results
 
@@ -251,7 +250,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 
 
 
-<a name="h2hopts"></a>
+<a name="pvp-h2hopts"></a>
 
 ## Python vs Perl: Walltime vs. Number of Solutions Tested
 
@@ -276,7 +275,7 @@ Here is that table of the number of solutions for each value of N, together with
 ![Graph of walltime versus number of solutions tested](/images/python-vs-perl-ntested.png)
 
 
-<a name="winner"></a>
+<a name="pvp-winner"></a>
 
 ## The Winner: Perl for Small Problems, Python for Big Ones
 
@@ -290,6 +289,8 @@ and Python came out ahead on the biggest, a different CPU or platform, micro-opt
 could easily turn the tables. 
 
 
+
+<a name="pvp-sources"></a>
 
 ## Sources
 

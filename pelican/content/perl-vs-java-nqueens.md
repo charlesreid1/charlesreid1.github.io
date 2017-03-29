@@ -5,25 +5,25 @@ Tags: java, perl, algorithms, recursion, n-queens
 
 ## TOC 
 
-* [Background: Huh?](#background)
-* [N Queens Problem](#nqueensproblem)
-* [N Queens Solution](#nqueenssoln)
-	* [Perl Solution](#perlsoln)
-  	* [Java Solution](#javasoln)
-* [Head to Head: Walltime vs. Number of Queens](#h2hnqueens)
-* [Perl Profiling](#perlprof)
-* [Perl Profiling Results](#perlprofresults)
-* [Java Profiling](#javaprof)
-* [Java Profiling Results](#javaprofresults)
-* [Head to Head: Walltime vs. Number of Solutions Tested](#h2hntested)
-* [Apples and Oranges](#applesoranges)
-* [Sources](#sources)
+* [Background: Huh?](#pvj-background)
+* [N Queens Problem](#pvj-nqueensproblem)
+* [N Queens Solution](#pvj-nqueenssoln)
+	* [Perl Solution](#pvj-perlsoln)
+  	* [Java Solution](#pvj-javasoln)
+* [Head to Head: Walltime vs. Number of Queens](#pvj-h2hnqueens)
+* [Perl Profiling](#pvj-perlprof)
+* [Perl Profiling Results](#pvj-perlprofresults)
+* [Java Profiling](#pvj-javaprof)
+* [Java Profiling Results](#pvj-javaprofresults)
+* [Head to Head: Walltime vs. Number of Solutions Tested](#pvj-h2hntested)
+* [Apples and Oranges](#pvj-applesoranges)
+* [Sources](#pvj-sources)
 
 ## Summary
 
 
 
-<a name="background"></a>
+<a name="pvj-background"></a>
 ## Background: Huh?
 
 Recently I read an [(11 year old) article](http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html) 
@@ -48,7 +48,7 @@ Right...
 So here's the plan: study a verb-oriented implementation of this canonical, deceptively subtle programming problem in Perl; 
 translate it into a verb-oriented Java program; and run the two head-to-head, using a profiler to understand the results.
 
-<a name="nqueensproblem"></a>
+<a name="pvj-nqueensproblem"></a>
 ## N Queens Problem
 
 The N queens problem predates computers - it's a chess puzzle that asks: how many ways can you place 8 queens on a chessboard
@@ -101,7 +101,7 @@ This covers each precondition for a solved board, and allows the base case of th
 
 Now, let's get to the solution algorithm.
 
-<a name="nqueenssoln"></a>
+<a name="pvj-nqueenssoln"></a>
 ## N Queens Solution
 
 As a recap, we dusted off our Perl skills to utilize an N queens solution in Perl from [Rosetta Code](http://rosettacode.org/wiki/N-queens_problem#Perl).
@@ -126,7 +126,7 @@ Both codes use integer arrays to keep track of where queens are placed.
 Solutions are stringified version of these arrays, consisting of 8 digits.
 
 
-<a name="perlsoln"></a>
+<a name="pvj-perlsoln"></a>
 ### Perl Solution
 
 After looking at the Rosetta Code solution for a (long) while and marking it up with comments to understand what it was doing, 
@@ -226,7 +226,7 @@ print "total ", scalar(@solutions), " solutions\n";
 
 
 
-<a name="javasoln"></a>
+<a name="pvj-javasoln"></a>
 ### Java Solution
 
 Starting with the Rosetta Code solution in Perl, I translated the algorithm into Java, sticking as closely as possible to the Way of the Verb.
@@ -242,7 +242,7 @@ This is the only use of non-array objects and has a trivial impact on the soluti
 (Verbatim code not included for length.)
 
 
-<a name="h2hnqueens"></a>
+<a name="pvj-h2hnqueens"></a>
 ## Head to Head: Walltime vs. Number of Queens 
 
 ![Graph of walltime versus number of queens](/images/perl-vs-java-nqueens.png)
@@ -273,7 +273,7 @@ and Java becomes the clear winner.
 
 We can dig deeper and understand this comparison better by using some profiling tools.
 
-<a name="perlprof"></a>
+<a name="pvj-perlprof"></a>
 ## Perl Profiling 
 
 I profiled Perl with `Devel::NYTProf` , 
@@ -304,7 +304,7 @@ $ nytprofcsv nytprof.out
 This puts the CSV file in a folder called `nytprof/`.
 
 
-<a name="perlprofresults"></a>
+<a name="pvj-perlprofresults"></a>
 ## Perl Profiling Results
 
 The CSV output of the NYTProf module gives a breakdown of 
@@ -353,7 +353,7 @@ excluding the deepest depth of the tree (the base recursive case).
 The Java profiler will show us that Java explores the exact same number of solutions,
 which is confirmation that these tests are comparing the two languages on equal footing.
 
-<a name="javaprof"></a>
+<a name="pvj-javaprof"></a>
 ## Java Profiling 
 
 More details about the profiling tools I used for Java are on the charlesreid1 wiki at 
@@ -396,7 +396,7 @@ The most useful, though, is at the end, so use tail to get a quick overview of t
 $ tail -n 100 java.hprof.txt
 ```
 
-<a name="javaprof"></a>
+<a name="pvj-javaprof"></a>
 ## Java Profiling Results
 
 The profiling results from JIP for the 11 queens problem are shown below.
@@ -460,7 +460,7 @@ SITES END
 HPROF tells us that over 86% of the time spent on this program was spent accessing integer arrays.
 Again, confirmation that we are getting a fair measurement of Java's performance with a core data type, the integer array.
 
-<a name="h2hntested"></a>
+<a name="pvj-h2hntested"></a>
 
 ## Head to Head: Walltime vs. Number of Solutions Tested
 
@@ -495,7 +495,7 @@ that a compiled language beats a scripted language every time,
 it also provides proof Perl can scale as well as Java - 
 it just takes significantly more overhead and time per statement.
 
-<a name="applesoranges"></a>
+<a name="pvj-applesoranges"></a>
 ## Why Java Beat Perl 
 
 Compiled languages are turned into bytecode and pre-optimized for the processor.
@@ -506,7 +506,7 @@ So, we didn't learn anything surprising. But we did find an interesting result -
 Perl can scale as well as Java in its implementation of the N queens recursive backtracking algorithm.
 
 
-<a name="sources"></a>
+<a name="pvj-sources"></a>
 
 ## Sources
 
