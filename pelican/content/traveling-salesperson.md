@@ -4,27 +4,31 @@ Category: Java
 Tags: computer science, guava, graph, TSP
 
 
-* [Background: Traveling Salesperson Problem (TSP)](#bkg)
-* [Graphs](#graphs)
-	* [Number of Edges](#nedges)
-* [Solution: Recursive Backtracking](#bktk) 
-* [Solving the TSP with Java and Guava](#guava) 
-	* [Basics of Guava](#basic-guava)
-	* [Guava Graphs](#guava-graphs)
-	* [Guava Mutable vs Immutable](#guava-mutable-immutable)
-	* [Importing Guava](#importing-guava)
-	* [TSP Class](#tsp-class)
-	* [Node Class](#node-class)
-	* [Edge Class](#edge-class)
-* [TSP Constructor and Building the Graph](#building-graph)
-	* [Constructor](#constructor)
-	* [Build Graph Method](#build-graph-method)
-* [Solving and Exploring with Recursive Backtracking](#solving-exploring)
-	* [Solve Method](#solve)
-	* [Explore (Backtrack) Method](#explore)
+## Table of Contents
+
+* [Background: Traveling Salesperson Problem (TSP)](#tsp1-bkg)
+* [Graphs](#tsp1-graphs)
+	* [Number of Edges](#tsp1-nedges)
+* [Solution: Recursive Backtracking](#tsp1-bktk) 
+* [Solving the TSP with Java and Guava](#tsp1-guava) 
+	* [Basics of Guava](#tsp1-basic-guava)
+	* [Guava Graphs](#tsp1-guava-graphs)
+	* [Guava Mutable vs Immutable](#tsp1-guava-mutable-immutable)
+	* [Importing Guava](#tsp1-importing-guava)
+	* [TSP Class](#tsp1-tsp-class)
+	* [Node Class](#tsp1-node-class)
+	* [Edge Class](#tsp1-edge-class)
+* [TSP Constructor and Building the Graph](#tsp1-building-graph)
+	* [Constructor](#tsp1-constructor)
+	* [Build Graph Method](#tsp1-build-graph-method)
+* [Solving and Exploring with Recursive Backtracking](#tsp1-solving-exploring)
+	* [Solve Method](#tsp1-solve)
+	* [Explore (Backtrack) Method](#tsp1-explore)
+* [Next Steps: Timing and Profiling](#tsp1-nextsteps)
+* [Sources](#tsp1-sources)
 
 
-<a name="bkg"></a>
+<a name="tsp1-bkg"></a>
 
 ## Background: Traveling Salesperson Problem (TSP)
 
@@ -40,10 +44,11 @@ and visiting each city once and only once?
 Like the N queens problem, the traveling salesperson problem is a good candidate for recursive backtracking.
 Also like the N queens problem, there are certain shortcuts we can take to trim down the possibilities we explore.
 
-[Wikipedia article for traveling salesman problem](https://en.wikipedia.org/wiki/Travelling_salesman_problem)
+Computer science pages on Wikipedia are generally pretty high in quality, and the [traveling salesman problem](https://en.wikipedia.org/wiki/Traveling_salesman_problem)
+page is no exception. It give a very thorough overview of the important aspects of the problem.
 
 
-<a name="graphs"></a>
+<a name="tsp1-graphs"></a>
 
 ## Graphs
 
@@ -60,8 +65,13 @@ Here is an example of a graph with five nodes, with each edge labeled with its d
 
 <img style="background:#fff;" alt="A basic graph with five nodes" src="/images/basic-graph.png" />
 
+We will skip over a vast amount of detail about graph theory that is both fascinating and useful,
+but M. E. J. Newman's paper ["The structure and function of complex networks"](http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf) 
+(self-published and written as a course review) is an extremely detailed
+and academically rigorous overview of just about every important detail of the field.
 
-<a name="nedges"></a>
+
+<a name="tsp1-nedges"></a>
 ### Number of Edges
 
 The maximum number of roads or edges $E$ depends on the number of nodes as $E = \dfrac{N(N-1)}{2}$, which is derived from
@@ -82,7 +92,7 @@ If the graph is directed, then order matters (the edgge `A->B` is no longer the 
 so we have to use the formula for k pick N, 
 
 $$
-P_{N,k} = \dfrac{N!}{(N-k}!}
+P_{N,k} = \dfrac{N!}{(N-k)!}
 $$
 
 which results in
@@ -94,7 +104,7 @@ $$
 possible edges.
 
 
-<a name="nsolutions"></a>
+<a name="tsp1-nsolutions"></a>
 ### Number of Solutions
 
 Naturally, the question of the total solution space arises.
@@ -118,7 +128,7 @@ For a string of length $N$, the string has $(N-1)!$ possible permutations that s
 Therefore, as the number of nodes $N$ increases, the number of possible solutions increases as $(N-1)!$, 
 making the complexity class of the problem $O(N!)$.
 
-<a name="bktk"></a>
+<a name="tsp1-bktk"></a>
 
 ## Solution: Recursive Backtracking
 
@@ -153,7 +163,7 @@ Likewise, the graph edges can be represented using integers or doubles.
 
 
 
-<a name="guava"></a>
+<a name="tsp1-guava"></a>
 
 ## Solving the TSP with Java and Guava
 
@@ -161,7 +171,7 @@ Likewise, the graph edges can be represented using integers or doubles.
 The library provides some useful graph objects that we can use to easily solve the TSP on a graph.
 
 
-<a name="basic-guava"></a>
+<a name="tsp1-basic-guava"></a>
 
 ### Basics of Guava
 
@@ -180,7 +190,7 @@ $ java -cp '.:/path/to/guava/jars/guava-21.0.jar' TSP
 More information can be found on the charlesreid1.com wiki: [Guava](https://charlesreid1.com/wiki/Guava)
 
 
-<a name="guava-graphs"></a>
+<a name="tsp1-guava-graphs"></a>
 
 ### Guava Graphs
 
@@ -203,7 +213,7 @@ We will use a Network object and design our own graph Node and Edge objects.
 [Guava API Documentation: ValueGraph](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html)
 
 
-<a name="guava-mutable-immutable"></a>
+<a name="tsp1-guava-mutable-immutable"></a>
 
 ### Guava Mutable vs Immutable
 
@@ -218,7 +228,7 @@ We then use the immutable graph to access the graph while solving.
 
 
 
-<a name="importing-guava"></a>
+<a name="tsp1-importing-guava"></a>
 
 ### Importing Guava 
 
@@ -247,7 +257,7 @@ see [Google's Java style guide](https://google.github.io/styleguide/javaguide.ht
 
 
 
-<a name="tsp-class"></a>
+<a name="tsp1-tsp-class"></a>
 
 ### TSP Class
 
@@ -301,7 +311,7 @@ class TSP {
 
 
 
-<a name="node-class"></a>
+<a name="tsp1-node-class"></a>
 
 ### Node Class (Cities)
 
@@ -329,7 +339,7 @@ Note that Nodes don't need to store information about their neighbors.
 That's what we'll use Google Guava for!
 
 
-<a name="edge-class"></a>
+<a name="tsp1-edge-class"></a>
 
 ### Edge Class (Roads)
 
@@ -354,12 +364,12 @@ since that's what the Google Guava graph object will take care of.
 
 
 
-<a name="building-graph"></a>
+<a name="tsp1-building-graph"></a>
 
 ## TSP Constructor and Building the Graph
 
 
-<a name="constructor"></a>
+<a name="tsp1-constructor"></a>
 
 ### Constructor
 
@@ -390,7 +400,7 @@ so really the constructor just calls a function and then does #2.
 
 
 
-<a name="build-graph-method"></a>
+<a name="tsp1-build-graph-method"></a>
 
 ### Build Graph Method
 
@@ -471,7 +481,7 @@ we can turn "A" and "B" into references to the Node objects A and B.
 
 
 
-<a name="recursive-backtracking"></a>
+<a name="tsp1-recursive-backtracking"></a>
 
 ## Solving and Exploring with Recursive Backtracking
 
@@ -630,6 +640,8 @@ Note that this method may be called multiple times during the solution procedure
 
 ## Program Output
 
+### Initial Graph Structure and Solution
+
 In the construction of the graph, we defined our graph as:
 
 ```java
@@ -649,4 +661,127 @@ $ java -cp '.:/Users/charles/codes/guava/jars/guava-21.0.jar' TSP
 @@@@@@@@@@	NEW SOLUTION	Route: [A, E, D, C, B]	Distance: 35.0
 ```
 
+The answers given were satisfactory and correct, so we moved on to 
+a more advanced graph construction process that utilized a static class
+to generate random, fully-connected graphs. This also implemented 
+additional functionality to export to Dot format. This static RandomGraph
+class will be covered in later post.
+
+Here is the resulting output of the random graph generator for a 6-node TSP problem,
+with the sequence of shortest routes found by the algorithm:
+
+![Six-node traveling salesperson problem](graphviz_tsp_6.png)
+
+```plain
+java -cp '.:/Users/charles/codes/guava/jars/guava-21.0.jar' TSP 6 
+------------------- TSP ----------------------
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 3, 2, 4, 5]	Distance: 291.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 3, 5, 4, 2]	Distance: 249.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 2, 4, 3, 5]	Distance: 246.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 5, 3, 4, 2]	Distance: 203.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 5, 1, 4, 2]	Distance: 178.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 2, 4, 1, 5, 3]	Distance: 163.0
+ Done.
+ ```
+
+And for 12 nodes, a problem twice that size, here is the graph and corresponding output:
+
+![Twelve-node traveling salesperson problem](graphviz_tsp_12.png)
+
+```plain
+**************************************
+Running TSP with 12 nodes with Java...
+# Java times itself, we just have to pass it the size
+java -cp '.:/Users/charles/codes/guava/jars/guava-21.0.jar' TSP 12 
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 6, 8, 11]	Distance: 585.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 8, 11, 6]	Distance: 558.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 8, 6, 11]	Distance: 522.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 10, 6, 5, 3, 8, 11]	Distance: 499.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 10, 11, 8, 6, 5, 3]	Distance: 460.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 10, 11, 6, 8, 3, 5]	Distance: 459.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 11, 8, 10, 6, 5, 3]	Distance: 449.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 11, 10, 6, 8, 3, 5]	Distance: 419.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 11, 10, 8, 6, 5, 3]	Distance: 408.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 3, 5, 6, 8, 10, 11]	Distance: 402.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 3, 9, 11, 10, 8, 6, 5]	Distance: 385.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 11, 10, 8, 6, 2, 9, 3, 5]	Distance: 377.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 5, 3, 9, 11, 10, 8, 6, 2]	Distance: 374.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 5, 6, 8, 10, 11, 9, 3, 2]	Distance: 371.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 9, 3, 5, 4, 11, 10, 8, 6, 2]	Distance: 363.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 9, 3, 2, 6, 8, 10, 11, 4, 5]	Distance: 352.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 3, 5, 4, 11, 9, 2, 6, 8, 10]	Distance: 350.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 3, 2, 9, 11, 4, 5, 6, 8, 10]	Distance: 347.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 3, 9, 2, 4, 11, 10, 8, 6, 5]	Distance: 345.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 3, 9, 2, 6, 8, 10, 11, 4, 5]	Distance: 323.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 5, 3, 9, 2, 6, 8, 10, 11, 4]	Distance: 322.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 5, 4, 2, 3, 9, 11, 10, 8, 6]	Distance: 316.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 5, 4, 2, 6, 8, 10, 11, 9, 3]	Distance: 313.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 5, 4, 11, 9, 3, 2, 6, 8, 10]	Distance: 306.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 5, 4, 11, 10, 8, 6, 2, 9, 3]	Distance: 302.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 10, 11, 4, 5, 7, 3, 9, 2, 6, 8]	Distance: 289.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 10, 8, 6, 2, 9, 3, 7, 5, 4, 11]	Distance: 286.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 10, 8, 6, 2, 3, 9, 11, 4, 5, 7]	Distance: 283.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 8, 6, 10, 11, 4, 2, 9, 3, 7, 5]	Distance: 274.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 8, 6, 10, 11, 4, 5, 7, 3, 9, 2]	Distance: 260.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 4, 2, 6, 8, 10, 11, 9, 3, 7, 5]	Distance: 259.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 4, 11, 10, 8, 6, 5, 7, 3, 9, 2]	Distance: 256.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 4, 11, 10, 8, 6, 2, 9, 3, 7, 5]	Distance: 248.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 4, 5, 7, 3, 9, 11, 10, 8, 6, 2]	Distance: 245.0
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 7, 5, 4, 1, 8, 6, 10, 11, 9, 3, 2]	Distance: 236.0
+ Done.
+ ```
+
+Note that these random graphs are fully connected - every node connects to every other node.
+Among the many interesting aspects of the problem, one of them is the impact of connectivity
+on the solution time. 
+
+Another aspect of the problem is the topology of the network, and exploring how 
+a larger number of unconnected nodes, or groups of nodes clustered together but isolated from one another,
+affect the final solution time and the final route.
+
+But before get to that, we have some other things to work out.
+
+## Next Steps: Timing and Profiling
+
+This post described a working implementation of a recursive backtracking solution 
+to the traveling salesperson problem on a graph. This is a naive solution, however,
+and in the next few posts about the traveling salesperson problem we'll focus on using
+timing and profiling tools for Java to profile this Guava program, identify bottlenecks, 
+and speed it up. In fact, there is one small tweak we can make to the algorithm covered above
+that will improve the performance by orders of magnitude. But more on that in a future post.
+
+
+<a name="tsp1-sources"></a>
+## Sources
+
+
+1. "Traveling Salesman Problem". Wikipedia, the Free Encyclopedia. The Wikimedia Foundation. Edited 12 March 2017. Accessed 23 March 2017. 
+<[https://en.wikipedia.org/wiki/Travelling_salesman_problem](https://en.wikipedia.org/wiki/Travelling_salesman_problem)>
+
+2. "Seven Bridges of Königsberg". Wikipedia, the Free Encyclopedia. The Wikimedia Foundation. Edited 11 March 2017. Accessed 23 March 2017.
+<[https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg](https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg)>
+
+3. "The structure and function of complex networks". M. E. J. Newman. 
+<[http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf](http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf)>
+
+4. "Google Guava - Github". Alphabet, Inc. Released under the Apache 2.0 License. Accessed 20 March 2017.
+<[https://github.com/google/guava](https://github.com/google/guava)>
+
+5. "Guava". Charles Reid. Edited 23 March 2017. Accessed 23 March 2017.
+
+6. "Graphs Explained". Google Guava Wiki. Accessed 23 March 2017.
+<[https://github.com/google/guava/wiki/GraphsExplained](https://github.com/google/guava/wiki/GraphsExplained)>
+
+7. "Network". Google Guava API Documentation. Accessed 23 March 2017.
+<[http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html)>
+
+8. "Graph". Google Guava API Documentation. Accessed 23 March 2017.
+<[http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html)>
+
+9. "Value Graph". Google Guava API Documentation. Accessed 23 March 2017.
+<(http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html)>
+
+10. "Google Java Style Guide". Alphabet Inc. Accessed 21 March 2017.
+<(https://google.github.io/styleguide/javaguide.html)[https://google.github.io/styleguide/javaguide.html]>
 
