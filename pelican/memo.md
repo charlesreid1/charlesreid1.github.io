@@ -8,16 +8,18 @@
 
 <s>Fix spacing between blog posts (a little too much).</s>
 
+<s>fix navbar links to be absolute urls</s>
+
+<s>fix charlesreid1 to be consistent</s>
+
+<s>fix publication dates</s>
+
 Check if responsive on phones. If not, add bootstrap to make it responsive.
 
 Fix Next button to be a bootstrap item.
 
-fix navbar links to be absolute urls
+Remove any unused images from theme
 
-fix charlesreid1 to be consistent
+How to copy over the theme, and/or extricate the theme into its own repository, for re-use across sites/servers
 
-fix publication dates
 
-remove any unused images from theme
-
-how to copy over the theme, and/or extricate the theme into its own repository, for re-use across sites/servers
