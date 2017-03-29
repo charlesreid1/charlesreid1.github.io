@@ -5,6 +5,8 @@ Tags: computer science, guava, graph, TSP
 
 
 * [Background: Traveling Salesperson Problem (TSP)](#bkg)
+* [Graphs](#graphs)
+	* [Number of Edges](#nedges)
 * [Solution: Recursive Backtracking](#bktk) 
 * [Solving the TSP with Java and Guava](#guava) 
 	* [Basics of Guava](#basic-guava)
@@ -30,7 +32,7 @@ The traveling salesperson problem, or TSP, is a classic programming problem and 
 and applications in operations research and optimization.
 
 The idea is that you have a set of $N$ cities, connected by various roads, each with their own distances.
-That is, we have a set of $R$ roads, each with their own distance $d_j, j=1 \dots R$. There will be an upper limit of $R = N!$. 
+That is, we have a set of $E$ roads, each with their own distance $d_j, j=1 \dots E$. 
 
 The question is, what is the shortest path that a salesperson can take to visit all $N$ cities, traveling the shortest possible total distance
 and visiting each city once and only once?
@@ -57,6 +59,64 @@ meaning the edges simply represent a connection between the two nodes.
 Here is an example of a graph with five nodes, with each edge labeled with its distance:
 
 <img style="background:#fff;" alt="A basic graph with five nodes" src="/images/basic-graph.png" />
+
+
+<a name="nedges"></a>
+### Number of Edges
+
+The maximum number of roads or edges $E$ depends on the number of nodes as $E = \dfrac{N(N-1)}{2}$, which is derived from
+the formula for 2 choose N (because edges connect 2 nodes). For k choose N, the formula is given by:
+
+$$
+C_{N,k} = \dfrac{N!}{k! (N-k)!}
+$$
+
+and for 2 choose N, it is given by:
+
+$$
+C_{N,2} = \dfrac{N(N-1)}{2}
+$$
+
+This is the maximum number of undirected edges in a graph. 
+If the graph is directed, then order matters (the edgge `A->B` is no longer the same as `B->A`),
+so we have to use the formula for k pick N, 
+
+$$
+P_{N,k} = \dfrac{N!}{(N-k}!}
+$$
+
+which results in
+
+$$
+P_{N,2} = N (N-1)
+$$
+
+possible edges.
+
+
+<a name="nsolutions"></a>
+### Number of Solutions
+
+Naturally, the question of the total solution space arises.
+Assuming the graph of cities is perfectly connected (representing an upper limit on problem complexity),
+how does the number of solutions change as the number of nodes increases?
+
+We can start with a trivial graph, and count the number of possible paths
+through the entire graph, starting with a specific node.
+This is equivalent to counting permutations of a string that start with a specific character.
+
+```
+ABCDE
+ABCED
+ABDCE
+ABDEC
+ABECD
+ABEDC
+```
+
+For a string of length $N$, the string has $(N-1)!$ possible permutations that start with a specific character.
+Therefore, as the number of nodes $N$ increases, the number of possible solutions increases as $(N-1)!$, 
+making the complexity class of the problem $O(N!)$.
 
 <a name="bktk"></a>
 

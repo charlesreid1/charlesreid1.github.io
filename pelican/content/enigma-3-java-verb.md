@@ -301,8 +301,6 @@ is a method to rotate strings forward 1 character. Here's that method:
 
 ## Complete Enigma Implementation
 
-(ADD LINK TO GITHUB CODE HERE)
-
 Here is a link to the complete Enigma code on Github: [Enigma.java]()
 
 Now that the Enigma machine implementation is finished, we can test it out.
@@ -366,6 +364,9 @@ RECOVERED: ABCDE FG HIJKL MNOP QRS TUVWXYZ
 
 ## Sources
 
-1. "The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
+1. "Execution in the Kingdom of Nouns". Steve Yegge. March 2006. Accessed 18 March 2017.
+<[https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html](https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html)>
+
+2. "The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
 <[https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm](https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm)>
 
