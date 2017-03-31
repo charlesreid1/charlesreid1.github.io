@@ -780,8 +780,8 @@ that will improve the performance by orders of magnitude. But more on that in a 
 <[http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html)>
 
 9. "Value Graph". Google Guava API Documentation. Accessed 23 March 2017.
-<(http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html)>
+<[http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html](http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html)>
 
 10. "Google Java Style Guide". Alphabet Inc. Accessed 21 March 2017.
-<(https://google.github.io/styleguide/javaguide.html)[https://google.github.io/styleguide/javaguide.html]>
+<[https://google.github.io/styleguide/javaguide.html](https://google.github.io/styleguide/javaguide.html)>
 
