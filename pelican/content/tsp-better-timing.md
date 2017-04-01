@@ -1,19 +1,21 @@
-Title: Better Timing of Guava Traveling Salesperson Problem Code: Part 1: Timing Scripts
+Title: Better Timing of Guava Traveling Salesperson Problem Code: Timing Scripts
 Status: draft
-Date: 2017-03-29 14:00
+Date: 2017-04-01 9:00
 Category: Java
-Tags: computer science, guava, graph, TSP
+Tags: computer science, command line, guava, graph, TSP, make, awk, performance
 
-* [Before We Begin: The Code](#thecode)
-* [Timing Scripts](#timing)
-* [Before You Time: Developing Your Algorithm](#before-u-time)
-* [Beginning Your Timing Journey](#timing-journey)
-* [Statistical Timing, a.k.a., If You Give A Mouse A Cookie](#mouse-cookie)
-* [Hierarchical Timing Strategy](#hierarchical)
-* [Single Problem/Program/Binary](#single)
-* [Multiple Problem/Program/Binary](#multiple)
-* [Statistical Averaging](#statistical)
-* 
+* [Before We Begin: The Code](#better-timing-thecode)
+* [Timing Scripts](#better-timing-timing)
+* [Before You Time: Developing Your Algorithm](#better-timing-before-u-time)
+* [Beginning Your Timing Journey](#better-timing-timing-journey)
+* [Statistical Timing, a.k.a., If You Give A Mouse A Cookie](#better-timing-mouse-cookie)
+* [Hierarchical Timing Strategy](#better-timing-hierarchical)
+* [Single Problem/Program/Binary](#better-timing-single)
+* [Multiple Problem/Program/Binary](#better-timing-multiple)
+* [Statistical Averaging](#better-timing-statistical)
+* [Results](#better-timing-results)
+* [Summary](#better-timing-summary)
+
 
 
 <a name="thecode"></a>
@@ -23,6 +25,23 @@ Note that all of the code discussed/shown in this post is available from the
 traveling salesperson problem repository on [git.charlesreid1.com](https://charlesreid1.com:3000/charlesreid1/tsp).
 The `guava/` directory contains the guava solution to the traveling salesperson problem,
 along with the timing scripts discussed below, and several example output files.
+
+<a name="intro"></a>
+## Introduction
+
+Timing a piece of code can be tricky. 
+
+Choosing a random problem of a given size can be problematic,
+if you happen to randomly chose a particularly easy or difficult case.
+This can lead to an inaccurate picture of scale-up behavior.
+Timing results should be statistically averaged - the figure below
+shows scale-up behavior for the traveling salesperson problem
+when solving a single random problem, versus a hundred random problems.
+
+![Average versus one-time solutions, walltime versus problem size.](avg-vs-onetime-walltime.png)
+
+This post will cover some conceptual and code tools 
+for measuring the timing and performance of code.
 
 <a name="timing"></a>
 ## Timing Scripts
@@ -131,6 +150,8 @@ time:
 clean:
 	rm -rf *.class
 ```
+
+[Link to code on git.charlesreid1.com](https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/Makefile)
 
 This enables us to run 
 
@@ -243,6 +264,8 @@ echo ${OUTFILE}
 echo ""
 ```
 
+[Link to code on git.charlesreid1.com](https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/time_java.sh)
+
 This creates a time-and-date-stamped output file in which 
 all of the output of this script goes - and which can be 
 parsed for plotting the results of timing studies.
@@ -301,7 +324,14 @@ in solution time on a random assortment of problems,
 so we need a way of scripting solutions to dozens or hundreds of random problems 
 and computing statistically representative measures of code performance.
 
-We can do that by adding a for loop to our for loop. Careful not to scale up too big too fast!
+Our code implements a function to generate random graphs, 
+but for testing and debugging purposes the random number generator 
+was seeded with the same value each time. By making the random number generators
+truly random, each problem we solve will be a different random graph
+with the specified number ofn odes.
+
+We can accomplish all of this using bash again: within the for loop over different problem sizes,
+we will add a for loop for repetitions.
 Here is the basic framework:
 
 ```
@@ -346,6 +376,8 @@ echo ""
 echo ${OUTFILE}
 echo ""
 ```
+
+[Link to code on git.charlesreid1.com](https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/avg_time_java.sh)
 
 This results in a file with a large amount of information, but it can be trimmed down 
 to the quantities of interest using a little command line fu.
@@ -472,6 +504,8 @@ do
 done
 ```
 
+[Link to code on git.charlesreid1.com](https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/avg_calcs.sh)
+
 Example output:
 
 ```plain
@@ -495,4 +529,212 @@ Average time : 7-node TSP problem : 0.0100795 s
 Average time : 8-node TSP problem : 0.0167346 s
 Average time : 9-node TSP problem : 0.028239 s
 ```
+
+Inspecting the output from particular solutions of particular random graphs 
+shows a wide variation in the number of shortest paths found. For example, 
+for random graphs consisting of 11 nodes, here are some sample solutions.
+Note the difference in solution times:
+
+```plain
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 5, 7, 6, 10, 3]	Distance: 597
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 5, 7, 6, 3, 10]	Distance: 582
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 5, 7, 10, 3, 6]	Distance: 560
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 5, 7, 3, 6, 10]	Distance: 553
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 5, 10, 3, 7, 6]	Distance: 540
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 5, 10, 7, 6, 3]	Distance: 532
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 5, 10, 7, 3, 6]	Distance: 503
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 5, 6, 3, 7, 10]	Distance: 498
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 10, 3, 7, 5, 6]	Distance: 450
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 10, 5, 7, 3, 6]	Distance: 440
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 10, 5, 6, 7, 3]	Distance: 422
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 6, 5, 10, 3, 7]	Distance: 421
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 4, 6, 5, 10, 7, 3]	Distance: 380
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 7, 10, 5, 6, 4, 3]	Distance: 364
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 8, 7, 3, 4, 6, 5, 10]	Distance: 357
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 5, 10, 7, 3, 8, 4, 6]	Distance: 352
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 5, 10, 7, 8, 3, 4, 6]	Distance: 336
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 5, 6, 4, 10, 7, 8, 3]	Distance: 330
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 4, 8, 7, 3, 6, 5, 10]	Distance: 326
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 4, 8, 3, 7, 6, 5, 10]	Distance: 320
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 4, 8, 3, 7, 10, 5, 6]	Distance: 298
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 1, 4, 6, 5, 10, 7, 8, 3]	Distance: 261
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 2, 7, 8, 3, 1, 4, 6, 5, 10]	Distance: 250
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 8, 7, 2, 3, 1, 4, 6, 5, 10]	Distance: 245
+Found solution.
+Elapsed time 0.057047 s
+
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 4, 9, 10, 5, 2, 7, 3]	Distance: 650
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 4, 9, 10, 5, 2, 3, 7]	Distance: 641
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 4, 9, 10, 5, 7, 2, 3]	Distance: 638
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 4, 9, 10, 5, 7, 3, 2]	Distance: 630
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 4, 9, 10, 7, 5, 2, 3]	Distance: 589
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 4, 9, 10, 2, 3, 7, 5]	Distance: 580
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 4, 9, 10, 2, 5, 7, 3]	Distance: 548
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 4, 9, 2, 5, 7, 3, 10]	Distance: 533
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 4, 9, 7, 5, 2, 3, 10]	Distance: 522
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 4, 9, 7, 5, 2, 10, 3]	Distance: 495
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 7, 9, 4, 5, 2, 10, 3]	Distance: 494
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 7, 5, 4, 9, 2, 10, 3]	Distance: 493
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 3, 10, 2, 5, 7, 9, 4]	Distance: 490
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 3, 10, 2, 5, 7, 4, 9]	Distance: 486
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 6, 9, 4, 7, 5, 2, 10, 3]	Distance: 467
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 10, 2, 5, 7, 4, 9, 6, 3]	Distance: 453
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 2, 5, 7, 4, 9, 6, 3, 10]	Distance: 442
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 2, 5, 7, 4, 9, 6, 10, 3]	Distance: 437
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 1, 5, 7, 4, 9, 2, 10, 6, 3]	Distance: 433
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 10, 2, 1, 5, 4, 9, 7, 6, 3]	Distance: 427
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 10, 2, 1, 5, 7, 4, 9, 6, 3]	Distance: 400
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 2, 1, 5, 7, 4, 9, 6, 10, 3]	Distance: 399
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 7, 4, 9, 6, 10, 2, 1, 5, 8]	Distance: 394
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 7, 4, 9, 6, 10, 2, 8, 5, 1]	Distance: 389
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 6, 9, 4, 7, 5, 8, 1, 2, 10]	Distance: 384
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 6, 9, 4, 7, 5, 8, 10, 2, 1]	Distance: 382
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 6, 9, 4, 7, 5, 1, 2, 8, 10]	Distance: 374
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 4, 5, 1, 2, 8, 10, 3, 6, 7]	Distance: 373
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 4, 7, 3, 6, 10, 8, 5, 1, 2]	Distance: 365
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 4, 7, 3, 6, 10, 2, 1, 5, 8]	Distance: 360
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 4, 7, 3, 6, 10, 2, 8, 5, 1]	Distance: 355
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 4, 7, 5, 8, 1, 2, 10, 6, 3]	Distance: 345
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 9, 4, 7, 5, 1, 2, 8, 10, 6, 3]	Distance: 335
+Found solution.
+Elapsed time 0.159882 s
+
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 2, 5, 4, 7, 8, 1, 9, 6]	Distance: 500
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 2, 5, 4, 7, 8, 1, 6, 9]	Distance: 498
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 2, 5, 4, 7, 8, 6, 1, 9]	Distance: 493
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 2, 5, 4, 7, 8, 6, 9, 1]	Distance: 481
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 2, 5, 4, 7, 8, 9, 1, 6]	Distance: 443
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 2, 5, 4, 7, 8, 9, 6, 1]	Distance: 429
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 2, 5, 6, 1, 9, 8, 7, 4]	Distance: 417
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 2, 6, 5, 4, 7, 8, 9, 1]	Distance: 360
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 2, 1, 9, 6, 5, 4, 7, 8]	Distance: 359
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 4, 5, 6, 2, 1, 9, 7, 8]	Distance: 358
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 4, 5, 6, 2, 1, 9, 8, 7]	Distance: 342
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 4, 5, 6, 9, 8, 7, 2, 1]	Distance: 340
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 10, 4, 7, 8, 9, 1, 2, 6, 5]	Distance: 310
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 7, 8, 9, 10, 4, 5, 6, 2, 1]	Distance: 305
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 9, 8, 7, 4, 10, 1, 2, 6, 5]	Distance: 303
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 4, 7, 3, 10, 8, 9, 6, 2, 1]	Distance: 301
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 4, 7, 3, 10, 1, 2, 6, 9, 8]	Distance: 293
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 4, 7, 3, 1, 6, 2, 10, 9, 8]	Distance: 286
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 4, 7, 3, 1, 2, 6, 9, 10, 8]	Distance: 281
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 4, 7, 3, 1, 2, 6, 10, 9, 8]	Distance: 275
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 4, 7, 8, 9, 6, 2, 1, 3, 10]	Distance: 270
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 4, 7, 8, 9, 10, 3, 1, 2, 6]	Distance: 269
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 4, 10, 3, 7, 8, 9, 6, 2, 1]	Distance: 268
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 4, 10, 9, 8, 7, 3, 1, 2, 6]	Distance: 252
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 4, 10, 9, 6, 2, 1, 3, 7, 8]	Distance: 248
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 6, 2, 10, 4, 7, 8, 9, 3, 1]	Distance: 235
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 6, 2, 1, 3, 10, 4, 7, 8, 9]	Distance: 231
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 6, 2, 1, 3, 7, 4, 10, 9, 8]	Distance: 212
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 5, 6, 2, 1, 3, 9, 10, 4, 7, 8]	Distance: 207
+Found solution.
+Elapsed time 0.175282 s
+
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 2, 5, 10, 4, 9, 3, 8, 1]	Distance: 515
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 2, 5, 10, 4, 9, 3, 1, 8]	Distance: 495
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 2, 5, 10, 4, 9, 8, 1, 3]	Distance: 423
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 2, 5, 10, 4, 8, 9, 1, 3]	Distance: 368
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 2, 5, 10, 4, 3, 8, 9, 1]	Distance: 361
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 2, 5, 10, 4, 3, 1, 9, 8]	Distance: 341
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 2, 5, 1, 9, 8, 3, 4, 10]	Distance: 330
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 2, 10, 5, 1, 9, 8, 4, 3]	Distance: 309
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 10, 2, 5, 1, 9, 8, 4, 3]	Distance: 284
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 8, 9, 1, 5, 2, 10, 4, 3]	Distance: 266
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 7, 8, 9, 1, 5, 10, 2, 4, 3]	Distance: 258
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 5, 2, 10, 4, 3, 1, 9, 8, 7]	Distance: 250
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 5, 2, 10, 7, 8, 9, 1, 3, 4]	Distance: 243
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 5, 2, 4, 3, 1, 9, 8, 7, 10]	Distance: 225
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 6, 5, 1, 9, 8, 7, 10, 2, 4, 3]	Distance: 197
+Found solution.
+Elapsed time 0.051783 s
+
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 1, 7, 3, 4, 5, 2, 10]	Distance: 607
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 1, 7, 3, 4, 2, 5, 10]	Distance: 573
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 1, 7, 3, 4, 10, 5, 2]	Distance: 562
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 1, 7, 3, 5, 2, 4, 10]	Distance: 513
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 1, 3, 5, 2, 7, 4, 10]	Distance: 496
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 7, 3, 1, 5, 2, 4, 10]	Distance: 493
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 7, 3, 1, 10, 4, 2, 5]	Distance: 489
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 7, 2, 4, 10, 1, 3, 5]	Distance: 487
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 7, 2, 5, 3, 1, 10, 4]	Distance: 480
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 4, 3, 5, 2, 7, 1, 10]	Distance: 454
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 4, 5, 2, 7, 3, 1, 10]	Distance: 453
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 4, 10, 5, 2, 7, 3, 1]	Distance: 452
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 4, 10, 1, 7, 3, 5, 2]	Distance: 443
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 6, 4, 10, 1, 3, 5, 2, 7]	Distance: 411
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 4, 6, 1, 3, 5, 2, 7]	Distance: 407
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 4, 6, 7, 2, 5, 3, 1]	Distance: 402
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 4, 6, 5, 2, 7, 3, 1]	Distance: 390
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 4, 6, 2, 7, 3, 1, 5]	Distance: 388
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 4, 6, 2, 7, 1, 3, 5]	Distance: 387
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 4, 6, 2, 5, 3, 1, 7]	Distance: 384
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 1, 3, 5, 2, 7, 4, 6]	Distance: 376
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 6, 4, 3, 1, 7, 2, 5]	Distance: 371
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 6, 4, 3, 1, 5, 2, 7]	Distance: 367
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 6, 4, 2, 5, 3, 1, 7]	Distance: 366
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 10, 6, 4, 7, 2, 5, 3, 1]	Distance: 365
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 5, 3, 1, 10, 6, 4, 2, 7]	Distance: 358
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 9, 5, 2, 7, 3, 1, 10, 4, 6]	Distance: 352
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 2, 4, 6, 10, 9, 5, 3, 7, 1]	Distance: 344
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 2, 4, 6, 10, 9, 5, 3, 1, 7]	Distance: 328
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 2, 7, 3, 1, 5, 9, 10, 4, 6]	Distance: 321
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 2, 7, 1, 3, 5, 9, 10, 4, 6]	Distance: 320
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 5, 3, 1, 9, 10, 6, 4, 2, 7]	Distance: 319
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 5, 9, 10, 6, 4, 2, 7, 3, 1]	Distance: 314
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 5, 2, 7, 3, 1, 9, 10, 4, 6]	Distance: 313
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 4, 3, 5, 2, 7, 1, 9, 10, 6]	Distance: 299
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 4, 3, 7, 2, 5, 9, 1, 10, 6]	Distance: 293
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 4, 3, 1, 7, 2, 5, 9, 10, 6]	Distance: 278
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 4, 2, 7, 3, 1, 5, 9, 10, 6]	Distance: 277
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 4, 2, 7, 1, 3, 5, 9, 10, 6]	Distance: 276
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 4, 6, 10, 9, 5, 3, 1, 7, 2]	Distance: 263
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 4, 6, 10, 9, 5, 3, 1, 2, 7]	Distance: 262
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 8, 4, 6, 10, 9, 5, 2, 7, 3, 1]	Distance: 249
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 5, 9, 10, 6, 4, 8, 1, 7, 2]	Distance: 245
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 5, 9, 10, 6, 4, 8, 1, 2, 7]	Distance: 244
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 7, 2, 5, 9, 10, 1, 8, 4, 6]	Distance: 242
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 7, 2, 5, 9, 10, 6, 4, 8, 1]	Distance: 231
+!!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 1, 8, 4, 6, 10, 9, 5, 2, 7]	Distance: 215
+Found solution.
+Elapsed time 0.087109 s
+```
+
+## Results
+
+The figure below shows the results of the timing study when using the average of 100 different random problems, 
+compared to the timing study performed using a single problem size.
+
+![Average versus one-time solutions, walltime versus problem size.](avg-vs-onetime-walltime.png)
+
+The results show dramatically different behavior, highlighting the importance
+of computing the statistical average of solution walltime for many different problems.
+This was not an issue that arose in discussing timing or profiling of codes to solve the 
+8 queens problem, because in that case the problem (and resulting decision tree)
+were determined by the choice of algorithm.
+
+This information is also important ot keep in mind when comparing the timing performance 
+of two algorithms - using many cases to compare two algorithms is preferrable,
+since it reduces the likelihood of randomly selecting a problem that highights 
+a weakness of one algorithm or a strength of the other.
+
+## Summary
+
+In this post we covered some scripting tools that make timing a lot easier to do,
+and some ways of thinking about and building up scripts 
+to allow for more complex timing studies without an increase 
+in the associated post-processing work involved.
+
+We showed how to use `make` and a Makefile to create compact, expressive commands to build and run Java programs.
+We showed how to use Bash scripting to implement loops and run a case matrix of problems of various sizes,
+measuring timing data for hundreds of problems in total.
+All of these scripts made heavy use of Unix command line tools, 
+demonstrating how to chain commands and functionality together on the command line to accomplish complex tasks.
+Finally, we showed how to use the `awk` programming language to compute the average of a set of numbers,
+exploring yet another application of this unusually handy language.
 
