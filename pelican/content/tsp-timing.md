@@ -1,7 +1,7 @@
 Title: Fixing Bottlenecks in the Guava Traveling Salesperson Problem Code
 Date: 2017-03-29 14:00
 Category: Java
-Tags: computer science, guava, graph, TSP
+Tags: computer science, guava, graph, TSP, performance
 
 * [Intro](#tsp2-intro)
 * [The Graphs We Are Solving](#tsp2-graphs)
