@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <title>charlesreid1</title>
+        <meta charset="utf-8" />
+
+        <!--
+        CSS styles
+        -->
+        <link href="/theme/css/bootstrap.css"       rel="stylesheet" type="text/css">
+        <!--
+        <link href="/theme/css/cyborg.css"          rel="stylesheet" type="text/css">
+        <link href="/theme/css/cosmo.css"           rel="stylesheet" type="text/css">
+        <link href="/theme/css/sandstone.css"       rel="stylesheet" type="text/css">
+        -->
+        <link href="/theme/css/slate.css"              rel="stylesheet" type="text/css">
+        <link href="/theme/css/font-awesome.css"       rel="stylesheet" type="text/css"/>
+        <link href="/theme/css/pygment-solarized.css"  rel="stylesheet" type="text/css"/>
+
+
+        <!--
+        my CSS styles
+        -->
+        <link href="/theme/css/main.css"            rel="stylesheet" type="text/css">
+        <link href="/theme/css/dox.css"             rel="stylesheet" type="text/css">
+
+
+        <!--
+        include Angular first
+        -->
+        <script type="text/javascript" src="/theme/js/angular-1.3.15.js"></script>
+        <script type="text/javascript" src="/theme/js/skrollr-0.6.29.js"></script>
+        <script type="text/javascript" src="/theme/js/d3-3.5.5.js"></script>
+
+        <!--
+        this seems like a bad idea.
+        but if I don't put jquery first, I get errors about unrecognized $s.
+        -->
+        <script type="text/javascript" src="/theme/js/jquery-1.11.2.js"></script>
+
+</head>
+<body id="index">
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <!--
+            http://www.w3schools.com/bootstrap/bootstrap_case_navigation.asp
+            -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span> 
+            </button>
+            <a href="/" class="navbar-brand">charlesreid1.com</a>
+        </div>
+        <div>
+            <div class="collapse navbar-collapse" id="myNavbar">
+                <ul class="nav navbar-nav">
+
+                    <li>
+                        <a href="https://charlesreid1.com/projects">Projects</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.com/wiki">Wiki</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.github.io">Research Blog</a>
+                    </li>
+                    <li>
+                        <a href="http://git.charlesreid1.com/explore">git.charlesreid1.com</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.com/contact">Contact Me</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+<div class="container">
+
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Setting Up a Self-Hosted Github Clone with Gitea
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-04-01T22:00:00-07:00" pubdate>Saturday 04/01/2017</time>
+                in 
+                <a href="/category/git.html">Git</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/setting-up-a-self-hosted-github-clone-with-gitea.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><ul>
+<li><a href="#gitea-intro">Intro</a></li>
+<li><a href="#gitea-running">Running with Gitea</a><ul>
+<li><a href="#gitea-bin">Binary or Source</a></li>
+<li><a href="#gitea-config-dir">Configuring Gitea Directories</a></li>
+<li><a href="#gitea-fw">Opening the Firewall</a></li>
+<li><a href="#gitea-config-server">Setting Up and Configuring Gitea Server</a></li>
+</ul>
+</li>
+<li><a href="#gitea-use">How To Use Gitea</a><ul>
+<li><a href="#gitea-pushing-local">Pushing a Local Repo Into Gitea</a></li>
+<li><a href="#gitea-copying">Copying Repos from Github to Gitea</a></li>
+<li><a href="#gitea-moving">"Moving" Repos from Github to Gitea</a></li>
+<li><a href="#gitea-pushing-commits">Pushing Commits to Github or Gitea</a></li>
+<li><a href="#gitea-backing-up">Backing Up Gitea</a></li>
+</ul>
+</li>
+<li><a href="#gitea-patterns">How Gitea Fits Into Git Patterns</a></li>
+<li><a href="#gitea-wrapup">Wrapup</a></li>
+</ul>
+<p><a name="gitea-intro"></a></p>
+<h2>Intro</h2>
+<p>In this post we'll cover how to set up a web-hosted git server that uses Gitea,
+a Github clone that is written in Go. 
+While this post is not, strictly speaking, research, 
+having your own hosted git server certainly makes it easier to
+manage research codes and set up organizations to own different bits of code.</p>
+<p>Here's an image of a git repository in the finished product:</p>
+<p><img alt="Image of finished product" src="/images/gitea1.png"></p>
+<p>We will start by covering the server configuration for Gitea, 
+and then we'll cover how to use Gitea's git repository.</p>
+<p><a name="gitea-running"></a></p>
+<h2>Running with Gitea</h2>
+<p>Gitea is a web app for running a self-hosted Github clone. 
+It is implemented entirely in the Go language,
+so all of the pages that are served up are assembled by the Go binary.
+The Go binary also has a local instance of git running, 
+and any actions taken through the Gitea web interface
+are translated, by the Go binary, into actions in the git reopsitory.</p>
+<p>Out of the box, Gitea provides all of this functionality, and takes care of all the details,
+so you don't have to worry about any of this. But if you build it yourself,
+you can modify the content the binary serves up and the actions it takes. </p>
+<p>In this guide, we'll stick to the binary.</p>
+<p><img alt="DIagram of how the gitea binary runs as an http server on port 3000." src="/images/gitea-diagram.png"></p>
+<p><a name="gitea-bin"></a></p>
+<h3>Binary or Source</h3>
+<p>There are some problems with the source code that may make compilation from source impossible.
+(See <a href="https://charlesreid1.com/wiki/Gitea#Using_Binary">charlesreid1.com wiki notes</a>.)
+The binary version of Gitea is recommended. </p>
+<p><a name="gitea-config-dir"></a></p>
+<h3>Configuring Gitea Directories</h3>
+<p>Gitea expects a certain directory organization, specifically, a folder for binaries, 
+certificates, a database, git repositories, and the log.</p>
+<p>The recommended arrangment is:</p>
+<div class="highlight"><pre><span></span>/path/to/www/gitea/
+   \
+    \---------- bin/
+     \--------- certs/
+      \-------- data/
+       \------- repositories/
+        \------ log/
+</pre></div>
+
+
+<p>Once the files are organized in this way, navigate to the bin directory
+and (preferrably using tmux or screen to send to background) 
+execute the command:</p>
+<div class="highlight"><pre><span></span>./gitea web
+</pre></div>
+
+
+<p>This runs a setup page on port 3000.</p>
+<p>Note that you may or may not need to set your <code>$GOPATH</code> variable:</p>
+<div class="highlight"><pre><span></span>export GOPATH=&quot;<span class="cp">${</span><span class="n">HOME</span><span class="cp">}</span>/gocode&quot;
+</pre></div>
+
+
+<p>Go ahead and follow the instructions on the page to get Gitea set up.
+The <a href="https://gitea.io">gitea.io</a> page has good documentation.</p>
+<p><a name="gitea-fw"></a></p>
+<h3>Opening the Firewall</h3>
+<p>Assuming your port 3000 was closed on the firewall,
+and assuming you plan to run the gitea service as a public service listening on an external port, 
+you will want to open your firewall to accept incoming traffic on port 3000:</p>
+<div class="highlight"><pre><span></span># allow traffic on port 3000
+iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
+#  to allow forwarding for 3000 to internal LAN 
+iptables -A FORWARD -p tcp -j ACCEPT --dport 3000 -m state --state NEW
+</pre></div>
+
+
+<p><a name="gitea-config-server"></a></p>
+<h3>Setting Up and Configuring Gitea Server</h3>
+<p>To configure gitea, you will use a <code>.ini</code> configuration file contained in:</p>
+<div class="highlight"><pre><span></span>/path/to/www/gitea/custom/conf/app.ini
+</pre></div>
+
+
+<p>Here is an example gitea configuration file. It starts with a header, then has sections
+for different aspects like databases, the git repository, and the server:</p>
+<div class="highlight"><pre><span></span>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Example Gitea Config File
+;;
+;; https://github.com/go-gitea/gitea/blob/master/conf/app.ini
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+APP_NAME = big ugly git repo (BUGR)
+RUN_USER = git
+RUN_MODE = prod
+
+[database]
+DB_TYPE  = sqlite3
+SSL_MODE = disable
+PATH     = /www/gitea/data/gitea.db
+
+[repository]
+ROOT = /www/gitea/repositories
+PREFERRED_LICENSES = MIT License
+
+[server]
+PROTOCOL     = https
+DOMAIN       = yourdomain.com
+CERT_FILE    = /www/gitea/certs/cert.pem
+KEY_FILE     = /www/gitea/certs/key.pem
+SSH_DOMAIN   = git.yourdomain.com
+HTTP_PORT    = 3000
+ROOT_URL     = https://yourdomain.com:3000
+DISABLE_SSH  = false
+SSH_PORT     = 22
+OFFLINE_MODE = false
+
+[log]
+ROOT_PATH = /www/gitea/log
+</pre></div>
+
+
+<p>Ultimately, there are many configuration examples available for Gitea,
+so we won't go into any more detail on that.</p>
+<p>For details on how to configure Gitea with HTTPS, see <a href="https://charlesreid1.com/wiki/Gitea">charlesreid1.com/wiki/Gitea</a>.</p>
+<p>Let's move on to how we actually utilize Gitea,
+and focus especially on how to make gitea work in tandem with github
+and other git servers, instead of being yet another complication in the toolchain.</p>
+<p><a name="gitea-use"></a></p>
+<h2>How To Use Gitea</h2>
+<p>As we mentioned before, the gitea binary is actually wrapping a git repo, 
+and interactions with the binary (via the web) are translated into actions in that repo.
+This is important to understand, since it will prevent us from thinking about 
+gitea as a "centralized" server, and get us thinking about gitea as just another 
+computer with a copy of the repository on it.</p>
+<p>Understanding how to use gitea also requires correct thinking about how 
+distributed version control works - the way that each collaborator 
+with a copy of the repo can also act as a decentralized git server. 
+In this way, the gitea server becomes just another git client,
+with some extra frosting on top in the form of a web interface.</p>
+<p><a name="gitea-pushing-local"></a></p>
+<h3>Pushing a Local Repo Into Gitea</h3>
+<p>If you want to move existing local repositories into gitea, it's easy.
+Remember that with git, everything is local, so all you need to do 
+is push a copy to gitea, and gitea will have the whole repository locally too,
+including its entire history and any branches and tags that were on your local machine.
+If you have remotes, you'll need to get local copies of any branches or tags you want
+from that remote server (covered in more detail below).</p>
+<p>The basic steps:
+<em> Get everything you want locally (including branches and tags)
+</em> Fetch from remotes, if you have any.
+<em> Add new remote (gitea)
+</em> Push to new remote</p>
+<p>The end result will be a gitea repo fully-populated with the project's commit history.</p>
+<p>Here are the steps in a bit more detail:</p>
+<p>Start by creating a git repository, or cloning an existing one:</p>
+<div class="highlight"><pre><span></span>mkdir my_git_repo/
+cd my_git_repo
+git init .
+</pre></div>
+
+
+<p>or</p>
+<div class="highlight"><pre><span></span>git clone http://github.com/mot_pesli/coune_car
+</pre></div>
+
+
+<p>Next, create an empty git repo on the gitea server.
+Sign in using a gitea username and password. 
+There will be a plus sign in the upper right,
+just like on Github. Click the plus sign, and choose create new repo.
+Enter the repo name, and a description.
+Make sure the repo will NOT automatically create
+a readme or a LICENSE file, as we will be importing all files
+from another repo anyway.</p>
+<p>Once you've got a local copy of the repo with everything you want to push,
+and you have an empty repository on the gitea server ready for commits,
+add the gitea repository as a new remote to your local repository.</p>
+<p>Example: suppose you have a gitea user named <code>zappa</code> who has created a new empty repo 
+named <code>linol-aquabus</code> on the gitea server. 
+Zappa would then cd to the local copy of the git repo,
+and add the gitea repository's url as a new remote called <code>gitea</code>:</p>
+<div class="highlight"><pre><span></span>git remote add gitea https://git.mydomain.com/zappa/linol-aquabus.git
+
+# alternatively,
+
+git remote add gitea https://mydomain.com:3000/zappa/linol-aquabus.git
+</pre></div>
+
+
+<p>Now Zappa can push the entire commit history of the current repo
+to the gitea remote git server:</p>
+<div class="highlight"><pre><span></span>git push origin gitea
+
+# alternatively,
+
+git push --all origin gitea
+</pre></div>
+
+
+<p>If Zappa now visits <code>mydomain.com:3000/zappa/linol-aquabus</code> the entire
+contents of the repository and its commit history in gitea's web interface
+will be available for browsing.</p>
+<p><a name="gitea-copying"></a></p>
+<h3>Copying Repos from Gitub to Gitea</h3>
+<p>The process for copying Github repositories to Gitea follows the above procedure closely:</p>
+<div class="highlight"><pre><span></span>git clone https://github.com/user/repo.git
+</pre></div>
+
+
+<p>Check out any branches or tags you may want to push to gitea.</p>
+<p>Then add the gitea remote to the repo:</p>
+<div class="highlight"><pre><span></span>git remote add gitea https://git.mydomain.com/zappa/linol-aquabus.git
+</pre></div>
+
+
+<p>Now push the contents of the local repository to the remote gitea repository:</p>
+<div class="highlight"><pre><span></span>git push origin gitea
+</pre></div>
+
+
+<p>Once this command is executed, the gitea remote will have the entire commit history of the repo,
+which it will render and display through its web interface. Thus, the entire commit history
+will be immediately available to browse through gitea.</p>
+<p>(Note that information about Github issues or Github user profiles is not stored in the git repo,
+just as Gitea comments and Gitea user profiles are not stored in the git repo.)</p>
+<p><img alt="Gitea and Github - same repo, side by side." src="/images/gitea-n-github.png"></p>
+<p><a name="gitea-moving"></a></p>
+<h3>"Moving" Repos from Gitub to Gitea</h3>
+<p>First, it should be stated up front that you do not have to choose 
+between gitea and github - you can have a copy of a repo on both,
+frequently push to one or the other, and occasionally update the other
+as a kind of "mirror."</p>
+<p>If you do want to <em>move</em> a repo from github to gitea,
+remember that github does not "own" the repo,
+so what you're actually doing is deleting the copy of your repo 
+that lives on github's server.</p>
+<p>To move the repo, all you have to do is copy it from github to somewhere else
+(whether it be your local computer, or to the gitea server), then delete it from github.
+You will not lose any information about the git repository history.
+Github does not keep/store that information - git does.</p>
+<p><a name="gitea-pushing-commits"></a></p>
+<h3>Where to Push Commits: Github or Gitea?</h3>
+<p>It may seem confusing to use multiple repositories side-by-side,
+but this is precisely how the designers of git intended it to be used - 
+for decentralized version control.</p>
+<p>That means Github or Gitea are not "centralized" servers that "own" the repository,
+they are merely another instance of git, running on a server, with a local copy of the repo.</p>
+<p>Accordingly, if your project exists as a repo on gitea and as a repo on github, 
+it is like the project existing as a repo on your hard drive and as a repo on your collaborator's hard drive -
+there is no contradiction. If you make changes to your local copy of the repo, you can commit those changes,
+then push the commits to someone else. In the same way, you can make changes to your local copy of the repo 
+and commit those changes, then push the commits to either gitea, or github, or both - wherever you want.</p>
+<p><a name="gitea-backing-up"></a></p>
+<h3>Backing Up Gitea</h3>
+<p>It's important to say a few words about backups.</p>
+<p>Because Gitea is configured (with the above config file) to use sqlite,
+it stores its entire database (the extra "frosting" of stars, wiki pages,
+issues, user pictures, etc.) in a single file on disk, in the <code>data/</code> directory
+of the gitea installation.</p>
+<p>The git repository is, similarly, a single file on disk, with the entire database 
+of commits, blogs, commit histories, etc., all contained in the <code>.git</code> directory,
+which is contained in the <code>repositories</code> directory of the gitea installation.</p>
+<p>That means backing up your git server is as easy as copying the gitea folder.
+No need to back up a MySQL database or do a funny pants dance to export your database
+to a proprietary format. </p>
+<p>This is another central tenent of git's design philosophy - 
+be fast, pack light, and travel easily.</p>
+<p><a name="gitea-patterns"></a></p>
+<h2>How Gitea Fits Into Git Patterns</h2>
+<p>There are <a href="https://charlesreid1.com/wiki/Git_Resources">many resources on git</a>,
+and some cover the concept of "git patterns," 
+or templates for how to use git.</p>
+<p>Because git is designed to be decentralized, 
+gitea provides a "centralized" node for collaboration
+within a decentralized system.
+So you could use gitea to collaborate with 
+your local Team A, and push and pull branches 
+and work on various features together.
+Then, once Team A has put together a branch they've found useful,
+they can push it to a different remote server that is more widely accessed.</p>
+<p>(Note that this is the logic behind why you need to 
+check out all the branches and tags, <em>locally</em>, that you want to push 
+to the gitea remote server - this allows you the flexibility to 
+only share select branches, so that you might have 
+some branches shared in common wth gitea and github,
+and other branches only existing on gitea.)</p>
+<p>Team B and Team C may use github, and not gitea, to access the project code.
+The gitea server may for example be a private server on a local network,
+whereas github is better suited for collaboration.
+By pushing select branches from the Team A git server, gitea,
+to the github server, Team B and Team C will then be able to 
+access them from github.</p>
+<p>You could also have multiple gitea/gitlab/github enterprise servers 
+for multiple organizations running on git, and they could share a code base 
+by sharing git repositories, commit histories, branches, and so on.</p>
+<p><a name="gitea-wrapup"></a></p>
+<h2>Wrapup</h2>
+<p>Have a look at the <a href="http://gitea.io">Gitea project</a>, <a href="https://golang.org">the Go language</a>,
+<a href="https://git-scm.com">git</a>, <a href="https://github.com">Github</a> for all the nice software
+that made this possible. </p>
+<p>Then have a look at the finished product at <a href="https://git.charlesreid1.com">git.charlesreid1.com</a>.</p>
+<p>Gitea allows you to create organizations, useful for organizing repos related to 
+particular functionality or platforms. For example, <a href="https://charlesreid1.com:3000/rpi">rpi</a> 
+is an organization that owns repositories with scripts and software for raspberry pis,
+<a href="https://charlesreid1.com:3000/docker">docker</a> is an organization that owns repositories
+with Dockerfiles, and <a href="https://charlesreid1.com:3000/mac">mac</a> holds Mac-related things.</p>
+<p>This organization allows better organization of project code - a dotfiles repository
+that works for a Mac laptop or a Unix server is not necessarily good for a Raspberry Pi
+or a Docker container, so code is organized accordingly.</p>
+<p>Organizations can also be used to organize project-level code. 
+This git repo is in its beginning phases, but has great potential
+as a great tool that makes git even more functional and provides 
+one more reason to switch to git.</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/git.html">git</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/go.html">go</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/gitea.html">gitea</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+
+</div>
+
+
+<script type="text/javascript" src="/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="/theme/js/bootstrap-3.3.4.js"></script>
+<script type="text/javascript" src="/theme/js/d3-3.5.5.js"></script>
+<!--
+<script type="text/javascript" src="/theme/js/leaflet-0.7.3.js"></script>
+<script type="text/javascript" src="/theme/js/leaflet.ajax.min.js"></script>
+--><footer id="contentinfo" class="body">
+<hr />
+<p style="text-align: center">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-terminal fa-stack-1x fa-inverse"></i>
+    </span>
+    Made from the command line with vim by 
+    <a href="http://charlesreid1.com">charlesreid1</a><br />
+    with help from <a href="http://d3js.org">D3.js</a>, <a href="http://angularjs.org">Angular.js</a>, and <a href="http://getpelican.com">Pelican</a>.
+</p>
+
+<script type="text/javascript" src="/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="/theme/js/jquery_load_template-1.4.5.min.js"></script>
+<script type="text/javascript" src="/theme/js/bootstrap-3.3.4.js"></script>
+
+</footer><!-- /#contentinfo -->
+</body>
+</html>
