@@ -17,7 +17,7 @@ Tags: computer science, command line, guava, graph, TSP, make, awk, performance
 
 
 
-<a name="thecode"></a>
+<a name="better-timing-thecode"></a>
 ## Before We Begin: The Code
 
 Note that all of the code discussed/shown in this post is available from the 
@@ -25,7 +25,7 @@ traveling salesperson problem repository on [git.charlesreid1.com](https://charl
 The `guava/` directory contains the guava solution to the traveling salesperson problem,
 along with the timing scripts discussed below, and several example output files.
 
-<a name="intro"></a>
+<a name="better-timing-intro"></a>
 ## Introduction
 
 Timing a piece of code can be tricky. 
@@ -42,7 +42,7 @@ when solving a single random problem, versus a hundred random problems.
 This post will cover some conceptual and code tools 
 for measuring the timing and performance of code.
 
-<a name="timing"></a>
+<a name="better-timing-timing"></a>
 ## Timing Scripts
 
 Timing a piece of code is a task that sounds simple, on its face.
