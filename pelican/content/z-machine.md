@@ -1,5 +1,4 @@
 Title: The Z-Machine: A Simple Turing Machine
-Status: draft
 Date: 2017-04-24 20:00
 Category: Computer Science
 Tags: turing machine, computer science, computer engineering, circuit
@@ -16,7 +15,7 @@ Tags: turing machine, computer science, computer engineering, circuit
 	* [Solution 2: Dealing with Zeros](#addition2)
 * [Implementing a Decrement Operator on the Z-Machine](#subtraction)
 * [Implementing a Less Than Operator on the Z-Machine](#lessthan)
-* [Okay, Great. Who Cares?](#whocares)
+* [Okay, Great. Who Cares? (Or, How To Build A Computer)](#whocares)
 * [References](#refs)
 
 
@@ -273,7 +272,7 @@ is 0 or any positive integer.
 
 
 <a name="whocares"></a>
-## Okay, Great. Who Cares?
+## Okay, Great. Who Cares? (Or, How To Build A Computer)
 
 This whole exercise may appear, at first glance, to be an exercise in trivial pursuit. 
 Why bother reinventing the wheel? Isn't this nothing more than an entertaining puzzle?
