@@ -292,10 +292,11 @@ AD (add)
     Add the contents of memory to register A and store the result in A.
 
 INDEX
-    Add the data retrieved at the address specified by the instruction to the next instruction. 
-	INDEX can be used to add or subtract an index value to the base address specified by 
-	the operand of the instruction that follows INDEX. This method is used to implement 
-	arrays and table look-ups.
+    Add the data retrieved at the address specified by the instruction 
+	to the next instruction. INDEX can be used to add or subtract 
+	an index value to the base address specified by the operand 
+	of the instruction that follows INDEX. This method is used 
+	to implement arrays and table look-ups.
 ```
 
 It is not unusual for a hardware platform to have a small set of basic commands or instructions
