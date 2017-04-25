@@ -21,7 +21,16 @@ Tags: java, perl, algorithms, recursion, n-queens
 
 ## Summary
 
+In this post, we describe an implementation of the [N Queens Problem](https://en.wikipedia.org/wiki/Eight_queens_puzzle),
+which is a puzzle related to optimization, combinatorics, and recursive backtracking.
+The puzzle asks: how many configurations are there for placing 8 queens on a chessboard
+such that no queen can attack any othr queen?
 
+This problem was implemented in Perl and in Java, the solution results were timed,
+and the codes were profiled. While Perl is an interpreted language, and is therefore
+fully expeted to be much slower than Java (which indeed it is), it is still useful
+to compare the performance between these two codes to gain an appreciation for 
+the advantages and disadvantages to both approaches.
 
 <a name="pvj-background"></a>
 ## Background: Huh?
