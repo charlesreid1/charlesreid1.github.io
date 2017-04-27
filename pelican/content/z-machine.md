@@ -1,25 +1,25 @@
 Title: The Z-Machine: A Simple Turing Machine
 Date: 2017-04-24 20:00
 Category: Computer Science
-Tags: turing machine, computer science, computer engineering, circuit
+Tags: turing machine, computer science, computer engineering, apollo, assembly
 
 ## TOC 
 
-* [Background](#background)
-* [The Z-Machine: Setup](#setup)
-* [The Z-Machine: Instructions](#instructions)
-* [Simple Example: Loop](#loop)
-* [Implementing an Addition Operator on the Z-Machine](#addition)
-	* [The Solution Approach (The Maths)](#solution-approach)
-	* [Solution 1: Positive Integers Only](#addition1)
-	* [Solution 2: Dealing with Zeros](#addition2)
-* [Implementing a Decrement Operator on the Z-Machine](#subtraction)
-* [Implementing a Less Than Operator on the Z-Machine](#lessthan)
-* [Okay, Great. Who Cares? (Or, How To Build A Computer)](#whocares)
-* [References](#refs)
+* [Background](#z-bkg)
+* [The Z-Machine: Setup](#z-setup)
+* [The Z-Machine: Instructions](#z-instructions)
+* [Simple Example: Loop](#z-loop)
+* [Implementing an Addition Operator on the Z-Machine](#z-addition)
+	* [The Solution Approach (The Maths)](#z-solution-approach)
+	* [Solution 1: Positive Integers Only](#z-addition1)
+	* [Solution 2: Dealing with Zeros](#z-addition2)
+* [Implementing a Decrement Operator on the Z-Machine](#z-subtraction)
+* [Implementing a Less Than Operator on the Z-Machine](#z-lessthan)
+* [Who Cares? (Or, How To Build A Computer)](#z-whocares)
+* [Sources](#z-sources)
 
 
-<a name="bkg"></a>
+<a name="z-bkg"></a>
 ## Background
 
 Recently I discovered the wonderful blog of [John Graham-Cumming](http://blog.jgc.org/2013/05/the-two-problems-i-had-to-solve-in-my.html).
@@ -27,7 +27,7 @@ One of hist posts, from 2013, details a question that he had to answer for the O
 (which, I believe, are a kind of final examination "interview" to graduate, not an interview for admittance to the program).
 Graham-Cumming describes one of the quetions he was presented with during his interview.
 
-<a name="setup"></a>
+<a name="z-setup"></a>
 ## The Z-Machine: Setup
 
 Here is the problem setup:
@@ -38,7 +38,7 @@ These numbers are positive or negative integers. Here is an illustration of an e
 
 ![Z Machine Memory Layout](https://charlesreid1.com/w/images/2/22/Z-Machine1.png)
 
-<a name="instructions"></a>
+<a name="z-instructions"></a>
 ## The Z-Machine: Instructions
 
 Z-Machine Instructions
@@ -53,7 +53,7 @@ The **J operator** compares two locations in memory. If the values are different
 
 The program stops when it reaches the end of the instruction list.
 
-<a name="loop"></a>
+<a name="z-loop"></a>
 ## Simple Example: Loop
 
 Here is an example of a loop program. This program sets memory index 4 to zero, 
@@ -68,7 +68,7 @@ then increments it until it is equal to the value in memory index 20:
 The instruction `J4,20 --> 002` indicates that the values in cell 4 and cell 20 
 should be compared, and if they are not equal, the machine should jump to instruction `002`.
 
-<a name="addition"></a>
+<a name="z-addition"></a>
 ## Implementing an Addition Operation on the Z-Machine
 
 Graham-Cumming includes the following programming challenge in his [blog post](http://blog.jgc.org/2013/05/the-two-problems-i-had-to-solve-in-my.html):
@@ -77,7 +77,7 @@ Suppose a machine has two numbers in the first two locations in memory. Utilize 
 
 Under what circumstances does the program fail?
 
-<a name="solution-approach"></a>
+<a name="z-solution-approach"></a>
 ### The Solution Approach (The Maths)
 
 To approach the solution, start with the maths. What we're doing is trying to define a "complex" arithmetical operation (addition) from simpler "unit" operations (increment by one), so it will be helpful to wipe our mental slate clean and start at the very beginning of the problem.
@@ -112,7 +112,7 @@ This recursive definition of new operations can continue as long as we'd like: a
 
 But let's get back to addition.
 
-<a name="addition1"></a>
+<a name="z-addition1"></a>
 ### Solution 1: Positive Integers Only
 
 Adding two positive integers is the simplest case. 
@@ -141,7 +141,7 @@ Dittos for non-integer real numbers.)
 
 This method will fail when either of the two numbers we are adding are zero.
 
-<a name="addition2"></a>
+<a name="z-addition2"></a>
 ### Solution 2: Dealing With Zeros
 
 A second solution that is a bit more challenging is dealing with the case of possible zeros 
@@ -201,7 +201,7 @@ to increment by the amount in the given index.
 The block of 6 statements checks if the number we are adding is zero, 
 and if it is not, the result is incremented by that many times. 
 
-<a name="decrement"></a>
+<a name="z-decrement"></a>
 ## Implementing a Decrement Operator on the Z-Machine
 
 Suppose an operator places a number into cell 0 of the Z-Machine's memory. 
@@ -229,7 +229,7 @@ that is always false and therefore always followed. This allows the machine to
 skip a line of code like instruction 006, and perform the increment operation 
 in a staggered manner, as described above.
 
-<a name="lessthan"></a>
+<a name="z-lessthan"></a>
 ## Implementing a Less Than Operator on the Z-Machine
 
 Another challenging operation to implement with the Z-Machine is a comparison operator. 
@@ -271,8 +271,8 @@ Note that this code successfully handles the case where either number (or both)
 is 0 or any positive integer.
 
 
-<a name="whocares"></a>
-## Okay, Great. Who Cares? (Or, How To Build A Computer)
+<a name="z-whocares"></a>
+## Who Cares? (Or, How To Build A Computer)
 
 This whole exercise may appear, at first glance, to be an exercise in trivial pursuit. 
 Why bother reinventing the wheel? Isn't this nothing more than an entertaining puzzle?
@@ -307,7 +307,7 @@ For that reason, it is important to keep those engineering and puzzle-solving sk
 You never know when you'll be designing a new computer device.
 
 
-<a name="sources"></a>
+<a name="z-sources"></a>
 ## Sources
 
 1. "The Two Problems I Had To Solve In My Oxford Interview." John Graham-Cumming. Published 2 May 2013. Accessed 24 April 2017.
