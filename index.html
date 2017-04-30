@@ -107,6 +107,279 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Stunnel
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-04-24T20:00:00-07:00" pubdate>Monday 04/24/2017</time>
+                in 
+                <a href="/category/security.html">Security</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/stunnel.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><ul>
+<li>
+<p><a href="#stunnel-intro">Introduction</a></p>
+<ul>
+<li><a href="#stunnel-what">What Does Stunnel Do?</a></li>
+<li><a href="#stunnel-work">How Does Stunnel Work?</a> </li>
+</ul>
+</li>
+<li>
+<p><a href="#stunnel-server">Setting Up an Stunnel Server</a></p>
+<ul>
+<li><a href="#stunnel-server-resoures">Charlesreid1.com Resources for Stunnel Servers</a></li>
+</ul>
+</li>
+<li>
+<p><a href="#stunnel-client">Setting Up an Stunnel Client</a></p>
+</li>
+<li>
+<p><a href="#stunnel-protocols">Example Protocols</a></p>
+</li>
+<li>
+<p><a href="#stunnel-docker">Stunnel with Docker</a></p>
+</li>
+<li>
+<p><a href="#stunnel-troubleshooting">Troubleshooting Stunnel Connections</a></p>
+</li>
+<li>
+<p><a href="#stunnel-refs">References</a></p>
+</li>
+</ul>
+<p><a name="stunnel-intro"></a></p>
+<h2>Introduction</h2>
+<p><a name="stunnel-what"></a></p>
+<h3>What Does Stunnel Do?</h3>
+<p>Stunnel is a tool for creating SSL tunnels between a client and a server.</p>
+<p>Creating SSL connections is a general task that is very useful.
+In particular, any packet of any protocol can always be wrapped in an
+additional SSL layer, with packets embedded within packets, so this means 
+you can wrap arbitrary traffic protocols in SSL using Stunnel.</p>
+<p>Stunnel requires a client and a server on either end of the tunnel.</p>
+<p>This writeup assumes access to both the server and the client.
+If you don't have access to the client, the server certificate
+needs to be signed by a certificate authority that the client trusts.
+You can either:
+<em> Shell out big bucks for a certificate signed by a certificate authority company, thereby contributing to the ongoing racketeering of said companies;
+</em> Use a LetsEncrypt certificate, signed by a certificate authority for free; or
+* Use a self-signed certificate and install the certificate authority onto the client computer.</p>
+<p>(These are all difficult and confusing processes, 
+compounded by OpenSSL's lack of documentation
+and a proliferation of incorrect terminology.
+Good luck.)</p>
+<p><a name="stunnel-work"></a></p>
+<h3>How Does Stunnel Work?</h3>
+<p>The client stunnel instance will encrypt traffic, 
+and the server stunnel instance will decrypt traffic.</p>
+<p>When encrypting traffic, stunnel accepts incoming traffic by listening on
+a port (almost always a local port). It will wrap the traffic in an encrypted
+SSL layer (TCP wrapping) using the SSL certificate/key that is shared between
+the client and the server. The client then sends out the encrypted traffic 
+over an external connection, and on to the stunnel server.</p>
+<p>When decrypting traffic, stunnel will listen on an external connection for 
+incoming, encrypted SSL traffic. It will use its SSL certificate/key to 
+decrypt the traffic and unwrap the SSL layer. It will then forward this traffic
+on to another (usually local) port.</p>
+<p><img alt="Stunnel flowchart schematic" src="/images/stunnel1.png"></p>
+<p><a name="stunnel-server"></a></p>
+<h2>Setting Up an Stunnel Server</h2>
+<p>Stunnel servers can listen on any port, and the port you choose depends on the application. 
+The configuration we're showing here is intended to bypass a network that is tightly controlled
+and locked down except for HTTP and HTTPS traffic (ports 80 and 443).</p>
+<p>Consider an example of connecting a local service on local port 8443 (not open to the outside world)
+to an stunnel server listening on port 443 (open to the outside world).</p>
+<p>stunnel will listen on port 443, open to external traffic, for SSL-encrypted stunnel traffic. 
+This means that only stunnel can listen on 443 (so this cannot be a server for an HTTPS web 
+site - if a user points their browser to https://yourstunnelserver.com stunnel will not understand
+the HTTPS request and will discard it). 
+We can use stunnel on any port that we want, but communicating between stunnel clients 
+and servers on port 443 allows us to disguise arbitrary traffic (HTTP, HTTPS, SSH, database, 
+etc.) as legitimate HTTPS. </p>
+<p>This is very useful if we have a firewall that is actively inspecting
+the type of traffic inside of packets, and dropping packets with particular protocols like 
+SSH or OpenVPN. By wrapping that traffic in an SSL layer, there is no way for the 
+firewall to inspect the contents of the packet, so it just looks like ordinary HTTPS traffic.
+The firewall can't decrypt the packet contents, so it doesn't know if you are visiting 
+your bank, checking your email, or sneaking SSH/OpenVPN traffic through the firewall. </p>
+<p>(Note that other services like Iodine allow you to do similar things with other protocols,
+like disguising network connections using encrypted DNS on port 53.)</p>
+<p>Typically, stunnel is forwarding that traffic on to a local port, something like 8443. 
+(The common scenario is if you have a service only exposed to LOCAL traffic from localhost or 127.0.0.1 
+and not bound to an EXTERNAL ip address like 0.0.0.0). </p>
+<p><a name="stunnel-server-resources"></a></p>
+<h3>Charlesreid1.com Resources for Stunnel Servers</h3>
+<p>The charlesreid1.com wiki has an extensive guide to setting up an Stunnel server: 
+<em> <a href="https://charlesreid1.com/wiki/Stunnel/Server">charlesreid1.com/wiki/Stunnel/Server</a>
+</em> <a href="https://charlesreid1.com/wiki/Stunnel/Docker">charlesreid1.com/wiki/Stunnel/Docker</a> - wiki page detailing the use of Docker and Docker containers to run an stunnel server.</p>
+<p>The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel server: 
+* <a href="https://charlesreid1.com:3000/docker/d-stunnel">d-stunnel repository</a> - repo containing Docker configuration files, for creating a Docker container that runs an stunnel server.
+    This repository contains example stunnel configuration files for running a number of different protocols over stunnel (ssh, http, and rsync).</p>
+<p><a name="stunnel-client"></a></p>
+<h2>Setting Up an Stunnel Client</h2>
+<p>Running an stunnel client requires installing stunnel and 
+setting up a configuration file just like if you were setting up an Stunnel/Server, 
+except swapping the accept and connect ports, since we want the client to accept local 
+traffic (e.g., on port 8443) and send it on to the server that it connects to with SSL 
+(e.g., on port 443).</p>
+<p><a name="stunnel-client-resources"></a></p>
+<h2>Charlesreid1.com Resources for Stunnel Clients</h2>
+<p>The charlesreid1.com wiki has an extensive guide to setting up an Stunnel client: 
+* <a href="https://charlesreid1.com/wiki/Stunnel/Client">charlesreid1.com/wiki/Stunnel/Client</a> - wiki page detailing the stunnel configuration process for stunnel servers.</p>
+<p>The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel client: 
+<em> <a href="https://charlesreid1.com:3000/mac/m-stunnel">m-stunnel repository</a> - stunnel configuration files for running an stunnel client on Mac OS X
+</em> <a href="https://charlesreid1.com:3000/rpi/pi-stunnel">pi-stunnel repository</a> - stunnel configuration files for running an stunnel client on Raspberry Pi</p>
+<p><a name="stunnel-protocols"></a></p>
+<h2>Example Protocols</h2>
+<p>One of the most beautiful aspects of networking is that packets can be wrapped within other packets - 
+so theoretically it can be packets all the way down. This allows us to use stunnel's SSL TCP wrappers to wrap
+just about any traffic we want. This means we can run various services (encrypted or not) through stunnel,
+including but not limited to:
+<em> SSH (secure shell)
+</em> SCP (secure copy)
+<em> OpenVPN (virtual network)
+</em> Rsync (file transfer)
+<em> MongoDB (NoSQL database)
+</em> Redis (local-only NoSQL database)</p>
+<p>While stunnel has a few pre-configured services that it can deal with, 
+users can also define their own custom protocols, over whatever port they please.</p>
+<p>The charlesreid1.com wiki details stunnel configuration for all of the above protocols,
+excepting MongoDB and redis. Here are links to pages specifying how to configure stunnel
+for each protocol:
+<em> <a href="https://charlesreid1.com/wiki/Stunnel/SSH">SSH over stunnel</a>
+</em> <a href="https://charlesreid1.com/wiki/Stunnel/Scp">SCP over stunnel</a>
+<em> <a href="https://charlesreid1.com/wiki/Stunnel/HTTP">HTTP over stunnel</a>
+</em> <a href="https://charlesreid1.com/wiki/Stunnel/OpenVPN">OpenVPN over stunnel</a>
+* <a href="https://charlesreid1.com/wiki/Stunnel/Rsync">Rsync over stunnel</a></p>
+<p>The <a href="https://charlesreid1.com/wiki/Stunnel/Rsync">Rsync over stunnel</a> page, in particular,
+details the steps needed to define your own custom protocol and have stunnel wrap it 
+in an SSL layer <em>correctly</em>.</p>
+<p><a name="stunnel-docker"></a></p>
+<h2>Stunnel with Docker</h2>
+<p>Docker is a useful way of managing services in a self-contained and reproducible manner.
+Running stunnel through a Docker container is surprisingly easy: 
+once you've installed stunnel into the docker container, you just need to map 
+the incoming port (containing incoming encrypted traffic from the client, linked to the external network interface)
+to the outgoing port (containing decrypted traffic from stunnel, linked to a local-only service on a closed port).</p>
+<p>The charlesreid1.com wiki details how to create set up SSH over stunnel at the following page:
+* <a href="https://charlesreid1.com/wiki/Stunnel/Docker">charlesreid1.com/wiki/Stunnel/Docker</a></p>
+<p>The charlesreid1.com git server has an stunnel docker repository with configuration files
+for running a Docker stunnel server, along with several example stunnel server configuration files
+for handling protocols like rsync, ssh, and http:
+* <a href="https://charlesreid1.com:3000/docker/d-stunnel">d-stunnel repository</a></p>
+<p><a name="stunnel-troubleshooting"></a></p>
+<h2>Troubleshooting Stunnel Connections</h2>
+<p>In the <a href="https://charlesreid1.com:3000/docker/d-stunnel">d-stunnel repository</a> is a document called <code>DEBUGGING.md</code> 
+that contains a number of techniques for debugging an stunnel connection. </p>
+<p><a href="https://charlesreid1.com:3000/docker/d-stunnel/src/master/DEBUGGING.md">Here is the direct link to DEBUGGING.md</a>.</p>
+<p>The techniques covered include:
+<em> Configuring stunnel to run in the foreground (print log messages to console instead of to log file)
+</em> Configuring stunnel to output debugging information 
+<em> Poking the stunnel server with telnet
+</em> Inspecting open ports with nmap
+* Watching <code>/var/log/syslog</code> for activity</p>
+<p>See <a href="https://charlesreid1.com:3000/docker/d-stunnel/src/master/DEBUGGING.md">DEBUGGING.md</a> for details.</p>
+<p><a name="stunnel-refs"></a></p>
+<h2>References</h2>
+<ol>
+<li>
+<p>"Stunnel". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel">https://charlesreid1.com/wiki/Stunnel</a>&gt;</p>
+</li>
+<li>
+<p>"Category: Stunnel". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Category:Stunnel">https://charlesreid1.com/wiki/Category:Stunnel</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Server". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Server">https://charlesreid1.com/wiki/Stunnel/Server</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Client". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Client">https://charlesreid1.com/wiki/Stunnel/Client</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Docker". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Docker">https://charlesreid1.com/wiki/Stunnel/Docker</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Certificates". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Certificates">https://charlesreid1.com/wiki/Stunnel/Certificates</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Rsync". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Rsync">https://charlesreid1.com/wiki/Stunnel/Rsync</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/SSH". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/SSH">https://charlesreid1.com/wiki/Stunnel/SSH</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Scp". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Scp">https://charlesreid1.com/wiki/Stunnel/Scp</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/OpenVPN". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/OpenVPN">https://charlesreid1.com/wiki/Stunnel/OpenVPN</a>&gt;</p>
+</li>
+</ol></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/stunnel.html">stunnel</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/ssl.html">SSL</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/encryption.html">encryption</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/ssh.html">SSH</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/networking.html">networking</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/openvpn.html">OpenVPN</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 The Z-Machine: A Simple Turing Machine
             </b></h1>
         
@@ -871,731 +1144,6 @@ one more reason to switch to git.</p></div>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Better Timing of Guava Traveling Salesperson Problem Code: Timing Scripts
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-04-01T09:00:00-07:00" pubdate>Saturday 04/01/2017</time>
-                in 
-                <a href="/category/java.html">Java</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><ul>
-<li><a href="#better-timing-thecode">Before We Begin: The Code</a></li>
-<li><a href="#better-timing-timing">Timing Scripts</a></li>
-<li><a href="#better-timing-before-u-time">Before You Time: Developing Your Algorithm</a></li>
-<li><a href="#better-timing-timing-journey">Beginning Your Timing Journey</a></li>
-<li><a href="#better-timing-mouse-cookie">Statistical Timing, a.k.a., If You Give A Mouse A Cookie</a></li>
-<li><a href="#better-timing-hierarchical">Hierarchical Timing Strategy</a></li>
-<li><a href="#better-timing-single">Single Problem/Program/Binary</a></li>
-<li><a href="#better-timing-multiple">Multiple Problem/Program/Binary</a></li>
-<li><a href="#better-timing-statistical">Statistical Averaging</a></li>
-<li><a href="#better-timing-results">Results</a></li>
-<li><a href="#better-timing-summary">Summary</a></li>
-</ul>
-<p><a name="better-timing-thecode"></a></p>
-<h2>Before We Begin: The Code</h2>
-<p>Note that all of the code discussed/shown in this post is available from the 
-traveling salesperson problem repository on <a href="https://charlesreid1.com:3000/charlesreid1/tsp">git.charlesreid1.com</a>.
-The <code>guava/</code> directory contains the guava solution to the traveling salesperson problem,
-along with the timing scripts discussed below, and several example output files.</p>
-<p><a name="better-timing-intro"></a></p>
-<h2>Introduction</h2>
-<p>Timing a piece of code can be tricky. </p>
-<p>Choosing a random problem of a given size can be problematic,
-if you happen to randomly chose a particularly easy or difficult case.
-This can lead to an inaccurate picture of scale-up behavior.
-Timing results should be statistically averaged - the figure below
-shows scale-up behavior for the traveling salesperson problem
-when solving a single random problem, versus a hundred random problems.</p>
-<p><img alt="Average versus one-time solutions, walltime versus problem size." src="/images/avg-vs-onetime-walltime.png"></p>
-<p>This post will cover some conceptual and code tools 
-for measuring the timing and performance of code.</p>
-<p><a name="better-timing-timing"></a></p>
-<h2>Timing Scripts</h2>
-<p>Timing a piece of code is a task that sounds simple, on its face.
-However, the task of profiling code quickly balloons 
-from a single timing of a single bit of code 
-to running hundreds of cases, juggling output from each run,
-and stitching together script upon script.
-Soon you find yourself swimming in a pool of output files,
-looking for your scripts...</p>
-<p>In this post we'll cover a workflow for timing a piece of Java code
-that will help give you a method for thinking about timing.
-This also balances the need for practicality
-(i.e., just get it done in as simple a manner as possible)
-with good design 
-(i.e., flexible inputs and the use of scripts).</p>
-<h2>Before You Time: Developing Your Algorithm</h2>
-<p>As you develop your algorithm, you may have variable values hard-coded 
-and random number generators seeding from the same value each time.
-The intention, as you are developing, is to work out the bugs
-without the additional difficulty of solving a different problem
-each time you run the program.</p>
-<h2>Beginning Your Timing Journey</h2>
-<p>Once you've implemented your algorithm and verified that it works,
-the timing portion begins. You can time the code using mechanisms
-built into the language, which is the most accurate way of 
-timing code. This is called <em>instrumenting</em> your code.
-To begin with, you might try timing a single problem size, 
-but this information is hard to interpret without more data,
-so you start to time the code on problems of other sizes.</p>
-<p>Here there be dragons.</p>
-<h2>Statistical Timing, a.k.a., If You Give A Mouse A Cookie</h2>
-<p>See <a href="https://en.wikipedia.org/wiki/If_You_Give_a_Mouse_a_Cookie"><em>If You Give A Mouse A Cookie</em></a>.</p>
-<p>Once you time the code solving a single problem,
-you will want to time the code solving multiple problems.</p>
-<p>Once you time the code solving multiple problems,
-you will want to time the code solving each problem multiple times 
-to get an accurate statistical picture of the solution time on a variety of problems.</p>
-<p>Once you get statistics about multiple problem times,
-you will want to gather statics about variations in problem types and algorithm variations.</p>
-<p>It simply does not end. A strategy for managing this deluge of new timing needs 
-prevents spaghetti code.</p>
-<h2>Hierarchical Timing Strategy</h2>
-<p>The strategy here is to design code and scripts that are <em>hierarchical</em>.
-The levels of the hierarchy consist of the different scopes involved in timing:
-<em> Single problem/program/binary
-</em> Multiple problem/program/binary
-<em> Statistical averages using case matrix
-</em> Design of Computer Experiments: Testing Variations 
-* Strong and weak scaling (if we decide to continue with parallelization of algorithm)</p>
-<p>At each stage, we utilize scripts to bundle the task into a single command or script.</p>
-<h2>Single Problem/Program/Binary: Makefile</h2>
-<p>At the scale of solving a single problem, we need a tool that will 
-compile and run Java code - even if it only happens once.
-Makefiles are an excellent tool for stringing together commands with flags 
-(in the case of the traveling salesperson problem,
-we need to link to the Guava Jars when we compile and run).</p>
-<p>By defining some variables at the top of the Makefile, 
-and a few rules, we have a functional and easy way to build code 
-with scalable complexity:</p>
-<div class="highlight"><pre><span></span><span class="c"># Set path to guava</span>
-<span class="nv">HOME</span><span class="o">=</span>/Users/charles
-<span class="nv">GUAVA</span><span class="o">=</span><span class="k">$(</span>HOME<span class="k">)</span>/codes/guava/jars/guava-21.0.jar
-
-<span class="c"># Set compile target</span>
-<span class="nv">BIN</span><span class="o">=</span>TSP
-<span class="nv">TARGET</span><span class="o">=</span><span class="k">$(</span>BIN<span class="k">)</span>.java
-
-<span class="c"># Set java class path</span>
-<span class="c"># Hard to believe this actually works, but ok:</span>
-<span class="nv">CP</span><span class="o">=</span>-cp <span class="s1">&#39;.:$(GUAVA)&#39;</span>
-
-
-<span class="nf">build</span><span class="o">:</span>
-    javac <span class="k">$(</span>CP<span class="k">)</span> <span class="k">$(</span>TARGET<span class="k">)</span> 
-
-<span class="nf">run</span><span class="o">:</span>
-<span class="c">    # If no size, use default</span>
-    java <span class="k">$(</span>CP<span class="k">)</span> <span class="k">$(</span>BIN<span class="k">)</span> 
-
-<span class="nf">time</span><span class="o">:</span>
-<span class="c">    # Java times itself, we just have to pass it the size</span>
-    java <span class="k">$(</span>CP<span class="k">)</span> <span class="k">$(</span>BIN<span class="k">)</span> <span class="k">$(</span>SIZE<span class="k">)</span> 
-
-<span class="nf">clean</span><span class="o">:</span>
-    rm -rf *.class
-</pre></div>
-
-
-<p><a href="https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/Makefile">Link to code on git.charlesreid1.com</a></p>
-<p>This enables us to run </p>
-<div class="highlight"><pre><span></span>$ make build 
-/Users/charles/codes/guava/jars/guava-21.0.jar
-</pre></div>
-
-
-<p>and have a new version of the code compile. 
-We can also run a problem with a default size of 5 nodes with a simple make run command:</p>
-<div class="highlight"><pre><span></span>$ make run
-java -cp <span class="s1">&#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39;</span> TSP
-------------------- TSP Version <span class="m">2</span>: The Pessimistic Algorithm ----------------------
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">2</span>, <span class="m">3</span>, <span class="m">4</span>, <span class="m">1</span><span class="o">]</span>  Distance: <span class="m">258</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">2</span>, <span class="m">3</span>, <span class="m">1</span>, <span class="m">4</span><span class="o">]</span>  Distance: <span class="m">257</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">2</span>, <span class="m">4</span>, <span class="m">1</span>, <span class="m">3</span><span class="o">]</span>  Distance: <span class="m">189</span>
-Found solution...?
-Elapsed <span class="nb">time</span> <span class="m">0</span>.005529 s
-</pre></div>
-
-
-<p>and have the compiled code run. We can also feed arguments to make commands,
-and have them passed to the command that is executed:</p>
-<div class="highlight"><pre><span></span>$ make <span class="nb">time</span> <span class="nv">SIZE</span><span class="o">=</span><span class="m">10</span>
-<span class="c1"># Java times itself, we just have to pass it the size</span>
-java -cp <span class="s1">&#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39;</span> TSP <span class="m">10</span>
-------------------- TSP Version <span class="m">2</span>: The Pessimistic Algorithm ----------------------
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">9</span>, <span class="m">7</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">1</span>, <span class="m">4</span><span class="o">]</span>   Distance: <span class="m">446</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">9</span>, <span class="m">7</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">4</span>, <span class="m">1</span><span class="o">]</span>   Distance: <span class="m">395</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">9</span>, <span class="m">7</span>, <span class="m">4</span>, <span class="m">1</span>, <span class="m">8</span>, <span class="m">2</span><span class="o">]</span>   Distance: <span class="m">382</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">9</span>, <span class="m">1</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">2</span>, <span class="m">8</span><span class="o">]</span>   Distance: <span class="m">365</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">9</span>, <span class="m">1</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">8</span>, <span class="m">2</span><span class="o">]</span>   Distance: <span class="m">326</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">7</span>, <span class="m">4</span>, <span class="m">1</span>, <span class="m">9</span><span class="o">]</span>   Distance: <span class="m">303</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">9</span>, <span class="m">1</span><span class="o">]</span>   Distance: <span class="m">298</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">3</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">9</span>, <span class="m">1</span><span class="o">]</span>   Distance: <span class="m">286</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">8</span>, <span class="m">2</span>, <span class="m">3</span>, <span class="m">7</span>, <span class="m">4</span>, <span class="m">1</span>, <span class="m">9</span><span class="o">]</span>   Distance: <span class="m">283</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">9</span>, <span class="m">1</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">3</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">8</span>, <span class="m">2</span><span class="o">]</span>   Distance: <span class="m">275</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">3</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">5</span>, <span class="m">6</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">9</span>, <span class="m">1</span><span class="o">]</span>   Distance: <span class="m">274</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">7</span>, <span class="m">4</span>, <span class="m">1</span>, <span class="m">9</span>, <span class="m">5</span>, <span class="m">6</span>, <span class="m">3</span><span class="o">]</span>   Distance: <span class="m">262</span>
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">3</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">9</span>, <span class="m">1</span><span class="o">]</span>   Distance: <span class="m">256</span>
-Found solution...?
-Elapsed <span class="nb">time</span> <span class="m">0</span>.050795 s
-</pre></div>
-
-
-<p>For running single cases and gathering small amounts of (initial) timing data,
-Makefiles greatly simplify the workflow.</p>
-<h2>Multiple Program/Problem/Binary: Bash</h2>
-<p>Bash is a faithful scripting language that makes it easy to do 
-simple mechanical tasks like run commands in for loops,
-necessary for the next level of complexity in our timing hierarchy.</p>
-<p>While the task at hand is simple enough, and we could easily use Makefiles, 
-we'll use a separate Bash script for separate functionality 
-and keep things from getting overly complicated in the Makefile.</p>
-<p>The essence of the timing script is combining the <code>make time</code> command,
-which takes a size parameter, with bash for loops.</p>
-<p>Here is a stripped down version of the timing script:</p>
-<div class="highlight"><pre><span></span>make build 
-
-for N in 4 5 6 7 8
-do
-    make time SIZE=<span class="cp">${</span><span class="n">N</span><span class="cp">}</span> 
-done
-</pre></div>
-
-
-<p>That's it... The rest is just printing!</p>
-<p>The <code>make time</code> command passes the size argument on the command line.
-The Java Traveling Salesperson Problem code checks if there is an input argument on the command line,
-and if there is it uses that as the problem size.</p>
-<p>Here's a more embellished script:</p>
-<div class="highlight"><pre><span></span>export RIGHTNOW=&quot;`date +&quot;%Y%m%d_%H%M%S&quot;`&quot;
-export OUT=&quot;timeout_tsp_java_<span class="cp">${</span><span class="n">RIGHTNOW</span><span class="cp">}</span>.out&quot;
-touch <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-cat /dev/null &gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-
-# Compile
-make build 
-
-for N in {4..8..1}
-do
-    echo &quot;**************************************&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-    echo &quot;Running TSP with <span class="nv">$N</span> nodes with Java...&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-
-    make time SIZE=<span class="cp">${</span><span class="n">N</span><span class="cp">}</span> &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span> 2&gt;<span class="err">&amp;</span>1
-
-    make dot
-    mv graphviz.png graphviz_tsp_<span class="cp">${</span><span class="n">N</span><span class="cp">}</span>.png
-
-    echo &quot;Done.&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-
-    echo &quot;&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-
-done
-
-echo &quot;&quot;
-echo <span class="cp">${</span><span class="n">OUTFILE</span><span class="cp">}</span>
-echo &quot;&quot;
-</pre></div>
-
-
-<p><a href="https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/time_java.sh">Link to code on git.charlesreid1.com</a></p>
-<p>This creates a time-and-date-stamped output file in which 
-all of the output of this script goes - and which can be 
-parsed for plotting the results of timing studies.</p>
-<p>Before it times the solution to the TSP, it dumps out a graphviz dot file 
-containing a schematic of the graph that can be diagrammed:</p>
-<p><img alt="Example graphviz dot output showing a 14-node TSP." src="/images/graphviz_tsp_14.png"></p>
-<div class="highlight"><pre><span></span>**************************************
-Running TSP with 4 nodes with Java...
-Found solution.
-Elapsed time 0.004679 s
- Done.
-
-**************************************
-Running TSP with 5 nodes with Java...
-Found solution.
-Elapsed time 0.004543 s
- Done.
-
-**************************************
-Running TSP with 6 nodes with Java...
-Found solution.
-Elapsed time 0.006911 s
- Done.
-
-**************************************
-Running TSP with 7 nodes with Java...
-Found solution.
-Elapsed time 0.008286 s
- Done.
-
-**************************************
-Running TSP with 8 nodes with Java...
-Found solution.
-Elapsed time 0.014499 s
- Done.
-</pre></div>
-
-
-<p>In this way we can run a quick test matrix of different problem sizes,
-and see how the code scales.</p>
-<h2>Statistical Averaging</h2>
-<p>Of course, any good computational physicist will tell you that scaling behavior
-extrapolated from running a single case of a single problem size is folly - 
-your random choice of graph could have been an unusually easy or difficult graph,
-throwing off the results of the timing. </p>
-<p>A proper scaling study really needs to take into account the statistical trends 
-in solution time on a random assortment of problems, 
-so we need a way of scripting solutions to dozens or hundreds of random problems 
-and computing statistically representative measures of code performance.</p>
-<p>Our code implements a function to generate random graphs, 
-but for testing and debugging purposes the random number generator 
-was seeded with the same value each time. By making the random number generators
-truly random, each problem we solve will be a different random graph
-with the specified number ofn odes.</p>
-<p>We can accomplish all of this using bash again: within the for loop over different problem sizes,
-we will add a for loop for repetitions.
-Here is the basic framework:</p>
-<div class="highlight"><pre><span></span>make build 
-
-for N in {4..10..1}
-do
-    for repetition in {0..100..1}
-    do
-        make time SIZE=<span class="cp">${</span><span class="n">N</span><span class="cp">}</span> 
-    done
-done
-</pre></div>
-
-
-<p>And the embellished version that prints the resulting timing information to a file:</p>
-<div class="highlight"><pre><span></span># Compile
-make build 
-
-export RIGHTNOW=&quot;`date +&quot;%Y%m%d_%H%M%S&quot;`&quot;
-
-for N in {4..10..1}
-do
-
-    export OUT=&quot;avgtimeout_tsp_<span class="cp">${</span><span class="n">RIGHTNOW</span><span class="cp">}</span>_<span class="cp">${</span><span class="n">N</span><span class="cp">}</span>.out&quot;
-    touch <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-
-    echo &quot;**************************************&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-    echo &quot;Running TSP with <span class="nv">$N</span> nodes with Java...&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-
-    for repetition in {0..100..1}
-    do
-        make time SIZE=<span class="cp">${</span><span class="n">N</span><span class="cp">}</span> &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span> 2&gt;<span class="err">&amp;</span>1
-    done
-    echo &quot;Done.&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-    echo &quot;&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
-
-done
-
-echo &quot;&quot;
-echo <span class="cp">${</span><span class="n">OUTFILE</span><span class="cp">}</span>
-echo &quot;&quot;
-</pre></div>
-
-
-<p><a href="https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/avg_time_java.sh">Link to code on git.charlesreid1.com</a></p>
-<p>This results in a file with a large amount of information, but it can be trimmed down 
-to the quantities of interest using a little command line fu.
-Here are filtered results from an 11-node traveling salesperson problem
-run approximately 102 times:</p>
-<div class="highlight"><pre><span></span>$ cat avgtimeout_tsp_20170330_235134_11.out <span class="p">|</span> grep Elapsed <span class="p">|</span> wc -l
-     <span class="m">102</span>
-
-$ cat avgtimeout_tsp_20170330_235134_11.out <span class="p">|</span> grep Elapsed
-Elapsed <span class="nb">time</span> <span class="m">0</span>.082839 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.130378 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.173737 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.100067 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.166046 s
-
-&lt;clipped&gt;
-
-Elapsed <span class="nb">time</span> <span class="m">0</span>.147801 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.285777 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.078655 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.081246 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.174288 s
-</pre></div>
-
-
-<p>Now we have a Makefile that allows us to build and run with a single command,
-and a bash script that loops over each problem size and runs a set of computations
-for each problem size. But how to compute an average?</p>
-<p>We have an assortment of choices - Python being the most obvious - but in the spirit of
-old-school Unix tools like make, cat, grep, and wc, let's use <code>awk</code> to compute the average 
-walltime for each case size.</p>
-<h2>Awk to Compute Average Walltime</h2>
-<p>Given the following output of elapsed walltime for different problem sizes,</p>
-<div class="highlight"><pre><span></span>$ cat avgtimeout_tsp_20170330_235134_11.out <span class="p">|</span> grep Elapsed
-Elapsed <span class="nb">time</span> <span class="m">0</span>.082839 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.130378 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.173737 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.100067 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.166046 s
-
-&lt;clipped&gt;
-
-Elapsed <span class="nb">time</span> <span class="m">0</span>.147801 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.285777 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.078655 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.081246 s
-Elapsed <span class="nb">time</span> <span class="m">0</span>.174288 s
-</pre></div>
-
-
-<p>we want to extract two things: 
-the first is the problem size (contained in the filename),
-and the second is the column of numbers.</p>
-<p>We can extract the problem size from the filename using sed,
-by searching for the pattern <code>_8.out</code> or <code>_10.out</code>. 
-Here is a Bash one-liner that does this for a variable <code>$f</code> 
-containing the filename:</p>
-<div class="highlight"><pre><span></span>    N=$(echo $f | sed &#39;s/^.*_\([0-9]\{1,\}\).out/\1/&#39;)
-</pre></div>
-
-
-<p>The next thing we wnat to do is extract the column of timing data.
-This is a good task for the <code>cut</code> utility. We can pass it two flags,
-<code>-d</code> to tell it what to use as a field delimiter, and <code>-f</code> to tell it which field
-(column) to return. To extract the third column,</p>
-<div class="highlight"><pre><span></span>    cat $f | grep &quot;Elapsed&quot; | cut -d&quot; &quot; -f3 
-</pre></div>
-
-
-<p>This command results in a series of floating point numbers. If we can pipe it to a program
-that can do simple math, like <code>awk</code>, we can compute an average (which is pretty simple math).</p>
-<p>Since <code>awk</code> is a text-proecssing program that happens to be able to interpret numbers as numbers,
-we have to think like a text processing program. To compute an average, we accumulate the sum
-of each line in the file, using an accumulator variable. When we have gone through each line in the file,
-we divide this cumulative sum by the number of lines in the file.</p>
-<div class="highlight"><pre><span></span>    cat $f | grep &quot;Elapsed&quot; | cut -d&quot; &quot; -f3 | awk &#39;{a+=$1} END{print a/NR}&#39;
-</pre></div>
-
-
-<p>This one-liner uses two important concepts in <code>awk</code>, the first is the bracketed blocks <code>{}</code> 
-some denoted with <code>BEGIN</code> and <code>END</code>, and the second is the set of built-in variables available in <code>awk</code>.</p>
-<p>By surrounding statements by brackets, we denote a block of statements to be run together as the main body of the program.
-If the bracket is prefixed by <code>BEFORE</code>, this block of statements is run once at the beginning of the program.
-If the bracket is prefixed by <code>END</code>, this block of statements is run once at the end of the program.
-To compute an average, the main body of the program is to accumulate a cumulative sum variable. 
-The <code>END</code> block, run once at the end, is to divide this cumulative sum by the total number of lines.</p>
-<p>Finally, these values can be assigned to Bash variables using <code>$(cmd)</code> syntax:</p>
-<div class="highlight"><pre><span></span>    export N=$(echo <span class="nv">$f</span> | sed &#39;s/^.*_\([0-9]\{1,\}\).out/\1/&#39;)
-    export AVG=$(cat <span class="nv">$f</span> | grep &quot;Elapsed&quot; | cut -d&quot; &quot; -f3 | awk &#39;{a+=$1} END{print a/NR}&#39;) 
-    echo &quot;Average time : <span class="cp">${</span><span class="n">N</span><span class="cp">}</span>-node TSP problem : <span class="cp">${</span><span class="n">AVG</span><span class="cp">}</span> s&quot;
-</pre></div>
-
-
-<p>Here is the final script, which loops over all of the output files
-generated by the statistical average timing script,
-which runs 10-100 cases per problem size:</p>
-<div class="highlight"><pre><span></span><span class="ch">#!/bin/sh</span>
-
-<span class="k">for</span> f in <span class="sb">`</span>/bin/ls -1 avgtimeout_tsp*<span class="sb">`</span>
-<span class="k">do</span>
-    touch tmpfile 
-    cat /dev/null &gt; tmpfile
-
-    <span class="nb">export</span> <span class="nv">N</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$f</span> <span class="p">|</span> sed <span class="s1">&#39;s/^.*_\([0-9]\{1,\}\).out/\1/&#39;</span><span class="k">)</span>
-    <span class="nb">export</span> <span class="nv">AVG</span><span class="o">=</span><span class="k">$(</span>cat <span class="nv">$f</span> <span class="p">|</span> grep <span class="s2">&quot;Elapsed&quot;</span> <span class="p">|</span> cut -d<span class="s2">&quot; &quot;</span> -f3 <span class="p">|</span> awk <span class="s1">&#39;{a+=$1} END{print a/NR}&#39;</span><span class="k">)</span> 
-    <span class="nb">echo</span> <span class="s2">&quot;Average time : </span><span class="si">${</span><span class="nv">N</span><span class="si">}</span><span class="s2">-node TSP problem : </span><span class="si">${</span><span class="nv">AVG</span><span class="si">}</span><span class="s2"> s&quot;</span>
-
-    rm tmpfile
-<span class="k">done</span>
-</pre></div>
-
-
-<p><a href="https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/avg_calcs.sh">Link to code on git.charlesreid1.com</a></p>
-<p>Example output:</p>
-<div class="highlight"><pre><span></span>$ ./avg_calcs.sh  <span class="p">|</span> sort
-Average <span class="nb">time</span> : <span class="m">10</span>-node TSP problem : <span class="m">0</span>.0492826 s
-Average <span class="nb">time</span> : <span class="m">11</span>-node TSP problem : <span class="m">0</span>.125827 s
-Average <span class="nb">time</span> : <span class="m">12</span>-node TSP problem : <span class="m">0</span>.272998 s
-Average <span class="nb">time</span> : <span class="m">13</span>-node TSP problem : <span class="m">0</span>.56743 s
-Average <span class="nb">time</span> : <span class="m">14</span>-node TSP problem : <span class="m">1</span>.24297 s
-Average <span class="nb">time</span> : <span class="m">14</span>-node TSP problem : <span class="m">1</span>.66563 s
-Average <span class="nb">time</span> : <span class="m">15</span>-node TSP problem : <span class="m">8</span>.08373 s
-Average <span class="nb">time</span> : <span class="m">16</span>-node TSP problem : <span class="m">16</span>.4353 s
-Average <span class="nb">time</span> : <span class="m">17</span>-node TSP problem : <span class="m">94</span>.7363 s
-Average <span class="nb">time</span> : <span class="m">18</span>-node TSP problem : <span class="m">749</span>.798 s
-Average <span class="nb">time</span> : <span class="m">4</span>-node TSP problem : <span class="m">0</span>.00473154 s
-Average <span class="nb">time</span> : <span class="m">4</span>-node TSP problem : <span class="m">0</span>.00475648 s
-Average <span class="nb">time</span> : <span class="m">5</span>-node TSP problem : <span class="m">0</span>.005247 s
-Average <span class="nb">time</span> : <span class="m">5</span>-node TSP problem : <span class="m">0</span>.005765 s
-Average <span class="nb">time</span> : <span class="m">6</span>-node TSP problem : <span class="m">0</span>.00694926 s
-Average <span class="nb">time</span> : <span class="m">7</span>-node TSP problem : <span class="m">0</span>.0100795 s
-Average <span class="nb">time</span> : <span class="m">8</span>-node TSP problem : <span class="m">0</span>.0167346 s
-Average <span class="nb">time</span> : <span class="m">9</span>-node TSP problem : <span class="m">0</span>.028239 s
-</pre></div>
-
-
-<p>Inspecting the output from particular solutions of particular random graphs 
-shows a wide variation in the number of shortest paths found. For example, 
-for random graphs consisting of 11 nodes, here are some sample solutions.
-Note the difference in solution times:</p>
-<div class="highlight"><pre><span></span>------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 7, 6, 10, 3]   Distance: 597
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 7, 6, 3, 10]   Distance: 582
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 7, 10, 3, 6]   Distance: 560
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 7, 3, 6, 10]   Distance: 553
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 10, 3, 7, 6]   Distance: 540
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 10, 7, 6, 3]   Distance: 532
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 10, 7, 3, 6]   Distance: 503
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 6, 3, 7, 10]   Distance: 498
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 10, 3, 7, 5, 6]   Distance: 450
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 10, 5, 7, 3, 6]   Distance: 440
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 10, 5, 6, 7, 3]   Distance: 422
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 6, 5, 10, 3, 7]   Distance: 421
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 6, 5, 10, 7, 3]   Distance: 380
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 7, 10, 5, 6, 4, 3]   Distance: 364
-NEW SOLUTION    Route: [0, 9, 2, 1, 8, 7, 3, 4, 6, 5, 10]   Distance: 357
-NEW SOLUTION    Route: [0, 9, 2, 1, 5, 10, 7, 3, 8, 4, 6]   Distance: 352
-NEW SOLUTION    Route: [0, 9, 2, 1, 5, 10, 7, 8, 3, 4, 6]   Distance: 336
-NEW SOLUTION    Route: [0, 9, 2, 1, 5, 6, 4, 10, 7, 8, 3]   Distance: 330
-NEW SOLUTION    Route: [0, 9, 2, 1, 4, 8, 7, 3, 6, 5, 10]   Distance: 326
-NEW SOLUTION    Route: [0, 9, 2, 1, 4, 8, 3, 7, 6, 5, 10]   Distance: 320
-NEW SOLUTION    Route: [0, 9, 2, 1, 4, 8, 3, 7, 10, 5, 6]   Distance: 298
-NEW SOLUTION    Route: [0, 9, 2, 1, 4, 6, 5, 10, 7, 8, 3]   Distance: 261
-NEW SOLUTION    Route: [0, 9, 2, 7, 8, 3, 1, 4, 6, 5, 10]   Distance: 250
-NEW SOLUTION    Route: [0, 9, 8, 7, 2, 3, 1, 4, 6, 5, 10]   Distance: 245
-Found solution.
-Elapsed time 0.057047 s
-
-------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
-NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 5, 2, 7, 3]   Distance: 650
-NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 5, 2, 3, 7]   Distance: 641
-NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 5, 7, 2, 3]   Distance: 638
-NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 5, 7, 3, 2]   Distance: 630
-NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 7, 5, 2, 3]   Distance: 589
-NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 2, 3, 7, 5]   Distance: 580
-NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 2, 5, 7, 3]   Distance: 548
-NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 2, 5, 7, 3, 10]   Distance: 533
-NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 7, 5, 2, 3, 10]   Distance: 522
-NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 7, 5, 2, 10, 3]   Distance: 495
-NEW SOLUTION    Route: [0, 8, 1, 6, 7, 9, 4, 5, 2, 10, 3]   Distance: 494
-NEW SOLUTION    Route: [0, 8, 1, 6, 7, 5, 4, 9, 2, 10, 3]   Distance: 493
-NEW SOLUTION    Route: [0, 8, 1, 6, 3, 10, 2, 5, 7, 9, 4]   Distance: 490
-NEW SOLUTION    Route: [0, 8, 1, 6, 3, 10, 2, 5, 7, 4, 9]   Distance: 486
-NEW SOLUTION    Route: [0, 8, 1, 6, 9, 4, 7, 5, 2, 10, 3]   Distance: 467
-NEW SOLUTION    Route: [0, 8, 1, 10, 2, 5, 7, 4, 9, 6, 3]   Distance: 453
-NEW SOLUTION    Route: [0, 8, 1, 2, 5, 7, 4, 9, 6, 3, 10]   Distance: 442
-NEW SOLUTION    Route: [0, 8, 1, 2, 5, 7, 4, 9, 6, 10, 3]   Distance: 437
-NEW SOLUTION    Route: [0, 8, 1, 5, 7, 4, 9, 2, 10, 6, 3]   Distance: 433
-NEW SOLUTION    Route: [0, 8, 10, 2, 1, 5, 4, 9, 7, 6, 3]   Distance: 427
-NEW SOLUTION    Route: [0, 8, 10, 2, 1, 5, 7, 4, 9, 6, 3]   Distance: 400
-NEW SOLUTION    Route: [0, 8, 2, 1, 5, 7, 4, 9, 6, 10, 3]   Distance: 399
-NEW SOLUTION    Route: [0, 3, 7, 4, 9, 6, 10, 2, 1, 5, 8]   Distance: 394
-NEW SOLUTION    Route: [0, 3, 7, 4, 9, 6, 10, 2, 8, 5, 1]   Distance: 389
-NEW SOLUTION    Route: [0, 3, 6, 9, 4, 7, 5, 8, 1, 2, 10]   Distance: 384
-NEW SOLUTION    Route: [0, 3, 6, 9, 4, 7, 5, 8, 10, 2, 1]   Distance: 382
-NEW SOLUTION    Route: [0, 3, 6, 9, 4, 7, 5, 1, 2, 8, 10]   Distance: 374
-NEW SOLUTION    Route: [0, 9, 4, 5, 1, 2, 8, 10, 3, 6, 7]   Distance: 373
-NEW SOLUTION    Route: [0, 9, 4, 7, 3, 6, 10, 8, 5, 1, 2]   Distance: 365
-NEW SOLUTION    Route: [0, 9, 4, 7, 3, 6, 10, 2, 1, 5, 8]   Distance: 360
-NEW SOLUTION    Route: [0, 9, 4, 7, 3, 6, 10, 2, 8, 5, 1]   Distance: 355
-NEW SOLUTION    Route: [0, 9, 4, 7, 5, 8, 1, 2, 10, 6, 3]   Distance: 345
-NEW SOLUTION    Route: [0, 9, 4, 7, 5, 1, 2, 8, 10, 6, 3]   Distance: 335
-Found solution.
-Elapsed time 0.159882 s
-
-------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
-NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 1, 9, 6]   Distance: 500
-NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 1, 6, 9]   Distance: 498
-NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 6, 1, 9]   Distance: 493
-NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 6, 9, 1]   Distance: 481
-NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 9, 1, 6]   Distance: 443
-NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 9, 6, 1]   Distance: 429
-NEW SOLUTION    Route: [0, 3, 10, 2, 5, 6, 1, 9, 8, 7, 4]   Distance: 417
-NEW SOLUTION    Route: [0, 3, 10, 2, 6, 5, 4, 7, 8, 9, 1]   Distance: 360
-NEW SOLUTION    Route: [0, 3, 10, 2, 1, 9, 6, 5, 4, 7, 8]   Distance: 359
-NEW SOLUTION    Route: [0, 3, 10, 4, 5, 6, 2, 1, 9, 7, 8]   Distance: 358
-NEW SOLUTION    Route: [0, 3, 10, 4, 5, 6, 2, 1, 9, 8, 7]   Distance: 342
-NEW SOLUTION    Route: [0, 3, 10, 4, 5, 6, 9, 8, 7, 2, 1]   Distance: 340
-NEW SOLUTION    Route: [0, 3, 10, 4, 7, 8, 9, 1, 2, 6, 5]   Distance: 310
-NEW SOLUTION    Route: [0, 3, 7, 8, 9, 10, 4, 5, 6, 2, 1]   Distance: 305
-NEW SOLUTION    Route: [0, 3, 9, 8, 7, 4, 10, 1, 2, 6, 5]   Distance: 303
-NEW SOLUTION    Route: [0, 5, 4, 7, 3, 10, 8, 9, 6, 2, 1]   Distance: 301
-NEW SOLUTION    Route: [0, 5, 4, 7, 3, 10, 1, 2, 6, 9, 8]   Distance: 293
-NEW SOLUTION    Route: [0, 5, 4, 7, 3, 1, 6, 2, 10, 9, 8]   Distance: 286
-NEW SOLUTION    Route: [0, 5, 4, 7, 3, 1, 2, 6, 9, 10, 8]   Distance: 281
-NEW SOLUTION    Route: [0, 5, 4, 7, 3, 1, 2, 6, 10, 9, 8]   Distance: 275
-NEW SOLUTION    Route: [0, 5, 4, 7, 8, 9, 6, 2, 1, 3, 10]   Distance: 270
-NEW SOLUTION    Route: [0, 5, 4, 7, 8, 9, 10, 3, 1, 2, 6]   Distance: 269
-NEW SOLUTION    Route: [0, 5, 4, 10, 3, 7, 8, 9, 6, 2, 1]   Distance: 268
-NEW SOLUTION    Route: [0, 5, 4, 10, 9, 8, 7, 3, 1, 2, 6]   Distance: 252
-NEW SOLUTION    Route: [0, 5, 4, 10, 9, 6, 2, 1, 3, 7, 8]   Distance: 248
-NEW SOLUTION    Route: [0, 5, 6, 2, 10, 4, 7, 8, 9, 3, 1]   Distance: 235
-NEW SOLUTION    Route: [0, 5, 6, 2, 1, 3, 10, 4, 7, 8, 9]   Distance: 231
-NEW SOLUTION    Route: [0, 5, 6, 2, 1, 3, 7, 4, 10, 9, 8]   Distance: 212
-NEW SOLUTION    Route: [0, 5, 6, 2, 1, 3, 9, 10, 4, 7, 8]   Distance: 207
-Found solution.
-Elapsed time 0.175282 s
-
-------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
-NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 9, 3, 8, 1]   Distance: 515
-NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 9, 3, 1, 8]   Distance: 495
-NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 9, 8, 1, 3]   Distance: 423
-NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 8, 9, 1, 3]   Distance: 368
-NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 3, 8, 9, 1]   Distance: 361
-NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 3, 1, 9, 8]   Distance: 341
-NEW SOLUTION    Route: [0, 6, 7, 2, 5, 1, 9, 8, 3, 4, 10]   Distance: 330
-NEW SOLUTION    Route: [0, 6, 7, 2, 10, 5, 1, 9, 8, 4, 3]   Distance: 309
-NEW SOLUTION    Route: [0, 6, 7, 10, 2, 5, 1, 9, 8, 4, 3]   Distance: 284
-NEW SOLUTION    Route: [0, 6, 7, 8, 9, 1, 5, 2, 10, 4, 3]   Distance: 266
-NEW SOLUTION    Route: [0, 6, 7, 8, 9, 1, 5, 10, 2, 4, 3]   Distance: 258
-NEW SOLUTION    Route: [0, 6, 5, 2, 10, 4, 3, 1, 9, 8, 7]   Distance: 250
-NEW SOLUTION    Route: [0, 6, 5, 2, 10, 7, 8, 9, 1, 3, 4]   Distance: 243
-NEW SOLUTION    Route: [0, 6, 5, 2, 4, 3, 1, 9, 8, 7, 10]   Distance: 225
-NEW SOLUTION    Route: [0, 6, 5, 1, 9, 8, 7, 10, 2, 4, 3]   Distance: 197
-Found solution.
-Elapsed time 0.051783 s
-
-------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
-NEW SOLUTION    Route: [0, 8, 9, 6, 1, 7, 3, 4, 5, 2, 10]   Distance: 607
-NEW SOLUTION    Route: [0, 8, 9, 6, 1, 7, 3, 4, 2, 5, 10]   Distance: 573
-NEW SOLUTION    Route: [0, 8, 9, 6, 1, 7, 3, 4, 10, 5, 2]   Distance: 562
-NEW SOLUTION    Route: [0, 8, 9, 6, 1, 7, 3, 5, 2, 4, 10]   Distance: 513
-NEW SOLUTION    Route: [0, 8, 9, 6, 1, 3, 5, 2, 7, 4, 10]   Distance: 496
-NEW SOLUTION    Route: [0, 8, 9, 6, 7, 3, 1, 5, 2, 4, 10]   Distance: 493
-NEW SOLUTION    Route: [0, 8, 9, 6, 7, 3, 1, 10, 4, 2, 5]   Distance: 489
-NEW SOLUTION    Route: [0, 8, 9, 6, 7, 2, 4, 10, 1, 3, 5]   Distance: 487
-NEW SOLUTION    Route: [0, 8, 9, 6, 7, 2, 5, 3, 1, 10, 4]   Distance: 480
-NEW SOLUTION    Route: [0, 8, 9, 6, 4, 3, 5, 2, 7, 1, 10]   Distance: 454
-NEW SOLUTION    Route: [0, 8, 9, 6, 4, 5, 2, 7, 3, 1, 10]   Distance: 453
-NEW SOLUTION    Route: [0, 8, 9, 6, 4, 10, 5, 2, 7, 3, 1]   Distance: 452
-NEW SOLUTION    Route: [0, 8, 9, 6, 4, 10, 1, 7, 3, 5, 2]   Distance: 443
-NEW SOLUTION    Route: [0, 8, 9, 6, 4, 10, 1, 3, 5, 2, 7]   Distance: 411
-NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 1, 3, 5, 2, 7]   Distance: 407
-NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 7, 2, 5, 3, 1]   Distance: 402
-NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 5, 2, 7, 3, 1]   Distance: 390
-NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 2, 7, 3, 1, 5]   Distance: 388
-NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 2, 7, 1, 3, 5]   Distance: 387
-NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 2, 5, 3, 1, 7]   Distance: 384
-NEW SOLUTION    Route: [0, 8, 9, 10, 1, 3, 5, 2, 7, 4, 6]   Distance: 376
-NEW SOLUTION    Route: [0, 8, 9, 10, 6, 4, 3, 1, 7, 2, 5]   Distance: 371
-NEW SOLUTION    Route: [0, 8, 9, 10, 6, 4, 3, 1, 5, 2, 7]   Distance: 367
-NEW SOLUTION    Route: [0, 8, 9, 10, 6, 4, 2, 5, 3, 1, 7]   Distance: 366
-NEW SOLUTION    Route: [0, 8, 9, 10, 6, 4, 7, 2, 5, 3, 1]   Distance: 365
-NEW SOLUTION    Route: [0, 8, 9, 5, 3, 1, 10, 6, 4, 2, 7]   Distance: 358
-NEW SOLUTION    Route: [0, 8, 9, 5, 2, 7, 3, 1, 10, 4, 6]   Distance: 352
-NEW SOLUTION    Route: [0, 8, 2, 4, 6, 10, 9, 5, 3, 7, 1]   Distance: 344
-NEW SOLUTION    Route: [0, 8, 2, 4, 6, 10, 9, 5, 3, 1, 7]   Distance: 328
-NEW SOLUTION    Route: [0, 8, 2, 7, 3, 1, 5, 9, 10, 4, 6]   Distance: 321
-NEW SOLUTION    Route: [0, 8, 2, 7, 1, 3, 5, 9, 10, 4, 6]   Distance: 320
-NEW SOLUTION    Route: [0, 8, 5, 3, 1, 9, 10, 6, 4, 2, 7]   Distance: 319
-NEW SOLUTION    Route: [0, 8, 5, 9, 10, 6, 4, 2, 7, 3, 1]   Distance: 314
-NEW SOLUTION    Route: [0, 8, 5, 2, 7, 3, 1, 9, 10, 4, 6]   Distance: 313
-NEW SOLUTION    Route: [0, 8, 4, 3, 5, 2, 7, 1, 9, 10, 6]   Distance: 299
-NEW SOLUTION    Route: [0, 8, 4, 3, 7, 2, 5, 9, 1, 10, 6]   Distance: 293
-NEW SOLUTION    Route: [0, 8, 4, 3, 1, 7, 2, 5, 9, 10, 6]   Distance: 278
-NEW SOLUTION    Route: [0, 8, 4, 2, 7, 3, 1, 5, 9, 10, 6]   Distance: 277
-NEW SOLUTION    Route: [0, 8, 4, 2, 7, 1, 3, 5, 9, 10, 6]   Distance: 276
-NEW SOLUTION    Route: [0, 8, 4, 6, 10, 9, 5, 3, 1, 7, 2]   Distance: 263
-NEW SOLUTION    Route: [0, 8, 4, 6, 10, 9, 5, 3, 1, 2, 7]   Distance: 262
-NEW SOLUTION    Route: [0, 8, 4, 6, 10, 9, 5, 2, 7, 3, 1]   Distance: 249
-NEW SOLUTION    Route: [0, 3, 5, 9, 10, 6, 4, 8, 1, 7, 2]   Distance: 245
-NEW SOLUTION    Route: [0, 3, 5, 9, 10, 6, 4, 8, 1, 2, 7]   Distance: 244
-NEW SOLUTION    Route: [0, 3, 7, 2, 5, 9, 10, 1, 8, 4, 6]   Distance: 242
-NEW SOLUTION    Route: [0, 3, 7, 2, 5, 9, 10, 6, 4, 8, 1]   Distance: 231
-NEW SOLUTION    Route: [0, 3, 1, 8, 4, 6, 10, 9, 5, 2, 7]   Distance: 215
-Found solution.
-Elapsed time 0.087109 s
-</pre></div>
-
-
-<h2>Results</h2>
-<p>The figure below shows the results of the timing study when using the average of 100 different random problems, 
-compared to the timing study performed using a single problem size.</p>
-<p><img alt="Average versus one-time solutions, walltime versus problem size." src="/images/avg-vs-onetime-walltime.png"></p>
-<p>The results show dramatically different behavior, highlighting the importance
-of computing the statistical average of solution walltime for many different problems.
-This was not an issue that arose in discussing timing or profiling of codes to solve the 
-8 queens problem, because in that case the problem (and resulting decision tree)
-were determined by the choice of algorithm.</p>
-<p>This information is also important ot keep in mind when comparing the timing performance 
-of two algorithms - using many cases to compare two algorithms is preferrable,
-since it reduces the likelihood of randomly selecting a problem that highights 
-a weakness of one algorithm or a strength of the other.</p>
-<h2>Summary</h2>
-<p>In this post we covered some scripting tools that make timing a lot easier to do,
-and some ways of thinking about and building up scripts 
-to allow for more complex timing studies without an increase 
-in the associated post-processing work involved.</p>
-<p>We showed how to use <code>make</code> and a Makefile to create compact, expressive commands to build and run Java programs.
-We showed how to use Bash scripting to implement loops and run a case matrix of problems of various sizes,
-measuring timing data for hundreds of problems in total.
-All of these scripts made heavy use of Unix command line tools, 
-demonstrating how to chain commands and functionality together on the command line to accomplish complex tasks.
-Finally, we showed how to use the <code>awk</code> programming language to compute the average of a set of numbers,
-exploring yet another application of this unusually handy language.</p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/command-line.html">command line</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/guava.html">guava</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/graph.html">graph</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/tsp.html">TSP</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/make.html">make</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/awk.html">awk</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/performance.html">performance</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1622,6 +1170,9 @@ exploring yet another application of this unusually handy language.</p></div>
 
             <h2>April 2017</h2>
 
+            <p class="archive">
+            <a href="/stunnel.html">Stunnel</a>
+            </p>
             <p class="archive">
             <a href="/the-z-machine-a-simple-turing-machine.html">The Z-Machine: A Simple Turing Machine</a>
             </p>
