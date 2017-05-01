@@ -1,6 +1,5 @@
 Title: Traveling Schoolteacher Problem
-Status: draft
-Date: 2017-04-29 20:00
+Date: 2017-04-30 13:00
 Category: Java
 Tags: computer science, guava, graph, TSP
 
