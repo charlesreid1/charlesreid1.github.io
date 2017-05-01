@@ -304,7 +304,7 @@ and comparisons between the TSP and TSTP slopes will be added later.
 ## References
 
 1. "tsp (git repository)." Charles Reid. Modified 7 April 2017. Accesssed 30 April 2017.
-<[https://charlesreid1.com:3000/charlesreid1/tsp](https://charlesreid1.com:3000/charlesreid1/tsp)>
+<[https://git.charlesreid1.com/charlesreid1/tsp](https://charlesreid1.com:3000/charlesreid1/tsp)>
 
 2. "Solving the Traveling Salesperson Problem with Java and Guava." Charles Reid. 23 March 2017. Accessed 30 April 2017.
 <[http://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html](http://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html)>
