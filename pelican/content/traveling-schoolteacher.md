@@ -307,8 +307,8 @@ and comparisons between the TSP and TSTP slopes will be added later.
 <[https://git.charlesreid1.com/charlesreid1/tsp](https://charlesreid1.com:3000/charlesreid1/tsp)>
 
 2. "Solving the Traveling Salesperson Problem with Java and Guava." Charles Reid. 23 March 2017. Accessed 30 April 2017.
-<[http://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html](http://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html)>
+<[https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html](https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html)>
 
 3. "Better Timing of Guava Traveling Salesperson Problem Code: Timing Scripts." Charles Reid. 1 April 2017. Accessed 30 April 2017.
-<[http://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html](http://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html)>
+<[https://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html](https://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html)>
 
