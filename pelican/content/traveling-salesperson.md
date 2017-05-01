@@ -650,7 +650,7 @@ String[] distances = {"A:B:24","A:C:5","A:D:20","A:E:18","B:C:10","B:D:20","C:D:
 This is the graph that we're solving the TSP problem on.
 Here are the results when the program is compiled and run:
 
-```bash
+```
 $ javac -cp '.:/Users/charles/codes/guava/jars/guava-21.0.jar' TSP.java
 
 $ java -cp '.:/Users/charles/codes/guava/jars/guava-21.0.jar' TSP
@@ -671,7 +671,7 @@ with the sequence of shortest routes found by the algorithm:
 
 ![Six-node traveling salesperson problem](graphviz_tsp_6.png)
 
-```plain
+```
 java -cp '.:/Users/charles/codes/guava/jars/guava-21.0.jar' TSP 6 
 ------------------- TSP ----------------------
 !!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 3, 2, 4, 5]	Distance: 291.0
@@ -681,16 +681,15 @@ java -cp '.:/Users/charles/codes/guava/jars/guava-21.0.jar' TSP 6
 !!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 3, 5, 1, 4, 2]	Distance: 178.0
 !!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 2, 4, 1, 5, 3]	Distance: 163.0
  Done.
- ```
+```
 
 And for 12 nodes, a problem twice that size, here is the graph and corresponding output:
 
 ![Twelve-node traveling salesperson problem](graphviz_tsp_12.png)
 
-```plain
-**************************************
-Running TSP with 12 nodes with Java...
-# Java times itself, we just have to pass it the size
+and the output:
+
+```
 java -cp '.:/Users/charles/codes/guava/jars/guava-21.0.jar' TSP 12 
 ------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
 !!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 6, 8, 11]	Distance: 585.0
@@ -729,7 +728,7 @@ java -cp '.:/Users/charles/codes/guava/jars/guava-21.0.jar' TSP 12
 !!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 1, 4, 5, 7, 3, 9, 11, 10, 8, 6, 2]	Distance: 245.0
 !!!!!YAY!!!!!!	NEW SOLUTION	Route: [0, 7, 5, 4, 1, 8, 6, 10, 11, 9, 3, 2]	Distance: 236.0
  Done.
- ```
+```
 
 Note that these random graphs are fully connected - every node connects to every other node.
 Among the many interesting aspects of the problem, one of them is the impact of connectivity
