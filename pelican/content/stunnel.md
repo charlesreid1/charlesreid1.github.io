@@ -41,8 +41,11 @@ This writeup assumes access to both the server and the client.
 If you don't have access to the client, the server certificate
 needs to be signed by a certificate authority that the client trusts.
 You can either:
+
 * Shell out big bucks for a certificate signed by a certificate authority company, thereby contributing to the ongoing racketeering of said companies;
+
 * Use a LetsEncrypt certificate, signed by a certificate authority for free; or
+
 * Use a self-signed certificate and install the certificate authority onto the client computer.
 
 (These are all difficult and confusing processes, 
@@ -105,10 +108,13 @@ and not bound to an EXTERNAL ip address like 0.0.0.0).
 ### Charlesreid1.com Resources for Stunnel Servers
 
 The charlesreid1.com wiki has an extensive guide to setting up an Stunnel server: 
+
 * [charlesreid1.com/wiki/Stunnel/Server](https://charlesreid1.com/wiki/Stunnel/Server)
+
 * [charlesreid1.com/wiki/Stunnel/Docker](https://charlesreid1.com/wiki/Stunnel/Docker) - wiki page detailing the use of Docker and Docker containers to run an stunnel server.
 
 The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel server: 
+
 * [d-stunnel repository](https://charlesreid1.com:3000/docker/d-stunnel) - repo containing Docker configuration files, for creating a Docker container that runs an stunnel server.
 	This repository contains example stunnel configuration files for running a number of different protocols over stunnel (ssh, http, and rsync).
 
@@ -126,10 +132,13 @@ traffic (e.g., on port 8443) and send it on to the server that it connects to wi
 ## Charlesreid1.com Resources for Stunnel Clients
 
 The charlesreid1.com wiki has an extensive guide to setting up an Stunnel client: 
+
 * [charlesreid1.com/wiki/Stunnel/Client](https://charlesreid1.com/wiki/Stunnel/Client) - wiki page detailing the stunnel configuration process for stunnel servers.
 
 The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel client: 
+
 * [m-stunnel repository](https://charlesreid1.com:3000/mac/m-stunnel) - stunnel configuration files for running an stunnel client on Mac OS X
+
 * [pi-stunnel repository](https://charlesreid1.com:3000/rpi/pi-stunnel) - stunnel configuration files for running an stunnel client on Raspberry Pi
 
 
@@ -140,11 +149,17 @@ One of the most beautiful aspects of networking is that packets can be wrapped w
 so theoretically it can be packets all the way down. This allows us to use stunnel's SSL TCP wrappers to wrap
 just about any traffic we want. This means we can run various services (encrypted or not) through stunnel,
 including but not limited to:
+
 * SSH (secure shell)
+
 * SCP (secure copy)
+
 * OpenVPN (virtual network)
+
 * Rsync (file transfer)
+
 * MongoDB (NoSQL database)
+
 * Redis (local-only NoSQL database)
 
 While stunnel has a few pre-configured services that it can deal with, 
@@ -153,10 +168,15 @@ users can also define their own custom protocols, over whatever port they please
 The charlesreid1.com wiki details stunnel configuration for all of the above protocols,
 excepting MongoDB and redis. Here are links to pages specifying how to configure stunnel
 for each protocol:
+
 * [SSH over stunnel](https://charlesreid1.com/wiki/Stunnel/SSH)
+
 * [SCP over stunnel](https://charlesreid1.com/wiki/Stunnel/Scp)
+
 * [HTTP over stunnel](https://charlesreid1.com/wiki/Stunnel/HTTP)
+
 * [OpenVPN over stunnel](https://charlesreid1.com/wiki/Stunnel/OpenVPN)
+
 * [Rsync over stunnel](https://charlesreid1.com/wiki/Stunnel/Rsync)
 
 The [Rsync over stunnel](https://charlesreid1.com/wiki/Stunnel/Rsync) page, in particular,
@@ -191,10 +211,15 @@ that contains a number of techniques for debugging an stunnel connection.
 [Here is the direct link to DEBUGGING.md](https://charlesreid1.com:3000/docker/d-stunnel/src/master/DEBUGGING.md).
 
 The techniques covered include:
+
 * Configuring stunnel to run in the foreground (print log messages to console instead of to log file)
+
 * Configuring stunnel to output debugging information 
+
 * Poking the stunnel server with telnet
+
 * Inspecting open ports with nmap
+
 * Watching `/var/log/syslog` for activity
 
 See [DEBUGGING.md](https://charlesreid1.com:3000/docker/d-stunnel/src/master/DEBUGGING.md) for details.
