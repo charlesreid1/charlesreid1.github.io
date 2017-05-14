@@ -23,3 +23,6 @@ Remove any unused images from theme
 How to copy over the theme, and/or extricate the theme into its own repository, for re-use across sites/servers
 
 
+# To make a post a draft
+
+Status: draft
