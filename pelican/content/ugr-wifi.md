@@ -1,6 +1,5 @@
 Title: Undergraduate Research Project: Wireless Sensor Networks for Internet of Things Applications (Part 1: The Project)
 Date: 2017-05-14 11:00
-Status: draft
 Category: Wireless
 Tags: wireless, security, undergraduate research project, stunnel, SSH, aircrack, mongodb, python, jupyter, linux, raspberry pi
 
@@ -14,15 +13,6 @@ Table of Contents:
 	* [UW Research Symposium](#ugr-uw)
 
 
-* Challenges
-	* Infrastructure challenges
-		* Firewalls, Restrictive Networks, and Blocked Ports 
-		* No Money-Dollars
-	* Hardware challenges
-		* The Obstreperous Raspberry Pi
-	* Student challenges
-		* What do you do, when everything is new, and you don't have a clue
-		* Finding References
 
 <a name="ugr-overview"></a>
 # Overview of the Undergraduate Research (UGR) Project
@@ -90,7 +80,7 @@ one antenna for listening to and collect wireless signal data in monitor mode,
 and one antenna to connect to nearby wireless networks to establish a connection
 to a centralized data warehouse server.
 
-<a name="ugr-components">
+<a name="ugr-components"></a>
 ## Project Components: Extract, Store, and Analyze
 
 The wireless sensor network project had three major components:
@@ -118,7 +108,7 @@ The wireless sensor network project had three major components:
 	at a coffee shop, on a bus), a diverse set of data was gathered, allowing students
 	to extract meaningful information about each experiment from each data set.
 
-<a name="ugr-buzzword">
+<a name="ugr-buzzword"></a>
 ## The Internet of Things: Not Just a Buzzword
 
 One of the biggest challenges starting out was in getting the students into the 
