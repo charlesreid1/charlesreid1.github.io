@@ -125,20 +125,22 @@ the internet, so they were expecting a design project in which we would make
 a prototype consumer device intended to connect to the internet.
 
 Further complicating things was the fact that we were focusing on 
-**building a thing** - a data analysis pipeline - a workflow for 
+**building a data acquisition system** - a data analysis pipeline - a workflow for 
 extracting, storing, and analyzing sensor data. We were not focused
 on the specific types of questions that our specific type of data 
-could answer. This was puzzling to the students (who could not see
+could answer. This was a bit puzzling for the students (who could not see
 the intrinsic value of building a data analysis pipeline).
 Much of their time was spent struggling with what, exactly, we were
-supposed to be doing with the data. 
+supposed to be doing with the data, and getting past a 
+contaminated, consumer-centric view of the term "Internet of Things."
 
 It was, therefore, a major breakthrough when one of the students, 
-as we were diving deeper into the data analysis portion and utilizing Python 
-to visualize the data we were gathering, told me, "Looking back, I realize that 
-I was thinking really narrowly about the whole project. I thought we 
-were going to build a 'smart' device, like a business project. 
-But now I realize our project has a bigger scope, because of the analysis part." 
+as we were diving deeper into the data analysis portion, utilizing Python 
+to plot the data, quantitatively analyze it, and better understand it, 
+told me, "Looking back, I realize that I was thinking really narrowly 
+about the whole project. I thought we were going to build a 'smart' device, 
+like a business project. But now I realize our project has a bigger scope, 
+because of the analysis part." 
 
 That, in a nutshell, was **precisely** the intention of the project.
 
@@ -150,7 +152,7 @@ Next week the students present the culmination of their research project at the 
 that summarizes their research effort, the results, and the tools that were used. 
 
 It is clear to anyone attending the Undergrad Research Symposium that community college students are among the minority 
-of students who are involved in, and benefitting from, research projects. The intention of most of the projects 
+of students who are involved in, and benefiting from, research projects. The intention of most of the projects 
 showcased at the symposium is to launch undergraduate students into a graduate level research career 
 and prepare them to hit the ground running, and have a stronger resume and application,
 when they have finished their undergraduate education and are applying to graduate schools.
@@ -158,22 +160,27 @@ Many of the research posters at the symposium showcase research using expensive 
 and complex mathematical methods. Many of the students are mentored by world-class research professors 
 with deep expertise and small armies of graduate and postgraduate researchers. 
 
-Nevertheless, despite our research efforts being completely outmatched 
+Despite our research efforts being completely outmatched 
 by many of the undergraduate researchers from the University of Washington 
-(out-funded, out-manned, and out-gunned), we managed to pull together a 
-project that gathered a very rich data set (wireless signals are a fascinating 
-topic in and of themselves), touches on some incredibly important issues (wireless networks,
-privacy and security, embedded devices, databases, Linux), 
-and exposed students to a totally new way of thinking about the "interenet of things"
-that allows them to move beyond the shallow hype of the latest 
-internet-connected consumer gadgets. The students now have the skills to 
-identify real, significant problems faced by many, many companies that are 
-drowning in data, and to design data pipelines to help solve these problems. 
+(out-funded, out-manned, and out-gunned), our group managed to pull together a 
+very interesting and very ambitious design project that collected a very rich data set.
+The students were introduced to some useful tools and fields of computer science 
+(wireless networks, privacy and security, embedded devices, databases, Linux), 
+and exposed students to a totally new way of thinking about the "internet of things"
+that allows them to move beyond the shallow hype of internet-connected toothbrushes. 
+The students have developed the ability to build a data pipeline that could be used by a company
+to address real, significant problems and needs around data. 
 
-All in all, it may not be the most showy poster at the symposium, 
-but it is an extremely worthwhile, high-impact project that's equipping 
+All in all, this was an extremely worthwhile, high-impact project that's equipping 
 the next generation of computer scientists with the cognitive tools
 to anticipate and solve data problems, which (as hardware becomes cheaper
-and embedded devices become more ubiquitous) are only going to become 
+and embedded devices become more ubiquitous) are problems that will only become 
 more common in more industries.
+
+<a name="ugr-poster"></a>
+## The Poster
+
+Here's a rough draft of the poster we will be showing at the UGR symposium: 
+
+![UGR Poster](/images/ugr-poster.png)
 
