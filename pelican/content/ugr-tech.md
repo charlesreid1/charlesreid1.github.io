@@ -47,8 +47,10 @@ the wireless sensor data (NoSQL database tools), and those used to process,
 analyze, and visualize the data colleted (Python data analysis tools).
 
 The technologies used can be classified two ways:
+
 * ***Student-Led Components*** - the software components of the pipeline 
 	that students learned about, and whose implementation was student-led. 
+
 * ***Backend Components*** - the software components of the pipeline
 	that were too complicated, too hairy, and/or too extraneous to the project
 	objectives to have students try and handle. These were the components of the project
@@ -95,11 +97,17 @@ that was flexible enough to handle the many tasks we would be
 asking of it.
 
 A word about networking issues that the students had connecting to the headless Raspberry Pis: 
+
 * Issues were due to a combination of hardware and networking problems
+
 * Many issues required multi-step workarounds
+
 * Workarounds introduced new concepts (DHCP, subnets, IP configuration schemes, IPv6) 
+
 * Each new concept introduced led students to feel overwhelmed
+
 * Students had a difficult time telling what steps were "normal" and which were esoteric
+
 * There is a lot of documentation to read - especially difficult for non-English speakers 
 
 Each of the multitude of problems students experienced arose from different aspects of the machines.
@@ -184,9 +192,13 @@ the script to extract and process data from the CSV files
 was run on the computer running the database.
 
 This is a best practice I learned form experience: 
+
 * Extract and process the sensor data on-premises (i.e., near or where the data is stored)
+
 * Keep the original, raw data whenever possible, transport it to the data storage 
+
 * Assume the components of your pipeline will be unreliable or asychronously available
+
 * Build the pipeline to be robust and handle failures.
 
 We used a cheap, $5/month virtual private server from Linode
@@ -200,9 +212,9 @@ database system like SQLite or PostgreSQL
  is "normal" or "not normal" that I would start to feel like the 
  parent of a bunch of teenagers).
 
- Think of the long-term influence that research mentors can have: 
- simply by showing students how to use vim, and not emacs, 
- I have set them on the path to enlightenment.
+Think of the long-term influence that research mentors can have: 
+simply by showing students how to use vim, and not emacs, 
+I have set them on the path to enlightenment.
 
 We ran the database on the server, but conceptualizing the database
 was difficult for the students. To this end, I set up an instance of
