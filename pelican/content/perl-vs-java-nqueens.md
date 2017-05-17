@@ -66,15 +66,15 @@ such that no queen can attack any other queen?
 The number of possible configurations of queens on a chessboard is 64 pick 8, or
 
 $$
-\dfrac{64!}{(64-8)!} = 64 \times 63 \times \dots \times 57 \times 56 = 9,993,927,307,714,560
+\dfrac{64!}{(64-8)!} = 64 \times 63 \times \dots \times 57 \times 56 = 178,462,987,637,760 
 $$
 
-Or, just a whisker shy of 10 quadrillion (if a whisker is defined as 7 trillion). Here's that calculation in Python:
+Here's that calculation in Python:
 
 ```
 >>> import numpy as np
->>> np.prod(range(64-8,64+1))
-9993927307714560
+>>> np.prod(range(64-8+1,64+1))
+178462987637760
 ```
 
 That's bigger than the net worth of most U.S. Presidents!
