@@ -15,6 +15,8 @@ Table of Contents:
 
 * [Accounting for Diagonal Attacks](#8q-diag)
 
+* [Why the N Queens Problem?](#8q-why)
+
 <a name="8q-gentle-intro"></a>
 ## A Gentle Introduction to Recursion
 
@@ -239,7 +241,58 @@ can be ruled out as possible squares for the placement of the
 
 <img src="images/8-queens-diag.png" width="500px" />
 
-Accounting for these diagonal attacks can lead to substantial 
-speed-ups: the number of squares that can be eliminated by 
-accounting for diagonal attacks is substantial 
-and makes the extra index accounting worth it.
+Accounting for these diagonal attacks can lead to substantial speed-ups: 
+each queen that is placed can eliminate up to two additional squares per column,
+which means the overall decision tree for the N queens problem becomes a lot less
+dense, and faster to explore. 
+
+<a name="8q-why"></a>
+## Why the N Queens Problem? 
+
+Invariably, some students will deal with this difficult problem
+by questioning the premise of the question - a reasonable 
+thing to wonder. 
+
+This leads to a broader, more important question: 
+why do computer scientists focus so much on *games*?
+
+Games, like computers, are self-contained universes, 
+they are abstract systems, they remove messy details and complications.
+They allow you to start, from scratch, by setting up a board,
+a few rules, a few pieces - things that are easy to implement 
+in a computer.
+
+Mazes, crossword puzzles, card games, checkers, chess, 
+are all systems with a finite, small number of elements 
+that interact in finite, small numbers of ways.
+The beauty of games is that those small rule sets
+can result in immensely complex systems, so that there
+are more [branches in the chess decision tree](https://en.wikipedia.org/wiki/Shannon_number)
+(the Shannon number, $10^{120}$) than there are 
+[protons in the universe](https://en.wikipedia.org/wiki/Eddington_number)
+(the Eddington number, $10^{80}$).
+
+That simplicity is important in computer science.
+Any real-world problem is going to have to be broken down,
+eventually, into pieces, into rules, into a finite representation,
+so that anything we try to model with a computer, 
+any problem we attempt to solve computationally,
+no matter how complex, will always have a game-like representation.
+
+(Side note: much of the literature in systems operations research,
+which studies the application of mathematical optimization to
+determine the best way to manage resources, 
+came out of work on war games - which were 
+themselves game-ified, simplified representations
+of real, complex systems. Econometrics, or 
+"computational economics," is another field where 
+game theory has gained much traction and finds many 
+practical applications.)
+
+Recursion, too, is a useful concept in and of itself,
+one that shows up in sorting and searching algorithms,
+computational procedures, and even in nature. 
+
+But it isn't just knowing **where** to look - 
+it's knowing what you're looking for in the first place. 
+
