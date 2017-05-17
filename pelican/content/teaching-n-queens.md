@@ -3,11 +3,16 @@ Date: 2017-05-16 18:00
 Category: Computer Science
 Tags: java, algorithms, recursion, n-queens
 
-Table of Contents
+Table of Contents:
+
 * [A Gentle Introduction to Recursion](#8q-gentle-intro)
+
 * [Recursive Backtracking](#8q-backtrack)
+
 * [Paring Down the Decision Tree](#8q-decision)
+
 * [The Pseudocode](#8q-pseudocode)
+
 * [Accounting for Diagonal Attacks](#8q-diag)
 
 <a name="8q-gentle-intro"></a>
