@@ -89,13 +89,6 @@ jumping each of the white checkers. If none, say "None". If multiple, say "Multi
 <a name="checkers-solution"></a>
 # The Solution
 
-Our approach: keep it simple
-
-Solution analysis, graph methods, Euler tour
-
-Solution algorithm
-
-Solution code
 
 <a name="checkers-kiss"></a>
 ## Keep It Simple
