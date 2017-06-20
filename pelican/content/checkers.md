@@ -15,6 +15,7 @@ Tags: programming, computer science, final project, competitive programming
 	* [Solution Analysis: Graphs and Euler Tours](#checkers-euler)
 	* [Solution Algorithm](#checkers-algo)
 	* [Solution Pseudocode](#checkers-pseudocode)
+	* Solution Code
 * [References](#checkers-refs)
 
 <a name="checkers-intro"></a>
