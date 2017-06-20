@@ -5,27 +5,31 @@ Tags: programming, computer science, final project, competitive programming
 
 # Table of Contents
 
-* The Problem
-	* Problem Description: Checkers
-	* Input File
-	* Output
-* The Solution
-	* Keep It Simple
-	* Solution Analysis: Parity
-	* Solution Analysis: Graphs and Euler Tours
-	* Solution Algorithm
-	* Solution Code
+* [The Problem](#checkers-intro)
+	* [Problem Description: Checkers](#checkers-problem)
+	* [Input File](#checkers-input)
+	* [Output](#checkers-output)
+* [The Solution](#checkers-solution)
+	* [Keep It Simple](#checkers-kiss)
+	* [Solution Analysis: Parity](#checkers-parity)
+	* [Solution Analysis: Graphs and Euler Tours](#checkers-euler)
+	* [Solution Algorithm](#checkers-algo)
+	* [Solution Pseudocode](#checkers-pseudocode)
+* [References](#checkers-refs)
 
+<a name="checkers-intro"></a>
 # The Problem
 
 This is a programming challenge that was assigned to some of my CSE 143 students 
 as a final project for their class.
 
-The origin of this problem was the International Competitive Programming Competition (ICPC),
+The origin of this problem was the Association of Computing Machinery (ACM)'s 
+International Collegiate Programming Competition (ICPC),
 in particular the Pacific Northwest Regional Competition, Division 1 challenges from 2015.
 
-[Pacific NW ICPC link](http://acmicpc-pacnw.org/)
+[Link to Pacific NW ACM ICPC page.](http://acmicpc-pacnw.org/)
 
+<a name="checkers-problem"></a>
 ## Problem Description: Checkers
 
 In the Checkers problem, you are presented with a checkerboard consisting of 
@@ -49,6 +53,7 @@ that will allow any black piece to jump all of the white pieces.
 
 ![Checkerboard 2 - demonstrate no solution](/images/checkers2.png)
 
+<a name="checkers-input"></a>
 ## Input File
 
 The input file consists of one line with a single integer, 
@@ -75,11 +80,13 @@ _._._._.
 _._._._.
 ```
 
+<a name="checkers-output"></a>
 ## Output
 
 The output is simple: simply state which of the black checkers is capable of 
 jumping each of the white checkers. If none, say "None". If multiple, say "Multiple".
 
+<a name="checkers-solution"></a>
 # The Solution
 
 Our approach: keep it simple
@@ -90,7 +97,7 @@ Solution algorithm
 
 Solution code
 
-
+<a name="checkers-kiss"></a>
 ## Keep It Simple
 
 To successfully solve the checkers problem, it is important to **keep it simple**. 
@@ -101,6 +108,7 @@ use a 2D array of chars to represent the board.
 Also as usual with permutations of arrangements on boards of fixed size,
 recursion will be useful here.
 
+<a name="checkers-parity"></a>
 ## Solution Analysis: Parity
 
 We can begin our analysis of the checkers problem with a few observations.
@@ -134,6 +142,7 @@ has the correct parity, while the black checker in the right do not.
 ![Checkerboard 3 - illustrate parity](/images/checkers3.png)
 
 
+<a name="checkers-euler"></a>
 ## Solution Analysis: Graphs and Euler Tours
 
 If we examine the squares with correct parity, we can translate the board
@@ -183,18 +192,25 @@ as a board with no solution:
 ![Checkerboard 4 - illustrate no Euler tour](/images/checkers4.png)
 
 This is because three of the nodes have degree 1 and one node has degree 3,
-for a total of 4 nodes with odd degree.
+for a total of 4 nodes with odd degree. The requirements for an Euler Tour 
+to exist (equivalent to saying a solution to the Checkers problem can be found
+for a given black checker) are violated, so no solution can be found.
 
 If we were to add a second black checker piece two squares away,
-an alternate graph (highlighted in red) can be constructed, 
-and an alternate Euler path through the graph is available..
+an alternate graph (highlighted in blue) can be constructed, 
+and an alternate Euler path through the graph is available.
 
 ![Checkerboard 5 - illustrate alternate Euler tour](/images/checkers5.png)
+
+On the red graph, each node has an odd degree, so the number of nodes with odd degree is not 0 or 2.
+On the blue graph, only the start and end nodes have an odd degree (1), while the rest of the nodes 
+have a degree of 2 (one input and one output). This means an Euler Tour exists on the blue graph.
 
 In practice, a given black piece has a given graph connecting squares on the checkerboard - 
 we can ask each node on that graph for its degree, and the degree of its neighbors,
 and if a black piece results in an invalid number of odd nodes, we can abandon it.
 
+<a name="checkers-algo"></a>
 ## Solution Algorithm
 
 The algorithm to find solutions to this problem very roughly follows this pattern:
@@ -207,6 +223,7 @@ The algorithm to find solutions to this problem very roughly follows this patter
 	* Fail if more than 2 odd neighbors, or 2 odd neighbors and odd self
 	* Backtracking: explore neighbors, determine if all whites can be jumped
 
+<a name="checkers-pseudocode"></a>
 ## Solution Pseudocode
 
 The solution code has three basic parts (four, including the input parser):
@@ -250,7 +267,7 @@ without a square to land in when they are jumped (i.e., landing square blocked
 by another black piece or at edge of board).
 
 
-```
+```plain
 function is solution piece:
 	for each square of similar "jump" parity:
 		for each neighbor:
@@ -289,4 +306,9 @@ define number of jumped white checkers:
 ```
 
 
+<a name="checkers-refs"></a>
+## References
+
+1. "ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
+<[http://acmicpc-pacnw.org/](http://acmicpc-pacnw.org/)>
 
