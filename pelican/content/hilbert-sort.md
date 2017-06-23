@@ -7,8 +7,7 @@ Tags: programming, computer science, final project, competitive programming
 
 * The Problem 
 	* Motivation
-	* Space Filling Curves
-	* Hilbert Curve
+	* Peano Curves and Hilbert Curves
 	* Problem Description
 * The Solution
 	* Solution Analysis: Recursion
