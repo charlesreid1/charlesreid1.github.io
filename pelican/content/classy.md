@@ -1,16 +1,16 @@
 Title: CSE 143 Final Project: Classy
-Date: 2017-06-20 11:00
+Date: 2017-06-23 9:00
 Category: Computer Science
-Tags: programming, computer science, final project, competitive programming
+Tags: programming, comparison, sorting, algorithms, computer science, final project, competitive programming
 
 # Table of Contents
 
 * [Problem Description](#classy-problem)
 * [Solution Approach](#classy-approach)
-* [Solution Algorithm](#classy-algo)
-* [Solution Pseudocode](#classy-pseudo)
-* [Solution OOP](#classy-oop)
-* [Solution Code](#classy-code)
+* [Algorithm](#classy-algo)
+* [Pseudocode](#classy-pseudo)
+* [Using an Object-Oriented Approach](#classy-oop)
+* [Code](#classy-code)
 * [References](#classy-refs)
 
 <a name="classy-intro"></a>
@@ -68,7 +68,7 @@ This functionality then allows the array to be sorted, using the built-in
 Collections sort function or a custom sort function.
 
 <a name="classy-algo"></a>
-# Solution Algorithm 
+# Algorithm 
 
 The classy algorithm can be briefly described in this way: we are iterating over two lists of strings,
 of possibly unequal length, and comparing them right to left. We have a few very simple rules that 
@@ -112,7 +112,7 @@ Here is how these fit together:
 * In Java, we can define people objects, then we can either have People objects implement Comparable, or we can define our own Comparator for two People objects.
 
 <a name="classy-pseudo"></a>
-# Solution Pseudocode
+# Pseudocode
 
 When we translate the above procedure into Python-like pseudocode, here is the result:
 
@@ -141,12 +141,221 @@ define compare_lengths(title1, title2):
 ```
 
 <a name="classy-oop"></a>
-# Solution OOP
+# Using an Object-Oriented Approach
 
-Java solution: can use objects that implement Comparable, or define our own Comparator objects.
+To apply object-oriented principles in this situation, 
+we want to bundle together related data, and abstract 
+away details. That means we want to create an object
+to associate the name and titles of a given person,
+and implement functionality to allow each person
+to be compared with other people. 
+
+This will allow us to create two people 
+and compare them with greater than, less than, or 
+equal to operators. More importantly, this will also allow us 
+to perform sorting.
+
+Our Java program Classy is a simple driver that loads the names and titles
+of people from standard input.
+
+The Person class stores associated name and title data for each person.
+This class implements the Comparable interface, which requires it 
+to implement a `compareTo()` method.
+
+
+```
+class Person implements Comparable<Person> {
+
+	...
+
+	public int compareTo(Person p2) { 
+```
+
+The Person class constructor just tokenizes one line of input,
+populating the titles list and the person's name. Here is the 
+declaration of those private fields:
+
+```
+class Person implements Comparable<Person> {
+	private String name;
+	private ArrayList<String> titles;
+
+	...
+
+```
+
+The implementation of the compareTo method 
+utilized Stack objects to examine the 
+sequence of titles in reverse.
+
+Pop the stacks until one of them is empty.
+Then, keep popping until both are empty, 
+using "middle" in place of the empty stack.
+
+```
+	/** Compare a person to another person. */
+	public int compareTo(Person p2) { 
+
+		Stack<String> st1 = new Stack<String>();
+		Stack<String> st2 = new Stack<String>();
+
+		// Add names to stack, left to right
+		for(String title : this.getTitles()) {
+			st1.push(title);
+		}
+		for(String title : p2.getTitles()) { 
+			st2.push(title);
+		}
+
+		// Compare each name, from right-to-left.
+		// If stack 1 is not empty, pop next item, otherwise use "middle"
+		// If stack 2 is not empty, pop next item, otherwise use "middle"
+
+		int max = Math.max(this.getTitles().size(), p2.getTitles().size());
+		for(int i=0; i<max; i++) {
+
+			// Pop names from the stack, right to left.
+			String s1, s2;
+
+			if(!st1.isEmpty()) {
+				s1 = st1.pop();
+			} else {
+				s1 = "middle";
+			}
+
+			if(!st2.isEmpty()) {
+				s2 = st2.pop();
+			} else {
+				s2 = "middle";
+			}
+
+			// Rather than converting strings to numbers,
+			// compare the strings directly (lower < middle < upper).
+			int res = s2.compareTo(s1);
+
+			// Return the first non-zero value
+			if( res != 0 ) {
+				return res;
+			}
+		}
+
+		// If we reach here, there was a tie.
+		// Use name as tie breaker.
+		return this.getName().compareTo(p2.getName());
+	}
+```
+
 
 <a name="classy-code"></a>
-# Solution Code
+# Code
+
+Here is the entire Classy code, also available on 
+[git.charlesreid1.com](https://charlesreid1.com:3000/cs/finalproject-143/src/master/classy/Classy.java):
+
+```
+import java.util.*; 
+import java.io.*;
+public class Classy { 
+
+	public static void main(String[] args) { 
+		Scanner s = new Scanner(new BufferedReader(new InputStreamReader(System.in)));
+
+		// Read the input file: new Person for each line
+		int n = Integer.parseInt(s.nextLine());
+		ArrayList<Person> people = new ArrayList<Person>();
+		while(s.hasNextLine()) {
+			String line = s.nextLine();
+			String[] deets = line.split(" ");
+			Person p = new Person(deets);
+			people.add(p);
+		}
+
+		Collections.sort(people);
+		for(Person p : people) { 
+			System.out.println(p);
+		}
+	}
+}
+
+class Person implements Comparable<Person> {
+	private String name;
+	private ArrayList<String> titles;
+
+	/** Person constructor - pass in a String array with the deets. */
+	public Person(String[] deets) { 
+		name = deets[0];
+		// Remove : from name
+		name = name.substring(0,name.length()-1);
+
+		// initialize list of classes 
+		titles = new ArrayList<String>();
+		for(int i=1; i<deets.length-1; i++) { 
+			titles.add(deets[i]);
+		}
+		// Last word will be "class", so ignore.
+	}
+
+	/** Get a person's name. */
+	public String getName() { return name; }
+
+	/** Get a person's titles in an ArrayList. */
+	public ArrayList<String> getTitles() { return titles; }
+
+	/** Get a string representation of a person. */
+	public String toString() { return getName(); }
+
+	/** Compare a person to another person. */
+	public int compareTo(Person p2) { 
+
+		Stack<String> st1 = new Stack<String>();
+		Stack<String> st2 = new Stack<String>();
+
+		// Add names to stack, left to right
+		for(String title : this.getTitles()) {
+			st1.push(title);
+		}
+		for(String title : p2.getTitles()) { 
+			st2.push(title);
+		}
+
+		// Compare each name, from right-to-left.
+		// If stack 1 is not empty, pop next item, otherwise use "middle"
+		// If stack 2 is not empty, pop next item, otherwise use "middle"
+
+		int max = Math.max(this.getTitles().size(), p2.getTitles().size());
+		for(int i=0; i<max; i++) {
+
+			// Pop names from the stack, right to left.
+			String s1, s2;
+
+			if(!st1.isEmpty()) {
+				s1 = st1.pop();
+			} else {
+				s1 = "middle";
+			}
+
+			if(!st2.isEmpty()) {
+				s2 = st2.pop();
+			} else {
+				s2 = "middle";
+			}
+
+			// Rather than converting strings to numbers,
+			// compare the strings directly (lower < middle < upper).
+			int res = s2.compareTo(s1);
+
+			// Return the first non-zero value
+			if( res != 0 ) {
+				return res;
+			}
+		}
+
+		// If we reach here, there was a tie.
+		// Use name as tie breaker.
+		return this.getName().compareTo(p2.getName());
+	}
+}
+```
 
 <a name="classy-refs"></a>
 # References
@@ -154,22 +363,9 @@ Java solution: can use objects that implement Comparable, or define our own Comp
 1. "ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
 <[http://acmicpc-pacnw.org/](http://acmicpc-pacnw.org/)>
 
+1. "ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
+<[http://acmicpc-pacnw.org/](http://acmicpc-pacnw.org/)>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+2. "finalproject-143 (git repository)." Charles Reid. Modified 16 June 2017. Accessed 23 June 2017.
+<[https://charlesreid1.com:3000/cs/finalproject-143/src/master/classy/Classy.java](https://charlesreid1.com:3000/cs/finalproject-143/src/master/classy/Classy.java)>
 
