@@ -363,9 +363,6 @@ class Person implements Comparable<Person> {
 1. "ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
 <[http://acmicpc-pacnw.org/](http://acmicpc-pacnw.org/)>
 
-1. "ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
-<[http://acmicpc-pacnw.org/](http://acmicpc-pacnw.org/)>
-
 2. "finalproject-143 (git repository)." Charles Reid. Modified 16 June 2017. Accessed 23 June 2017.
 <[https://charlesreid1.com:3000/cs/finalproject-143/src/master/classy/Classy.java](https://charlesreid1.com:3000/cs/finalproject-143/src/master/classy/Classy.java)>
 
