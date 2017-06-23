@@ -276,10 +276,10 @@ final Java code to perform this task.
 <[http://acmicpc-pacnw.org/](http://acmicpc-pacnw.org/)>
 
 2. "Sur une courbe, qui remplit toute une aire plane." G. Peano. 
-**Mathematische Annalen** 36 (1890), 157–160.
+**Mathematische Annalen** 36 (1890), 157–160. [(pdf)](/files/PeanoCurve.pdf)
 
 3. "Über die stetige Abbildung einer Linie auf ein Flächenstück." D. Hilbert. 
-**Mathematische Annalen** 38 (1891), 459–460.
+**Mathematische Annalen** 38 (1891), 459–460. [(pdf)](/files/HilbertCurve.pdf)
 
 4. "Hilbert Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 29 April 2017. Accessed 23 June 2017.
 <[https://en.wikipedia.org/wiki/Hilbert_curve](https://en.wikipedia.org/wiki/Hilbert_curve)>
