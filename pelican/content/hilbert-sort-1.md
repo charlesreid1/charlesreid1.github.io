@@ -15,7 +15,7 @@ This post sets up the problem.
 * [Constructing a Hilbert Curve](#hilbert-curve)
 * [Performing a Hilbert Sort](#hilbert-sort)
 * [Problem Statement](#hilbert-problem)
-* [References](#references)
+* [References](#hilbert-refs)
 
 <a name="hilbert-motivation"></a>
 # Hilbert Sort: Motivation

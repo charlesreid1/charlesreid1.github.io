@@ -13,7 +13,7 @@ Tags: programming, comparison, sorting, algorithms, computer science, final proj
 * [Code](#classy-code)
 * [References](#classy-refs)
 
-<a name="classy-intro"></a>
+<a name="classy-problem"></a>
 # Problem Description
 
 Comedian John Cleese, in his memoir __So Anyway...__, described the social classes of his
