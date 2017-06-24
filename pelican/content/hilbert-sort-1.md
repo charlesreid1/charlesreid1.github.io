@@ -197,6 +197,15 @@ including the Hilbert curve itself.
 
 **Remember, in Hilbert sort, the end goal is not the curve itself, but the sort order.**
 
+Here is how the quadrant-by-quadrant partitioning to sort elements ends up looking 
+when applied repeatedly: 
+
+![Repeated Applications](/images/hilbert2b.png)
+
+It is important to note that the two diagonal reflections happening in the corners
+are the trickiest part of this problem. We will cover this operation in greater detail
+in the solution blog post.
+
 <a name="hilbert-problem"></a>
 # Problem Statement
 
