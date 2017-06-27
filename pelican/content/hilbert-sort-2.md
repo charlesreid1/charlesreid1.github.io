@@ -17,7 +17,7 @@ This post solves the problem.
 	* [Scaling](#hilbert2-scaling)
 	* [Reflection](#hilbert2-reflection)
 * [Solving the Reflection Problem](#hilbert2-reflection-solution)
-* Pseudocode
+* [Procedure](#hilbert2-procedure)
 * [References](#hilbert2-references)
 
 
@@ -236,6 +236,120 @@ transformed in such a way that the order in which the Hilbert
 curve visits each point has not been affected.
 
 
+
+
+<a name="hilbert2-procedure"></a>
+# Hilbert Sort Procedure
+
+The implementation strategy is, obviously, recursive. What we want to do at each level is:
+* Start with a square and points contained in the square. 
+* Cut the square under consideration into four quadrants.
+* Apply a transformation to each square so that it is re-oriented in a manner that matches our original Hilbert curve.
+
+Once each of those squares goes through all of its respective recursive calls, 
+it will return a sorted list of points. Then we will know what to do - 
+we collect each of the sorted points from each of the four quadrants in order, 
+maintain that order, and return those sorted quadrants.
+
+To nail down the details, treat the square under consideration as ranging from 
+$(0,0)$ to $(S,S)$.
+
+Each time we cut a square into quadrants, we re-orient ourselves as to where 
+$(0,0)$ is located and which quadrants will be visited in which order.
+If we are in the lower left quadrant, $x$ is below $\frac{S}{2}$ and 
+$y$ is below $\frac{S}{2}$, so we rotate and reflect by swapping x and y:
+
+```plain
+        X -> Y
+        Y -> X
+```
+
+If we are in the upper left quadrant, x is below $\frac{S}{2}$, y is above $\frac{S}{2}$, 
+so subtract $\frac{S}{2}$ from y and we're done.
+
+```plain
+        X -> X
+        Y -> Y-(S/2)
+```
+
+If we are in the upper right quadrant, x is above $\frac{S}{2}$, y is above $\frac{S}{2}$, 
+so subtract $\frac{S}{2}$ from both
+
+```plain
+        X -> X - S/2
+        Y -> Y - S/2
+```
+
+If we are in the lower right quadrant, our x and y values are now 
+relative to the quadrant bounding box. The distance to the top of the 
+bounding box to the y coordinate becomes our new x coordinate, while the 
+distance from the right of the bounding box S to the x coordinate becomes 
+our new y coordinate:
+
+```plain
+        X -> S/2 - Y
+        Y -> S - X
+```
+
+Recursion always requires a base case and a recursive case. Our "base case" is the 
+simple comparison of one or no points in each of our four quadrants. If we get to 
+this base case, we know the order in which the Hilbert Curve will visit each of 
+those points.
+
+If we are not at the base case, if we have a large number of points to sort, 
+we can bin together all the points in a given quadrant, and consider the order
+in which those points go with an additional level of finer granularity. 
+
+
+
+<a name="hilbert2-pseudocode"></a>
+# Pseudocode
+
+
+```
+set square dimension S
+
+create unsorted queue
+load points into unsorted queue
+
+create sorted queue
+sorted queue = hilbert_sort( unsorted queue, square dimension )
+```
+
+Now here is the Hilbert sort function:
+
+```
+define hilbert_sort( unsorted queue, square dimension ):
+	create southwest queue
+	create northwest queue
+	create northeast queue
+	create southeast queue
+	for each point:
+		if in southwest:
+			create new point using X -> Y, Y -> X
+			add to southwest queue
+		if in northwest:
+			create new point using X -> 2X, Y -> 2Y - S
+			add to northwest queue
+		if in northeast:
+			create new point using X -> 2X - S, Y -> 2Y - S
+			add to northeast queue
+		if in southeast:
+			create new point using X -> S - 2Y, Y -> 2S - 2X
+			add to southeast queue
+
+		hilbertsort(southwest queue, square dimension)
+		hilbertsort(northwest queue, square dimension)
+		hilbertsort(northeast queue, square dimension)
+		hilbertsort(southeast queue, square dimension)
+
+		create new results queue
+		add points from southwest into results queue
+		add points from northwest into results queue
+		add points from northeast into results queue
+		add points from southeast into results queue
+		return results queue
+```
 
 
 
