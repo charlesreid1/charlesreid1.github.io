@@ -104,7 +104,8 @@ elegant mathematical properties.
 
 Also, he included pictures.
 
-Here is the first figure from Hilbert's paper:
+Here is the first set of figures from Hilbert's 
+[original 1890 paper](/files/HilbertCurve.pdf):
 
 ![Hilbert Curve](/images/HilbertCurve-OriginalPaper.png)
 
