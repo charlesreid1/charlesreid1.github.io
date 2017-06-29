@@ -1,7 +1,7 @@
 Title: CSE 143 Final Project: Hilbert Sort: 2. The Solution Algorithm
 Date: 2017-06-27 11:00
 Category: Computer Science
-Tags: programming, computer science, final project, competitive programming
+Tags: programming, computer science, final project, competitive programming, hilbert sort
 
 # Table of Contents
 
@@ -356,7 +356,7 @@ define hilbert_sort( unsorted queue, square dimension ):
 <a name="hilbert2-refs"></a>
 # References
 
-1. "ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
+1. "ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
 <[http://acmicpc-pacnw.org/](http://acmicpc-pacnw.org/)>
 
 2. "Über die stetige Abbildung einer Linie auf ein Flächenstück." D. Hilbert. 

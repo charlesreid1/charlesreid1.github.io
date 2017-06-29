@@ -1,7 +1,7 @@
 Title: CSE 143 Final Project: Hilbert Sort: 1. The Problem
 Date: 2017-06-23 16:30
 Category: Computer Science
-Tags: programming, computer science, final project, competitive programming
+Tags: programming, computer science, final project, competitive programming, hilbert sort 
 
 # Table of Contents
 
@@ -282,7 +282,7 @@ final Java code to perform this task.
 <a name="hilbert-refs"></a>
 # References
 
-1. "ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
+1. "ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
 <[http://acmicpc-pacnw.org/](http://acmicpc-pacnw.org/)>
 
 2. "Sur une courbe, qui remplit toute une aire plane." G. Peano. 
