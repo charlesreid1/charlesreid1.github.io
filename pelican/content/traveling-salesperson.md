@@ -767,6 +767,7 @@ that will improve the performance by orders of magnitude. But more on that in a 
 <[https://github.com/google/guava](https://github.com/google/guava)>
 
 5. "Guava". Charles Reid. Edited 23 March 2017. Accessed 23 March 2017.
+<[https://www.charlesreid1.com/wiki/Guava](https://www.charlesreid1.com/wiki/Guava)>
 
 6. "Graphs Explained". Google Guava Wiki. Accessed 23 March 2017.
 <[https://github.com/google/guava/wiki/GraphsExplained](https://github.com/google/guava/wiki/GraphsExplained)>
