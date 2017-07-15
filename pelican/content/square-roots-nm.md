@@ -1,5 +1,5 @@
 Title: Computing Square Roots: Part 1: Using Newton's Method
-Date: 2017-07-14 20:00
+Date: 2017-07-14 18:00
 Category: Numerics
 Tags: computer science, java, mathematics, square roots, numerical methods, newtons method
 
@@ -16,6 +16,8 @@ Tags: computer science, java, mathematics, square roots, numerical methods, newt
 * [Speed](#newton-speed)
 
 * [Next Steps](#newton-next)
+
+* [References](#newton-refs)
 
 
 <a name="newton-roots"></a>
@@ -148,7 +150,7 @@ Here is sample output from a program that varies the tolerance and prints
 the corresponding value of the square root that was computed:
 
 ```plain
-javac SquareRoot.java && java SquareRoot
+$ javac SquareRoot.java && java SquareRoot
 Actual value sqrt(2) = 1.4142135623730951
 Testing Newton's Method, Specifying Tolerance:
 Tol			sqrt(2)
@@ -269,5 +271,11 @@ $$
 
 But more on that in a future post...
 
+<a name="newton-refs"></a>
+## References
 
+1. Press, William et al. "Numerical Recipes in C." Cambridge Unviersity Press (2007).
+
+2. "SquareRoot.java". Charles Reid. git.charlesreid1.com.
+<[https://charlesreid1.com:3000/cs/java/src/master/numerics/newtons-method](https://charlesreid1.com:3000/cs/java/src/master/numerics/newtons-method)>
 
