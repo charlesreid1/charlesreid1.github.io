@@ -415,7 +415,7 @@ Continuing in this fashion gives:
 
 $$
 \begin{array}
-\dfrac{P_2}{Q_2} &=& \dfrac{15}{4} \\
+\quad \dfrac{P_2}{Q_2} &=& \dfrac{15}{4} \\
 \dfrac{P_3}{Q_3} &=& \dfrac{101}{27}
 \end{array}
 $$
