@@ -387,6 +387,138 @@ sqrt(19) = [4, 2, 1, 3, 1, 2, 8]
 <a name="cf-example-convergents"></a>
 ## Example: Convergents of $\sqrt{14}$
 
+We now turn to the task of computing the convergents of the continued fraction,
+which will yield successive rational numbers that are progressively better approximations
+to $\sqrt{14}$. 
 
+We start with the expression given above for the $k^{th}$ convergent: 
+
+$$
+\dfrac{P_k}{Q_k} = \dfrac{a_k P_{k-1} + P_{k-2}}{a_k Q_{k-1} + Q_{k-2}}
+$$
+
+with initial values $P_{-1} = 1, P_{-2} = 0, Q_{-1} = 0, Q_{-2} = 1$. This yields 
+the first convergent:
+
+$$
+\dfrac{P_1}{Q_1} = \dfrac{a_0 + 0}{0 + 1} = 4
+$$
+
+Successive approximations will use the values $P_1$ and $Q_1$ to compute
+the next convergents.
+
+$$
+\dfrac{P_2}{Q_2} = \dfrac{P_1 a_1 + P_0}{Q_1 a_1 + Q_0} = \frac{11}{3}
+$$
+
+Continuing in this fashion gives:
+
+$$
+\begin{array}
+\dfrac{P_2}{Q_2} &=& \dfrac{15}{4} \\
+\dfrac{P_3}{Q_3} &=& \dfrac{101}{27}
+\end{array}
+$$
+
+and so on. This recurrence relation is easy to code up. It starts with 
+the continued fraction coefficients for the given square root, 
+and computes succesive values of P and Q. The number of terms computed
+is specified by the user. Once it reaches the end of the sequence of 
+continued fraciton coefficeints, it can start at the beginning again 
+(the sequence is palindromic). 
+
+Finally, it returns the values of $P_k$ and $Q_k$.
+
+Here is a static method in Java that will compute the convergents
+of a square root:
+
+```java
+	/** 
+	 * Compute the convergents (rational representation of
+	 * continued fraction).
+	 *
+	 * This uses the recurrence relation:
+	 *
+	 * P_n     a_n P_n-1  + P_n-2
+	 * ---- = -----------------
+	 *  Q_n    a_n Q_n-1  + Q_n-2
+	 */
+	public static long[] convergents(int n, int nterms) {
+		long[] convergents = new long[2];
+
+		List<Integer> cfrepr = continuedFractionSqrt(n);
+
+		// Initial values for convergent recurrence relation
+		long Pnm2 = 0; // P_{n-2}
+		long Pnm1 = 1;
+		long Qnm2 = 1;
+		long Qnm1 = 0;
+		long P = 0;
+		long Q = 0;
+
+		// Term 0 is the constant value a0.
+		int accessindex = 0;
+		for(int i=0; i<=nterms; i++) { 
+			int an = cfrepr.get(accessindex);
+
+			P = an * Pnm1 + Pnm2;
+			Q = an * Qnm1 + Qnm2;
+
+			Pnm2 = Pnm1;
+			Pnm1 = P;
+
+			Qnm2 = Qnm1;
+			Qnm1 = Q;
+
+			if(accessindex+1>=cfrepr.size()) { 
+				// Ensure we keep repeating the sequence
+				// if the sequence has fewer terms than
+				// the user asks for.
+				// This allows us to get really good
+				// approximations for numbers.
+				// This only works because the sequence
+				// is palindromic.
+				accessindex = 1;
+			} else {
+				accessindex++;
+			}
+		}
+
+		convergents[0] = P;
+		convergents[1] = Q;
+
+		return convergents;
+	}
+```
+
+Here is a simple driver program that prints out several
+convergents for $\sqrt{14}$:
+
+```java
+public class SquareRootCF {
+	public static void main(String[] args) {
+		for(int i=1; i<=10; i++) {
+			long[] conv = Convergents.convergents(14,i);
+			System.out.println("Convergent "+i+": "+conv[0]+"/"+conv[1]);
+		}
+	}
+}
+```
+
+and the corresponding console output:
+
+```plain
+$ javac SquareRootCF.java && java SquareRootCF
+Convergent 1: 4/1
+Convergent 2: 11/3
+Convergent 3: 15/4
+Convergent 4: 101/27
+Convergent 5: 116/31
+Convergent 6: 333/89
+Convergent 7: 449/120
+Convergent 8: 3027/809
+Convergent 9: 3476/929
+Convergent 10: 9979/2667
+```
 
 
