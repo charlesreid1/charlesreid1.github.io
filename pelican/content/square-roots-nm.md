@@ -3,14 +3,19 @@ Date: 2017-07-14 20:00
 Category: Numerics
 Tags: computer science, java, mathematics, square roots, numerical methods, newtons method
 
-Table of Contents:
-* [Newton's Method for Finding Roots of Equations](#newton-roots)
-* [Newton's Method for Finding Square Roots](#newton-square-roots)
-* [Newton's Method for Finding Square Roots: Program](#newton-program)
-* [Accuracy](#newton-accuracy)
-* [Speed](#newton-speed)
-* [Going Bigger](#newton-bigger)
+## Table of Contents
 
+* [Newton's Method for Finding Roots of Equations](#newton-roots)
+
+* [Newton's Method for Finding Square Roots](#newton-square-roots)
+
+* [Newton's Method for Finding Square Roots: Program](#newton-program)
+
+* [Accuracy](#newton-accuracy)
+
+* [Speed](#newton-speed)
+
+* [Next Steps](#newton-next)
 
 
 <a name="newton-roots"></a>
@@ -250,6 +255,19 @@ Math Library Time (ms) per 1k operations: 3.0E-4
 
 While the accuracy of Newton's Method for square roots may not be that great,
 it ain't bad, for 9 lines of code. 
+
+<a name="newton-next"></a>
+## Next Steps
+
+In a blog post to follow, we'll compare the speed and accuracy of square root computations using Newton's Method
+to an alternative approach involving the continued fraction representation of square roots. This particularly interesting
+technique can also be used to solve the Pell equation, a quadratic Diophantine equation of the form:
+
+$$
+x^2 - D y^2 = 1
+$$
+
+But more on that in a future post...
 
 
 

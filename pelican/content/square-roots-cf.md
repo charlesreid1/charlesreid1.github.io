@@ -2,6 +2,7 @@ Title: Computing Square Roots: Part 2: Using Continued Fractions
 Date: 2017-07-14 20:00
 Category: Numerics
 Tags: computer science, java, mathematics, square roots, numerical methods, continued fractions
+Status: draft
 
 Table of Contents:
 * Start with continued fraction representation
