@@ -3,15 +3,6 @@ Date: 2017-07-14 20:00
 Category: Numerics
 Tags: computer science, java, mathematics, square roots, numerical methods, continued fractions
 
-Table of Contents:
-* Start with continued fraction representation
-* Give examples of square roots represented as continued fractions
-* Show the patterns that you see
-* Show the method for turning sqrt(n) into continued fraction representation
-* Now how do we use this to approximate?
-* Fractions - convergents
-* Speed and timing 
-
 ## Table of Contents
 
 * [Number Systems and Representations](#cf-number-systems)
@@ -20,8 +11,6 @@ Table of Contents:
 * [Example: Continued Fraction Coefficients of $\sqrt{14}$](#cf-example-coeffs)
 * [Example: Convergents of $\sqrt{14}$](#cf-example-convergents)
 * [Approximating Square Roots](#cf-sqrt-approx)
-* [Accuracy](#cf-accuracy)
-* [Speed](#cf-speed)
 
 
 <a name="cf-number-systems"></a>
@@ -520,5 +509,14 @@ Convergent 8: 3027/809
 Convergent 9: 3476/929
 Convergent 10: 9979/2667
 ```
+
+<a name="cf-sqrt-approx"></a>
+## Approximating Square Roots
+
+In order to approximate square roots using the continued fraction method,
+we run into a bootstrapping problem - finding the continued fraction 
+representation of the square root of an arbitrary integer requires 
+knowing its square root accurately, to say nothing of the perils of 
+roundoff error and the chaos it creates in long sequences.
 
 
