@@ -1,6 +1,6 @@
 Title: Shortest Lattice Paths and Multiset Permutations
 Date: 2017-07-18 08:00
-Category: Numerics
+Category: Mathematics
 Tags: computer science, mathematics, combinatorics, permutations, lattice paths, puzzles, project euler
 
 ## Table of Contents
