@@ -1,6 +1,6 @@
 Title: Computing Square Roots: Part 1: Using Newton's Method
 Date: 2017-07-14 18:00
-Category: Numerics
+Category: Mathematics
 Tags: computer science, java, mathematics, square roots, numerical methods, newtons method
 
 ## Table of Contents

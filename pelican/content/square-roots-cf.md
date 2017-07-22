@@ -1,6 +1,6 @@
 Title: Computing Square Roots: Part 2: Using Continued Fractions
 Date: 2017-07-14 20:00
-Category: Numerics
+Category: Mathematics
 Tags: computer science, java, mathematics, square roots, numerical methods, continued fractions
 
 ## Table of Contents
@@ -518,5 +518,15 @@ we run into a bootstrapping problem - finding the continued fraction
 representation of the square root of an arbitrary integer requires 
 knowing its square root accurately, to say nothing of the perils of 
 roundoff error and the chaos it creates in long sequences.
+
+<a name="hilbert2-refs"></a>
+# References
+
+1. Hardy, G. H. <u>A Course of Pure Mathematics.</u> 
+Cambridge University Press, Tenth Edition (1908-1967).
+
+2. Knuth, Donald. <u>The Art of Computer Programming, Volume 2: Seminumerical Algorithms.</u> 
+Addison-Wesley Publishing Company, Second Edition (1975).
+
 
 
