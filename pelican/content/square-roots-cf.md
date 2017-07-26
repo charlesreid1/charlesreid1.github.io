@@ -411,9 +411,9 @@ $$
 
 and so on. This recurrence relation is easy to code up. It starts with 
 the continued fraction coefficients for the given square root, 
-and computes succesive values of P and Q. The number of terms computed
+and computes successive values of P and Q. The number of terms computed
 is specified by the user. Once it reaches the end of the sequence of 
-continued fraciton coefficeints, it can start at the beginning again 
+continued fraction coefficients, it can start at the beginning again 
 (the sequence is palindromic). 
 
 Finally, it returns the values of $P_k$ and $Q_k$.
