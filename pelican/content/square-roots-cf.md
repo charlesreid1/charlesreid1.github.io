@@ -143,7 +143,7 @@ the above properties:
 
 $$
 \begin{array}
-\sqrt{19} &=& [4; \overline{2, 1, 3, 1, 2, 8}] \\
+_ \sqrt{19} &=& [4; \overline{2, 1, 3, 1, 2, 8}] \\
 \sqrt{115} &=& [10; \overline{1, 2, 1, 1, 1, 1, 1, 2, 1, 20}] \\
 \sqrt{988} &=& [31; \overline{2, 3, 4, 1, 20, 6, 1, 14, 1, 6, 20, 1, 4, 3, 2, 62}]
 \end{array}
@@ -172,7 +172,7 @@ we can use successive terms to write successive linear approximations:
 
 $$
 \begin{array}
-\sqrt{19}	&\approx& 4 \\
+_ \sqrt{19}	&\approx& 4 \\
 \quad		&\approx& 4 + \frac{1}{2+0} \approx \frac{9}{2} \\
 \quad 		&\approx& 4 + \cfrac{1}{2+\cfrac{1}{1}} \approx \frac{13}{3} \\
 \quad 		&\approx& 4 + \cfrac{1}{2+\cfrac{1}{\cfrac{1}{3}}} \approx \frac{48}{11} \\
@@ -184,7 +184,7 @@ each of *these* terms...):
 
 $$
 \begin{array}
-\sqrt{19}	&\approx& \frac{61}{14} \\
+_ \sqrt{19}	&\approx& \frac{61}{14} \\
 \quad 		&\approx& \frac{170}{39} \\
 \quad 		&\approx& \frac{1421}{326} \\
 \quad 		&\approx& \frac{3012}{691} \\
@@ -276,11 +276,11 @@ $$
 where the initial values $a_0, r_0$ are computed as mentioned above,
 and the rest of the values in the sequence follow.
 
-Continuing for 14, we get:
+Continuing for $\sqrt{14}$, we get:
 
 $$
 \begin{array}
-a_0 &=& 3 \\
+_ a_0 &=& 3 \\
 r_1 &=& \dfrac{1}{\sqrt{14}-3} = 1.348331 \\
 a_1 &=& 1 \\
 r_2 &=& \dfrac{1}{.348331} = 2.870829 \\
@@ -387,7 +387,7 @@ $$
 $$
 
 with initial values $P_{-1} = 1, P_{-2} = 0, Q_{-1} = 0, Q_{-2} = 1$. This yields 
-the first convergent:
+the first "real" convergent:
 
 $$
 \dfrac{P_1}{Q_1} = \dfrac{a_0 + 0}{0 + 1} = 4
@@ -405,7 +405,7 @@ Continuing in this fashion gives:
 $$
 \begin{array}
 \quad \dfrac{P_2}{Q_2} &=& \dfrac{15}{4} \\
-\dfrac{P_3}{Q_3} &=& \dfrac{101}{27}
+\dfrac{P_3}{Q_3} &=& \dfrac{11}{3}
 \end{array}
 $$
 
@@ -416,7 +416,24 @@ is specified by the user. Once it reaches the end of the sequence of
 continued fraction coefficients, it can start at the beginning again 
 (the sequence is palindromic). 
 
-Finally, it returns the values of $P_k$ and $Q_k$.
+Finally, it returns the values of $P_k$ and $Q_k$, and of the 
+successive convergents:
+
+$$
+\begin{array}
+_ \sqrt{14} &\approx& 3 \\
+&\approx& 4 \\
+&\approx& 11/3 \\
+&\approx& 15/4 \\
+&\approx& 101/27 \\
+&\approx& 116/31 \\
+&\approx& 333/89 \\
+&\approx& 449/120 \\
+&\approx& 3027/809 \\
+&\approx& 3476/929 \\
+&\approx& 9979/2667 
+\end{array}
+$$
 
 Here is a static method in Java that will compute the convergents
 of a square root:
@@ -510,16 +527,7 @@ Convergent 9: 3476/929
 Convergent 10: 9979/2667
 ```
 
-<a name="cf-sqrt-approx"></a>
-## Approximating Square Roots
-
-In order to approximate square roots using the continued fraction method,
-we run into a bootstrapping problem - finding the continued fraction 
-representation of the square root of an arbitrary integer requires 
-knowing its square root accurately, to say nothing of the perils of 
-roundoff error and the chaos it creates in long sequences.
-
-<a name="hilbert2-refs"></a>
+<a name="cf-sqrt-refs"></a>
 # References
 
 1. Hardy, G. H. <u>A Course of Pure Mathematics.</u> 

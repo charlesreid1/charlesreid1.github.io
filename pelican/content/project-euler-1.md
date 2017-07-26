@@ -36,6 +36,12 @@ It is a deceptively simple problem. In fact, it is so easy to solve with a compu
 that you almost lose a sense of what the manual process would look like.
 How might we perform this task by hand? 
 
+Finally, it is an example of a problem in which we are trying to find 
+the number of outcomes of several classes of events, and some of the events
+are labeled with both classes. This means it will be important to learn and apply
+the Inclusion-Exclusion Principle. (Fortunately, this principle is fairly 
+straightforward to apply.)
+
 We will get to the algorithm to counting these factors by hand, and handling 
 more complicated constraints as well, but first I'll address why this problem - 
 this task - was deemed important enough to be the very first step that nearly 

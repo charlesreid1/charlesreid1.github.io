@@ -7,8 +7,8 @@ Tags: computer science, mathematics, combinatorics, permutations, lattice paths,
 
 * [The Lattice Paths Problem](#multiset-lattice)
 * [Problem Formulation: Permutations](#multiset-permutations)
-	* [Permutations of Unique Items](#multiset-permutations-unique)
-	* [Permutations of Items with Duplicates](#multiset-permutations-dupes)
+	* [Permutations of Unique Items (Factorial)](#multiset-permutations-unique)
+	* [Permutations of Items with Duplicates (Multichoose)](#multiset-permutations-dupes)
 	* [Example](#multiset-permutations-example)
 * [Solving 2D Rectangular Lattice](#multiset-2d-rectangular)
 	* [More Examples](#multiset-2d-examples)
@@ -50,7 +50,7 @@ Now we have a way of representing paths through the lattice - and we've turned o
 into a much more general combinatorics problem. How many unique permutations of the above path/string can we find?
 
 <a name="multiset-permutations-unique"></a>
-### Permutations of Unique Items 
+### Permutations of Unique Items (Factorial)
 
 Let's suppose we have a string consisting of unique characters:
 
@@ -73,7 +73,7 @@ as D1 and D2, we can choose the first move as D1 and the second move as D2, or t
 This will eliminate some of the permutations.
 
 <a name="multiset-permutations-dupes"></a>
-### Permutations of Items with Duplicates
+### Permutations of Items with Duplicates (Multichoose)
 
 Our case is slightly different: we have items with duplicates. This fits into a general combinatorics framework called 
 [stars-and-bars](https://en.wikipedia.org/wiki/Stars_and_bars_(combinatorics)) (link to Wikipedia article). 
