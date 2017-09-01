@@ -1,7 +1,7 @@
 Title: Project Euler Problem 1
 Date: 2017-07-22 09:00
 Category: Mathematics
-Tags: computer science, mathematics, factors, sequences, project euler
+Tags: computer science, mathematics, factors, sequences, euler, project euler
 
 # Table of Contents
 
