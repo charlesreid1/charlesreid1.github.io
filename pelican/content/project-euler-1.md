@@ -5,10 +5,11 @@ Tags: computer science, mathematics, factors, sequences, euler, project euler
 
 # Table of Contents
 
-* Overview: The Problem
-* Why This Problem?
-* Going Deeper: An Example
+* [Overview: The Problem](#pe1-problem)
+* [Why This Problem?](#pe1-why)
+* [Going Deeper: An Example](#pe1-deeper)
 
+<a name="pe1-problem"></a>
 # Overview: The Problem
 
 Project Euler is a website that provides mathematically-oriented programming problems.
@@ -47,6 +48,7 @@ more complicated constraints as well, but first I'll address why this problem -
 this task - was deemed important enough to be the very first step that nearly 
 everyone takes on their epic (or... not so epic) Project Euler journey.
 
+<a name="pe1-why"></a>
 # Why This Problem?
 
 The central task in this problem is to find multiples of a number $k$,
@@ -69,6 +71,7 @@ then all multiples of 5, forgetting that some repeat.
 
 Welcome to Project Euler.
 
+<a name="pe1-deeper"></a>
 # Going Deeper: An Example
 
 It's true that this problem seems a bit boring on its face. But let's dive deeper. Suppose I asked you to find the number of multiples of the integers 3 and 4, but not the integer 5, below 2,001 - and to do so without explicitly enumerating them with a computer.
@@ -140,35 +143,4 @@ M &=& 667 + 500 - 166 - 133 - 100 + 33 \\
 M &=& 801
 \end{align}
 $$
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
