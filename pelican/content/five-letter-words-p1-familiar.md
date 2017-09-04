@@ -1,7 +1,7 @@
 Title: Five Letter Words: Part 1: Getting Familiar With The List
-Date: 2017-08-16 12:00
+Date: 2017-09-01 21:00
 Category: Computer Science
-Tags: python, computer science, graphs, algorithms, art of computer programming, language 
+Tags: python, computer science, graphs, algorithms, art of computer programming, knuth, language
 
 _NOTE: This post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
 but the author would encourage any user of Python 2 to "put on your big kid pants" and 
