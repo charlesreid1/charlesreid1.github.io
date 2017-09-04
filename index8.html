@@ -107,6 +107,782 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Solving the Traveling Salesperson Problem with Java and Guava
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-03-23T11:00:00-07:00" pubdate>Thursday 03/23/2017</time>
+                in 
+                <a href="/category/java.html">Java</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/solving-the-traveling-salesperson-problem-with-java-and-guava.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2>TOC</h2>
+<ul>
+<li><a href="#tsp1-bkg">Background: Traveling Salesperson Problem (TSP)</a></li>
+<li><a href="#tsp1-graphs">Graphs</a><ul>
+<li><a href="#tsp1-nedges">Number of Edges</a></li>
+</ul>
+</li>
+<li><a href="#tsp1-bktk">Solution: Recursive Backtracking</a> </li>
+<li><a href="#tsp1-guava">Solving the TSP with Java and Guava</a> <ul>
+<li><a href="#tsp1-basic-guava">Basics of Guava</a></li>
+<li><a href="#tsp1-guava-graphs">Guava Graphs</a></li>
+<li><a href="#tsp1-guava-mutable-immutable">Guava Mutable vs Immutable</a></li>
+<li><a href="#tsp1-importing-guava">Importing Guava</a></li>
+<li><a href="#tsp1-tsp-class">TSP Class</a></li>
+<li><a href="#tsp1-node-class">Node Class</a></li>
+<li><a href="#tsp1-edge-class">Edge Class</a></li>
+</ul>
+</li>
+<li><a href="#tsp1-building-graph">TSP Constructor and Building the Graph</a><ul>
+<li><a href="#tsp1-constructor">Constructor</a></li>
+<li><a href="#tsp1-build-graph-method">Build Graph Method</a></li>
+</ul>
+</li>
+<li><a href="#tsp1-solving-exploring">Solving and Exploring with Recursive Backtracking</a><ul>
+<li><a href="#tsp1-solve">Solve Method</a></li>
+<li><a href="#tsp1-explore">Explore (Backtrack) Method</a></li>
+</ul>
+</li>
+<li><a href="#tsp1-nextsteps">Next Steps: Timing and Profiling</a></li>
+<li><a href="#tsp1-sources">Sources</a></li>
+</ul>
+<p><a name="tsp1-bkg"></a></p>
+<h2>Background: Traveling Salesperson Problem (TSP)</h2>
+<p>The traveling salesperson problem, or TSP, is a classic programming problem and an important one in computer science,
+and applications in operations research and optimization.</p>
+<p>The idea is that you have a set of <span class="math">\(N\)</span> cities, connected by various roads, each with their own distances.
+That is, we have a set of <span class="math">\(E\)</span> roads, each with their own distance <span class="math">\(d_j, j=1 \dots E\)</span>. </p>
+<p>The question is, what is the shortest path that a salesperson can take to visit all <span class="math">\(N\)</span> cities, traveling the shortest possible total distance
+and visiting each city once and only once?</p>
+<p>Like the N queens problem, the traveling salesperson problem is a good candidate for recursive backtracking.
+Also like the N queens problem, there are certain shortcuts we can take to trim down the possibilities we explore.</p>
+<p>Computer science pages on Wikipedia are generally pretty high in quality, and the <a href="https://en.wikipedia.org/wiki/Traveling_salesman_problem">traveling salesman problem</a>
+page is no exception. It give a very thorough overview of the important aspects of the problem.</p>
+<p><a name="tsp1-graphs"></a></p>
+<h2>Graphs</h2>
+<p>Graphs are mathematical objects first utilized by Leonhard Euler to solve the
+<a href="https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg">Seven Bridges of Köningsberg</a> problem.
+The concept is simple: you have a bunch of dots connected with lines.</p>
+<p>The dots are called nodes, and the lines are called edges.</p>
+<p>Graphs can be directed, meaning the edges are like arrows with particular directions, or undirected, 
+meaning the edges simply represent a connection between the two nodes.</p>
+<p>Here is an example of a graph with five nodes, with each edge labeled with its distance:</p>
+<p><img style="background:#fff;" alt="A basic graph with five nodes" src="/images/basic-graph.png" /></p>
+<p>We will skip over a vast amount of detail about graph theory that is both fascinating and useful,
+but M. E. J. Newman's paper <a href="http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf">"The structure and function of complex networks"</a> 
+(self-published and written as a course review) is an extremely detailed
+and academically rigorous overview of just about every important detail of the field.</p>
+<p><a name="tsp1-nedges"></a></p>
+<h3>Number of Edges</h3>
+<p>The maximum number of roads or edges <span class="math">\(E\)</span> depends on the number of nodes as <span class="math">\(E = \dfrac{N(N-1)}{2}\)</span>, which is derived from
+the formula for 2 choose N (because edges connect 2 nodes). For k choose N, the formula is given by:</p>
+<div class="math">$$
+C_{N,k} = \dfrac{N!}{k! (N-k)!}
+$$</div>
+<p>and for 2 choose N, it is given by:</p>
+<div class="math">$$
+C_{N,2} = \dfrac{N(N-1)}{2}
+$$</div>
+<p>This is the maximum number of undirected edges in a graph. 
+If the graph is directed, then order matters (the edgge <code>A-&gt;B</code> is no longer the same as <code>B-&gt;A</code>),
+so we have to use the formula for k pick N, </p>
+<div class="math">$$
+P_{N,k} = \dfrac{N!}{(N-k)!}
+$$</div>
+<p>which results in</p>
+<div class="math">$$
+P_{N,2} = N (N-1)
+$$</div>
+<p>possible edges.</p>
+<p><a name="tsp1-nsolutions"></a></p>
+<h3>Number of Solutions</h3>
+<p>Naturally, the question of the total solution space arises.
+Assuming the graph of cities is perfectly connected (representing an upper limit on problem complexity),
+how does the number of solutions change as the number of nodes increases?</p>
+<p>We can start with a trivial graph, and count the number of possible paths
+through the entire graph, starting with a specific node.
+This is equivalent to counting permutations of a string that start with a specific character.</p>
+<div class="highlight"><pre><span></span>ABCDE
+ABCED
+ABDCE
+ABDEC
+ABECD
+ABEDC
+</pre></div>
+
+
+<p>For a string of length <span class="math">\(N\)</span>, the string has <span class="math">\((N-1)!\)</span> possible permutations that start with a specific character.
+Therefore, as the number of nodes <span class="math">\(N\)</span> increases, the number of possible solutions increases as <span class="math">\((N-1)!\)</span>, 
+making the complexity class of the problem <span class="math">\(O(N!)\)</span>.</p>
+<p><a name="tsp1-bktk"></a></p>
+<h2>Solution: Recursive Backtracking</h2>
+<p>Here is pseudocode for a recursive backtracking method:</p>
+<div class="highlight"><pre><span></span>explore(neighbors):
+
+    if(no more unvisited neighbors):
+        # This is the base case.
+        if total distance is less than current minimum:
+            save path and new minimum
+
+    else:
+        # This is the recursive case.
+        for neighbor in unvisited neighbors:
+            visit neighbor
+            explore(new_neighbors)
+            unvisit neighbor
+</pre></div>
+
+
+<p>Care is needed to prevent infinite loops in which the traveling salesperson goes back and forth between two cities.
+As we traverse the graph, we can mark each node as visited, to ensure we don't revisit nodes and go in circles.</p>
+<p>Nodes can be implemented as a <code>Node</code> object in Java, with each Node having a few characteristics:</p>
+<ul>
+<li>String label</li>
+<li>Container of Node pointers pointing to neighbors</li>
+<li>Boolean flag: have we visited this node already?</li>
+</ul>
+<p>Likewise, the graph edges can be represented using integers or doubles.</p>
+<p><a name="tsp1-guava"></a></p>
+<h2>Solving the TSP with Java and Guava</h2>
+<p><a href="https://github.com/google/guava">Google Guava</a> is a library of high-performance data containers in Java.
+The library provides some useful graph objects that we can use to easily solve the TSP on a graph.</p>
+<p><a name="tsp1-basic-guava"></a></p>
+<h3>Basics of Guava</h3>
+<p>Install and use Guava by visiting the <a href="https://github.com/google/guava">Guava project on Github</a>, 
+find the page for their latest release (<a href="https://github.com/google/guava/wiki/Release21">here is version 21.0</a>), 
+and getting the latest <code>.jar</code> file.</p>
+<p>To compile with the jar file, you can either utilize an IDE like <a href="http://www.eclipse.org/">Eclipse</a> or <a href="https://www.jetbrains.com/idea/">IntelliJ</a>,
+or you can compile from the command line, specifying the class path using the <code>-cp</code> flag:</p>
+<div class="highlight"><pre><span></span>$ javac -cp <span class="s1">&#39;.:/path/to/guava/jars/guava-21.0.jar&#39;</span> TSP.java
+$ java -cp <span class="s1">&#39;.:/path/to/guava/jars/guava-21.0.jar&#39;</span> TSP
+</pre></div>
+
+
+<p>More information can be found on the charlesreid1.com wiki: <a href="https://charlesreid1.com/wiki/Guava">Guava</a></p>
+<p><a name="tsp1-guava-graphs"></a></p>
+<h3>Guava Graphs</h3>
+<p>Graph objects in Guava are implemented using a set of objects: Graphs, ValueGraphs, and Networks.</p>
+<p>Graph objects treat edges as very simple and assumes they contain no information and simply link nodes. </p>
+<p>ValueGraphs associate a single non-unique value with each edge on the graph. This can also be used to solve the TSP.</p>
+<p>Network objects treat nodes and edges both as objects, and has the ability to deal with more complex edges: model multi-edges, repeated edges, directed edges, etc.</p>
+<p>We will use a Network object and design our own graph Node and Edge objects.</p>
+<p><a href="https://github.com/google/guava/wiki/GraphsExplained#building-graph-instances">Link to Guava wiki on how to build graph instances</a></p>
+<p><a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html">Guava API Documentation: Network</a></p>
+<p><a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html">Guava API Documentation: Graph</a></p>
+<p><a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html">Guava API Documentation: ValueGraph</a></p>
+<p><a name="tsp1-guava-mutable-immutable"></a></p>
+<h3>Guava Mutable vs Immutable</h3>
+<p>Guava makes a distinction between mutable graphs, which can be modified, and immutable graphs, which cannot.
+Immutability provides some safety and assurances to programmers, and can make things faster.</p>
+<p>When we construct the network, we need a mutable graph to modify (add nodes and edges). 
+But once the network is constructed, it is finished: we don't need to modify the network while we're solving the problem.</p>
+<p>Therefore, we construct a mutable network, assemble the graph for the given problem, and copy it into an immutable graph.
+We then use the immutable graph to access the graph while solving.</p>
+<p><a name="tsp1-importing-guava"></a></p>
+<h3>Importing Guava</h3>
+<p>Starting with import statements, we'll use a couple of objects from the Java API, and from Google's Guava library:</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.util.Set</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.Map</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.TreeMap</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.Arrays</span><span class="o">;</span>
+
+<span class="kn">import</span> <span class="nn">com.google.common.graph.Network</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">com.google.common.graph.NetworkBuilder</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">com.google.common.graph.ImmutableNetwork</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">com.google.common.graph.MutableNetwork</span><span class="o">;</span>
+</pre></div>
+
+
+<p>For more info on why we don't just do the lazier</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.util.*</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">com.google.common.graph.*</span><span class="o">;</span>
+</pre></div>
+
+
+<p>see <a href="https://google.github.io/styleguide/javaguide.html">Google's Java style guide</a>.</p>
+<p><a name="tsp1-tsp-class"></a></p>
+<h3>TSP Class</h3>
+<p>Let's lay out the TSP class definition. This class is simple, and wraps a few pieces of data:
+the current route, the current distance, and the minimum distance.
+Note that we could also save the solution in a container, instead of printing it,
+by defining a static class to hold solutions, but we'll keep it simple.</p>
+<div class="highlight"><pre><span></span><span class="cm">/** This class solves the traveling salesman problem on a graph. */</span>
+<span class="kd">class</span> <span class="nc">TSP</span> <span class="o">{</span>
+    <span class="c1">// The actual graph of cities</span>
+    <span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="n">graph</span><span class="o">;</span>
+    <span class="kt">int</span> <span class="n">graphSize</span><span class="o">;</span>
+
+    <span class="c1">// Storage variables used when searching for a solution </span>
+    <span class="n">String</span><span class="o">[]</span> <span class="n">route</span><span class="o">;</span>         <span class="c1">// store the route</span>
+    <span class="kt">double</span> <span class="n">this_distance</span><span class="o">;</span>   <span class="c1">// store the total distance</span>
+    <span class="kt">double</span> <span class="n">min_distance</span><span class="o">;</span>    <span class="c1">// store the shortest path found so far</span>
+
+    <span class="cm">/** Defaut constructor generates the graph and initializes storage variables */</span>
+    <span class="kd">public</span> <span class="nf">TSP</span><span class="o">()</span> <span class="o">{</span>
+        <span class="c1">// TODO</span>
+    <span class="o">}</span>
+
+    <span class="cm">/** This method actually constructs the graph. */</span>
+    <span class="kd">public</span> <span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="nf">buildGraph</span><span class="o">()</span> <span class="o">{</span>
+        <span class="c1">// TODO</span>
+    <span class="o">}</span>
+
+    <span class="cm">/** Public solve method will call the recursive backtracking method to search for solutions on the graph */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">solve</span><span class="o">()</span> <span class="o">{</span>
+        <span class="c1">// TODO</span>
+    <span class="o">}</span>
+
+    <span class="cm">/** Recursive backtracking method: explore possible solutions starting at this node, having made nchoices */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">explore</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">,</span> <span class="kt">int</span> <span class="n">nchoices</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// TODO</span>
+    <span class="o">}</span>
+
+    <span class="cm">/** Print out solution */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">printSolution</span><span class="o">()</span> <span class="o">{</span>
+        <span class="c1">// TODO</span>
+    <span class="o">}</span>
+
+    <span class="cm">/** Print out failed path */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">printFailure</span><span class="o">()</span> <span class="o">{</span>
+        <span class="c1">// TODO</span>
+    <span class="o">}</span>
+</pre></div>
+
+
+<p><a name="tsp1-node-class"></a></p>
+<h3>Node Class (Cities)</h3>
+<p>Now we can define the Node class to represent cities on the graph.</p>
+<div class="highlight"><pre><span></span><span class="kd">class</span> <span class="nc">Node</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="n">String</span> <span class="n">label</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="kt">boolean</span> <span class="n">visited</span><span class="o">;</span> <span class="c1">// Helps us to keep track of where we&#39;ve been on the graph</span>
+    <span class="kd">public</span> <span class="nf">Node</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">){</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">label</span> <span class="o">=</span> <span class="n">name</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">visited</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">visit</span><span class="o">(){</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">visited</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">unvisit</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">visited</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+
+
+<p>Like a lined list node, we want to keep graph nodes simple. 
+Note that Nodes don't need to store information about their neighbors.
+That's what we'll use Google Guava for!</p>
+<p><a name="tsp1-edge-class"></a></p>
+<h3>Edge Class (Roads)</h3>
+<p>Edge classes are even simpler, wrapping a single integer:</p>
+<div class="highlight"><pre><span></span><span class="kd">class</span> <span class="nc">Edge</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kt">int</span> <span class="n">value</span><span class="o">;</span>
+    <span class="kd">public</span> <span class="n">String</span> <span class="n">left</span><span class="o">,</span> <span class="n">right</span><span class="o">;</span> <span class="c1">// For convenience in construction process. Not necessary.</span>
+    <span class="kd">public</span> <span class="nf">Edge</span><span class="o">(</span><span class="n">String</span> <span class="n">left</span><span class="o">,</span> <span class="n">String</span> <span class="n">right</span><span class="o">,</span> <span class="kt">int</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">left</span> <span class="o">=</span> <span class="n">left</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">right</span> <span class="o">=</span> <span class="n">right</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+
+
+<p>Note that left and right are used for convenience only during the graph construction process.
+Like the nodes, the edges don't need to know who their neighbors are, 
+since that's what the Google Guava graph object will take care of.</p>
+<p><a name="tsp1-building-graph"></a></p>
+<h2>TSP Constructor and Building the Graph</h2>
+<p><a name="tsp1-constructor"></a></p>
+<h3>Constructor</h3>
+<p>The TSP class constructor should do a few things:</p>
+<ul>
+<li>Construct a graph, with a given set of cities and distances.</li>
+<li>Initialize arrays and cumulative variables that will be used by the backtracking method.</li>
+</ul>
+<p>The actual graph construction process is put into another function called <code>buildGraph()</code>,
+so really the constructor just calls a function and then does #2.</p>
+<div class="highlight"><pre><span></span>    <span class="cm">/** Defaut constructor generates the graph and initializes storage variables */</span>
+    <span class="kd">public</span> <span class="nf">TSP</span><span class="o">()</span> <span class="o">{</span>
+        <span class="c1">// Build the graph</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">graph</span> <span class="o">=</span> <span class="n">buildGraph</span><span class="o">();</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">graphSize</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">graph</span><span class="o">.</span><span class="na">nodes</span><span class="o">().</span><span class="na">size</span><span class="o">();</span>
+
+        <span class="c1">// Initialize route variable, shared across recursive method instances</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">route</span> <span class="o">=</span> <span class="k">new</span> <span class="n">String</span><span class="o">[</span><span class="k">this</span><span class="o">.</span><span class="na">graphSize</span><span class="o">];</span>
+
+        <span class="c1">// Initialize distance variable, shared across recursive method instances</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">=</span> <span class="mf">0.0</span><span class="o">;</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="o">;</span> <span class="c1">// negative min means uninitialized</span>
+    <span class="o">}</span>
+</pre></div>
+
+
+<p><a name="tsp1-build-graph-method"></a></p>
+<h3>Build Graph Method</h3>
+<p>Now we actually use Guava's Immutable Network object,
+which takes two templated types, T1 and T2, 
+which correspond to the node types and the edge types.</p>
+<p>We use a NetworkBuilder object to build the Network 
+(an example of the factory template).
+This returns a MutableNetwork of Node and Edge objects,
+which we can then connect up using some built-in methods.</p>
+<p>Here are some built-in methods available for a MutableNetwork:</p>
+<div class="highlight"><pre><span></span>    addEdge(node1, node2, edge)
+    addNode(node1)
+    removeEdge(edge)
+    removeNode(node)
+</pre></div>
+
+
+<p>Now here is the construction of the graph, using the Google Guava library.
+There are two loops here: one for cities, and one for edges.
+In the loop over each city,we create a new node and add it to the graph.
+To be able to easily retrieve the Nodes we have created, 
+we also store references to the nodes in a map called <code>all_nodes</code>.</p>
+<p>When we construct edges, we use the map of all nodes <code>all_nodes</code> to get references to the Node objects
+that correspond to a label. That way, if an edge connects "A" with "B" at a distance of 24, 
+we can turn "A" and "B" into references to the Node objects A and B.</p>
+<div class="highlight"><pre><span></span>    <span class="cm">/** This method actually constructs the graph. */</span>
+    <span class="kd">public</span> <span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="nf">buildGraph</span><span class="o">()</span> <span class="o">{</span>
+
+        <span class="c1">// MutableNetwork is an interface requiring a type for nodes and a type for edges</span>
+        <span class="n">MutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="n">roads</span> <span class="o">=</span> <span class="n">NetworkBuilder</span><span class="o">.</span><span class="na">undirected</span><span class="o">().</span><span class="na">build</span><span class="o">();</span>
+
+        <span class="c1">// Construct Nodes for cities,</span>
+        <span class="c1">// and add them to a map</span>
+        <span class="n">String</span><span class="o">[]</span> <span class="n">cities</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;A&quot;</span><span class="o">,</span><span class="s">&quot;B&quot;</span><span class="o">,</span><span class="s">&quot;C&quot;</span><span class="o">,</span><span class="s">&quot;D&quot;</span><span class="o">,</span><span class="s">&quot;E&quot;</span><span class="o">};</span>
+        <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">all_nodes</span> <span class="o">=</span> <span class="k">new</span> <span class="n">TreeMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Node</span><span class="o">&gt;();</span>
+        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">cities</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="c1">// Add nodes to map</span>
+            <span class="n">Node</span> <span class="n">node</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Node</span><span class="o">(</span><span class="n">cities</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
+            <span class="n">all_nodes</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">cities</span><span class="o">[</span><span class="n">i</span><span class="o">],</span> <span class="n">node</span><span class="o">);</span>
+
+            <span class="c1">// Add nodes to network</span>
+            <span class="n">roads</span><span class="o">.</span><span class="na">addNode</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
+        <span class="o">}</span>
+
+        <span class="c1">// Construct Edges for roads,</span>
+        <span class="c1">// and add them to a map</span>
+        <span class="n">String</span><span class="o">[]</span> <span class="n">distances</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;A:B:24&quot;</span><span class="o">,</span><span class="s">&quot;A:C:5&quot;</span><span class="o">,</span><span class="s">&quot;A:D:20&quot;</span><span class="o">,</span><span class="s">&quot;A:E:18&quot;</span><span class="o">,</span><span class="s">&quot;B:C:10&quot;</span><span class="o">,</span><span class="s">&quot;B:D:20&quot;</span><span class="o">,</span><span class="s">&quot;C:D:4&quot;</span><span class="o">,</span><span class="s">&quot;C:E:28&quot;</span><span class="o">,</span><span class="s">&quot;D:E:3&quot;</span><span class="o">};</span>
+        <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="n">all_edges</span> <span class="o">=</span> <span class="k">new</span> <span class="n">TreeMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;();</span>
+        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">&lt;</span><span class="n">distances</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
+            <span class="c1">// Parse out (city1):(city2):(distance)</span>
+            <span class="n">String</span><span class="o">[]</span> <span class="n">splitresult</span> <span class="o">=</span> <span class="n">distances</span><span class="o">[</span><span class="n">j</span><span class="o">].</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">);</span>
+            <span class="n">String</span> <span class="n">left</span> <span class="o">=</span> <span class="n">splitresult</span><span class="o">[</span><span class="mi">0</span><span class="o">];</span>
+            <span class="n">String</span> <span class="n">right</span> <span class="o">=</span> <span class="n">splitresult</span><span class="o">[</span><span class="mi">1</span><span class="o">];</span>
+            <span class="n">String</span> <span class="n">label</span> <span class="o">=</span> <span class="n">left</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span> <span class="o">+</span> <span class="n">right</span><span class="o">;</span>
+            <span class="kt">int</span> <span class="n">value</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">parseInt</span><span class="o">(</span><span class="n">splitresult</span><span class="o">[</span><span class="mi">2</span><span class="o">]);</span>
+
+            <span class="c1">// Add edges to map</span>
+            <span class="n">Edge</span> <span class="n">edge</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Edge</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="n">right</span><span class="o">,</span> <span class="n">value</span><span class="o">);</span>
+            <span class="n">all_edges</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">label</span><span class="o">,</span> <span class="n">edge</span><span class="o">);</span>
+
+            <span class="c1">// Add edges to network</span>
+            <span class="n">roads</span><span class="o">.</span><span class="na">addEdge</span><span class="o">(</span><span class="n">all_nodes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">edge</span><span class="o">.</span><span class="na">left</span><span class="o">),</span> <span class="n">all_nodes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">edge</span><span class="o">.</span><span class="na">right</span><span class="o">),</span> <span class="n">edge</span><span class="o">);</span>
+        <span class="o">}</span>
+
+        <span class="c1">// Freeze the network</span>
+        <span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="n">frozen_roads</span> <span class="o">=</span> <span class="n">ImmutableNetwork</span><span class="o">.</span><span class="na">copyOf</span><span class="o">(</span><span class="n">roads</span><span class="o">);</span>
+
+        <span class="k">return</span> <span class="n">frozen_roads</span><span class="o">;</span>
+    <span class="o">}</span>
+</pre></div>
+
+
+<p><a name="tsp1-recursive-backtracking"></a></p>
+<h2>Solving and Exploring with Recursive Backtracking</h2>
+<h3>Solve Method</h3>
+<p>The structure of some recursive backtracking problems is to create a public and a private interface,
+with the public interface taking no parameters or a single parameter that the user will know, 
+and the private method taking a parameter specific to the implementation. That's the pattern we use here.</p>
+<p>The solve method sets up the problem by picking a starting node (in this case, an arbitrary starting node).
+It then gets a reference to that node on the graph, and calls the recursive <code>explore()</code> method,
+which begins the recursive backtracking method.</p>
+<div class="highlight"><pre><span></span>    <span class="cm">/** Public solve method will call the recursive backtracking method to search for solutions on the graph */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">solve</span><span class="o">()</span> <span class="o">{</span>
+        <span class="cm">/** To solve the traveling salesman problem:</span>
+<span class="cm">         * Set up the graph, choose a starting node, then call the recursive backtracking method and pass it the starting node.</span>
+<span class="cm">         */</span>
+
+        <span class="c1">// We need to pass a starting node to recursive backtracking method</span>
+        <span class="n">Node</span> <span class="n">startNode</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+
+        <span class="c1">// Grab a node, any node...</span>
+        <span class="k">for</span><span class="o">(</span> <span class="n">Node</span> <span class="n">n</span> <span class="o">:</span> <span class="n">graph</span><span class="o">.</span><span class="na">nodes</span><span class="o">()</span> <span class="o">)</span> <span class="o">{</span>
+            <span class="n">startNode</span> <span class="o">=</span> <span class="n">n</span><span class="o">;</span>
+            <span class="k">break</span><span class="o">;</span>
+        <span class="o">}</span>
+
+        <span class="c1">// Visit the first node</span>
+        <span class="n">startNode</span><span class="o">.</span><span class="na">visit</span><span class="o">();</span>
+
+        <span class="c1">// Add first node to the route</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">=</span> <span class="n">startNode</span><span class="o">.</span><span class="na">label</span><span class="o">;</span>
+
+        <span class="c1">// Pass the number of choices made</span>
+        <span class="kt">int</span> <span class="n">nchoices</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span>
+
+        <span class="c1">// Recursive backtracking</span>
+        <span class="n">explore</span><span class="o">(</span><span class="n">startNode</span><span class="o">,</span> <span class="n">nchoices</span><span class="o">);</span>
+    <span class="o">}</span>
+</pre></div>
+
+
+<h3>Explore (Backtrack) Method</h3>
+<p>And now, on to the recursive backtracking method.</p>
+<p>The method takes as a parameter which node we are currently on and the number of cities we have visited.
+As multiple explore methods choose different paths, they pass references to different node objects in the graph,
+and they pass different values of <code>nchoices</code>. </p>
+<p>The methods, when they do not encounter a solution, will choose a next node and call the explore method on it.
+Each instance of the explore method marks nodes as visited or unvisited on the same shared graph object.
+This allows instances of the function to share information about their choices with other instances of the function.</p>
+<p>All recursive methods must consist of a base case and a recursive case:</p>
+<p>Base case:
+- We've visited as many cities as are on the graph.
+- Check if this is a new solution (distance less than the current minimum).</p>
+<p>Recursive case:
+- Make a choice (mark node as visited, add city to route).
+- Explore the consequences (recursive call).
+- Unmake the choice (mark node as unvisited, remove city from route).
+- Move on to next choice.</p>
+<div class="highlight"><pre><span></span>    <span class="cm">/** Recursive backtracking method: explore possible solutions starting at this node, having made nchoices */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">explore</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">,</span> <span class="kt">int</span> <span class="n">nchoices</span><span class="o">)</span> <span class="o">{</span>
+        <span class="cm">/**</span>
+<span class="cm">         * Solution strategy: recursive backtracking.</span>
+<span class="cm">         */</span>
+
+        <span class="k">if</span><span class="o">(</span><span class="n">nchoices</span> <span class="o">==</span> <span class="n">graphSize</span><span class="o">)</span> <span class="o">{</span>
+            <span class="c1">// </span>
+            <span class="c1">// BASE CASE</span>
+            <span class="c1">//</span>
+            <span class="k">if</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">&lt;</span> <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">||</span> <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+                <span class="c1">// if this_distance &lt; min_distance, this is our new minimum distance</span>
+                <span class="c1">// if min_distance &lt; 0, this is our first minimium distance</span>
+                <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span><span class="o">;</span>
+                <span class="n">printSolution</span><span class="o">();</span>
+            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                <span class="n">printFailure</span><span class="o">();</span>
+            <span class="o">}</span>
+
+        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+            <span class="c1">//</span>
+            <span class="c1">// RECURSIVE CASE</span>
+            <span class="c1">//  </span>
+            <span class="n">Set</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="na">adjacentNodes</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
+            <span class="k">for</span><span class="o">(</span><span class="n">Node</span> <span class="n">neighbor</span> <span class="o">:</span> <span class="n">neighbors</span><span class="o">)</span> <span class="o">{</span>
+                <span class="k">if</span><span class="o">(</span><span class="n">neighbor</span><span class="o">.</span><span class="na">visited</span> <span class="o">==</span> <span class="kc">false</span><span class="o">)</span> <span class="o">{</span>
+
+                    <span class="kt">int</span> <span class="n">distance_btwn</span><span class="o">;</span>
+
+                    <span class="k">for</span><span class="o">(</span> <span class="n">Edge</span> <span class="n">edge</span> <span class="o">:</span> <span class="n">graph</span><span class="o">.</span><span class="na">edgesConnecting</span><span class="o">(</span><span class="n">node</span><span class="o">,</span> <span class="n">neighbor</span><span class="o">)</span> <span class="o">)</span> <span class="o">{</span>
+                        <span class="n">distance_btwn</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="na">value</span><span class="o">;</span>
+                    <span class="o">}</span>
+
+                    <span class="c1">// Make a choice</span>
+                    <span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="n">neighbor</span><span class="o">.</span><span class="na">label</span><span class="o">;</span>
+                    <span class="n">neighbor</span><span class="o">.</span><span class="na">visit</span><span class="o">();</span>
+                    <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">+=</span> <span class="n">distance_btwn</span><span class="o">;</span>
+
+                    <span class="c1">// Explore the consequences</span>
+                    <span class="n">explore</span><span class="o">(</span><span class="n">neighbor</span><span class="o">,</span><span class="n">nchoices</span><span class="o">+</span><span class="mi">1</span><span class="o">);</span>
+
+                    <span class="c1">// Unmake the choice</span>
+                    <span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+                    <span class="n">neighbor</span><span class="o">.</span><span class="na">unvisit</span><span class="o">();</span>
+                    <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">-=</span> <span class="n">distance_btwn</span><span class="o">;</span>
+                <span class="o">}</span>
+                <span class="c1">// Move on to the next choice (continue loop)</span>
+            <span class="o">}</span>               
+        <span class="o">}</span> <span class="c1">// End base/recursive case</span>
+    <span class="o">}</span>
+</pre></div>
+
+
+<h2>Main and Utility Methods</h2>
+<p>Last but not least, add the method that actually calls the TSP object's solve method,
+and define what to do when we encounter a new solution.
+This program just prints out new solutions as they are found, 
+but you could also add them to a map (map routes to distances),
+or quietly keep track of the shortest path and not print it until the end.</p>
+<div class="highlight"><pre><span></span><span class="kd">class</span> <span class="nc">TSP</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span> 
+        <span class="n">TSP</span> <span class="n">t</span> <span class="o">=</span> <span class="k">new</span> <span class="n">TSP</span><span class="o">();</span>
+        <span class="n">t</span><span class="o">.</span><span class="na">solve</span><span class="o">();</span>
+    <span class="o">}</span>
+
+    <span class="o">...</span>
+</pre></div>
+
+
+<p>Additionally, we may want to perform a certain action when we find a new minimum distance.
+Note that this method may be called multiple times during the solution procedure.</p>
+<div class="highlight"><pre><span></span>    <span class="cm">/** Print out solution */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">printSolution</span><span class="o">()</span> <span class="o">{</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">(</span><span class="s">&quot;@@@@@@@@@@\tNEW SOLUTION\t&quot;</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Route: &quot;</span><span class="o">+</span><span class="n">Arrays</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">)</span>
+                          <span class="o">+</span><span class="s">&quot;\tDistance: &quot;</span><span class="o">+</span><span class="k">this</span><span class="o">.</span><span class="na">min_distance</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="cm">/** Do nothing with failed path */</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">printFailure</span><span class="o">()</span> <span class="o">{</span>
+        <span class="c1">// Nope</span>
+    <span class="o">}</span>
+</pre></div>
+
+
+<h2>Program Output</h2>
+<h3>Initial Graph Structure and Solution</h3>
+<p>In the construction of the graph, we defined our graph as:</p>
+<div class="highlight"><pre><span></span><span class="n">String</span><span class="o">[]</span> <span class="n">distances</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;A:B:24&quot;</span><span class="o">,</span><span class="s">&quot;A:C:5&quot;</span><span class="o">,</span><span class="s">&quot;A:D:20&quot;</span><span class="o">,</span><span class="s">&quot;A:E:18&quot;</span><span class="o">,</span><span class="s">&quot;B:C:10&quot;</span><span class="o">,</span><span class="s">&quot;B:D:20&quot;</span><span class="o">,</span><span class="s">&quot;C:D:4&quot;</span><span class="o">,</span><span class="s">&quot;C:E:28&quot;</span><span class="o">,</span><span class="s">&quot;D:E:3&quot;</span><span class="o">};</span>
+</pre></div>
+
+
+<p>This is the graph that we're solving the TSP problem on.
+Here are the results when the program is compiled and run:</p>
+<div class="highlight"><pre><span></span>$ javac -cp <span class="s1">&#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39;</span> TSP.java
+
+$ java -cp <span class="s1">&#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39;</span> TSP
+
+@@@@@@@@@@  NEW SOLUTION    Route: <span class="o">[</span>A, B, C, D, E<span class="o">]</span>  Distance: <span class="m">41</span>.0
+@@@@@@@@@@  NEW SOLUTION    Route: <span class="o">[</span>A, C, B, D, E<span class="o">]</span>  Distance: <span class="m">38</span>.0
+@@@@@@@@@@  NEW SOLUTION    Route: <span class="o">[</span>A, E, D, C, B<span class="o">]</span>  Distance: <span class="m">35</span>.0
+</pre></div>
+
+
+<p>The answers given were satisfactory and correct, so we moved on to 
+a more advanced graph construction process that utilized a static class
+to generate random, fully-connected graphs. This also implemented 
+additional functionality to export to Dot format. This static RandomGraph
+class will be covered in later post.</p>
+<p>Here is the resulting output of the random graph generator for a 6-node TSP problem,
+with the sequence of shortest routes found by the algorithm:</p>
+<p><img alt="Six-node traveling salesperson problem" src="graphviz_tsp_6.png"></p>
+<div class="highlight"><pre><span></span>java -cp &#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39; TSP 6 
+------------------- TSP ----------------------
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 3, 2, 4, 5]   Distance: 291.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 3, 5, 4, 2]   Distance: 249.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 2, 4, 3, 5]   Distance: 246.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 5, 3, 4, 2]   Distance: 203.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 3, 5, 1, 4, 2]   Distance: 178.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 2, 4, 1, 5, 3]   Distance: 163.0
+ Done.
+</pre></div>
+
+
+<p>And for 12 nodes, a problem twice that size, here is the graph and corresponding output:</p>
+<p><img alt="Twelve-node traveling salesperson problem" src="graphviz_tsp_12.png"></p>
+<p>and the output:</p>
+<div class="highlight"><pre><span></span>java -cp &#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39; TSP 12 
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 6, 8, 11]   Distance: 585.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 8, 11, 6]   Distance: 558.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 8, 6, 11]   Distance: 522.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 6, 5, 3, 8, 11]   Distance: 499.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 11, 8, 6, 5, 3]   Distance: 460.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 11, 6, 8, 3, 5]   Distance: 459.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 11, 8, 10, 6, 5, 3]   Distance: 449.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 11, 10, 6, 8, 3, 5]   Distance: 419.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 11, 10, 8, 6, 5, 3]   Distance: 408.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 3, 5, 6, 8, 10, 11]   Distance: 402.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 3, 9, 11, 10, 8, 6, 5]   Distance: 385.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 11, 10, 8, 6, 2, 9, 3, 5]   Distance: 377.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 5, 3, 9, 11, 10, 8, 6, 2]   Distance: 374.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 5, 6, 8, 10, 11, 9, 3, 2]   Distance: 371.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 9, 3, 5, 4, 11, 10, 8, 6, 2]   Distance: 363.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 9, 3, 2, 6, 8, 10, 11, 4, 5]   Distance: 352.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 5, 4, 11, 9, 2, 6, 8, 10]   Distance: 350.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 2, 9, 11, 4, 5, 6, 8, 10]   Distance: 347.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 9, 2, 4, 11, 10, 8, 6, 5]   Distance: 345.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 9, 2, 6, 8, 10, 11, 4, 5]   Distance: 323.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 3, 9, 2, 6, 8, 10, 11, 4]   Distance: 322.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 2, 3, 9, 11, 10, 8, 6]   Distance: 316.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 2, 6, 8, 10, 11, 9, 3]   Distance: 313.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 11, 9, 3, 2, 6, 8, 10]   Distance: 306.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 11, 10, 8, 6, 2, 9, 3]   Distance: 302.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 10, 11, 4, 5, 7, 3, 9, 2, 6, 8]   Distance: 289.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 10, 8, 6, 2, 9, 3, 7, 5, 4, 11]   Distance: 286.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 10, 8, 6, 2, 3, 9, 11, 4, 5, 7]   Distance: 283.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 8, 6, 10, 11, 4, 2, 9, 3, 7, 5]   Distance: 274.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 8, 6, 10, 11, 4, 5, 7, 3, 9, 2]   Distance: 260.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 2, 6, 8, 10, 11, 9, 3, 7, 5]   Distance: 259.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 11, 10, 8, 6, 5, 7, 3, 9, 2]   Distance: 256.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 11, 10, 8, 6, 2, 9, 3, 7, 5]   Distance: 248.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 5, 7, 3, 9, 11, 10, 8, 6, 2]   Distance: 245.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 7, 5, 4, 1, 8, 6, 10, 11, 9, 3, 2]   Distance: 236.0
+ Done.
+</pre></div>
+
+
+<p>Note that these random graphs are fully connected - every node connects to every other node.
+Among the many interesting aspects of the problem, one of them is the impact of connectivity
+on the solution time. </p>
+<p>Another aspect of the problem is the topology of the network, and exploring how 
+a larger number of unconnected nodes, or groups of nodes clustered together but isolated from one another,
+affect the final solution time and the final route.</p>
+<p>But before get to that, we have some other things to work out.</p>
+<h2>Next Steps: Timing and Profiling</h2>
+<p>This post described a working implementation of a recursive backtracking solution 
+to the traveling salesperson problem on a graph. This is a naive solution, however,
+and in the next few posts about the traveling salesperson problem we'll focus on using
+timing and profiling tools for Java to profile this Guava program, identify bottlenecks, 
+and speed it up. In fact, there is one small tweak we can make to the algorithm covered above
+that will improve the performance by orders of magnitude. But more on that in a future post.</p>
+<p><a name="tsp1-sources"></a></p>
+<h2>Sources</h2>
+<ol>
+<li>
+<p>"Traveling Salesman Problem". Wikipedia, the Free Encyclopedia. The Wikimedia Foundation. Edited 12 March 2017. Accessed 23 March 2017. 
+&lt;<a href="https://en.wikipedia.org/wiki/Travelling_salesman_problem">https://en.wikipedia.org/wiki/Travelling_salesman_problem</a>&gt;</p>
+</li>
+<li>
+<p>"Seven Bridges of Königsberg". Wikipedia, the Free Encyclopedia. The Wikimedia Foundation. Edited 11 March 2017. Accessed 23 March 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg">https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg</a>&gt;</p>
+</li>
+<li>
+<p>"The structure and function of complex networks". M. E. J. Newman. 
+&lt;<a href="http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf">http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf</a>&gt;</p>
+</li>
+<li>
+<p>"Google Guava - Github". Alphabet, Inc. Released under the Apache 2.0 License. Accessed 20 March 2017.
+&lt;<a href="https://github.com/google/guava">https://github.com/google/guava</a>&gt;</p>
+</li>
+<li>
+<p>"Guava". Charles Reid. Edited 23 March 2017. Accessed 23 March 2017.
+&lt;<a href="https://www.charlesreid1.com/wiki/Guava">https://www.charlesreid1.com/wiki/Guava</a>&gt;</p>
+</li>
+<li>
+<p>"Graphs Explained". Google Guava Wiki. Accessed 23 March 2017.
+&lt;<a href="https://github.com/google/guava/wiki/GraphsExplained">https://github.com/google/guava/wiki/GraphsExplained</a>&gt;</p>
+</li>
+<li>
+<p>"Network". Google Guava API Documentation. Accessed 23 March 2017.
+&lt;<a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html">http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html</a>&gt;</p>
+</li>
+<li>
+<p>"Graph". Google Guava API Documentation. Accessed 23 March 2017.
+&lt;<a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html">http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html</a>&gt;</p>
+</li>
+<li>
+<p>"Value Graph". Google Guava API Documentation. Accessed 23 March 2017.
+&lt;<a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html">http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html</a>&gt;</p>
+</li>
+<li>
+<p>"Google Java Style Guide". Alphabet Inc. Accessed 21 March 2017.
+&lt;<a href="https://google.github.io/styleguide/javaguide.html">https://google.github.io/styleguide/javaguide.html</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    var location_protocol = (false) ? 'https' : document.location.protocol;
+    if (location_protocol !== 'http' && location_protocol !== 'https') location_protocol = 'https:';
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = location_protocol + '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/guava.html">guava</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/graph.html">graph</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/tsp.html">TSP</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Perl vs. Java: N Queens Problem
             </b></h1>
         
@@ -1330,410 +2106,6 @@ Final number of (big) Enigma combinations:
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Enigma Cipher Implementation: Part 3: Enigma in Java Without Objects
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-03-22T18:00:00-07:00" pubdate>Wednesday 03/22/2017</time>
-                in 
-                <a href="/category/enigma.html">Enigma</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/enigma-cipher-implementation-part-3-enigma-in-java-without-objects.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>As the title suggests, we're continuing with the third in a series of posts 
-exploring a verb-oriented approach to programming - 
-in an attempt to free ourselves from the fetishization of objects,
-we are attempting to learn how to use languages against their will.</p>
-<p>This is all inspired by <a href="http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html">Steve Yegge's 2006 blog post</a>,
-"Execution in the Kingdom of Nouns," an excellent read that inspired me to 
-explore the subject more deeply. </p>
-<h2>Java Pseudocode</h2>
-<p>In the last post, we ran through the pseudocode for an Enigma machine 
-based entirely upon Strings, iterators, and integer indexes, 
-leading to a vastly simpler abstraction of the Enigma machine
-than would have resulted if we had implicitly chosen a noun-centric approach,
-divided the entire Enigma encryption process into its component nouns like rotor wheels and reflectors,
-and implemented each as an object.</p>
-<p>Here was the pseudocode:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply forward rotor transformation
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    concatenate transformed input character to ciphertext message 
-
-    # Increment rotor wheels
-    for each rotor/scrambled alphabet, left to right:
-        get index of left notch in left alphabet
-        get index of right notch in right alphabet
-        if left index equals right index:
-            cycle left alphabet forward 1 character
-    cycle right-most alphabet forward 1 character
-</pre></div>
-
-
-<h2>Java Code</h2>
-<p>The Enigma code is defined in the Java program as follows:</p>
-<ul>
-<li>The Enigma class defines a set of constants for historically accurate cipher settings.</li>
-<li>The main method contains the encryption procedure.</li>
-<li>There is one static helper method called rotateString.</li>
-</ul>
-<p>Everything is in a public class. Starting with the definitions of constants:</p>
-<div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Enigma</span> <span class="o">{</span>
-
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">ALPHA</span> <span class="o">=</span> <span class="s">&quot;ABCDEFGHIJKLMNOPQRSTUVWXYZ&quot;</span><span class="o">;</span>
-
-    <span class="c1">// Historically accurate rotor scrambles</span>
-    <span class="c1">// See http://www.codesandciphers.org.uk/enigma/rotorspec.htm</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span><span class="o">[]</span> <span class="n">WHEEL</span> <span class="o">=</span> <span class="o">{</span> <span class="n">ALPHA</span><span class="o">,</span>
-                        <span class="s">&quot;EKMFLGDQVZNTOWYHXUSPAIBRCJ&quot;</span><span class="o">,</span> <span class="c1">// Rotor I    - Royal</span>
-                        <span class="s">&quot;AJDKSIRUXBLHWTMCQGZNPYFVOE&quot;</span><span class="o">,</span> <span class="c1">// Rotor II   - Flags</span>
-                        <span class="s">&quot;BDFHJLCPRTXVZNYEIWGAKMUSQO&quot;</span><span class="o">,</span> <span class="c1">// Rotor III  - Wave</span>
-                        <span class="s">&quot;ESOVPZJAYQUIRHXLNFTGKDCMWB&quot;</span><span class="o">,</span> <span class="c1">// Rotor IV   - Kings</span>
-                        <span class="s">&quot;VZBRGITYUPSDNHLXAWMJQOFECK&quot;</span><span class="o">,</span> <span class="c1">// Rotor V    - Above</span>
-                        <span class="s">&quot;JPGVOUMFYQBENHZRDKASXLICTW&quot;</span><span class="o">,</span>
-                        <span class="s">&quot;NZJHGRCXMYSWBOUFAIVLPEKQDT&quot;</span><span class="o">,</span>
-                        <span class="s">&quot;FKQHTLXOCBJSPDZRAMEWNIUYGV&quot;</span><span class="o">};</span>
-
-    <span class="c1">// Knocking (notch and clasp) advances the wheel to the left</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span><span class="o">[]</span> <span class="n">NOTCH</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;&quot;</span><span class="o">,</span>  <span class="c1">// No notch</span>
-                                          <span class="s">&quot;R&quot;</span><span class="o">,</span> <span class="c1">// Royal</span>
-                                          <span class="s">&quot;F&quot;</span><span class="o">,</span> <span class="c1">// Flags</span>
-                                          <span class="s">&quot;W&quot;</span><span class="o">,</span> <span class="c1">// Wave</span>
-                                          <span class="s">&quot;K&quot;</span><span class="o">,</span> <span class="c1">// Kings</span>
-                                          <span class="s">&quot;A&quot;</span><span class="o">,</span> <span class="c1">// Above</span>
-                                          <span class="s">&quot;AN&quot;</span><span class="o">,</span>
-                                          <span class="s">&quot;AN&quot;</span><span class="o">,</span>
-                                          <span class="s">&quot;AN&quot;</span><span class="o">};</span>
-
-    <span class="c1">// Reflectors</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">REFLECTOR_ALPHA</span> <span class="o">=</span> <span class="s">&quot;AY:BR:CU:DH:EQ:FS:GL:IP:JX:KN:MO:TZ:VW&quot;</span><span class="o">;</span>
-</pre></div>
-
-
-<h2>Main Method: User Settings</h2>
-<p>The next part of the code is the main method, where we begin by defining variables 
-that correspond to settings that the Enigma operator would set from the daily Enigma code book.
-These included:</p>
-<ul>
-<li>The numbering and ordering of wheels (e.g., <code>IV II I</code>)</li>
-<li>The initial rotor settings for each wheel (position 0-25)</li>
-<li>The pairs of letters connected on the switch board</li>
-</ul>
-<p>The wheels are specified using the <code>WHEEL</code> array of Strings, above.
-Each element of the WHEEL array contains a different scrambled alphabet, 
-corresponding to the alphabet scrambles hard-coded into the historical rotor wheels.
-These go into <code>rotorAlpha</code>, which stores each rotor's alphabet in a String.</p>
-<p>The locations of the notches that advance neighboring wheels are fixed by the choice of wheels, 
-and are available through the <code>NOTCH</code> array.
-The notch locations implemented in <code>NOTCH</code> are historically accurate for each rotor wheel. </p>
-<p>The initial rotor settings were also contained in the code book as a sequence of 3 numbers,
-each 0-25, indicating how many turns each wheel was rotated before starting.</p>
-<p>The plugboard pairs specify the wired connections on the front of the machine.
-These plugboard pairs were also daily machine settings specified in the daily Enigma code book.
-The plugboard pairs are input as a single string, with pairs of letters separated by a ":", like this: <code>AB:CD:EF:GH</code>.
-Pairs must be unique (no letter can connect to itself). 
-Letters cannot be repeated (no letter can connect to more than 1 other letter).</p>
-<div class="highlight"><pre><span></span>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span> 
-
-        <span class="c1">// These two strings should encrypt/decrypt to each other when you run them through the Enigma.</span>
-        <span class="c1">//String message = &quot;ABCDE FG HIJKL MNOP QRS TUVWXYZ&quot;; </span>
-        <span class="n">String</span> <span class="n">message</span> <span class="o">=</span> <span class="s">&quot;TVVFT KS UNVYJ FAFV NPC DZJPWEJ&quot;</span><span class="o">;</span>
-
-
-        <span class="c1">//////////////////////////////////</span>
-        <span class="c1">// Operator Settings</span>
-        <span class="c1">// </span>
-        <span class="c1">// Enigma operators have code sheets that specify: </span>
-        <span class="c1">//  - The numbering/ordering of wheels </span>
-        <span class="c1">//  - The initial rotor settings</span>
-        <span class="c1">//  - The plugboard pairs</span>
-
-        <span class="c1">// Rotor scrambles are applied right-to-left</span>
-        <span class="c1">//              {LAST, MIDDLE, FIRST}</span>
-        <span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha</span> <span class="o">=</span> <span class="o">{</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-        <span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch</span> <span class="o">=</span> <span class="o">{</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-        <span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit</span> <span class="o">=</span> <span class="o">{</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">};</span>
-
-        <span class="n">String</span> <span class="n">plugboardPairs</span> <span class="o">=</span> <span class="s">&quot;IR:HQ:NT:WZ:VC:OY:GP:LF:BX:AK&quot;</span><span class="o">;</span>
-
-        <span class="n">String</span> <span class="n">coded</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">message</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">coded</span><span class="o">);</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<h2>Cipher Procedure</h2>
-<p>The next bit of code is the meat of the Enigma method.
-Notice that this is purely procedural code, and makes no use of objects other than the built-in String type. 
-This is the kind of verb-oriented code we are striving for
-when we write noun-free Java code.</p>
-<p>We also pass in any information that's required. 
-Normally we would wrap all of these quantities in an object,
-to keep the list of parameters short, but this implementation is entirely object-free.</p>
-<div class="highlight"><pre><span></span>    <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">enigma</span><span class="o">(</span><span class="n">String</span> <span class="n">message</span><span class="o">,</span>
-                                <span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha</span><span class="o">,</span>
-                                <span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch</span><span class="o">,</span>
-                                <span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit</span><span class="o">,</span>
-                                <span class="n">String</span><span class="o">[]</span> <span class="n">plugboardPairs</span><span class="o">)</span> <span class="o">{</span> 
-
-        <span class="n">StringBuilder</span> <span class="n">message_final</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
-
-        <span class="c1">//////////////////////////////////////</span>
-        <span class="c1">// Enigma Cipher</span>
-
-        <span class="c1">// Apply each transformation in sequence</span>
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">message</span><span class="o">.</span><span class="na">length</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-
-            <span class="c1">// Starting char</span>
-            <span class="kt">char</span> <span class="n">c_orig</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
-            <span class="kt">char</span> <span class="n">c</span> <span class="o">=</span> <span class="n">c_orig</span><span class="o">;</span>
-
-            <span class="c1">// Perform plugboard swap</span>
-            <span class="k">for</span><span class="o">(</span><span class="n">String</span> <span class="n">pair</span> <span class="o">:</span> <span class="n">plugboardPairs</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">))</span> <span class="o">{</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
-                <span class="o">}</span> <span class="k">else</span> <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-
-            <span class="c1">// Perform rotor letter substitutions</span>
-            <span class="c1">// (forward order: right-to-left)</span>
-            <span class="kt">int</span> <span class="n">ix</span> <span class="o">=</span> <span class="o">-</span><span class="mi">100</span><span class="o">;</span>
-            <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=(</span><span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">-</span><span class="mi">1</span><span class="o">);</span> <span class="n">j</span><span class="o">&gt;=</span><span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">--)</span> <span class="o">{</span> 
-                <span class="n">ix</span> <span class="o">=</span> <span class="n">ALPHA</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
-                <span class="n">String</span> <span class="n">thisAlpha</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">ix</span><span class="o">&gt;=</span><span class="mi">0</span><span class="o">)</span> <span class="o">{</span> 
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">thisAlpha</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">ix</span><span class="o">);</span>
-                <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">c_orig</span><span class="o">;</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-
-            <span class="c1">// Perform reflection</span>
-            <span class="k">for</span><span class="o">(</span><span class="n">String</span> <span class="n">pair</span> <span class="o">:</span> <span class="n">REFLECTOR_ALPHA</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">))</span> <span class="o">{</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
-                <span class="o">}</span> <span class="k">else</span> <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-
-            <span class="c1">// Perform rotor letter substitutions</span>
-            <span class="c1">// (backwards order: left-to-right) </span>
-            <span class="n">ix</span> <span class="o">=</span> <span class="o">-</span><span class="mi">100</span><span class="o">;</span>
-            <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">&lt;</span><span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span> 
-                <span class="n">String</span> <span class="n">thisAlpha</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
-                <span class="n">ix</span> <span class="o">=</span> <span class="n">thisAlpha</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">ix</span><span class="o">&gt;=</span><span class="mi">0</span><span class="o">)</span> <span class="o">{</span> 
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">ALPHA</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">ix</span><span class="o">);</span>
-                <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">c_orig</span><span class="o">;</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-
-
-            <span class="c1">// Perform plugboard swap</span>
-            <span class="k">for</span><span class="o">(</span><span class="n">String</span> <span class="n">pair</span> <span class="o">:</span> <span class="n">plugboardPairs</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">))</span> <span class="o">{</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
-                <span class="o">}</span> <span class="k">else</span> <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span> <span class="o">{</span>
-                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-
-
-            <span class="c1">// Final text</span>
-            <span class="k">if</span><span class="o">(</span> <span class="n">c</span><span class="o">&gt;=</span><span class="sc">&#39;A&#39;</span> <span class="o">&amp;&amp;</span> <span class="n">c</span><span class="o">&lt;=</span><span class="sc">&#39;Z&#39;</span><span class="o">)</span> <span class="o">{</span> 
-                <span class="n">message_final</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
-            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-                <span class="c1">// Could not resolve </span>
-                <span class="n">message_final</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">c_orig</span><span class="o">);</span>
-            <span class="o">}</span>
-
-            <span class="c1">// Increment rotors</span>
-            <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">&lt;(</span><span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">-</span><span class="mi">1</span><span class="o">);</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
-                <span class="n">String</span> <span class="n">alphaL</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
-                <span class="kt">int</span> <span class="n">ixL</span> <span class="o">=</span> <span class="n">alphaL</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">rotorNotch</span><span class="o">[</span><span class="n">j</span><span class="o">]);</span>
-                <span class="n">String</span> <span class="n">alphaR</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="o">];</span>
-                <span class="kt">int</span> <span class="n">ixR</span> <span class="o">=</span> <span class="n">alphaR</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">rotorNotch</span><span class="o">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="o">]);</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">ixL</span><span class="o">!=</span><span class="n">ixR</span><span class="o">)</span> <span class="o">{</span> 
-                    <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">rotateString</span><span class="o">(</span><span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">]);</span>
-                <span class="o">}</span>
-            <span class="o">}</span>
-            <span class="c1">// Always increment the right-most rotor</span>
-            <span class="kt">int</span> <span class="n">lenny</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
-            <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">]</span> <span class="o">=</span> <span class="n">rotateString</span><span class="o">(</span><span class="n">rotorAlpha</span><span class="o">[</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">]);</span>
-        <span class="o">}</span>
-
-        <span class="k">return</span> <span class="n">message_final</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<h2>Utility Method: String Rotator</h2>
-<p>One last piece that's needed to emulate the rotation of the rotor wheels 
-is a method to rotate strings forward 1 character. Here's that method:</p>
-<div class="highlight"><pre><span></span>    <span class="c1">/// Rotate a string forward by 1 character, so &quot;ABCDEF&quot; becomes &quot;FABCDE&quot;</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">rotateString</span><span class="o">(</span><span class="n">String</span> <span class="n">original</span><span class="o">)</span> <span class="o">{</span>
-        <span class="kt">int</span> <span class="n">lenny</span> <span class="o">=</span> <span class="n">original</span><span class="o">.</span><span class="na">length</span><span class="o">();</span>
-        <span class="n">StringBuilder</span> <span class="n">rotated</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
-        <span class="n">rotated</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">original</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">));</span>
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span><span class="n">i</span><span class="o">&lt;</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">;</span><span class="n">i</span><span class="o">++)</span> <span class="o">{</span> 
-            <span class="n">rotated</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">original</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">));</span>
-        <span class="o">}</span>
-        <span class="k">return</span> <span class="n">rotated</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
-    <span class="o">}</span>
-
-<span class="o">}</span> <span class="c1">// end Enigma class</span>
-</pre></div>
-
-
-<h2>Complete Enigma Implementation</h2>
-<p>Here is a link to the complete Enigma code on git.charlesreid1.com: <a href="https://charlesreid1.com:3000/charlesreid1/java-crypto/src/master/enigma/Enigma.java">Enigma.java</a></p>
-<p>Now that the Enigma machine implementation is finished, we can test it out.
-One feature of the Enigma that makes it easy to test is, it is symmetric.
-If we feed a plain text into the Enigma and get the corresponding ciphertext,
-we can feed that ciphertext through the Enigma (with the same initial settings) 
-and recover the original plain text.</p>
-<p>Running the alphabet through the Enigma yields:</p>
-<div class="highlight"><pre><span></span>$ java Enigma
-IN:  ABCDE FG HIJKL MNOP QRS TUVWXYZ
-OUT: TVVFT KS UNVYJ FAFV NPC DZJPWEJ
-</pre></div>
-
-
-<p>Running this back through the Enigma yields:</p>
-<div class="highlight"><pre><span></span>$ java Enigma
-IN:  TVVFT KS UNVYJ FAFV NPC DZJPWEJ
-OUT: ABCDE FG HIJKL MNOP QRS TUVWXYZ
-</pre></div>
-
-
-<p><strong>NOTE:</strong> This code modifies the Enigma machine's settings in-place.
-This means multiple sequential calls to the <code>enigma()</code> method will not reset the rotors.
-The following code will not recover the original plain text <code>message</code>:</p>
-<div class="highlight"><pre><span></span><span class="c1">// This won&#39;t work:</span>
-<span class="n">String</span> <span class="n">coded</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">message</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
-<span class="n">String</span> <span class="n">original2</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">coded</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
-</pre></div>
-
-
-<p>To do this correctly, we would need multiple copies of the input arrays <code>rotorAlpha</code>, <code>rotorNotch</code>, and <code>rotorInit</code>:</p>
-<div class="highlight"><pre><span></span><span class="n">String</span> <span class="n">plugboardPairs</span> <span class="o">=</span> <span class="s">&quot;IR:HQ:NT:WZ:VC:OY:GP:LF:BX:AK&quot;</span><span class="o">;</span>
-
-<span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha</span> <span class="o">=</span> <span class="o">{</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-<span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch</span> <span class="o">=</span> <span class="o">{</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-<span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit</span> <span class="o">=</span> <span class="o">{</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">};</span>
-<span class="n">String</span> <span class="n">coded</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">message</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
-
-<span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha2</span> <span class="o">=</span> <span class="o">{</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-<span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch2</span> <span class="o">=</span> <span class="o">{</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
-<span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit2</span> <span class="o">=</span> <span class="o">{</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">};</span>
-<span class="n">String</span> <span class="n">original</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">coded</span><span class="o">,</span> <span class="n">rotorAlpha2</span><span class="o">,</span> <span class="n">rotorNotch2</span><span class="o">,</span> <span class="n">rotorInit2</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
-
-<span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;ORIGINAL:  &quot;</span><span class="o">+</span><span class="n">message</span><span class="o">);</span>
-<span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;RECOVERED: &quot;</span><span class="o">+</span><span class="n">original</span><span class="o">);</span>
-</pre></div>
-
-
-<p>This works fine:</p>
-<div class="highlight"><pre><span></span><span class="n">ORIGINAL</span><span class="o">:</span>  <span class="n">ABCDE</span> <span class="n">FG</span> <span class="n">HIJKL</span> <span class="n">MNOP</span> <span class="n">QRS</span> <span class="n">TUVWXYZ</span>
-<span class="n">RECOVERED</span><span class="o">:</span> <span class="n">ABCDE</span> <span class="n">FG</span> <span class="n">HIJKL</span> <span class="n">MNOP</span> <span class="n">QRS</span> <span class="n">TUVWXYZ</span> 
-</pre></div>
-
-
-<h2>Sources</h2>
-<ol>
-<li>
-<p>"Execution in the Kingdom of Nouns". Steve Yegge. March 2006. Accessed 18 March 2017.
-&lt;<a href="https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html">https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html</a>&gt;</p>
-</li>
-<li>
-<p>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</p>
-</li>
-</ol></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/ciphers.html">ciphers</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/enigma.html">enigma</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/encryption.html">encryption</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/java.html">java</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1755,6 +2127,19 @@ The following code will not recover the original plain text <code>message</code>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>September 2017</h2>
+
+            <p class="archive">
+            <a href="/five-letter-words-part-1-getting-familiar-with-the-list.html">Five Letter Words: Part 1: Getting Familiar With The List</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
