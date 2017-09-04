@@ -3,7 +3,7 @@ Date: 2017-09-01 21:00
 Category: Computer Science
 Tags: python, computer science, graphs, algorithms, art of computer programming, knuth, language
 
-_NOTE: This post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
+_NOTE: The code covered in this post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
 but the author would encourage any user of Python 2 to "put on your big kid pants" and 
 make the switch to Python 3. Let's all make this painful, drawn-out switch from Python 2 
 to Python 3 a thing of the past, shall we?_
@@ -206,7 +206,7 @@ The L2 norm between two vectors $\mathbf{v}_1$ and $\mathbf{v}_2$ is
 commonly denoted:
 
 $$
-| \mathbf{v}_2 - \mathbf{v}_1 |_2
+|| \mathbf{v}_2 - \mathbf{v}_1 ||_2
 $$
 
 <a name="five1-euclidean-examples"></a>
@@ -286,7 +286,7 @@ place, space
 place, piece
 ```
 
-
+<a name="five1-euclidean-n"></a>
 ### Different-by-N Code
 
 The code that performs the above calculations includes 
@@ -375,6 +375,7 @@ if __name__=="__main__":
         diff_by_n(n)
 ```
 
+<a name="five1-moproblems"></a>
 ## Mo Words, Mo Problems
 
 We have a number of other interesting problems and codes to cover, including:
