@@ -19,6 +19,7 @@ to Python 3 a thing of the past, shall we?_
 	* [Examples](#five1-euclidean-examples)
 	* [Different-by-N Code](#five1-euclidean-n)
 * [Mo Words, Mo Problems](#five1-moproblems)
+* [References](#five1-refs)
 
 <a name="five1-about"></a>
 ## About the Five-Letter Words
@@ -403,4 +404,15 @@ along with a whole bundle of notes from working through Donald Knuth's
 page on my wiki.
 
 Expect more soon!
+
+<a name="five1-refs"></a>
+## References
+
+1. Knuth, Donald. <u>The Art of Computer Programming</u>. Upper Saddle River, NJ: Addison-Wesley, 2008.
+
+2. Knuth, Donald. <u>The Stanford GraphBase: A Platform for Combinatorial Computing</u>. New York: ACM Press, 1994. 
+<[http://www-cs-faculty.stanford.edu/~knuth/sgb.html](http://www-cs-faculty.stanford.edu/~knuth/sgb.html)>
+
+3. "Five Letter Words." Git repository, git.charlesreid1.com. Charles Reid. Updated 1 September 2017.
+<[http://git.charlesreid1.com/cs/five-letter-words](http://git.charlesreid1.com/cs/five-letter-words)>
 
