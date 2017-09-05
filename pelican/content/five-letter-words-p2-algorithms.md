@@ -661,11 +661,119 @@ if our tolerance were 2, we would consider the words
 
 Here is the list of 37 off-by-one palindromes:
 
-* going, seeds, tight, trust, suits, sends, plump, slums, sighs, erase, serfs, soaps, sewer, soups, sever, slams, scabs, moron, ceded, scads, suets, fugue, seder, tryst, educe, twixt, tutus, shags, slims, abaca, anima, celeb, selfs, scuds, tikis, topos, rajas
+* going
+* seeds
+* tight
+* trust
+* suits
+* sends
+* plump
+* slums
+* sighs
+* erase
+* serfs
+* soaps
+* sewer
+* soups
+* sever
+* slams
+* scabs
+* moron
+* ceded
+* scads
+* suets
+* fugue
+* seder
+* tryst
+* educe
+* twixt
+* tutus
+* shags
+* slims
+* abaca
+* anima
+* celeb
+* selfs
+* scuds
+* tikis
+* topos
+* rajas
 
 and the list of off-by-two palindromes:
 
-* often, stars, sight, visit, towns, climb, flame, reads, sings, hatch, tends, naval, robot, reeds, cocoa, stout, spins, onion, sinks, edged, spurs, jewel, snaps, silks, nasal, theft, pagan, reefs, stirs, snips, tufts, truss, strut, spans, smelt, spars, flake, rusts, skims, sways, runts, tsars, tress, feted, rends, romps, cilia, ephod, fluke, reset, farad, peter, natal, thugs, newel, paean, emend, snoot, fiche, porno, flume, toons, roans, offen, klunk, feued, nihil, pavan, relet, heigh, revet, sicks, spoor
+* often
+* stars
+* sight
+* visit
+* towns
+* climb
+* flame
+* reads
+* sings
+* hatch
+* tends
+* naval
+* robot
+* reeds
+* cocoa
+* stout
+* spins
+* onion
+* sinks
+* edged
+* spurs
+* jewel
+* snaps
+* silks
+* nasal
+* theft
+* pagan
+* reefs
+* stirs
+* snips
+* tufts
+* truss
+* strut
+* spans
+* smelt
+* spars
+* flake
+* rusts
+* skims
+* sways
+* runts
+* tsars
+* tress
+* feted
+* rends
+* romps
+* cilia
+* ephod
+* fluke
+* reset
+* farad
+* peter
+* natal
+* thugs
+* newel
+* paean
+* emend
+* snoot
+* fiche
+* porno
+* flume
+* toons
+* roans
+* offen
+* klunk
+* feued
+* nihil
+* pavan
+* relet
+* heigh
+* revet
+* sicks
+* spoor
 
 The check for near-palindromes follows the palindrome test 
 fairly closely, except instead of checking if letters in two positions
