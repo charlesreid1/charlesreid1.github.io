@@ -397,11 +397,11 @@ You can follow all of this in my [five-letter-words](https://github.com/charlesr
 repository on Github, and/or in the [five-letter-words](https://charlesreid1.com:3000/cs/five-letter-words) 
 repository on git.charlesreid1.com.
 
-I also have some additional information written up on the charlesreid1 wiki,
+We have also provided additional information on the charlesreid1 wiki,
 at [Five Letter Words](http://charlesreid1.com/wiki/Five_Letter_Words),
 along with a whole bundle of notes from working through Donald Knuth's 
 <u>Art of Computer Programming</u> at the [Art of Computer Programming](https://charlesreid1.com/wiki/AOCP)
-page on my wiki.
+page of the wiki.
 
 Expect more soon!
 
