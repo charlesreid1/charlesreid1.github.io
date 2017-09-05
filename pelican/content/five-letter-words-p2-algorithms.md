@@ -1,8 +1,7 @@
 Title: Five Letter Words: Part 2: More Five-Word Algorithms
-Date: 2017-09-01 21:00
+Date: 2017-09-02 21:00
 Category: Computer Science
 Tags: python, computer science, graphs, algorithms, art of computer programming, knuth, language
-Status: draft
 
 _NOTE: The code covered in this post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
 but the author would encourage any user of Python 2 to "put on your big kid pants" and 
@@ -21,6 +20,7 @@ to Python 3 a thing of the past, shall we?_
 	* [Palindromes](#five2-palindromes)
 	* [Palindrome Pairs](#five2-palindromepairs)
 	* [Near Palindromes](#five2-nearpalindromes)
+* [References](#five2-references)
 
 <a name="five2-intro"></a>
 ## Introduction
@@ -214,53 +214,49 @@ There are 105 total words that fit this description.
 As we might expect, a majority of them begin with 
 letters at the beginning of the alphabet:
 
-```
-----------------------------------------
-ALL lexicographically sorted words:
-abbey
-abbot
-abhor
-abort
-abuzz
-achoo
-adder
-adept
-adios
-adopt
-aegis
-affix
-afoot
-aglow
-ahhhh
-allot
-allow
-alloy
-ammos
-annoy
-beefs
-beefy
-beeps
-beers
-beery
-befit
-begin
-begot
-bells
-belly
-below
-berry
-bills
-billy
-bitty
-blowy
-boors
-boost
-booty
-bossy
-ceils
-cello
-cells
-```
+* abbey
+* abbot
+* abhor
+* abort
+* abuzz
+* achoo
+* adder
+* adept
+* adios
+* adopt
+* aegis
+* affix
+* afoot
+* aglow
+* ahhhh
+* allot
+* allow
+* alloy
+* ammos
+* annoy
+* beefs
+* beefy
+* beeps
+* beers
+* beery
+* befit
+* begin
+* begot
+* bells
+* belly
+* below
+* berry
+* bills
+* billy
+* bitty
+* blowy
+* boors
+* boost
+* booty
+* bossy
+* ceils
+* cello
+* cells
 
 The full output is here:
 
@@ -351,48 +347,43 @@ There are significantly fewer five-letter words whose letters are in
 *reverse* lexicographic order - 37, compared to the 105 in sorted order.
 Here is the full list:
 
-```
-----------------------------------------
-ALL lexicographically reversed words:
-mecca
-offed
-ohhhh
-plied
-poked
-poled
-polka
-skied
-skiff
-sniff
-soled
-solid
-sonic
-speed
-spied
-spiff
-spoke
-spoof
-spook
-spool
-spoon
-toked
-toned
-tonic
-treed
-tried
-troll
-unfed
-upped
-urged
-vroom
-wheee
-wooed
-wrong
-yoked
-yucca
-zoned
-37 total.
-```
+* mecca
+* offed
+* ohhhh
+* plied
+* poked
+* poled
+* polka
+* skied
+* skiff
+* sniff
+* soled
+* solid
+* sonic
+* speed
+* spied
+* spiff
+* spoke
+* spoof
+* spook
+* spool
+* spoon
+* toked
+* toned
+* tonic
+* treed
+* tried
+* troll
+* unfed
+* upped
+* urged
+* vroom
+* wheee
+* wooed
+* wrong
+* yoked
+* yucca
+* zoned
 
 The code to do this requires only minor modifications to the original, sorted order code.
 
@@ -525,19 +516,216 @@ There are 18 such words. They are given below:
 * finif
 * dewed 
 
+The code to check if a word is a palindrome consists of two simple logical test:
+Is the character at position 0 equal to the character at position 4?
+Is the character at position 1 equal to the character at position 3?
+If both of these are true, the word is a palindrome. Here's the Python function
+to check if a word is a palindrome:
+
+[palindromes.py](https://github.com/charlesreid1/five-letter-words/blob/master/palindromes.py)
+
+```
+def is_palindrome(word):
+    test1 = word[0]==word[4]
+    test2 = word[1]==word[3]
+    if(test1 and test2):
+        return True
+    return False
+```
+
+and the main driver method, which actually runs the function on each word:
+
+```
+if __name__=="__main__":
+    words = get_words()
+
+    kp = 0
+    palindromes = []
+
+    # Check for palindromes
+    for i in range(len(words)):
+        if(is_palindrome(words[i])):
+            kp += 1
+            palindromes.append(words[i])
+
+    print("-"*40)
+    print("Palindromes: \n")
+    print(", ".join(palindromes))
+	print("There are {0:d} palindromes.".format(kp))
+```
 
 <a name="five2-palindromepairs"></a>
 ### Palindrome Pairs
 
 There are 34 palindromic pairs, if we disallow palindromes from being
-considered palindromic pairs with themselves.
+considered palindromic pairs with themselves. These are:
 
+* parts, strap
+* lived, devil
+* speed, deeps
+* sleep, peels
+* straw, warts
+* faced, decaf
+* spots, stops
+* fires, serif
+* lever, revel
+* smart, trams
+* ports, strop
+* pools, sloop
+* stool, loots
+* draws, sward
+* mined, denim
+* spins, snips
+* alley, yella
+* loops, spool
+* sleek, keels
+* repel, leper
+* snaps, spans
+* depot, toped
+* timed, demit
+* debut, tubed
+* laced, decal
+* stink, knits
+* regal, lager
+* tuber, rebut
+* remit, timer
+* pacer, recap
+* snoot, toons
+* namer, reman
+* hales, selah
+* tarps, sprat
+
+The code to check for palindrome pairs is a little more involved,
+but also consists of a few logical tests to see if letters in 
+one position of the first word match letters in another position of 
+the second word:
+
+[palindromes.py](https://github.com/charlesreid1/five-letter-words/blob/master/palindromes.py)
+
+```
+def is_palindrome_pair(word1,word2):
+    test0 = word1[0]==word2[4]
+    test1 = word1[1]==word2[3]
+    test2 = word1[2]==word2[2]
+    test3 = word1[3]==word2[1]
+    test4 = word1[4]==word2[0]
+    if(test0 and test1 and test2 and test3 and test4):
+        return True
+    return False
+```
+
+and the main driver method:
+
+```
+if __name__=="__main__":
+    words = get_words()
+
+    kpp = 0
+    palindrome_pairs = []
+
+    # Check for palindrome pairs
+    for i in range(len(words)):
+        for j in range(i,len(words)):
+            if(is_palindrome_pair(words[i],words[j])):
+                # Palindromes shouldn't count as palindrome pairs
+                if(words[i] is not words[j]):
+                    kpp += 1
+                    palindrome_pairs.append((words[i],words[j]))
+
+    print("-"*40)
+    print("Palindrome Pairs: \n")
+    for pair in palindrome_pairs:
+        print(", ".join(pair))
+    print("There are {0:d} palindrome pairs.".format(kpp))
+```
 
 <a name="five2-nearpalindromes"></a>
 ### Near Palindromes
 
+A near-palindrome is a word that would be a palindrome,
+if one of its letters were slightly modified. We use a 
+"tolerance" parameter to specify how much modification 
+we are willing to live with to consider a word a 
+near-palindrome.
 
+There are several ways to do this, but we'll keep it simple:
+we consider the totla number of changes to all characters in the word
+required to make a word a palindrome, and test whether the changes
+required to make the word a palindrome are less than or equal to 
+a specified parameter, tolerance.
 
+For example, if our tolerance were 1, we would consider the 
+words "going" and "moron" to be near-palindromes; 
+if our tolerance were 2, we would consider the words
+"tsars" and "jewel" to be near-palindromes.
 
+Here is the list of 37 off-by-one palindromes:
 
+* going, seeds, tight, trust, suits, sends, plump, slums, sighs, erase, serfs, soaps, sewer, soups, sever, slams, scabs, moron, ceded, scads, suets, fugue, seder, tryst, educe, twixt, tutus, shags, slims, abaca, anima, celeb, selfs, scuds, tikis, topos, rajas
+
+and the list of off-by-two palindromes:
+
+* often, stars, sight, visit, towns, climb, flame, reads, sings, hatch, tends, naval, robot, reeds, cocoa, stout, spins, onion, sinks, edged, spurs, jewel, snaps, silks, nasal, theft, pagan, reefs, stirs, snips, tufts, truss, strut, spans, smelt, spars, flake, rusts, skims, sways, runts, tsars, tress, feted, rends, romps, cilia, ephod, fluke, reset, farad, peter, natal, thugs, newel, paean, emend, snoot, fiche, porno, flume, toons, roans, offen, klunk, feued, nihil, pavan, relet, heigh, revet, sicks, spoor
+
+The check for near-palindromes follows the palindrome test 
+fairly closely, except instead of checking if letters in two positions
+are equal, we check of those two letters are a certain specified 
+distance from one another.
+
+Here is the code for finding near-palindromes:
+
+```
+"""
+near_palindromes.py
+
+Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0
+Variation on Exercise #29
+
+Find SGB words that are near-palindromes
+(edit distance of one or two letters away from a palindrome).
+"""
+from get_words import get_words
+from euclidean_distance import euclidean_distance
+from pprint import pprint
+
+def is_near_palindrome(word,lo,hi):
+    d1 = euclidean_distance(word[0],word[4])
+    d2 = euclidean_distance(word[1],word[3])
+
+    if( (d1+d2) > lo and (d1+d2) <= hi ):
+        return True
+
+    return False
+
+if __name__=="__main__":
+    words = get_words()
+
+    knp = 0
+    near_palindromes = []
+
+    # Euclidean distance tolerance
+    lo = 0.0
+    hi = 1.0
+
+    for i in range(len(words)):
+        if(is_near_palindrome(words[i],lo,hi)):
+            knp += 1
+            near_palindromes.append(words[i])
+
+    print("-"*40)
+    print("Near Palindromes: \n")
+    print(", ".join(near_palindromes))
+    print("The number of near-palindromes is {0:d}".format(len(near_palindromes)))
+```
+
+<a name="five2-references"></a>
+## References
+
+1. Knuth, Donald. <u>The Art of Computer Programming</u>. Upper Saddle River, NJ: Addison-Wesley, 2008.
+
+2. Knuth, Donald. <u>The Stanford GraphBase: A Platform for Combinatorial Computing</u>. New York: ACM Press, 1994. 
+<[http://www-cs-faculty.stanford.edu/~knuth/sgb.html](http://www-cs-faculty.stanford.edu/~knuth/sgb.html)>
+
+3. "Five Letter Words." Git repository, git.charlesreid1.com. Charles Reid. Updated 1 September 2017.
+<[http://git.charlesreid1.com/cs/five-letter-words](http://git.charlesreid1.com/cs/five-letter-words)>
 
