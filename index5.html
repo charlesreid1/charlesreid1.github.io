@@ -107,6 +107,371 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                CSE 143 Final Project: Checkers
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-06-19T11:00:00-07:00" pubdate>Monday 06/19/2017</time>
+                in 
+                <a href="/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/cse-143-final-project-checkers.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h1>Table of Contents</h1>
+<ul>
+<li><a href="#checkers-intro">The Problem</a><ul>
+<li><a href="#checkers-problem">Problem Description: Checkers</a></li>
+<li><a href="#checkers-input">Input File</a></li>
+<li><a href="#checkers-output">Output</a></li>
+</ul>
+</li>
+<li><a href="#checkers-solution">The Solution</a><ul>
+<li><a href="#checkers-kiss">Keep It Simple</a></li>
+<li><a href="#checkers-parity">Solution Analysis: Parity</a></li>
+<li><a href="#checkers-euler">Solution Analysis: Graphs and Euler Tours</a></li>
+<li><a href="#checkers-algo">Solution Algorithm</a></li>
+<li><a href="#checkers-pseudocode">Solution Pseudocode</a></li>
+<li>Solution Code</li>
+</ul>
+</li>
+<li><a href="#checkers-refs">References</a></li>
+</ul>
+<p><a name="checkers-intro"></a></p>
+<h1>The Problem</h1>
+<p>This is a programming challenge that was assigned to some of my CSE 143 students 
+as a final project for their class.</p>
+<p>The origin of this problem was the Association of Computing Machinery (ACM)'s 
+International Collegiate Programming Competition (ICPC),
+in particular the Pacific Northwest Regional Competition, Division 1 challenges from 2015.</p>
+<p><a href="http://acmicpc-pacnw.org/">Link to Pacific NW ACM ICPC page.</a></p>
+<p><a name="checkers-problem"></a></p>
+<h2>Problem Description: Checkers</h2>
+<p>In the Checkers problem, you are presented with a checkerboard consisting of 
+black and white squares. The boards follow a normal checkers layout, that is,
+all of the pieces occupy only the light or dark squares on the board.</p>
+<p>There are several white and black pieces arranged on the checkerboard.
+Your goal is to answer the following question: can any one single 
+black piece be used to jump and capture all of the white pieces 
+in a single move? This assumes that each of the black pieces are 
+"king" pieces and can jump in either direction.</p>
+<p>For example, the following 7x7 board configuration has one black piece 
+that can jump all of the white pieces on the board with a single sequence
+of moves. The black piece at B2 jumps to D4, then to F2.</p>
+<p><img alt="Checkerboard 1 - demonstrate solution" src="/images/checkers1.png"></p>
+<p>If an additional white piece is added, there is no sequence of moves
+that will allow any black piece to jump all of the white pieces.</p>
+<p><img alt="Checkerboard 2 - demonstrate no solution" src="/images/checkers2.png"></p>
+<p><a name="checkers-input"></a></p>
+<h2>Input File</h2>
+<p>The input file consists of one line with a single integer, 
+representing the size of the (square) board. 
+Following are characters representing the board state.</p>
+<p><code>.</code> represents a square that pieces cannot occupy - the off-color squares.</p>
+<p><code>_</code> represents an unoccupied but valid square.</p>
+<p><code>B</code> represents a black piece. <code>W</code> represents a white piece.</p>
+<p>Example:</p>
+<div class="highlight"><pre><span></span>8
+._._._._
+_._._._.
+.W._.B._
+_.W.W._.
+.W.B._._
+_._._._.
+.W._.W._
+_._._._.
+</pre></div>
+
+
+<p><a name="checkers-output"></a></p>
+<h2>Output</h2>
+<p>The output is simple: simply state which of the black checkers is capable of 
+jumping each of the white checkers. If none, say "None". If multiple, say "Multiple".</p>
+<p><a name="checkers-solution"></a></p>
+<h1>The Solution</h1>
+<p><a name="checkers-kiss"></a></p>
+<h2>Keep It Simple</h2>
+<p>To successfully solve the checkers problem, it is important to <strong>keep it simple</strong>. 
+There are different ways of representing the checkers problem abstractly,
+but the best representation in a program is the simplest one - 
+use a 2D array of chars to represent the board.</p>
+<p>Also as usual with permutations of arrangements on boards of fixed size,
+recursion will be useful here.</p>
+<p><a name="checkers-parity"></a></p>
+<h2>Solution Analysis: Parity</h2>
+<p>We can begin our analysis of the checkers problem with a few observations.</p>
+<p>First, we know that the valid squares for checkers are squares that are off by two.
+But we know further that the black checkers must only move in jumps, which mean that
+a piece at <span class="math">\((i,j)\)</span> can only reach squares indexed by 
+<span class="math">\((i + 4m, j + 4m)\)</span> or <span class="math">\((i + 4m + 2, j + 4n + 2)\)</span>, 
+where <span class="math">\(m, n\)</span> are positive/negative integers.</p>
+<p>That is, the checker pieces can make jumps of 2 squares at a time.  For example, if a checker
+starts at the square <span class="math">\((3,3)\)</span> and jumps a white piece down and to the right, it moves
+to square <span class="math">\((5,5)\)</span> or <span class="math">\((3+2, 3+2)\)</span>. If it jumps another white piece up and to the right,
+it moves to square <span class="math">\((3, 7)\)</span> or <span class="math">\((3, 3 + 4)\)</span>.</p>
+<p>Further, we know that a black checker can only jump checkers at 
+squares of the form <span class="math">\((a + 2m + 1, b + 2n + 1)\)</span>. Thus, black checkers either
+have the correct parity to jump all of the white checkers, or they have
+the same parity as the white checkers (in which case they can be ignored).</p>
+<p>If a black checker does not have the correct parity to jump white checkers, 
+we can save ourselves time by not checking it.</p>
+<p>For example, in the checkerboard below, there are four black checkers,
+but only one (row 2, column 3) has the correct parity to jump each of the 
+white pieces. The other three are </p>
+<p>The other three 
+has the correct parity, while the black checker in the right do not.</p>
+<p><img alt="Checkerboard 3 - illustrate parity" src="/images/checkers3.png"></p>
+<p><a name="checkers-euler"></a></p>
+<h2>Solution Analysis: Graphs and Euler Tours</h2>
+<p>If we examine the squares with correct parity, we can translate the board
+into a graph representation. Squares with the "jump" parity are nodes
+on the graph that can perform jumps. (No whites should have jump parity,
+otherwise the board is impossible.) </p>
+<p>Squares with the "jumped" (i.e., white pieces) parity are nodes that are 
+being jumped. These nodes form the edges between jump parity nodes,
+and these edges must be occupied by a white piece for a black piece
+to be able to pass through them. In this way, we can think of white pieces
+as "bridges" between jump parity squares.</p>
+<p>This representation leads to thinking about the tour the black checker takes
+through the checkerboard as an Euler tour across the graph. </p>
+<p>An Euler Tour, made famous by the 
+<a href="https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg">Seven Bridges of Königsberg</a>
+problem solved by Euler in 1736, 
+is a path that visits each node of the graph, traversing 
+each edge once and only once.</p>
+<p>Euler showed that an Euler path visiting each edge of the graph
+depends on the degree of each node in the graph.
+For an Euler path to exist, the graph must be connected
+and there must be exactly zero or two nodes of 
+odd degree.</p>
+<p>If we walk through the checker board and construct the graph
+(or assemble the information that the graph would have told us), 
+we can determine whether an Euler tour exists, and find the Euler tour.</p>
+<p>The example above shows a checkerboard with two white pieces
+forming two edges. The first white piece connects a jump parity square 
+with a black piece on it to a jump parity square that is empty.
+The second white piece connects two empty jump parity squares.</p>
+<p>The black "entrance" node has an odd degree (1).
+The second, unoccupied node has an even degree (2).
+The third, unoccupied node has an odd degree (1).
+Therefore the graph has two nodes of odd degree, so an Euler tour exists. </p>
+<p>If we modify this example to add one additional white checker piece
+on a square with correct parity, the Euler Path analysis identifies this 
+as a board with no solution:</p>
+<p><img alt="Checkerboard 4 - illustrate no Euler tour" src="/images/checkers4.png"></p>
+<p>This is because three of the nodes have degree 1 and one node has degree 3,
+for a total of 4 nodes with odd degree. The requirements for an Euler Tour 
+to exist (equivalent to saying a solution to the Checkers problem can be found
+for a given black checker) are violated, so no solution can be found.</p>
+<p>If we were to add a second black checker piece two squares away,
+an alternate graph (highlighted in blue) can be constructed, 
+and an alternate Euler path through the graph is available.</p>
+<p><img alt="Checkerboard 5 - illustrate alternate Euler tour" src="/images/checkers5.png"></p>
+<p>On the red graph, each node has an odd degree, so the number of nodes with odd degree is not 0 or 2.
+On the blue graph, only the start and end nodes have an odd degree (1), while the rest of the nodes 
+have a degree of 2 (one input and one output). This means an Euler Tour exists on the blue graph.</p>
+<p>In practice, a given black piece has a given graph connecting squares on the checkerboard - 
+we can ask each node on that graph for its degree, and the degree of its neighbors,
+and if a black piece results in an invalid number of odd nodes, we can abandon it.</p>
+<p><a name="checkers-algo"></a></p>
+<h2>Solution Algorithm</h2>
+<p>The algorithm to find solutions to this problem very roughly follows this pattern:
+<em> First, perform a parity check to determine if a solution is impossible.
+</em> Loop over each square of the board, looking for black pieces
+* For each black piece:
+    * Look at each neighbor:
+        * Determine if there is a square to jump to if neighbor is white 
+        * Determine number of odd neighbors
+    * Fail if more than 2 odd neighbors, or 2 odd neighbors and odd self
+    * Backtracking: explore neighbors, determine if all whites can be jumped</p>
+<p><a name="checkers-pseudocode"></a></p>
+<h2>Solution Pseudocode</h2>
+<p>The solution code has three basic parts (four, including the input parser):
+<em> Initialize and parse the board
+</em> Loop over each square, checking if black piece is a solution
+<em> Function to check if black piece is a solution piece 
+</em> (Recursive backtracking) function to jump each white piece possible to jump.</p>
+<p>Start with the initialization of the board and looping over each 
+black piece to check if it is a solution piece:</p>
+<div class="highlight"><pre><span></span>initialize solutions counter
+initialize board
+
+for each s in squares:
+    if s is black piece:
+        if s is solution piece:
+            increment solutions counter
+            save location
+
+print summary
+</pre></div>
+
+
+<p>Now we just need to implement functions that can (a) check if a square
+contains a black piece (easy) and (b) check if a black piece is a 
+solution piece (uh... kind of what the whole problem boils down to, no?)</p>
+<p>We break that functionality into a separate function. Here is the 
+pseudocode to check if a black piece in a particular square 
+is a solution piece. This function iterates over squares 
+with jump parity - that means this function traverses the 
+<strong>nodes only</strong> in the graph representation of the checkerboard.</p>
+<p>This function enforces the requirement that no node can have more than 2 odd neighbors,
+or be odd if it has more than 2 odd neighbors, since a graph must have 0 or 2 nodes
+with odd degree in the graph for an Euler Tour to exist. </p>
+<p>While we're at it, we also check if there are any white checker pieces
+without a square to land in when they are jumped (i.e., landing square blocked 
+by another black piece or at edge of board).</p>
+<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">is</span> <span class="nx">solution</span> <span class="nx">piece</span>:
+    <span class="kt">for</span> <span class="nx">each</span> <span class="nx">square</span> <span class="nx">of</span> <span class="nx">similar</span> <span class="s2">&quot;jump&quot;</span> <span class="nx">parity</span>:
+        <span class="kt">for</span> <span class="nx">each</span> <span class="nx">neighbor</span>:
+            <span class="kt">check</span> <span class="k">if</span> <span class="nx">neighbor</span> <span class="nx">is</span> <span class="nx">odd</span> 
+            <span class="k">if</span> <span class="nx">a</span> <span class="nx">neighbor</span> <span class="nx">square</span> <span class="nx">is</span> <span class="nx">white</span>:
+                <span class="kt">if</span> <span class="nx">next</span> <span class="nx">square</span> <span class="nx">is</span> <span class="nx">not</span> <span class="nx">empty</span>:
+                    <span class="kt">fail</span> <span class="nx">fast</span>
+
+    <span class="k">if</span> <span class="nx">more</span> <span class="nx">than</span> <span class="mi">2</span> <span class="nx">odd</span> <span class="nx">neighbors</span><span class="p">,</span> <span class="nx">or</span> <span class="mi">2</span> <span class="nx">neighbors</span> <span class="nx">and</span> <span class="nx">odd</span>:
+        <span class="kt">fail</span> <span class="nx">fast</span>
+
+    <span class="err">#</span> <span class="nx">we</span> <span class="nx">have</span> <span class="nx">a</span> <span class="nx">viable</span> <span class="nx">solution</span>
+
+    <span class="nx">recursively</span> <span class="nx">count</span> <span class="kt">number</span> <span class="nx">of</span> <span class="nx">jumped</span> <span class="nx">white</span> <span class="nx">checkers</span> 
+
+    <span class="k">if</span> <span class="kt">number</span> <span class="nx">of</span> <span class="nx">jumped</span> <span class="nx">white</span> <span class="nx">checkers</span> <span class="nx">equals</span> <span class="kt">number</span> <span class="nx">of</span> <span class="nx">white</span> <span class="nx">checkers</span> <span class="nx">on</span> <span class="nx">board</span>:
+        <span class="kt">return</span> <span class="kc">true</span>
+</pre></div>
+
+
+<p>Finding squares of similar jump parity is as easy as looping over each row and column, 
+and checking if it is off by 2 with the row/column of the black checker piece that we are
+currently checking. Checking if a neighbor is odd is as straightforward as counting its degree - 
+checking each of its four neighbors and determining which ones are open.
+This leaves finding the number of jumped white checkers as the only functionality left to define.</p>
+<div class="highlight"><pre><span></span>define number of jumped white checkers:
+    initialize white checkers jumped counter
+    for each neighbor:
+        if white piece, unvisited, with an empty place to jump to:
+            visit white piece
+            increment white checkers jumped
+            call number of jumped white checkers on next next neighbor
+            # this should be the empty space
+    return number white checkers jumped
+</pre></div>
+
+
+<p><a name="checkers-refs"></a></p>
+<h2>References</h2>
+<ol>
+<li>"ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
+&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    var location_protocol = (false) ? 'https' : document.location.protocol;
+    if (location_protocol !== 'http' && location_protocol !== 'https') location_protocol = 'https:';
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = location_protocol + '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/programming.html">programming</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/final-project.html">final project</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/competitive-programming.html">competitive programming</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Teaching Recursion with the N Queens Problem
             </b></h1>
         
@@ -838,245 +1203,6 @@ database server.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Undergraduate Research Project: Wireless Sensor Networks for Internet of Things Applications (Part 1: The Project)
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-05-14T11:00:00-07:00" pubdate>Sunday 05/14/2017</time>
-                in 
-                <a href="/category/wireless.html">Wireless</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/undergraduate-research-project-wireless-sensor-networks-for-internet-of-things-applications-part-1-the-project.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>Table of Contents:</p>
-<ul>
-<li><a href="#ugr-overview">Overview of the Undergraduate Research (UGR) Project</a><ul>
-<li><a href="#ugr-ugr">South Seattle UGR Project</a></li>
-<li><a href="#ugr-engr-design">Engineering Design Project</a></li>
-<li><a href="#ugr-components">Project Components: Extract, Store, and Analyze</a></li>
-<li><a href="#ugr-buzzword">The Internet of Things: Not Just a Buzzword</a></li>
-<li><a href="#ugr-uw">UW Research Symposium</a></li>
-</ul>
-</li>
-</ul>
-<p><a name="ugr-overview"></a></p>
-<h1>Overview of the Undergraduate Research (UGR) Project</h1>
-<p><a name="ugr-ugr"></a></p>
-<h2>South Seattle UGR Project</h2>
-<p>For the past year, in addition to my duties as a computer science and math instructor at South Seattle College,
-I have served as a research mentor for an NSF-funded undergraduate research project involving (off-and-on) five different 
-South Seattle students - all of whom have expressed interest in transferring to the University of Washington's 
-computer science program after they finish at South Seattle College.</p>
-<p>The students have various levels of preparation - some have taken calculus and finished programming, while others 
-are just starting out and have no programming experience outside of "programming lite" languages like HTML and CSS. </p>
-<p>But it's also been an extremely rewarding opportunity. I have gotten the chance to kindle students' interests in the 
-vast world of wireless security, introduced them to essential technologies like Linux, helped them get hands-on experience
-with NoSQL databases, and guided them through the process of analyzing a large data set to extract meaningful information -
-baby data scientists taking their first steps. </p>
-<p>These are all skills that will help equip students who are bound for university-level computer science programs,
-giving them both basic research skills (knowing the process to get started answering difficult, complex questions) 
-and essential tools in their toolbelt. </p>
-<p>Two students who I mentored as part of a prior UGR project last year (also focused on wireless networks 
-and the use of Raspberry Pi microcomputers) both successfully transferred to the 
-University of Washington's computer science program (one in the spring quarter of 2016, 
-the other in the fall of 2016). Both students told me that one of the first courses they took 
-at the University of Washington was a 2-credit Linux laboratory class, where they learned the basics of Linux.
-Having already installed Linux virtual machines onto their personal computers, and having used technologies
-like SSH to remotely connect to other Linux machines, they both happily reported that it was 
-smooth sailing in the course, and it was one less thing to worry about in the 
-process of transferring and adjusting to the much faster pace of university courses.</p>
-<p><a name="ugr-engr-design"></a></p>
-<h2>Engineering Design Project</h2>
-<p>The project was entitled "Wireless Sensor Networks for Internet of Things Applications," 
-and was intended to get students introduced to the basic workflow of any 
-internet of things system: a sensor to collect data, a wireless network to connect 
-sensors together, a warehouse to store data collected from sensors,
-and a workflow for analyzing the data to extract meaningful information.</p>
-<p>The focus was to implement a general workflow using tools that could extend to 
-many internet of things applications, be they commercial, residential, or industrial. </p>
-<p><strong>However,</strong> the NSF grant provided only a modest amount of funding, intended to go toward
-stipends to pay students and mentors a modest amount during the quarter, with only
-modest amounts of money for basic equipment.  (We were basically running a research project on a $100 budget.)</p>
-<p>That meant the project had to be flexible, scrappy, and run on a shoestring budget.
-This meant we were limited to cheap, off-the-shelf technologies for the sensors,
-the sensor platform, and the back-end infrastructure. Two technologies in particular
-lent themselves nicely to these constraints:</p>
-<ul>
-<li>
-<p>Wireless USB antennas - USB wifi dongles are cheap ($10), and the ubiquity of wireless
-    networks and wifi signals meant this would provide us with a rich data set on the cheap.</p>
-</li>
-<li>
-<p>Raspberry Pi - the Raspberry Pi is a credit-card sized microcomputer that runs a full stack
-    Linux operating system. With the low price point ($30) and the many free and open-source 
-    tools available for Linux, this was a natural choice for the sensor platform.</p>
-</li>
-</ul>
-<p>The result was a set of wireless sensors - Raspberry Pis with two wireless antennas -
-one antenna for listening to and collect wireless signal data in monitor mode,
-and one antenna to connect to nearby wireless networks to establish a connection
-to a centralized data warehouse server.</p>
-<p><a name="ugr-components"></a></p>
-<h2>Project Components: Extract, Store, and Analyze</h2>
-<p>The wireless sensor network project had three major components:</p>
-<ul>
-<li>
-<p><strong><em>Extract</em></strong> - using a wireless USB antenna, the Raspberry Pi would listen to
-    wireless signals in the area, creating a profile of local network names,
-    MAC addresses, signal strengths, encryption types, and a list of 
-    both clients and routers. Students used the <a href="http://aircrack-ng.org">aircrack-ng</a> 
-    suite to extract wireless signal information.</p>
-</li>
-<li>
-<p>IMPORTANT SIDE NOTE - students also learned about wiretapping laws and various 
-    legal aspects of wireless networks - the difference between monitoring ("sniffing") 
-    wireless traffic versus simply building a profile of wireless traffic. </p>
-</li>
-<li>
-<p><strong><em>Store</em></strong> - students learned about NoSQL databases (we used <a href="https://www.mongodb.com/">MongoDB</a>)
-    and set up a NoSQL database to store information about wireless signals. 
-    This also required some basic Python programming, as the wireless signal information
-    was exported to a large number of CSV files and had to be programmatically
-    collated and extracted.</p>
-</li>
-<li>
-<p><strong><em>Analyze</em></strong> - the pinnacle of the project was in the analysis of the wireless signal data
-    that was captured. Students ran several "experiments," collecting wireless signals 
-    for 2 hours using a portable battery and a Raspberry Pi with wifi dongles.
-    By running experiments under different conditions (at the college library, 
-    at a coffee shop, on a bus), a diverse set of data was gathered, allowing students
-    to extract meaningful information about each experiment from each data set.</p>
-</li>
-</ul>
-<p><a name="ugr-buzzword"></a></p>
-<h2>The Internet of Things: Not Just a Buzzword</h2>
-<p>One of the biggest challenges starting out was in getting the students into the 
-right "mindset" about the Internet of Things. This was a challenge that 
-I did not forsee when I came up with the project title. As a chemical engineer
-working on natural gas processing at a startup company, I knew the value of 
-creating wireless infrastructure to extract data from sensors, throw it into 
-a giant bucket, and utilize computational tools to analyze the data and extract 
-information from it.</p>
-<p>But the students involved in the project had no exposure to this kind of workflow.
-To them, the Internet of Things meant toasters and TVs that were connected to 
-the internet, so they were expecting a design project in which we would make
-a prototype consumer device intended to connect to the internet.</p>
-<p>Further complicating things was the fact that we were focusing on 
-<strong>building a data acquisition system</strong> - a data analysis pipeline - a workflow for 
-extracting, storing, and analyzing sensor data. We were not focused
-on the specific types of questions that our specific type of data 
-could answer. This was a bit puzzling for the students (who could not see
-the intrinsic value of building a data analysis pipeline).
-Much of their time was spent struggling with what, exactly, we were
-supposed to be doing with the data, and getting past a 
-contaminated, consumer-centric view of the term "Internet of Things."</p>
-<p>It was, therefore, a major breakthrough when one of the students, 
-as we were diving deeper into the data analysis portion, utilizing Python 
-to plot the data, quantitatively analyze it, and better understand it, 
-told me, "Looking back, I realize that I was thinking really narrowly 
-about the whole project. I thought we were going to build a 'smart' device, 
-like a business project. But now I realize our project has a bigger scope, 
-because of the analysis part." </p>
-<p>That, in a nutshell, was <strong>precisely</strong> the intention of the project.</p>
-<p><a name="ugr-uw"></a></p>
-<h2>University of Washington Undergraduate Research Symposium</h2>
-<p>Next week the students present the culmination of their research project at the University of Washington's 
-<a href="http://www.washington.edu/undergradresearch/symposium/">Undergraduate Research Symposium</a>, where they will have a poster
-that summarizes their research effort, the results, and the tools that were used. </p>
-<p>It is clear to anyone attending the Undergrad Research Symposium that community college students are among the minority 
-of students who are involved in, and benefiting from, research projects. The intention of most of the projects 
-showcased at the symposium is to launch undergraduate students into a graduate level research career 
-and prepare them to hit the ground running, and have a stronger resume and application,
-when they have finished their undergraduate education and are applying to graduate schools.
-Many of the research posters at the symposium showcase research using expensive equipment, specialized materials and methods,
-and complex mathematical methods. Many of the students are mentored by world-class research professors 
-with deep expertise and small armies of graduate and postgraduate researchers. </p>
-<p>Despite our research efforts being completely outmatched 
-by many of the undergraduate researchers from the University of Washington 
-(out-funded, out-manned, and out-gunned), our group managed to pull together a 
-very interesting and very ambitious design project that collected a very rich data set.
-The students were introduced to some useful tools and fields of computer science 
-(wireless networks, privacy and security, embedded devices, databases, Linux), 
-and exposed students to a totally new way of thinking about the "internet of things"
-that allows them to move beyond the shallow hype of internet-connected toothbrushes. 
-The students have developed the ability to build a data pipeline that could be used by a company
-to address real, significant problems and needs around data. </p>
-<p>All in all, this was an extremely worthwhile, high-impact project that's equipping 
-the next generation of computer scientists with the cognitive tools
-to anticipate and solve data problems, which (as hardware becomes cheaper
-and embedded devices become more ubiquitous) are problems that will only become 
-more common in more industries.</p>
-<p><a name="ugr-poster"></a></p>
-<h2>The Poster</h2>
-<p>Here's a rough draft of the poster we will be showing at the UGR symposium: </p>
-<p><img alt="UGR Poster" src="/images/ugr-poster.png"></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/wireless.html">wireless</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/security.html">security</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/undergraduate-research-project.html">undergraduate research project</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/stunnel.html">stunnel</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/ssh.html">SSH</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/aircrack.html">aircrack</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/mongodb.html">mongodb</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/jupyter.html">jupyter</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/linux.html">linux</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/raspberry-pi.html">raspberry pi</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1104,6 +1230,9 @@ more common in more industries.</p>
 
             <h2>September 2017</h2>
 
+            <p class="archive">
+            <a href="/five-letter-words-part-3-letter-coverage-and-dynamic-programming.html">Five Letter Words: Part 3: Letter Coverage and Dynamic Programming</a>
+            </p>
             <p class="archive">
             <a href="/five-letter-words-part-2-more-five-word-algorithms.html">Five Letter Words: Part 2: More Five-Word Algorithms</a>
             </p>

@@ -117,8 +117,397 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>Part 3:
-* Dynamic Programming: Letter Coverage</p></div>
+        <div class="entry-content"><p><em>NOTE: The code covered in this post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
+but the author would encourage any user of Python 2 to "put on your big kid pants" and 
+make the switch to Python 3. Let's all make this painful, drawn-out switch from Python 2 
+to Python 3 a thing of the past, shall we?</em></p>
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#five3-intro">Introduction</a></li>
+<li><a href="#five3-example">A Simple Manual Exmaple</a></li>
+<li><a href="#five3-pseudocode">Pseudocode</a></li>
+<li><a href="#five3-python">Python Code</a></li>
+<li><a href="#five3-output">Output and Timing</a></li>
+</ul>
+<p><a name="five3-intro"></a></p>
+<h2>Introduction</h2>
+<p>The letter/word coverage problem, as presented by Donald Knuth in Volume 4, Facsimile 0 
+of his masterpiece <u>Art of Computer Programming</u>, is the problem of finding
+the <em>minimum</em> number of words from the collection of five letter words that 
+"cover" (are drawn from) the first N letters of the alphabet.</p>
+<p>The problem has a couple of variations:
+<em> Provided a set of letters, search for the smallest number of words that cover those particular letters.
+</em> Given an integer <span class="math">\(N \leq 26\)</span>, search for the smallest number of words that cover the first N letters of the alphabet.
+* The same problem as above, but drawing from the first <span class="math">\(M\)</span> words of the 5757 total five-letter words.</p>
+<p>For the sake of simplicity, we will focus on the simplest problem: considering the first <span class="math">\(N\)</span> 
+letters of the alphabet, find the shortest sequence of words that will provide coverage of the first 
+<span class="math">\(N\)</span> letters of the alphabet.</p>
+<p>This problem is an example of a dynamic programming problem: a combinatorics problem that can 
+be solved by breaking the problem down into smaller sub-problems, solving the sub-problems, and 
+assembling solutions to the sub-problems into an overall problem solution.</p>
+<p>The procedure is as follows:</p>
+<ul>
+<li>For each word <span class="math">\(w_i\)</span>, examine all prior words <span class="math">\(w_j, j&lt;i\)</span></li>
+<li>For each pair of words, take the union (OR) of the character coverage for word <span class="math">\(w_i\)</span> 
+and the solution bit vector for word <span class="math">\(w_j\)</span> (that is, using the best-covered solution so far 
+for word <span class="math">\(w_j\)</span>)</li>
+<li>Note: for word <span class="math">\(w_i\)</span>, we need to store one of these unions as the best-covered solution so far for 
+word <span class="math">\(w_i\)</span>, but we aren't sure which one yet.)</li>
+<li>For the given pair of words <span class="math">\(w_j\)</span> and <span class="math">\(w_i\)</span>, we are looking at word <span class="math">\(w_j\)</span> and considering the possibility 
+of extending that with word <span class="math">\(w_i\)</span>. Adding <span class="math">\(w_i\)</span> to the best solution so far may or may not improve the best solution,
+so we need to decide whether to add <span class="math">\(w_i\)</span> to the best solution so far.</li>
+<li>Compute the number of letters covered in the union of <span class="math">\(w_i\)</span> and the best solution so far (by, e.g., 
+summing up the 1s in the bit vector of <span class="math">\(w_i\)</span> added to the bit vector representing the best solution so far for word <span class="math">\(w_j\)</span>)</li>
+<li>Compute the number of words in the best solution so far for word <span class="math">\(w_j\)</span>, and add one to it (representing the new word <span class="math">\(w_i\)</span> being added)</li>
+<li>We are searching for the prior solution for word <span class="math">\(w_j\)</span> that will lead to the maximum number of 1s in the bit vector</li>
+<li>We break ties by picking the word <span class="math">\(w_j\)</span> that will minimize the number of total words</li>
+<li>Once we find the best word <span class="math">\(w_j\)</span>, we save the union bit vector for word <span class="math">\(w_i\)</span> and word <span class="math">\(w_j\)</span> under the 
+word <span class="math">\(w_i\)</span> combined solution bit vector; we save the length of 1s in the combined solution bit vector; and we save 
+the number of words so far in that solution.</li>
+</ul>
+<p>Once we have gone through every word, we are ready to find the minimum. Do this by:
+<em> Searching through the solutions for every word, and pick out the one that maximizes the number of 1s in the solution bit vector
+(or, rather, that has the correct number of 1s in the bit vector) while also minimizing the total number of words.
+</em> To get the actual sequence of words, rather than just the minimum number of jwords, we need to save the prior word
+that leads to the maximum number of 1s in the solution bit vector and minimum number of words, for each word.
+Then, at the end, we can backtrack through the words that compose the solution.</p>
+<p>This is a bit complicated to explain in words, so we'll give a small example,
+then some pseudocode. Then we'll present the actual Python program that accomplishes
+this task.</p>
+<p><a name="five3-example"></a></p>
+<h2>A Simple Manual Example</h2>
+<p>Let's walk through an example manually to illustrate the approach:</p>
+<p>Suppose we are considering 2-letter words taken from a 5-letter alphabet <em>abcde</em>.
+We can represent a given word as a binary string or bit vector: for example,
+the two-letter word <code>aa</code> would be represented by the bit vector <code>10000</code>,
+<code>ab</code> would be represented by the bit vector <code>11000</code>, etc.</p>
+<p>Now let's consider a set of words, and step through the algorithm with them.</p>
+<div class="highlight"><pre><span></span>W1 = ab = 11000
+W2 = bc = 01100
+W3 = aa = 10000
+W4 = dd = 00010
+W5 = de = 00011
+W6 = bb = 01000
+</pre></div>
+
+
+<p>Now, we wish to write a dynamic program that will find the smallest set of 
+words such that taking the union of each bit vector for each of the words in 
+the set will yield the bit vector <code>11111</code>. At each step, we seek the words that will 
+maximize the number of 1s in the union of the bit vectors, while minimizing the number
+of words. We take the union of the "longest sequence of 1s" bit vector from the 
+prior step, plus the bit vector from the current step.</p>
+<p><em>W1:</em></p>
+<p>Start with word W1: this is the only bit vector, so it sets the starting "largest sequence of 1s" bit vector. 
+We wish to maximize "largest sequence of 1s" and minimize number of words.
+* W1 solution is therefore <span class="math">\(11000\)</span>. The number of 1s is 1. The number of words is 1. (W1 SOLUTION)</p>
+<p><em>W2:</em></p>
+<p>Next is word W2: the "largest sequence of 1s" bit vector is the union of the prior step's "largest sequence of 1s" bit vector and the current word's bit vector. One option:
+* union of W1 solution and W2 <span class="math">\(11000 \bigcup 01100 = 11100\)</span>. The number of 1s is 3. The number of words is 2. (W2 SOLUTION)</p>
+<p><em>W3:</em></p>
+<p>Next is word W3: the "largest sequence of 1s" bit vector is the union that maximizes the number of 1s and minimizes the number of words. Two options:
+<em> union of W1 solution and W3 <span class="math">\(11000 \bigcup 10000 = 11000\)</span>. The number of 1s is 2. The number of words is 2.
+</em> union of W2 solution and W3 <span class="math">\(11100 \bigcup 10000 = 11100\)</span>. The number of 1s is 3. The number of words is 3. (W3 SOLUTION)</p>
+<p><em>W4:</em></p>
+<p>Next is word W4: the "largest sequence of 1s" bit vector is the union that maximizes the number of 1s and minimizes the number of words. Three options:
+<em> union of W1 solution and W4 <span class="math">\(11000 \bigcup 00010 = 11010\)</span>. The number of 1s is 3. The number of words is 2.
+</em> union of W2 solution and W4 <span class="math">\(11100 \bigcup 00010 = 11110\)</span>. The number of 1s is 4. The number of words is 3. (W4 SOLUTION)
+* union of W3 solution and W4 <span class="math">\(11100 \bigcup 00010 = 11110\)</span>. The number of 1s is 4. The number of words is 4.</p>
+<p><em>W5:</em></p>
+<p>Next is word W5: the "largest sequence of 1s" bit vector is the union maximizing number of 1s and minimizing number of words. Four options:
+<em> union of W1 solution and W5 <span class="math">\(11000 \bigcup 00011 = 11011\)</span>. The number of 1s is 4. The number of words is 2.
+</em> union of W2 solution and W5 <span class="math">\(11100 \bigcup 00011 = 11111\)</span>. The number of 1s is 5. The number of words is 3. (W5 SOLUTION)
+<em> union of W3 solution and W5 <span class="math">\(11100 \bigcup 00011 = 11111\)</span>. The number of 1s is 5. The number of words is 4.
+</em> union of W4 solution and W5 <span class="math">\(11110 \bigcup 00111 = 11111\)</span>. The number of 1s is 5. The number of words is 4.</p>
+<p><em>W6:</em></p>
+<p>Next is word W6: the "largest sequence of 1s" bit vector is the union maximizing number of 1s and minimizing number of words. Five options:
+<em> union of W1 solution and W6 <span class="math">\(11000 \bigcup 01000 = 11000\)</span>. The number of 1s is 2. The number of words is 2.
+</em> union of W2 solution and W6 <span class="math">\(11100 \bigcup 01000 = 11100\)</span>. The number of 1s is 3. The number of words is 3.
+<em> union of W3 solution and W6 <span class="math">\(11100 \bigcup 01000 = 11100\)</span>. The number of 1s is 3. The number of words is 4.
+</em> union of W4 solution and W6 <span class="math">\(11110 \bigcup 01000 = 11110\)</span>. The number of 1s is 4. The number of words is 4.
+* union of W5 solution and W6 <span class="math">\(11111 \bigcup 01000 = 11111\)</span>. The number of 1s is 5. The number of words is 4. (W6 SOLUTION)</p>
+<p>(NOTE: We don't need to consider every possible combination of W1, W2, W3, W4, W5, and W6; we only need to consider each word once, because each word's current solution can be written in terms of the prior word's solution, so we only need to consider solutions for each word. We've already considered the non-solutions and can therefore ignore them because they don't maximize number of 1s and minimize number of words.)</p>
+<p>Thus far, we have found a ''local'' solution for each word. We can now compare all of these ''local'' solutions to find a ''global'' solution. The global solution will maximize the number of 1s found (meaning we can toss out any solutions that have less than 5 1s), and minimizes the total number of words (meaning, our W5 solution gives us the global optimum).</p>
+<p>Therefore our global solution is the W5 solution: 5 1s, and 3 words. Thus, backtracking, we see that the words W1, W2, W5 cover all of the first five letters, with the minimum number of total words.</p>
+<div class="highlight"><pre><span></span>W1 = ab = 11000
+W2 = bc = 01100
+W5 = de = 00011
+</pre></div>
+
+
+<p><a name="five3-pseudocode"></a></p>
+<h2>Pseudocode</h2>
+<p>Here is the pseudocode for the program. We utilize one function to compute
+the letter coverage bit vector for a single word, and the rest of the 
+functionality will go in the main method:</p>
+<div class="highlight"><pre><span></span>def word2bitvector(word):
+    initialize 26-element bit vector with 0s (one 0 per letter)
+    for each letter in word:
+        turn the bit for this letter to 1
+    return bit vector
+
+def main():
+
+    # initialization step:
+    initialize best coverage bit vector
+    initialize maximum number of 1s (the number of letters N we wish to cover)
+    initialize number of words in current solution
+    initialize backtracking array (for constructing final solution)
+
+    # outer loop fencepost step:
+    set things up for word 0 (base case)
+
+    # loop through each word
+    for each word in words:
+        # skip word 0 (base case)
+
+        # inner loop fencepost step:
+        initialize things for word (i-1)
+
+        for each prior word j &lt; i:
+            compute the new potential best coverage bitvector
+            compute the number of 1s in the bnew potential best coverage bit vector
+            compute numbr of words in new potential best solution
+            if this solution is better than current best solution:
+                overwrite best solution with current solution
+
+    # get solution:
+    find maximum indices of vector of number of 1s 
+    # (this is potentially multiple indices, representing multiple 
+    #  solutions that satisfy the coverage we want)
+    find minimum number of words corresponding to each of the coverage indices
+    backtrack through solution indices
+</pre></div>
+
+
+<p><a name="five3-python"></a></p>
+<h2>Python Code</h2>
+<p>The code for this solution can be found here: <a href="https://charlesreid1.com:3000/cs/five-letter-words/src/master/letter_coverage.py">letter_coverage.py</a></p>
+<p>This code is as follows:</p>
+<div class="highlight"><pre><span></span>def word2bitvector(word, N):
+    &quot;&quot;&quot;
+    Turns a five-letter word into a bit vector representing character coverage.
+    Uses 26 letters by default.
+    &quot;&quot;&quot;
+    bit_vector = [False,]*N
+    for c in word:
+        i = ord(c)-ord(&#39;a&#39;)
+        try:
+            bit_vector[i] = True
+        except IndexError:
+            pass
+    return np.array(bit_vector)
+</pre></div>
+
+
+<p>Next is the main method:</p>
+<div class="highlight"><pre><span></span>if __name__==&quot;__main__&quot;:
+
+    # Searching for words covering first N letters
+    N = 13
+
+    words = get_words()
+
+    # If we want to restrict our search to the first M letters,
+    #words = words[:1000]
+</pre></div>
+
+
+<p>We begin with the initialization step:</p>
+<div class="highlight"><pre><span></span>    # Initialization:
+    # ----------------
+
+    # Store best coverage bitvectors for each word
+    bestcoverage_bv = [[False]*N for k in range(len(words))]
+
+    # Store number of 1s for best coverage vector for each word
+    ones_bv = [0]*len(words)
+
+    # Store number of words in best solution for each word
+    ws = [0]*len(words)
+
+    # Store prior word for backtracking
+    bt = [-1]*len(words)
+</pre></div>
+
+
+<p>Next comes the fencepost initialization step:</p>
+<div class="highlight"><pre><span></span>    # Fencepost: Initial Step
+    # Word 0
+    # ----------------
+
+    # Start with word 0
+    wi = words[0]
+
+    # Best letter coverage bit vector
+    bestcoverage_bv[0] = word2bitvector(words[0],N)
+
+    # Length of 1s
+    ones_bv[0] = sum(bestcoverage_bv[0])
+
+    # Number of words in best solution:
+    ws[0] = 1
+
+    # Backtracking: first word has no prior word
+    bt[0] = 0
+</pre></div>
+
+
+<p>Next is the loop over the words <span class="math">\(w_i\)</span>:</p>
+<div class="highlight"><pre><span></span>    for i in range(1,len(words)):
+        wi = words[i]
+
+        # Start with bitvector of word i&#39;s coverage
+        wi_bv = word2bitvector(wi,N)
+
+        # Fencepost: Initial Step
+        # Word i-1
+        # Assume this is the solution,
+        # and if we find a better one later,
+        # we can overwrite it.
+        # ------------------------
+
+        # word i-1
+        wj = words[i-1]
+
+        # Get the best coverage bitvector for i-1
+        wj_bv = bestcoverage_bv[i-1]
+
+        # Get combined bitvector for word i and best coverage bitvector for word j
+        bestcoverage_bv[i] = np.logical_or(wi_bv,wj_bv)
+
+        # Count ones in new combined bitvector
+        ones_bv[i] = sum(bestcoverage_bv[i])
+
+        # Number of words in new best solution:
+        ws[i] = ws[i-1]+1
+
+        # Backtracking
+        bt[i] = i-1
+</pre></div>
+
+
+<p>Now that we are considering each word <span class="math">\(w_i\)</span>, we need to consider
+each of the prior words <span class="math">\(w_j\)</span> and update the best solution for each:</p>
+<div class="highlight"><pre><span></span>        # Now loop over the rest of the words,
+        # and look for a better solution.
+        for j in reversed(range(1,i)):
+
+            # Get the prior word
+            wj = words[j]
+
+            # Get best coverage bitvector
+            wj_bv = bestcoverage_bv[j]
+
+            # (potential) new combined coverage vector
+            bestcoverage_bv_i = np.logical_or(wi_bv, wj_bv)
+
+            # Number of ones in (potential) new combined coverage vector
+            ones_bv_i = sum(bestcoverage_bv_i)
+
+            # Number of words in (potential) new best solution
+            ws_i = ws[j]+1
+
+            # If this solution is better than our current one,
+            # overwrite the current solution.
+            # (Better means, more ones or fewer words.)
+
+            if(ones_bv_i &gt; ones_bv[i]):
+                bestcoverage_bv[i] = bestcoverage_bv_i
+                ones_bv[i] = ones_bv_i
+                ws[i] = ws_i
+                bt[i] = j
+
+            # It&#39;s tempting to stop early,
+            # but what if we find the perfect
+            # solution right at the end?!?
+</pre></div>
+
+
+<p>Now that we have found the coverage for each word, and the corresponding number of words 
+in that coverage solution, we find the solution that achieves the desired coverage 
+while minimizing the number of words, so that we can construct the actual solution:</p>
+<div class="highlight"><pre><span></span>    # Okay, now actually get the solution.
+    # The solution is the maximum of ones_bv and the minimum of ws
+    # 
+    # Start by finding the maximum(s) of ones_bv
+    # Then check each corresponding index of ws
+    ones_bv_indices = [k for k,v in enumerate(ones_bv) if v==max(ones_bv)]
+
+    min_key = ones_bv_indices[0]
+    min_val = ones_bv[ones_bv_indices[0]]
+    for ix in reversed(ones_bv_indices[1:]):
+        if(ones_bv[ix] &lt; min_key):
+            min_key = ix
+            min_val = ones_bv[ix]
+
+    print(&quot;Min key:&quot;)
+    print(min_key)
+    print(&quot;Min val:&quot;)
+    print(min_val)
+</pre></div>
+
+
+<p><a name="output"></a></p>
+<h2>Output and Timing</h2>
+<p>Let's take a look at some example output from the program:</p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    var location_protocol = (false) ? 'https' : document.location.protocol;
+    if (location_protocol !== 'http' && location_protocol !== 'https') location_protocol = 'https:';
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = location_protocol + '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
 
     </div>
 </div>
