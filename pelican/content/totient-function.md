@@ -3,7 +3,7 @@ Date: 2017-08-31 11:00
 Category: Mathematics
 Tags: mathematics, factors, number theory, euler
 
-## TOC
+## Table of Contents
 
 * [Introduction](#totient-intro)
 * [Complete and Reduced Residue Systems](#totient-complete-reduced)

@@ -3,7 +3,7 @@ Date: 2017-03-23 11:00
 Category: Java
 Tags: computer science, guava, graph, TSP
 
-## TOC
+## Table of Contents
 
 * [Background: Traveling Salesperson Problem (TSP)](#tsp1-bkg)
 * [Graphs](#tsp1-graphs)

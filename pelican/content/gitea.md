@@ -3,7 +3,7 @@ Date: 2017-04-01 22:00
 Category: Git
 Tags: git, go, gitea
 
-## TOC 
+## Table of Contents
 
 * [Intro](#gitea-intro)
 * [Running with Gitea](#gitea-running)

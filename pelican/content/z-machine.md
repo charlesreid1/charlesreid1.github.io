@@ -3,7 +3,7 @@ Date: 2017-04-24 20:00
 Category: Computer Science
 Tags: turing machine, computer science, computer engineering, apollo, assembly
 
-## TOC 
+## Table of Contents 
 
 * [Background](#z-bkg)
 * [The Z-Machine: Setup](#z-setup)

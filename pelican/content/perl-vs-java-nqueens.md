@@ -3,7 +3,7 @@ Date: 2017-03-22 22:00
 Category: Computer Science
 Tags: java, perl, algorithms, recursion, n-queens
 
-## TOC 
+## Table of Contents 
 
 * [Background: Huh?](#pvj-background)
 * [N Queens Problem](#pvj-nqueensproblem)
