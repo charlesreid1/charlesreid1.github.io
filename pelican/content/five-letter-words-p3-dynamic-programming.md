@@ -26,6 +26,7 @@ the _minimum_ number of words from the collection of five letter words that
 "cover" (are drawn from) the first N letters of the alphabet.
 
 The problem has a couple of variations:
+
 * Provided a set of letters, search for the smallest number of words that cover those particular letters.
 * Given an integer $N \leq 26$, search for the smallest number of words that cover the first N letters of the alphabet.
 * The same problem as above, but drawing from the first $M$ words of the 5757 total five-letter words.
@@ -34,8 +35,8 @@ For the sake of simplicity, we will focus on the simplest problem: considering t
 letters of the alphabet, find the shortest sequence of words that will provide coverage of the first 
 $N$ letters of the alphabet.
 
-This problem is an example of a dynamic programming problem: a combinatorics problem that can 
-be solved by breaking the problem down into smaller sub-problems, solving the sub-problems, and 
+This is an example of a dynamic programming problem: a combinatorics problem that can 
+be solved by breaking the overall down into smaller sub-problems, solving the sub-problems, and 
 assembling solutions to the sub-problems into an overall problem solution.
 
 The procedure is as follows:
@@ -60,6 +61,7 @@ word $w_i$ combined solution bit vector; we save the length of 1s in the combine
 the number of words so far in that solution.
 
 Once we have gone through every word, we are ready to find the minimum. Do this by:
+
 * Searching through the solutions for every word, and pick out the one that maximizes the number of 1s in the solution bit vector
 (or, rather, that has the correct number of 1s in the bit vector) while also minimizing the total number of words.
 * To get the actual sequence of words, rather than just the minimum number of jwords, we need to save the prior word
