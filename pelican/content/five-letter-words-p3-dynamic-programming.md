@@ -501,6 +501,6 @@ sys	0m1.958s
 Note that the algorithm is $O(N^2)$, since it iterates over each word, and for each word,
 it examines each possible pairing with a preceding word. Thus, if we increase the number of words
 by a factor of 6, we expect the runtime to increase by a factor of 36, for an estimated runtime of 
-$36 \times 17 \mbox{ seconds} \approx 10 \mbox{ minutes} $, which is pretty close to what we see above.
+$36 \times 17 \mbox{ seconds} \approx 10 \mbox{ minutes}$, which is pretty close to what we see above.
 
 
