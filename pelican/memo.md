@@ -14,13 +14,13 @@
 
 <s>fix publication dates</s>
 
-Check if responsive on phones. If not, add bootstrap to make it responsive.
+<s>Check if responsive on phones. If not, add bootstrap to make it responsive.</s>
 
-Fix Next button to be a bootstrap item.
+<s>Fix Next button to be a bootstrap item.</s>
 
-Remove any unused images from theme
+<s>Remove any unused images from theme</s>
 
-How to copy over the theme, and/or extricate the theme into its own repository, for re-use across sites/servers
+<s>How to copy over the theme, and/or extricate the theme into its own repository, for re-use across sites/servers</s>
 
 
 # To make a post a draft
