@@ -1,4 +1,4 @@
-Title: Let's Generate Some Tuples!
+Title: Let's Generate Permutations!
 Date: 2018-01-02 18:00
 Category: Computer Science
 Tags: combinatorics, permutations, python, computer science, algorithms, art of computer programming, knuth
