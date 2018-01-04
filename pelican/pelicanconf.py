@@ -8,7 +8,7 @@ AUTHOR = u'charlesreid1'
 SITENAME = u'charlesreid1'
 
 PATH = 'content'
-THEME = 'cmr-theme'
+THEME = 'charlesreid1-githubio-theme'
 
 
 # -------------------
