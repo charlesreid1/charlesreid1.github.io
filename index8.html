@@ -108,6 +108,396 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Setting Up a Self-Hosted Github Clone with Gitea
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-04-01T22:00:00-07:00" pubdate>Saturday 04/01/2017</time>
+                in 
+                <a href="/category/git.html">Git</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/setting-up-a-self-hosted-github-clone-with-gitea.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2>Table of Contents</h2>
+<ul>
+<li><a href="#gitea-intro">Intro</a></li>
+<li><a href="#gitea-running">Running with Gitea</a><ul>
+<li><a href="#gitea-bin">Binary or Source</a></li>
+<li><a href="#gitea-config-dir">Configuring Gitea Directories</a></li>
+<li><a href="#gitea-fw">Opening the Firewall</a></li>
+<li><a href="#gitea-config-server">Setting Up and Configuring Gitea Server</a></li>
+</ul>
+</li>
+<li><a href="#gitea-use">How To Use Gitea</a><ul>
+<li><a href="#gitea-pushing-local">Pushing a Local Repo Into Gitea</a></li>
+<li><a href="#gitea-copying">Copying Repos from Github to Gitea</a></li>
+<li><a href="#gitea-moving">"Moving" Repos from Github to Gitea</a></li>
+<li><a href="#gitea-pushing-commits">Pushing Commits to Github or Gitea</a></li>
+<li><a href="#gitea-backing-up">Backing Up Gitea</a></li>
+</ul>
+</li>
+<li><a href="#gitea-patterns">How Gitea Fits Into Git Patterns</a></li>
+<li><a href="#gitea-wrapup">Wrapup</a></li>
+</ul>
+<p><a name="gitea-intro"></a></p>
+<h2>Intro</h2>
+<p>In this post we'll cover how to set up a web-hosted git server that uses Gitea,
+a Github clone that is written in Go. 
+While this post is not, strictly speaking, research, 
+having your own hosted git server certainly makes it easier to
+manage research codes and set up organizations to own different bits of code.</p>
+<p>Here's an image of a git repository in the finished product:</p>
+<p><img alt="Image of finished product" src="/images/gitea1.png"></p>
+<p>We will start by covering the server configuration for Gitea, 
+and then we'll cover how to use Gitea's git repository.</p>
+<p><a name="gitea-running"></a></p>
+<h2>Running with Gitea</h2>
+<p>Gitea is a web app for running a self-hosted Github clone. 
+It is implemented entirely in the Go language,
+so all of the pages that are served up are assembled by the Go binary.
+The Go binary also has a local instance of git running, 
+and any actions taken through the Gitea web interface
+are translated, by the Go binary, into actions in the git reopsitory.</p>
+<p>Out of the box, Gitea provides all of this functionality, and takes care of all the details,
+so you don't have to worry about any of this. But if you build it yourself,
+you can modify the content the binary serves up and the actions it takes. </p>
+<p>In this guide, we'll stick to the binary.</p>
+<p><img alt="DIagram of how the gitea binary runs as an http server on port 3000." src="/images/gitea-diagram.png"></p>
+<p><a name="gitea-bin"></a></p>
+<h3>Binary or Source</h3>
+<p>There are some problems with the source code that may make compilation from source impossible.
+(See <a href="https://charlesreid1.com/wiki/Gitea#Using_Binary">charlesreid1.com wiki notes</a>.)
+The binary version of Gitea is recommended. </p>
+<p><a name="gitea-config-dir"></a></p>
+<h3>Configuring Gitea Directories</h3>
+<p>Gitea expects a certain directory organization, specifically, a folder for binaries, 
+certificates, a database, git repositories, and the log.</p>
+<p>The recommended arrangment is:</p>
+<div class="highlight"><pre><span></span>/path/to/www/gitea/
+   \
+    \---------- bin/
+     \--------- certs/
+      \-------- data/
+       \------- repositories/
+        \------ log/
+</pre></div>
+
+
+<p>Once the files are organized in this way, navigate to the bin directory
+and (preferrably using tmux or screen to send to background) 
+execute the command:</p>
+<div class="highlight"><pre><span></span>./gitea web
+</pre></div>
+
+
+<p>This runs a setup page on port 3000.</p>
+<p>Note that you may or may not need to set your <code>$GOPATH</code> variable:</p>
+<div class="highlight"><pre><span></span>export GOPATH=&quot;<span class="cp">${</span><span class="n">HOME</span><span class="cp">}</span>/gocode&quot;
+</pre></div>
+
+
+<p>Go ahead and follow the instructions on the page to get Gitea set up.
+The <a href="https://gitea.io">gitea.io</a> page has good documentation.</p>
+<p><a name="gitea-fw"></a></p>
+<h3>Opening the Firewall</h3>
+<p>Assuming your port 3000 was closed on the firewall,
+and assuming you plan to run the gitea service as a public service listening on an external port, 
+you will want to open your firewall to accept incoming traffic on port 3000:</p>
+<div class="highlight"><pre><span></span># allow traffic on port 3000
+iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
+#  to allow forwarding for 3000 to internal LAN 
+iptables -A FORWARD -p tcp -j ACCEPT --dport 3000 -m state --state NEW
+</pre></div>
+
+
+<p><a name="gitea-config-server"></a></p>
+<h3>Setting Up and Configuring Gitea Server</h3>
+<p>To configure gitea, you will use a <code>.ini</code> configuration file contained in:</p>
+<div class="highlight"><pre><span></span>/path/to/www/gitea/custom/conf/app.ini
+</pre></div>
+
+
+<p>Here is an example gitea configuration file. It starts with a header, then has sections
+for different aspects like databases, the git repository, and the server:</p>
+<div class="highlight"><pre><span></span>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Example Gitea Config File
+;;
+;; https://github.com/go-gitea/gitea/blob/master/conf/app.ini
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+APP_NAME = big ugly git repo (BUGR)
+RUN_USER = git
+RUN_MODE = prod
+
+[database]
+DB_TYPE  = sqlite3
+SSL_MODE = disable
+PATH     = /www/gitea/data/gitea.db
+
+[repository]
+ROOT = /www/gitea/repositories
+PREFERRED_LICENSES = MIT License
+
+[server]
+PROTOCOL     = https
+DOMAIN       = yourdomain.com
+CERT_FILE    = /www/gitea/certs/cert.pem
+KEY_FILE     = /www/gitea/certs/key.pem
+SSH_DOMAIN   = git.yourdomain.com
+HTTP_PORT    = 3000
+ROOT_URL     = https://yourdomain.com:3000
+DISABLE_SSH  = false
+SSH_PORT     = 22
+OFFLINE_MODE = false
+
+[log]
+ROOT_PATH = /www/gitea/log
+</pre></div>
+
+
+<p>Ultimately, there are many configuration examples available for Gitea,
+so we won't go into any more detail on that.</p>
+<p>For details on how to configure Gitea with HTTPS, see <a href="https://charlesreid1.com/wiki/Gitea">charlesreid1.com/wiki/Gitea</a>.</p>
+<p>Let's move on to how we actually utilize Gitea,
+and focus especially on how to make gitea work in tandem with github
+and other git servers, instead of being yet another complication in the toolchain.</p>
+<p><a name="gitea-use"></a></p>
+<h2>How To Use Gitea</h2>
+<p>As we mentioned before, the gitea binary is actually wrapping a git repo, 
+and interactions with the binary (via the web) are translated into actions in that repo.
+This is important to understand, since it will prevent us from thinking about 
+gitea as a "centralized" server, and get us thinking about gitea as just another 
+computer with a copy of the repository on it.</p>
+<p>Understanding how to use gitea also requires correct thinking about how 
+distributed version control works - the way that each collaborator 
+with a copy of the repo can also act as a decentralized git server. 
+In this way, the gitea server becomes just another git client,
+with some extra frosting on top in the form of a web interface.</p>
+<p><a name="gitea-pushing-local"></a></p>
+<h3>Pushing a Local Repo Into Gitea</h3>
+<p>If you want to move existing local repositories into gitea, it's easy.
+Remember that with git, everything is local, so all you need to do 
+is push a copy to gitea, and gitea will have the whole repository locally too,
+including its entire history and any branches and tags that were on your local machine.
+If you have remotes, you'll need to get local copies of any branches or tags you want
+from that remote server (covered in more detail below).</p>
+<p>The basic steps:
+<em> Get everything you want locally (including branches and tags)
+</em> Fetch from remotes, if you have any.
+<em> Add new remote (gitea)
+</em> Push to new remote</p>
+<p>The end result will be a gitea repo fully-populated with the project's commit history.</p>
+<p>Here are the steps in a bit more detail:</p>
+<p>Start by creating a git repository, or cloning an existing one:</p>
+<div class="highlight"><pre><span></span>mkdir my_git_repo/
+cd my_git_repo
+git init .
+</pre></div>
+
+
+<p>or</p>
+<div class="highlight"><pre><span></span>git clone http://github.com/mot_pesli/coune_car
+</pre></div>
+
+
+<p>Next, create an empty git repo on the gitea server.
+Sign in using a gitea username and password. 
+There will be a plus sign in the upper right,
+just like on Github. Click the plus sign, and choose create new repo.
+Enter the repo name, and a description.
+Make sure the repo will NOT automatically create
+a readme or a LICENSE file, as we will be importing all files
+from another repo anyway.</p>
+<p>Once you've got a local copy of the repo with everything you want to push,
+and you have an empty repository on the gitea server ready for commits,
+add the gitea repository as a new remote to your local repository.</p>
+<p>Example: suppose you have a gitea user named <code>zappa</code> who has created a new empty repo 
+named <code>linol-aquabus</code> on the gitea server. 
+Zappa would then cd to the local copy of the git repo,
+and add the gitea repository's url as a new remote called <code>gitea</code>:</p>
+<div class="highlight"><pre><span></span>git remote add gitea https://git.mydomain.com/zappa/linol-aquabus.git
+
+# alternatively,
+
+git remote add gitea https://mydomain.com:3000/zappa/linol-aquabus.git
+</pre></div>
+
+
+<p>Now Zappa can push the entire commit history of the current repo
+to the gitea remote git server:</p>
+<div class="highlight"><pre><span></span>git push origin gitea
+
+# alternatively,
+
+git push --all origin gitea
+</pre></div>
+
+
+<p>If Zappa now visits <code>mydomain.com:3000/zappa/linol-aquabus</code> the entire
+contents of the repository and its commit history in gitea's web interface
+will be available for browsing.</p>
+<p><a name="gitea-copying"></a></p>
+<h3>Copying Repos from Gitub to Gitea</h3>
+<p>The process for copying Github repositories to Gitea follows the above procedure closely:</p>
+<div class="highlight"><pre><span></span>git clone https://github.com/user/repo.git
+</pre></div>
+
+
+<p>Check out any branches or tags you may want to push to gitea.</p>
+<p>Then add the gitea remote to the repo:</p>
+<div class="highlight"><pre><span></span>git remote add gitea https://git.mydomain.com/zappa/linol-aquabus.git
+</pre></div>
+
+
+<p>Now push the contents of the local repository to the remote gitea repository:</p>
+<div class="highlight"><pre><span></span>git push origin gitea
+</pre></div>
+
+
+<p>Once this command is executed, the gitea remote will have the entire commit history of the repo,
+which it will render and display through its web interface. Thus, the entire commit history
+will be immediately available to browse through gitea.</p>
+<p>(Note that information about Github issues or Github user profiles is not stored in the git repo,
+just as Gitea comments and Gitea user profiles are not stored in the git repo.)</p>
+<p><img alt="Gitea and Github - same repo, side by side." src="/images/gitea-n-github.png"></p>
+<p><a name="gitea-moving"></a></p>
+<h3>"Moving" Repos from Gitub to Gitea</h3>
+<p>First, it should be stated up front that you do not have to choose 
+between gitea and github - you can have a copy of a repo on both,
+frequently push to one or the other, and occasionally update the other
+as a kind of "mirror."</p>
+<p>If you do want to <em>move</em> a repo from github to gitea,
+remember that github does not "own" the repo,
+so what you're actually doing is deleting the copy of your repo 
+that lives on github's server.</p>
+<p>To move the repo, all you have to do is copy it from github to somewhere else
+(whether it be your local computer, or to the gitea server), then delete it from github.
+You will not lose any information about the git repository history.
+Github does not keep/store that information - git does.</p>
+<p><a name="gitea-pushing-commits"></a></p>
+<h3>Where to Push Commits: Github or Gitea?</h3>
+<p>It may seem confusing to use multiple repositories side-by-side,
+but this is precisely how the designers of git intended it to be used - 
+for decentralized version control.</p>
+<p>That means Github or Gitea are not "centralized" servers that "own" the repository,
+they are merely another instance of git, running on a server, with a local copy of the repo.</p>
+<p>Accordingly, if your project exists as a repo on gitea and as a repo on github, 
+it is like the project existing as a repo on your hard drive and as a repo on your collaborator's hard drive -
+there is no contradiction. If you make changes to your local copy of the repo, you can commit those changes,
+then push the commits to someone else. In the same way, you can make changes to your local copy of the repo 
+and commit those changes, then push the commits to either gitea, or github, or both - wherever you want.</p>
+<p><a name="gitea-backing-up"></a></p>
+<h3>Backing Up Gitea</h3>
+<p>It's important to say a few words about backups.</p>
+<p>Because Gitea is configured (with the above config file) to use sqlite,
+it stores its entire database (the extra "frosting" of stars, wiki pages,
+issues, user pictures, etc.) in a single file on disk, in the <code>data/</code> directory
+of the gitea installation.</p>
+<p>The git repository is, similarly, a single file on disk, with the entire database 
+of commits, blogs, commit histories, etc., all contained in the <code>.git</code> directory,
+which is contained in the <code>repositories</code> directory of the gitea installation.</p>
+<p>That means backing up your git server is as easy as copying the gitea folder.
+No need to back up a MySQL database or do a funny pants dance to export your database
+to a proprietary format. </p>
+<p>This is another central tenent of git's design philosophy - 
+be fast, pack light, and travel easily.</p>
+<p><a name="gitea-patterns"></a></p>
+<h2>How Gitea Fits Into Git Patterns</h2>
+<p>There are <a href="https://charlesreid1.com/wiki/Git_Resources">many resources on git</a>,
+and some cover the concept of "git patterns," 
+or templates for how to use git.</p>
+<p>Because git is designed to be decentralized, 
+gitea provides a "centralized" node for collaboration
+within a decentralized system.
+So you could use gitea to collaborate with 
+your local Team A, and push and pull branches 
+and work on various features together.
+Then, once Team A has put together a branch they've found useful,
+they can push it to a different remote server that is more widely accessed.</p>
+<p>(Note that this is the logic behind why you need to 
+check out all the branches and tags, <em>locally</em>, that you want to push 
+to the gitea remote server - this allows you the flexibility to 
+only share select branches, so that you might have 
+some branches shared in common wth gitea and github,
+and other branches only existing on gitea.)</p>
+<p>Team B and Team C may use github, and not gitea, to access the project code.
+The gitea server may for example be a private server on a local network,
+whereas github is better suited for collaboration.
+By pushing select branches from the Team A git server, gitea,
+to the github server, Team B and Team C will then be able to 
+access them from github.</p>
+<p>You could also have multiple gitea/gitlab/github enterprise servers 
+for multiple organizations running on git, and they could share a code base 
+by sharing git repositories, commit histories, branches, and so on.</p>
+<p><a name="gitea-wrapup"></a></p>
+<h2>Wrapup</h2>
+<p>Have a look at the <a href="http://gitea.io">Gitea project</a>, <a href="https://golang.org">the Go language</a>,
+<a href="https://git-scm.com">git</a>, <a href="https://github.com">Github</a> for all the nice software
+that made this possible. </p>
+<p>Then have a look at the finished product at <a href="https://git.charlesreid1.com">git.charlesreid1.com</a>.</p>
+<p>Gitea allows you to create organizations, useful for organizing repos related to 
+particular functionality or platforms. For example, <a href="https://charlesreid1.com:3000/rpi">rpi</a> 
+is an organization that owns repositories with scripts and software for raspberry pis,
+<a href="https://charlesreid1.com:3000/docker">docker</a> is an organization that owns repositories
+with Dockerfiles, and <a href="https://charlesreid1.com:3000/mac">mac</a> holds Mac-related things.</p>
+<p>This organization allows better organization of project code - a dotfiles repository
+that works for a Mac laptop or a Unix server is not necessarily good for a Raspberry Pi
+or a Docker container, so code is organized accordingly.</p>
+<p>Organizations can also be used to organize project-level code. 
+This git repo is in its beginning phases, but has great potential
+as a great tool that makes git even more functional and provides 
+one more reason to switch to git.</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/git.html">git</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/go.html">go</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/gitea.html">gitea</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Better Timing of Guava Traveling Salesperson Problem Code: Timing Scripts
             </b></h1>
         
@@ -1295,386 +1685,6 @@ so it may be that the cost of sorting each edge pays off in the computational sa
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Python vs. Perl: N Queens Problem
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-03-25T20:00:00-07:00" pubdate>Saturday 03/25/2017</time>
-                in 
-                <a href="/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/python-vs-perl-n-queens-problem.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2>Table of Contents</h2>
-<ul>
-<li><a href="#pvp-background">Background</a></li>
-<li><a href="#pvp-nqueens">N Queens Revisited</a></li>
-<li><a href="#pvp-perlsoln">Perl Solution</a></li>
-<li><a href="#pvp-pythonsoln">Python Solution</a></li>
-<li><a href="#pvp-h2hnqueens">Python vs. Perl: Walltime vs. Number of Queens</a></li>
-<li><a href="#pvp-perlprof">Perl Profiling and Results</a></li>
-<li><a href="#pvp-pythonprof">Python Profiling</a></li>
-<li><a href="#pvp-pythonprofresults">Python Profiling Results</a></li>
-<li><a href="#pvp-pythonperl">Comparing Python to Perl</a></li>
-<li><a href="#pvp-h2hops">Python vs. Perl: Walltime vs. Number of Solutions Tested</a></li>
-<li><a href="#pvp-winner">The Winner: Perl for Small Problems, Python for Big Ones</a></li>
-<li><a href="#pvp-sources">Sources</a></li>
-</ul>
-<p><a name="pvp-background"></a></p>
-<h2>Background</h2>
-<p>Revisiting the N queens problem, this time implementing the solution in Python.</p>
-<p>Verb-oriented solution, functional, and based on Perl solution</p>
-<p>More fair comparison - both are interpreted languages, not compiled languages</p>
-<p>Compare Python and Perl, ease of implementation, speed, flexibility</p>
-<p><a name="pvp-nqueensproblem"></a></p>
-<h2>N Queens Problem</h2>
-<p>As a recap from the last post about the N queens problem, we're solving a chess puzzle that asks:
-how many different configurations are there for placing <span class="math">\(N\)</span> queens on an <span class="math">\(N \times N\)</span> chessboard
-such that no queen attacks any other queen?</p>
-<p>This is a popular problem in computer science because solutions often implement recursive backtracking.</p>
-<p>See <a href="https://en.wikipedia.org/wiki/N_Queens_Problem">the Wikipedia article</a> for details.</p>
-<p><a name="pvp-nqueenssoln"></a></p>
-<h2>N Queens Solution</h2>
-<p>Here is the pseudocode of the N queens solution being implemented here:</p>
-<div class="highlight"><pre><span></span>explore(column):
-    if last column:
-        # base case
-        add to solutions
-    else:
-        # recursive case
-        for each row:
-            if this is a safe row:
-                place queen on this row
-                explore(column+1)
-                remove queen from this row
-</pre></div>
-
-
-<p>This solution implements recursive backtracking to explore choices of where to place each queen.
-It keeps solutions simple, and can be implemented using only primitive built-in data types.
-Solutions are stringified version of these arrays, consisting of 8 digits, so they are likewise very simple.</p>
-<p><a name="pvp-perlsoln"></a></p>
-<h3>Perl Solution</h3>
-<p>As a reminder, the Perl solution was originally from <a href="http://rosettacode.org/wiki/N-queens_problem#Perl">Rosetta Code</a>.
-Here's another link to the Perl solution on Github.</p>
-<p><a href="https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535">Github gist: nqueens.pl</a></p>
-<p><a name="pvp-pythonsoln"></a></p>
-<h3>Python Solution</h3>
-<p>The solution requires the use of one array of data that is fixed in size,
-which for a given column stores a list of rows already occupied by queens, 
-and one array of data that is variable in size, which stores where each queen has been placed.</p>
-<p>The Python solution makes use of lists by using a fixed-size list for the occupied rows
-and a variable size list for storing queen locations. 
-It utilizes buit-in methods for the list data type to append and pop, or add and remove items from the end of the list.</p>
-<p><a href="https://gist.github.com/charlesreid1/1a2ecb3a83284290d4a9daf747d0d7e4">Github gist: nqueens.py</a></p>
-<p><a name="pvp-h2hnqueens"></a></p>
-<h2>Head to Head: Walltime vs. Number of Queens</h2>
-<p><img alt="Graph of walltime versus number of queens" src="/images/python-vs-perl-nqueens.png"></p>
-<div class="highlight"><pre><span></span>----------------------------------------------------------
-| NQueens | Nsolutions | Java      | Perl     | Python   |
-|---------|------------|-----------|----------|----------|
-| 8       | 92         | 0.003628  | 0.016    | 0.018    |
-| 9       | 352        | 0.006709  | 0.067    | 0.077    |
-| 10      | 724        | 0.017473  | 0.259    | 0.359    |
-| 11      | 2680       | 0.061291  | 1.542    | 1.684    |
-| 12      | 14200      | 0.240463  | 8.431    | 8.618    |
-| 13      | 73712      | 1.113491  | 48.542   | 50.401   |
-| 14      | 365596     | 6.557336  | 303.278  | 322.576  |
-| 15      | 2279184    | 42.619426 | 2057.052 | 1979.343 |
-----------------------------------------------------------
-</pre></div>
-
-
-<p>The results of this test show that Python and Perl
-are fairly closely matched.</p>
-<p><a name="pvp-perlprof"></a></p>
-<h2>Perl Profiling</h2>
-<p>Results of profiling the Perl code with <code>Devel::NYTProf</code> were detailed in a prior post.</p>
-<p>Here are those results once again,
-for the 11 queens problem:</p>
-<div class="highlight"><pre><span></span><span class="c1"># Profile data generated by Devel::NYTProf::Reader</span>
-<span class="c1"># Version: v6.04</span>
-<span class="c1"># More information at http://metacpan.org/release/Devel-NYTProf/</span>
-<span class="c1"># Format: time,calls,time/call,code</span>
-<span class="mf">0.000238</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mf">0.000119</span><span class="p">,</span><span class="k">use</span> <span class="nn">Time::HiRes</span> <span class="sx">qw(time)</span><span class="p">;</span>
-<span class="mf">0.000039</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mf">0.000019</span><span class="p">,</span><span class="k">use</span> <span class="nn">strict</span><span class="p">;</span>
-<span class="mf">0.000491</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mf">0.000246</span><span class="p">,</span><span class="k">use</span> <span class="nn">warnings</span><span class="p">;</span>
-<span class="mf">0.000021</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.000021</span><span class="p">,</span><span class="k">my</span> <span class="nv">$start</span> <span class="o">=</span> <span class="nb">time</span><span class="p">;</span>
-<span class="mf">0.010338</span><span class="p">,</span><span class="mi">2680</span><span class="p">,</span><span class="mf">0.000004</span><span class="p">,</span><span class="nb">push</span> <span class="nv">@solutions</span><span class="p">,</span> <span class="s">&quot;@queens\n&quot;</span><span class="p">;</span>
-<span class="mf">0.009993</span><span class="p">,</span><span class="mi">2680</span><span class="p">,</span><span class="mf">0.000004</span><span class="p">,</span><span class="k">return</span><span class="p">;</span>
-<span class="mf">0.186298</span><span class="p">,</span><span class="mi">164246</span><span class="p">,</span><span class="mf">0.000001</span><span class="p">,</span><span class="nv">$#attacked</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="nv">$board_size</span><span class="p">;</span>
-<span class="mf">0.150338</span><span class="p">,</span><span class="mi">164246</span><span class="p">,</span><span class="mf">0.000001</span><span class="p">,</span><span class="k">for</span><span class="p">(</span> <span class="mi">0</span> <span class="o">..</span> <span class="nv">$#queens</span><span class="p">)</span> <span class="p">{</span> 
-<span class="mf">0.675523</span><span class="p">,</span><span class="mf">1.26035e+06</span><span class="p">,</span><span class="mf">0.000001</span><span class="p">,</span><span class="nv">$attacked</span><span class="p">[</span> <span class="nv">$ix2</span> <span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-<span class="mf">1.242624</span><span class="p">,</span><span class="mi">164246</span><span class="p">,</span><span class="mf">0.000008</span><span class="p">,</span><span class="k">for</span> <span class="k">my</span> <span class="nv">$row</span> <span class="p">(</span><span class="mi">0</span> <span class="o">..</span> <span class="nv">$board_size</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
-<span class="mf">0.267469</span><span class="p">,</span><span class="mi">166925</span><span class="p">,</span><span class="mf">0.000002</span><span class="p">,</span><span class="n">explore</span><span class="p">(</span><span class="nv">$depth</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
-<span class="mf">0.125272</span><span class="p">,</span><span class="mi">166925</span><span class="p">,</span><span class="mf">0.000001</span><span class="p">,</span><span class="nv">$occupied</span><span class="p">[</span><span class="nv">$row</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-<span class="mf">0.000002</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.000002</span><span class="p">,</span><span class="n">explore</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
-<span class="mf">0.000011</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.000011</span><span class="p">,</span><span class="k">my</span> <span class="nv">$duration</span> <span class="o">=</span> <span class="nb">time</span> <span class="o">-</span> <span class="nv">$start</span><span class="p">;</span>
-<span class="mf">0.000075</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.000075</span><span class="p">,</span><span class="k">print</span> <span class="s">&quot;Found &quot;</span><span class="p">,</span> <span class="nb">scalar</span><span class="p">(</span><span class="nv">@solutions</span><span class="p">),</span> <span class="s">&quot; solutions\n&quot;</span><span class="p">;</span>
-<span class="mf">0.000050</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.000050</span><span class="p">,</span><span class="nb">printf</span> <span class="s">&quot;Execution time: %0.3f s \n&quot;</span><span class="p">,</span><span class="nv">$duration</span><span class="p">;</span>
-</pre></div>
-
-
-<p><a name="pvp-pythonprof"></a></p>
-<h2>Python Profiling</h2>
-<p>The Python N queens solution was profiled with two tools: <code>cProfile</code> and <code>line_profiler</code>. </p>
-<p>The built-in profiling tool <code>cProfile</code> gives a summary of how much time was spent in each method,
-but nothing lower level than that. It is similar to Java profiling tools. <a href="https://docs.python.org/2/library/profile.html">(cProfile documentation)</a></p>
-<p>The <code>line_profiler</code> tool is designed to profile Python code line-by-line, which gives a much more useful
-breakdown of where the code spent all of its time. It is also helpful because this can be compared one-to-one
-with the results from Perl, and we can get an equal basis for comparing the two languages.</p>
-<p><a name="pvp-pythonprofresults"></a></p>
-<h2>Python Profiling Results</h2>
-<h3><code>cProfile</code> Results</h3>
-<p>Here are the results from running the N queens problem for N = 11 through cProfile:</p>
-<div class="highlight"><pre><span></span>**************************************
-Profiling 11 queens problem with Python...
-*******************************
-cProfile:
-*******************************
-Found 2680 solutions
-         996197 function calls (829272 primitive calls) in 2.237 seconds
-
-   Ordered by: internal time
-
-   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
- 166926/1    1.845    0.000    2.237    2.237 /Volumes/noospace/Users/charles/codes/hello-world/python/nqueens/nqueens.py:12(explore)
-   328492    0.275    0.000    0.275    0.000 {range}
-   166925    0.062    0.000    0.062    0.000 {method &#39;pop&#39; of &#39;list&#39; objects}
-   169605    0.029    0.000    0.029    0.000 {method &#39;append&#39; of &#39;list&#39; objects}
-   164247    0.026    0.000    0.026    0.000 {len}
-        1    0.000    0.000    2.237    2.237 /Volumes/noospace/Users/charles/codes/hello-world/python/nqueens/nqueens.py:4(&lt;module&gt;)
-        1    0.000    0.000    0.000    0.000 {method &#39;disable&#39; of &#39;_lsprof.Profiler&#39; objects}
-</pre></div>
-
-
-<h3><code>line_profiler</code> Results</h3>
-<p>The <code>line_profiler</code> tool gives a more detailed picture of the code and where it spends its time,
-breaking down profiling information line-by-line. This tool can be installed with pip: <code>pip install line_profiler</code>.
-The (INSERT LINK)(nqueens repository on github) has a file that demonstrates how to use this tool.
-See <a href="https://charlesreid1.com/wiki/Python/Profiling">Python/Profiling</a></p>
-<p>Here are the results from the <code>line_profiler</code> tool run on the same (11 queens) problem:</p>
-<div class="highlight"><pre><span></span>**************************************
-Profiling 11 queens problem with Python...
-Found 2680 solutions
-Wrote profile results to nqueens.py.lprof
-Timer unit: 1e-06 s
-
-Total time: 14.2258 s
-File: nqueens.py
-Function: explore at line 11
-
-Line #      Hits         Time  Per Hit   % Time  Line Contents
-==============================================================
-    11                                           @profile
-    12                                           def explore(depth):
-    13                                               # base case
-    14    166926       187573      1.1      1.3      if(depth==board_size):
-    15                                                   # stringify/serialize the solution
-    16      2680        31497     11.8      0.2          solutions.append(&quot;%s&quot;%(queens))
-    17      2680         3117      1.2      0.0          return
-    18                                           
-    19                                               else:
-    20    164246       384688      2.3      2.7          attacked = 2*board_size*[0,]
-    21   1424595      1690693      1.2     11.9          for i in range(0,len(queens)):
-    22   1260349      1471304      1.2     10.3              ix1 = queens[i] + depth - i
-    23   1260349      1405141      1.1      9.9              attacked[ix1] = 1
-    24                                           
-    25   1260349      1494095      1.2     10.5              ix2 = queens[i] - depth + i
-    26   1260349      1392563      1.1      9.8              attacked[ix2] = 1
-    27                                           
-    28   1970952      2229922      1.1     15.7          for row in range(0,board_size):
-    29   1806706      2031139      1.1     14.3              if(occupied[row] or attacked[row]):
-    30    379432       374466      1.0      2.6                  continue
-    31                                           
-    32                                                       # make a choice
-    33    166925       241114      1.4      1.7              queens.append(row)
-    34    166925       186833      1.1      1.3              occupied[row] = 1
-    35                                           
-    36                                                       # explore the consequences
-    37    166925       610396      3.7      4.3              explore(depth+1)
-    38                                           
-    39                                                       # unmake the choice
-    40    166925       288667      1.7      2.0              queens.pop()
-    41    166925       202555      1.2      1.4              occupied[row] = 0
-</pre></div>
-
-
-<p><a name="pvp-h2hopts"></a></p>
-<h2>Python vs Perl: Walltime vs. Number of Solutions Tested</h2>
-<p>As with the prior post, I verified that both codes were testing the same number of solutions.
-Here is that table of the number of solutions for each value of N, together with the number of solutions tested:</p>
-<div class="highlight"><pre><span></span>-----------------------------------------------------------------------------
-| NQueens | Nsolutions | NsolutionsTested | Java      | Perl     | Python   |
-|---------|------------|------------------|-----------|----------|----------|
-| 8       | 92         | 1965             | 0.003628  | 0.016    | 0.018    |
-| 9       | 352        | 8042             | 0.006709  | 0.067    | 0.077    |
-| 10      | 724        | 34815            | 0.017473  | 0.259    | 0.359    |
-| 11      | 2680       | 164246           | 0.061291  | 1.542    | 1.684    |
-| 12      | 14200      | 841989           | 0.240463  | 8.431    | 8.618    |
-| 13      | 73712      | 4601178          | 1.113491  | 48.542   | 50.401   |
-| 14      | 365596     | 26992957         | 6.557336  | 303.278  | 322.576  |
-| 15      | 2279184    | 168849888        | 42.619426 | 2057.052 | 1979.343 |
------------------------------------------------------------------------------
-</pre></div>
-
-
-<p><img alt="Graph of walltime versus number of solutions tested" src="/images/python-vs-perl-ntested.png"></p>
-<p><a name="pvp-winner"></a></p>
-<h2>The Winner: Perl for Small Problems, Python for Big Ones</h2>
-<p>It was not a big surprise to see that Perl and Python were nearly identical in their performance,
-and it testament to the fact that interpreted scripting languages like Perl and Python operate at one speed,
-and compiled code in C++ or Java operates at a completely different speed that is an order of magnitude faster 
-(see the comparison of Perl and Java in a prior blog post).</p>
-<p>Perl and Python were close enough in performance that, although Perl came out ahead on smaller problems
-and Python came out ahead on the biggest, a different CPU or platform, micro-optimizations, and various butterfly effects 
-could easily turn the tables. </p>
-<p><a name="pvp-sources"></a></p>
-<h2>Sources</h2>
-<ol>
-<li>
-<p>"N-Queens Problem". Rosetta Code, GNU Free Documentation License. Edited 6 March 2017. Accessed 21 March 2017.
-&lt;<a href="https://web.archive.org/web/20170320081421/http://rosettacode.org/wiki/N-queens_problem">https://web.archive.org/web/20170320081421/http://rosettacode.org/wiki/N-queens_problem</a>&gt;</p>
-</li>
-<li>
-<p>"nqueens.py". Charles Reid. Github Gist, Github Inc. Edited 25 March 2017. Accessed 25 March 2017.
-&lt;<a href="https://gist.github.com/charlesreid1/1a2ecb3a83284290d4a9daf747d0d7e4">https://gist.github.com/charlesreid1/1a2ecb3a83284290d4a9daf747d0d7e4</a>&gt;</p>
-</li>
-<li>
-<p>"nqueens.pl". Charles Reid. Github Gist, Github Inc. Edited 20 March 2017. Accessed 23 March 2017.
-&lt;<a href="https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535">https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535</a>&gt;</p>
-</li>
-<li>
-<p>"The Python Profilers". Python 2.7.13 Documentation, Python Software Foundation. Updated 20 February 2017. Accessed 23 March 2017. 
-&lt;<a href="https://docs.python.org/2/library/profile.html">https://docs.python.org/2/library/profile.html</a>&gt;</p>
-</li>
-<li>
-<p>"line_profiler". Python Package Index, Python Software Foundation. Updated 20 October 2016. Accessed 23 March 2017.
-&lt;<a href="https://pypi.python.org/pypi/line_profiler/">https://pypi.python.org/pypi/line_profiler/</a>&gt;</p>
-</li>
-<li>
-<p>"Github - rkern/line_profiler". rkern, Github Repository, Github Inc. Updated 20 October 2016. Accessed 23 March 2017.
-&lt;<a href="https://github.com/rkern/line_profiler">https://github.com/rkern/line_profiler</a>&gt;</p>
-</li>
-<li>
-<p>"Python/Profiling". Charlesreid1.com wiki, Charles Reid. Edited 23 March 2017. Accessed 23 March 2017.
-&lt;<a href="https://web.archive.org/web/20170326031708/http://charlesreid1.com/wiki/Python/Profiling">https://web.archive.org/web/20170326031708/http://charlesreid1.com/wiki/Python/Profiling</a>&gt;</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    var location_protocol = (false) ? 'https' : document.location.protocol;
-    if (location_protocol !== 'http' && location_protocol !== 'https') location_protocol = 'https:';
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = location_protocol + '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/perl.html">perl</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/java.html">java</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/recursion.html">recursion</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/n-queens.html">n-queens</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1702,6 +1712,9 @@ could easily turn the tables. </p>
 
             <h2>January 2018</h2>
 
+            <p class="archive">
+            <a href="/4x4-rubiks-cube-part-1-representation.html">4x4 Rubik's Cube: Part 1: Representation</a>
+            </p>
             <p class="archive">
             <a href="/lets-generate-permutations.html">Let's Generate Permutations!</a>
             </p>
