@@ -1,7 +1,12 @@
 Title: 4x4 Rubik's Cube: Part 1: Representation
-Date: 2018-01-11 10:00
+Date: 2018-01-11 15:00
 Category: Rubiks Cube
 Tags: rubiks cube, mathematics, combinatorics, permutations, python, puzzles
+
+**This is Part 1 of a 3-part blog post 
+on the mathematics of the 4x4 Rubik's Cube, 
+its relation to algorithms, and some 
+curious properties of Rubik's Cubes.**
 
 # Table of Contents
 
@@ -118,8 +123,7 @@ is always fixed; the red and orange colored faces, for example,
 are never adjacent. This is due to the nature of the mechanical
 pieces that compose the Rubik's Cube.
 
-The standard orientation of colors to refer to the soled cube
-is as follows:
+The standard faces for each color on a solved cube are:
 
 * `U` = White
 * `D` = Yellow
@@ -145,7 +149,7 @@ using the face notation explained above, we can denote
 multiple types of moves on the Rubik's Cube.
 
 We have 36 total moves that we can make on the Rubik's Cube,
-easy to remember using the following groups of 12:
+which can be grouped by the dozen:
 
 ```
 L l r R
@@ -259,6 +263,7 @@ L L L L  F F F F  R R R R  B B B B
 ## Operations and Functionality
 
 Some important functionality:
+
 * Obtaining each side
 * Applying rotation
 * Applying sequence of rotations
@@ -277,8 +282,13 @@ OrderedDict([('U', <rubikscubennnsolver.RubiksSide.Side object at 0x11172d358>),
              ('D', <rubikscubennnsolver.RubiksSide.Side object at 0x11172d390>)])
 ```
 
+Each Side object has a long list of methods, including methods
+to obtain the index numbers of corner, edge, or center faces 
+on a particular side.
+
 To apply a rotation of a single face, 
-use the `rotate()` method:
+use the `rotate()` method and pass the 
+name of the face:
 
 ```
 In [10]: cube.rotate("U")
@@ -374,7 +384,7 @@ better if our goal were a minimal representation
 of the Rubik's Cube state.
 
 However, our goal is *not* a minimal representation
-of the cube, bu a *unique* representation of the cube.
+of the cube, but a *unique* representation of the cube.
 As we will see in a later post, the schema we use
 does not actually matter, so long as we can 
 represent each unique state of the cube using a sequence
@@ -384,6 +394,7 @@ of integers of arbitrary length.
 ## Tuple Representation Requirements
 
 The 4x4 cube, in the solved state, has a few representations:
+
 * Face indciators UDFBLR
 * Colors WYGBRO
 * Integers 1-96
@@ -429,8 +440,18 @@ O O O O  G G G G  R R R R  B B B B
 
 However, the tuple representation *cannot* use 
 colors to represent the state of the cube.
-We must use an integer to index each distinct
-face:
+This is because a tuple representation using 
+"R" to represent each red face would give us no
+way of distinguishing between the (non-interchangeable)
+red faces on the cube. For example, if the 
+red-green double edge piece were replaced 
+with a red-blue double edge piece, oriented
+with the red face at the same location,
+the n-tuple needs to reflect that this face
+has a different value than it did the prior move.
+
+For this reason, we must use an integer to index 
+each distinct face:
 
 ```
              01 02 03 04
@@ -449,14 +470,14 @@ face:
              93 94 95 96
 ```
 
-We can rearrange this:
+We can rearrange this into a 96-tuple:
 
 ```
 (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
 ```
 
 If we apply a rotation, for example `U R`, 
-we end up with a different cube:
+we will end up with a different cube:
 
 ```
              13 09 05 01
@@ -486,24 +507,21 @@ a cube state uniquely represented by the following
 <a name="tuple-representation"></a>
 ## Tuple Representation 
 
-Tuple representation:
-* 96 integers
-* Caveat: 4 are interchangeable.
-* Two approaches: one more complicated, one less complicated.
-* More complicated: duplicates in 96-tuple
-* Less complicated: 96 separate faces, but build in accounting for fact that four faces are interchangeable
-
-
 Now, we have managed to find a unique representation for any given cube state 
 by labeling each individual face 1-96.
 
-But we aren't quite done yet. It turns out that the 
-square pieces, which we said were completely interchangeable
-because they had no second face and therefore no orientation 
-to differentiate one center piece from another,
-throw in a twist. If we are doing anything that involves
-counting configurations, we should take care to
-treat the following groups of tuple indices as 
+But we aren't quite done yet. It turns out that our 
+statement, that our representation should treat each
+face as unique, is not strictly true for all 96 faces.
+
+The square pieces are completely interchangeable, due to 
+the fact that they are not connected to any other faces
+(and therefore have no orientation or way of differentiating
+them from one another).
+
+If we are doing anything that involves counting 
+configurations, it is important to account for this fact,
+by treating the following groups of face indices as
 interchangeable:
 
 ```
