@@ -1,7 +1,7 @@
 Title: 4x4 Rubik's Cube: Part 1: Representation
 Date: 2018-01-11 10:00
 Category: Rubiks Cube
-Tags: rubiks cube, combinatorics, permutations, python, puzzles, art of computer programming, knuth
+Tags: rubiks cube, mathematics, combinatorics, permutations, python, puzzles
 
 # Table of Contents
 
@@ -359,21 +359,129 @@ In [6]: cube.print_cube_layout()
 <a name="tuple"></a>
 # Tuple Representation
 
-Goal is to come up with a tuple representation of a 
-unique cube state.
+We have a goal of finding a way of representing the 
+state of the 4x4 Rubik's Revenge using a tuple, 
+which is a mathematical object that will enable us
+to investigate properties of sequences, moves, and 
+rotations.
 
-Goal is not to come up with minimal representation,
-but to come up with unique repesentation.
+It is important to note that the mechanics of the
+cube restrict some of the 96 total faces to only 
+occur in particular configurations. By using a 
+tuple of 96 integers, we are overspecifying the 
+state of the cube, and we would be able to do much 
+better if our goal were a minimal representation 
+of the Rubik's Cube state.
 
-Use a 96-tuple to represent location of each face.
+However, our goal is *not* a minimal representation
+of the cube, bu a *unique* representation of the cube.
+As we will see in a later post, the schema we use
+does not actually matter, so long as we can 
+represent each unique state of the cube using a sequence
+of integers of arbitrary length.
 
 <a name="tuple-requirements"></a>
 ## Tuple Representation Requirements
 
-What tuple representation will look like
-* Why can't just label faces/colors
-* Not a multiset problem WWWWBBBBRRRR etc
-* Numerical labeling of each face
+The 4x4 cube, in the solved state, has a few representations:
+* Face indciators UDFBLR
+* Colors WYGBRO
+* Integers 1-96
+
+Here is how the faces representation looks:
+
+```
+In [17]: cube.print_cube()
+         U U U U
+         U U U U
+         U U U U
+         U U U U
+
+L L L L  F F F F  R R R R  B B B B
+L L L L  F F F F  R R R R  B B B B
+L L L L  F F F F  R R R R  B B B B
+L L L L  F F F F  R R R R  B B B B
+
+         D D D D
+         D D D D
+         D D D D
+         D D D D
+```
+
+The equivalent color representation is:
+
+```
+         W W W W
+         W W W W
+         W W W W
+         W W W W
+
+O O O O  G G G G  R R R R  B B B B
+O O O O  G G G G  R R R R  B B B B
+O O O O  G G G G  R R R R  B B B B
+O O O O  G G G G  R R R R  B B B B
+
+         Y Y Y Y
+         Y Y Y Y
+         Y Y Y Y
+         Y Y Y Y
+```
+
+However, the tuple representation *cannot* use 
+colors to represent the state of the cube.
+We must use an integer to index each distinct
+face:
+
+```
+             01 02 03 04
+             05 06 07 08
+             09 10 11 12
+             13 14 15 16
+
+17 18 19 20  33 34 35 36  49 50 51 52  65 66 67 68
+21 22 23 24  37 38 39 40  53 54 55 56  69 70 71 72
+25 26 27 28  41 42 43 44  57 58 59 60  73 74 75 76
+29 30 31 32  45 46 47 48  61 62 63 64  77 78 79 80
+
+             81 82 83 84
+             85 86 87 88
+             89 90 91 92
+             93 94 95 96
+```
+
+We can rearrange this:
+
+```
+(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+```
+
+If we apply a rotation, for example `U R`, 
+we end up with a different cube:
+
+```
+             13 09 05 01
+             14 10 06 02
+             15 11 07 03
+             48 44 40 36
+
+33 34 35 84  61 57 53 49  16 66 67 68  17 18 19 20
+21 22 23 24  37 38 39 88  62 58 54 50  12 70 71 72
+25 26 27 28  41 42 43 92  63 59 55 51  08 74 75 76
+29 30 31 32  45 46 47 96  64 60 56 52  04 78 79 80
+
+             81 82 83 77
+             85 86 87 73
+             89 90 91 69
+             93 94 95 65
+```
+
+This particular sequence of moves results in 
+a cube state uniquely represented by the following 
+96-tuple:
+
+```
+(13 9 5 1 14 10 6 2 15 11 7 3 48 44 40 36 33 34 35 84 21 22 23 24 25 26 27 28 29 30 31 32 61 57 53 49 37 38 39 88 41 42 43 92 45 46 47 96 16 66 67 68 62 58 54 50 63 59 55 51 64 60 56 52 17 18 19 20 12 70 71 72 8 74 75 76 4 78 79 80 81 82 83 77 85 86 87 73 89 90 91 69 93 94 95 65)
+```
 
 <a name="tuple-representation"></a>
 ## Tuple Representation 
@@ -386,9 +494,47 @@ Tuple representation:
 * Less complicated: 96 separate faces, but build in accounting for fact that four faces are interchangeable
 
 
+Now, we have managed to find a unique representation for any given cube state 
+by labeling each individual face 1-96.
+
+But we aren't quite done yet. It turns out that the 
+square pieces, which we said were completely interchangeable
+because they had no second face and therefore no orientation 
+to differentiate one center piece from another,
+throw in a twist. If we are doing anything that involves
+counting configurations, we should take care to
+treat the following groups of tuple indices as 
+interchangeable:
+
+```
+(6, 7, 10, 11)
+(22, 23, 26, 27)
+(38, 39, 42, 43)
+(54, 55, 58, 59)
+(70, 71, 74, 75)
+(86, 87, 90, 91)
+```
+
+In Part 2 and Part 3 of this series, we will 
+encounter these concepts again, and it will
+become more clear what these caveats and 
+notes mean through example.
+
+Following is a preview of Part 2 of this 3-part blog post.
+
+
+
 <a name="preview-part-2"></a>
 # Preview of Part 2
 
-* Rotations and move sequences
-* Create maps for rotations: where does each index go?
+In Part 2 of this series, we will utilize the n-tuple representation
+of the 4x4 Rubik's Cube in order to write permutations of the cube
+corresponding to specific states, and turn a sequence of moves on the 
+cube into permutations.
+
+We will also create a map for each type of move, telling us 
+where each face index will end up.
+
+In Part 3 we will use these to predict properties of 
+rotations applied to the 4x4 Rubik's Cube.
 
