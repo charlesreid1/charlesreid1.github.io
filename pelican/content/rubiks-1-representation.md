@@ -3,10 +3,10 @@ Date: 2018-01-11 15:00
 Category: Rubiks Cube
 Tags: rubiks cube, mathematics, combinatorics, permutations, python, puzzles
 
-**This is Part 1 of a 3-part blog post 
+*This is Part 1 of a 3-part blog post 
 on the mathematics of the 4x4 Rubik's Cube, 
 its relation to algorithms, and some 
-curious properties of Rubik's Cubes.**
+curious properties of Rubik's Cubes.*
 
 # Table of Contents
 
