@@ -1,5 +1,5 @@
 Title: 4x4 Rubik's Cube: Part 2: Permutations
-Date: 2018-01-14 14:00
+Date: 2018-01-14 20:00
 Category: Rubiks Cube
 Tags: rubiks cube, combinatorics, permutations, python, puzzles, art of computer programming, knuth
 
@@ -10,31 +10,36 @@ curious properties of Rubik's Cubes.*
 
 # Table of Contents
 
-* [Introduction: Sequences and Permutations](#intro)
+* [Introduction: Sequences and Permutations](#rubiks2-intro)
 
-* [Representing Permutations: Two-Row Notation](#representing)
-    * [Two-Row Notation](#representing-tworow)
-    * [Two-Row Notation for Rubik's Cube](#representing-tworow-rubiks)
+* [Representing Permutations: Two-Row Notation](#rubiks2-representing)
+    * [Two-Row Notation](#rubiks2-representing-tworow)
+    * [Two-Row Notation for Rubik's Cube](#rubiks2-representing-tworow-rubiks)
 
-* [Sequences](#sequences)
-    * [Review of Move/Sequence Notation](#sequences-review)
-    * [How Moves Permute the Cube](#sequences-permute-cube)
+* [Sequences](#rubiks2-sequences)
+    * [Review of Move/Sequence Notation](#rubiks2-sequences-review)
+    * [How Moves Permute the Cube](#rubiks2-sequences-permute-cube)
 
-* [Rotation Maps](#maps)
-    * [U Rotation Map](#maps-u)
-    * [D Rotation Map](#maps-d)
-    * [L Rotation Map](#maps-l)
-    * [R Rotation Map](#maps-r)
-    * [F Rotation Map](#maps-f)
-    * [B Rotation Map](#maps-b)
-    * [How to Use Rotation Map](#maps-rotation)
+* [Rotation Maps](#rubiks2-maps)
+    * [U Rotation Map](#rubiks2-maps-u)
+    * [D Rotation Map](#rubiks2-maps-d)
+    * [L Rotation Map](#rubiks2-maps-l)
+    * [R Rotation Map](#rubiks2-maps-r)
+    * [F Rotation Map](#rubiks2-maps-f)
+    * [B Rotation Map](#rubiks2-maps-b)
+    * [How to Use Rotation Map](#rubiks2-maps-rotation)
+    * [Face Map Code](#rubiks2-maps-code)
+
+* [Tuples for Move Sequences](#rubiks2-tuples)
+
+* [Preview of Part 3](#rubiks2-preview)
+
+* [Appendix: Cube with Numbered Faces](#rubiks2-appendix)
 
 
 
-<a name="intro"></a>
+<a name="rubiks2-intro"></a>
 # Introduction
-
-(Sequences and permutations)
 
 In this post, we'll be connecting material from Part 1, about 
 how to represent the state of the cube in a mathematical way,
@@ -47,6 +52,10 @@ This notation is useful for representing permutations
 in a way that makes it possible to create a system for 
 describing permutations using algebra.
 
+We will not discuss the aim of representing permutations
+in this way in the present post, but this will be 
+described in Part 3.
+
 Next, we discuss move sequences on the Rubik's Cube - 
 these are sequences of rotations of particular faces
 on the Rubik's Cube. We discuss the application of the 
@@ -58,7 +67,7 @@ in the implementation of permutations via move sequences.
 
 
 
-<a name="representing"></a>
+<a name="rubiks2-representing"></a>
 # Representing Permutations: Two-Row Notation
 
 We begin by expanding on and streamlining the tuple notation
@@ -72,7 +81,7 @@ starting a cube in the solved state, then describing where
 each face ends up, in order to completely specify 
 the outcome of a move or a sequence of moves.
 
-<a name="representing-tworow"></a>
+<a name="rubiks2-representing-tworow"></a>
 ## Two-Row Notation
 
 We begin by considering a permutation of an $n$-tuple,
@@ -108,7 +117,7 @@ b = \bigl(\begin{smallmatrix}
 \end{smallmatrix}\bigr)
 $$
 
-<a name="representing-tworow-rubiks"></a>
+<a name="rubiks2-representing-tworow-rubiks"></a>
 ## Two-Row Notation for Rubik's Cube
 
 If we adopt the above two-row notation for the Rubik's Cube,
@@ -131,10 +140,10 @@ performed on a solved cube.
 
 
 
-<a name="sequences"></a>
+<a name="rubiks2-sequences"></a>
 # Sequences
 
-<a name="sequences-review"></a>
+<a name="rubiks2-sequences-review"></a>
 ## Review of Move/Sequence Notation
 
 Let's quickly recap what we already know from prior posts about the 
@@ -165,7 +174,7 @@ A 2 before the letter indicates that the second layer should be rotated
 (e.g., `2F` indicates a clockwise rotation of the second layer of the 
 front face).
 
-<a name="sequences-permute-cube"></a>
+<a name="rubiks2-sequences-permute-cube"></a>
 ## How Moves Permute the Cube
 
 This will be a little easier to understand if we consider 
@@ -231,13 +240,14 @@ The remaining 64 faces do not move:
 ```
 
 
-<a name="maps"></a>
+<a name="rubiks2-maps"></a>
 # Rotation Maps
 
 While the 96-tuple representation is useful, a better computational
 representation of the tuple is a rotation map, which consists of 
 2-tuples of face index numbers that are permuted. For example,
-the tuple $(4,16)$ would indicate that face 4 moves to face 16.
+the tuple $(4,16)$ would indicate that the position at face 4
+would become face 16 after the rotation.
 
 As a reminder, here is the solved cube's face index layout:
 
@@ -260,8 +270,10 @@ As a reminder, here is the solved cube's face index layout:
 
 Thus, the rotation map representation of each move would be:
 
-<a name="maps-u"></a>
+<a name="rubiks2-maps-u"></a>
 ## U Rotation Map
+
+Upon a U rotation, the face 1 will become face 13, indicated by (1,13).
 
 ```
 U:
@@ -495,7 +507,7 @@ L:
  (64, 93)]
 ```
 
-<a name="maps-rotation"></a>
+<a name="rubiks2-maps-rotation"></a>
 ## How To Use Rotation Map
 
 The rotation map enables us to represent a 4x4 Rubik's Cube
@@ -503,7 +515,8 @@ as a simple tuple, and just use a Rubik's Cube object from the
 [forked rubikscubesolver library](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)
 at git.charlesreid1.com to get the rotation maps.
 
-```
+```python
+# Python code:
 cube0 = list(range(1,96+1))
 cube1 = cube0.copy()
 cube_prior = cube0.copy()
@@ -524,8 +537,140 @@ for c,move in enumerate(rot.split(" ")):
     cube_prior = cube1.copy()
 ```
 
-Rotation maps provide utility in actually dealing with
-the cube representations and in applying rotation moves
-to the cube.
+<a name="rubiks2-maps-code"></a>
+## Face Map Code
+
+In this section we present a portion of the code 
+that actually generates these face maps. This functionality
+was not in the [original Rubik's Cube solver library](https://github.com/dwalton76/rubiks-cube-NxNxN-solver)
+from [Github user @dwalton76](https://github.com/dwalton76/),
+so the library was forked and the functionality added
+to the [forked Rubik's Cube solver library](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver).
+
+The actual implementation is in the `rotation_map(action)` method,
+defined for the Rubik's Cube object at the same place as the 
+`rotate(action)` method. This definition is in 
+`rubikscubennnsolver/__init__.py` on line 581:
+
+[link to `rubikscubennnsolver/__init__.py`](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver/src/master/rubikscubennnsolver/__init__.py#L581)
+
+This method returns a list containing the tuples of index permutations 
+(old,new) that correspond to this particular move. Call it like this:
+
+```python
+order = 'URFDLB'
+cube = RubiksCube444(solved_4x4x4, order)
+cube.rotation_map('U')
+```
+
+
+
+<a name="rubiks2-tuples"></a>
+# Tuples for Move Sequences
+
+So far we have shown the tuple representation for the Rubik's Cube
+and how it works, and created a more convenient representation for
+implementing the cube on a computer and applying rotations.
+
+Now, we can achieve the goal of this post, which is to be able to
+represent the state of a cube, after a certain number of rotations,
+in a quantitative and mathematical way.
+
+In Part 3, we'll develop an algebra of permutations to use 
+and understand the tuple representations we are presenting in 
+this post.
+
+## Applying Rotation Maps for Sequences
+
+The concept here is simple: we use the rotation maps that we defined
+above to permute elements according to the formula prescribed for 
+that particular rotation.
+
+By applying these permutations sequentially, we can permute the 
+96-tuple in a way that represents the permutations created by 
+a given sequence of moves.
+
+For example, after applying four sequence maps corresponding to 
+the move sequence `U R U' R'` we get:
+
+```
+(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+(1 2 3 77 5 6 7 73 9 10 11 69 16 12 8 20 17 18 19 36 21 22 23 24 25 26 27 28 29 30 31 32 49 50 51 33 37 38 39 40 41 42 43 44 45 46 47 48 13 56 60 64 53 54 55 34 57 58 59 35 61 62 63 4 96 66 67 68 14 70 71 72 15 74 75 76 65 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 52)
+```
+
+<a name="rubiks2-preview"></a>
+# Preview of Part 3
+
+As a preview of where we are going with Part 3, let's 
+return to the permutation corresponding to `U R U' R'`:
+
+```
+(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+(1 2 3 77 5 6 7 73 9 10 11 69 16 12 8 20 17 18 19 36 21 22 23 24 25 26 27 28 29 30 31 32 49 50 51 33 37 38 39 40 41 42 43 44 45 46 47 48 13 56 60 64 53 54 55 34 57 58 59 35 61 62 63 4 96 66 67 68 14 70 71 72 15 74 75 76 65 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 52)
+```
+
+It turns out that, unlike the `U` move by itself, this move sequence 
+results in groups of either three or six faces exchanging places.
+(In Part 3 we will cover the algorithm for finding these groups,
+which, crucially, relies on the work we did in this post.)
+
+The groups of six faces that are permuted are:
+
+```
+[77, 65, 96, 52, 64, 4]
+[16, 20, 36, 33, 49, 13]
+```
+
+These two sets of six faces all live on corners of the cube, 
+so this move sequence swaps six corners.
+
+Likewise, the groups of three faces that are permuted are:
+
+```
+[73, 15, 8]
+[69, 14, 12]
+[50, 56, 34]
+[51, 60, 35]
+```
+
+These are all faces on double edge pieces: 
+
+* `[73, 15, 8]` and `[51, 60, 35]` are faces on right-handed double edge pieces
+* `[69, 14, 12]` and `[50, 56, 34]` are faces on left-handed double edge pieces
+
+The remaining faces do not permute:
+
+```
+[1, 2, 3, 5, 6, 7, 9, 10, 11, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 53, 54, 55, 57, 58, 59, 61, 62, 63, 66, 67, 68, 70, 71, 72, 74, 75, 76, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95]
+```
+
+What we will discover is that the least common multiple 
+of these two numbers, 6 and 3, yields the number of times
+this move sequence needs to be applied to a solved cube (6) 
+in order to return the cube back to its solved state.
+
+
+
+<a name="rubiks2-appendix"></a>
+# Appendix: Cube with Numbered Faces
+
+```
+             01 02 03 04
+             05 06 07 08
+             09 10 11 12
+             13 14 15 16
+
+17 18 19 20  33 34 35 36  49 50 51 52  65 66 67 68
+21 22 23 24  37 38 39 40  53 54 55 56  69 70 71 72
+25 26 27 28  41 42 43 44  57 58 59 60  73 74 75 76
+29 30 31 32  45 46 47 48  61 62 63 64  77 78 79 80
+
+             81 82 83 84
+             85 86 87 88
+             89 90 91 92
+             93 94 95 96
+```
+
+
 
 
