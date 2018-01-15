@@ -2,7 +2,6 @@ Title: 4x4 Rubik's Cube: Part 2: Permutations
 Date: 2018-01-14 14:00
 Category: Rubiks Cube
 Tags: rubiks cube, combinatorics, permutations, python, puzzles, art of computer programming, knuth
-Status: draft
 
 *This is Part 2 of a 3-part blog post 
 on the mathematics of the 4x4 Rubik's Cube, 
@@ -14,26 +13,129 @@ curious properties of Rubik's Cubes.*
 * [Introduction: Sequences and Permutations](#intro)
 
 * [Representing Permutations: Two-Row Notation](#representing)
+    * [Two-Row Notation](#representing-tworow)
+    * [Two-Row Notation for Rubik's Cube](#representing-tworow-rubiks)
 
 * [Sequences](#sequences)
+    * [Review of Move/Sequence Notation](#sequences-review)
+    * [How Moves Permute the Cube](#sequences-permute-cube)
 
 * [Rotation Maps](#maps)
+    * [U Rotation Map](#maps-u)
+    * [D Rotation Map](#maps-d)
+    * [L Rotation Map](#maps-l)
+    * [R Rotation Map](#maps-r)
+    * [F Rotation Map](#maps-f)
+    * [B Rotation Map](#maps-b)
+    * [How to Use Rotation Map](#maps-rotation)
+
+
+
+<a name="intro"></a>
+# Introduction
+
+(Sequences and permutations)
+
+In this post, we'll be connecting material from Part 1, about 
+how to represent the state of the cube in a mathematical way,
+to the ultimate goal of exploring properties of particular
+move sequences.
+
+In paticular, we'll expand on the tuple notation from Part 1,
+and demonstrate the two-row permutation notation of Knuth.
+This notation is useful for representing permutations 
+in a way that makes it possible to create a system for 
+describing permutations using algebra.
+
+Next, we discuss move sequences on the Rubik's Cube - 
+these are sequences of rotations of particular faces
+on the Rubik's Cube. We discuss the application of the 
+two-row permutation notation to describe moves
+and to describe move sequences.
+
+Finally, we discuss rotation maps, a useful concept
+in the implementation of permutations via move sequences.
 
 
 
 <a name="representing"></a>
 # Representing Permutations: Two-Row Notation
 
-(Write state of cube at beginning, then state of cube at end)
+We begin by expanding on and streamlining the tuple notation
+introduced in Part 1 of this post so that we have a common
+basis for comparing two permutations. We do this using a two-row
+notation, where the first row denotes the "solved" or default 
+state of the system.
 
-(Introduce two row notation)
+In the case of the Rubik's Cube, this is equivalent to 
+starting a cube in the solved state, then describing where
+each face ends up, in order to completely specify 
+the outcome of a move or a sequence of moves.
 
-(This is how we will denote a particular permutation)
+<a name="representing-tworow"></a>
+## Two-Row Notation
+
+We begin by considering a permutation of an $n$-tuple,
+which, in the last post, we resolved to denote 
+
+$$
+(2 3 4 \dots n 1)
+$$
+
+Now, let us write this as two rows: the first row
+consists of each element of the tuple *in ascending 
+order*, while the second line will the tuple corresponding
+to the order of the elements in this particular permutation:
+
+$$
+a = \bigl(\begin{smallmatrix}
+  1 & 2 & 3 & \cdots & n-1 & n \\
+  2 & 3 & 4 & \cdots &  n  & 1
+\end{smallmatrix}\bigr)
+$$
+
+We can think of the first row as denoting the "solved", 
+default configuration, and the second row denoting how 
+each item is permuted.
+
+If we had a different permutation, we would simply change
+the second row:
+
+$$
+b = \bigl(\begin{smallmatrix}
+  1 & 2 & 3 & \cdots & n-1 & n \\
+  n & 4 & 1 & \cdots & 2   & 3
+\end{smallmatrix}\bigr)
+$$
+
+<a name="representing-tworow-rubiks"></a>
+## Two-Row Notation for Rubik's Cube
+
+If we adopt the above two-row notation for the Rubik's Cube,
+and we utilize the face numbering and tuple indexing from Part 1,
+the top row consists of the integers from 1 to 96:
+
+```
+(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+```
+
+Now suppose we perform a rotation of the upper row U on the cube.
+Then we end up with the following tuple:
+
+```
+(13 9 5 1 14 10 6 2 15 11 7 3 16 12 8 4 33 34 35 36 21 22 23 24 25 26 27 28 29 30 31 32 49 50 51 52 37 38 39 40 41 42 43 44 45 46 47 48 65 66 67 68 53 54 55 56 57 58 59 60 61 62 63 64 17 18 19 20 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+```
+
+This tuple denotes the permutation corresponding to the move U 
+performed on a solved cube.
 
 
 
 <a name="sequences"></a>
 # Sequences
+
+<a name="sequences-review"></a>
+## Review of Move/Sequence Notation
 
 Let's quickly recap what we already know from prior posts about the 
 properties of move sequences on the Rubik's Cube.
@@ -45,34 +147,385 @@ and cover clockwise and counterclockwise rotations of
 each of the six faces - either the first layer, the second layer,
 or both of the first two layers.
 
-These moves are denoted with six letters (UDLRFB) for the upper,
+These moves are denoted with six letters (`UDLRFB`) for the upper,
 downward, left, right, front, and back face of the cube, respectively.
 
 Moves indicated should be clockwise unless they contain an apostrophe
 character `'`, which indicates counterclockwise rotation.
 
 A capital letter indicates a rotation of the first layer only 
-(e.g., U indicates a clockwise rotation of the first layer of 
+(e.g., `U` indicates a clockwise rotation of the first layer of 
 the upper face).
 
 A lowercase letter indicates a roration of the first and second layers
-(e.g., r indicates a clockwise rotation of the top two layers of
+(e.g., `r` indicates a clockwise rotation of the top two layers of
 the right face).
 
 A 2 before the letter indicates that the second layer should be rotated
-(e.g., 2F indicates a clockwise rotation of the second layer of the 
+(e.g., `2F` indicates a clockwise rotation of the second layer of the 
 front face).
 
+<a name="sequences-permute-cube"></a>
+## How Moves Permute the Cube
+
+This will be a little easier to understand if we consider 
+a particular move sequence. We'll start simple and consider 
+the move sequence `U`. This results, as we saw before, in:
+
+```
+U:
+(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+(13 9 5 1 14 10 6 2 15 11 7 3 16 12 8 4 33 34 35 36 21 22 23 24 25 26 27 28 29 30 31 32 49 50 51 52 37 38 39 40 41 42 43 44 45 46 47 48 65 66 67 68 53 54 55 56 57 58 59 60 61 62 63 64 17 18 19 20 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+```
+
+Now let's consider the move sequence `U U`, a double rotation of the 
+cube's top layer:
+
+```
+U U:
+(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+(16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 49 50 51 52 21 22 23 24 25 26 27 28 29 30 31 32 65 66 67 68 37 38 39 40 41 42 43 44 45 46 47 48 17 18 19 20 53 54 55 56 57 58 59 60 61 62 63 64 33 34 35 36 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+```
+
+Third, we consider the move sequence `U U U`, equivalent to `U'`,
+a counterclockwise rotation of the top layer:
+
+```
+U U U:
+(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+(4 8 12 16 3 7 11 15 2 6 10 14 1 5 9 13 65 66 67 68 21 22 23 24 25 26 27 28 29 30 31 32 17 18 19 20 37 38 39 40 41 42 43 44 45 46 47 48 33 34 35 36 53 54 55 56 57 58 59 60 61 62 63 64 49 50 51 52 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+```
+
+The fourth application of `U`, of course, will return the cube back to its 
+solved state:
+
+```
+U U U:
+(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96)
+```
+
+Now if we examine the relationship between each of these tuples, 
+we see that the faces are exchanged according to specific patterns.
+
+These groups of four numbered faces are exchanged with one another:
+
+```
+( 4, 16, 13,  1)
+( 8, 15,  9,  2)
+(12, 14,  5,  3)
+( 7, 11, 10,  6)
+(65, 49, 33, 17) 
+(66, 50, 34, 18)
+(67, 51, 35, 19)
+(68, 52, 36, 20)
+```
+
+There are 8 total faces, composing one upper quadrant of the face
+being rotated.
+
+The remaining 64 faces do not move:
+
+```
+(21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96)
+```
 
 
 <a name="maps"></a>
 # Rotation Maps
 
-Alternative way of representing a permutation,
-list of 2-tuples that indicate which face index
-goes to which new face index.
+While the 96-tuple representation is useful, a better computational
+representation of the tuple is a rotation map, which consists of 
+2-tuples of face index numbers that are permuted. For example,
+the tuple $(4,16)$ would indicate that face 4 moves to face 16.
+
+As a reminder, here is the solved cube's face index layout:
+
+```
+             01 02 03 04
+             05 06 07 08
+             09 10 11 12
+             13 14 15 16
+
+17 18 19 20  33 34 35 36  49 50 51 52  65 66 67 68
+21 22 23 24  37 38 39 40  53 54 55 56  69 70 71 72
+25 26 27 28  41 42 43 44  57 58 59 60  73 74 75 76
+29 30 31 32  45 46 47 48  61 62 63 64  77 78 79 80
+
+             81 82 83 84
+             85 86 87 88
+             89 90 91 92
+             93 94 95 96
+```
+
+Thus, the rotation map representation of each move would be:
+
+<a name="maps-u"></a>
+## U Rotation Map
+
+```
+U:
+---------------------
+[(1, 13),
+ (2, 9),
+ (3, 5),
+ (4, 1),
+ (5, 14),
+ (6, 10),
+ (7, 6),
+ (8, 2),
+ (9, 15),
+ (10, 11),
+ (11, 7),
+ (12, 3),
+ (13, 16),
+ (14, 12),
+ (15, 8),
+ (16, 4),
+ (17, 33),
+ (18, 34),
+ (19, 35),
+ (20, 36),
+ (33, 49),
+ (34, 50),
+ (35, 51),
+ (36, 52),
+ (49, 65),
+ (50, 66),
+ (51, 67),
+ (52, 68),
+ (65, 17),
+ (66, 18),
+ (67, 19),
+ (68, 20)]
+```
+
+## D Rotation Map
+
+```
+D:
+----------------------------------------
+[(81, 93),
+ (82, 89),
+ (83, 85),
+ (84, 81),
+ (85, 94),
+ (86, 90),
+ (87, 86),
+ (88, 82),
+ (89, 95),
+ (90, 91),
+ (91, 87),
+ (92, 83),
+ (93, 96),
+ (94, 92),
+ (95, 88),
+ (96, 84),
+ (29, 77),
+ (30, 78),
+ (31, 79),
+ (32, 80),
+ (45, 29),
+ (46, 30),
+ (47, 31),
+ (48, 32),
+ (61, 45),
+ (62, 46),
+ (63, 47),
+ (64, 48),
+ (77, 61),
+ (78, 62),
+ (79, 63),
+ (80, 64)]
+```
+
+## L Rotation Map
+
+```
+L:
+----------------------------------------
+[(17, 29),
+ (18, 25),
+ (19, 21),
+ (20, 17),
+ (21, 30),
+ (22, 26),
+ (23, 22),
+ (24, 18),
+ (25, 31),
+ (26, 27),
+ (27, 23),
+ (28, 19),
+ (29, 32),
+ (30, 28),
+ (31, 24),
+ (32, 20),
+ (1, 80),
+ (5, 76),
+ (9, 72),
+ (13, 68),
+ (33, 1),
+ (37, 5),
+ (41, 9),
+ (45, 13),
+ (81, 33),
+ (85, 37),
+ (89, 41),
+ (93, 45),
+ (68, 93),
+ (72, 89),
+ (76, 85),
+ (80, 81)]
+```
+
+## R Rotation Map
+
+```
+ R:
+----------------------------------------
+[(49, 61),
+ (50, 57),
+ (51, 53),
+ (52, 49),
+ (53, 62),
+ (54, 58),
+ (55, 54),
+ (56, 50),
+ (57, 63),
+ (58, 59),
+ (59, 55),
+ (60, 51),
+ (61, 64),
+ (62, 60),
+ (63, 56),
+ (64, 52),
+ (4, 36),
+ (8, 40),
+ (12, 44),
+ (16, 48),
+ (36, 84),
+ (40, 88),
+ (44, 92),
+ (48, 96),
+ (84, 77),
+ (88, 73),
+ (92, 69),
+ (96, 65),
+ (65, 16),
+ (69, 12),
+ (73, 8),
+ (77, 4)]
+```
+
+## F Rotation Map
+
+```
+ F:
+----------------------------------------
+[(33, 45),
+ (34, 41),
+ (35, 37),
+ (36, 33),
+ (37, 46),
+ (38, 42),
+ (39, 38),
+ (40, 34),
+ (41, 47),
+ (42, 43),
+ (43, 39),
+ (44, 35),
+ (45, 48),
+ (46, 44),
+ (47, 40),
+ (48, 36),
+ (13, 32),
+ (14, 28),
+ (15, 24),
+ (16, 20),
+ (20, 81),
+ (24, 82),
+ (28, 83),
+ (32, 84),
+ (81, 61),
+ (82, 57),
+ (83, 53),
+ (84, 49),
+ (49, 13),
+ (53, 14),
+ (57, 15),
+ (61, 16)]
+```
+
+## B Rotation Map
+
+```
+ B:
+----------------------------------------
+[(65, 77),
+ (66, 73),
+ (67, 69),
+ (68, 65),
+ (69, 78),
+ (70, 74),
+ (71, 70),
+ (72, 66),
+ (73, 79),
+ (74, 75),
+ (75, 71),
+ (76, 67),
+ (77, 80),
+ (78, 76),
+ (79, 72),
+ (80, 68),
+ (1, 52),
+ (2, 56),
+ (3, 60),
+ (4, 64),
+ (17, 4),
+ (21, 3),
+ (25, 2),
+ (29, 1),
+ (93, 17),
+ (94, 21),
+ (95, 25),
+ (96, 29),
+ (52, 96),
+ (56, 95),
+ (60, 94),
+ (64, 93)]
+```
+
+<a name="maps-rotation"></a>
+## How To Use Rotation Map
+
+The rotation map enables us to represent a 4x4 Rubik's Cube
+as a simple tuple, and just use a Rubik's Cube object from the 
+[forked rubikscubesolver library](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)
+at git.charlesreid1.com to get the rotation maps.
+
+```
+cube0 = list(range(1,96+1))
+cube1 = cube0.copy()
+cube_prior = cube0.copy()
+r = get_cube()
+
+for c,move in enumerate(rot.split(" ")):
+
+    # Get the rotation map
+    rotmap = r.rotation_map(move)
+
+    # (Print the rotation map here)
+
+    # Apply each transformation in the rotation map to the new cube
+    for m in rotmap:
+        # shift item at index m[0] to item at index m[1]
+        cube1[cube_prior.index(m[0])] = m[1]
+
+    cube_prior = cube1.copy()
+```
 
 Rotation maps provide utility in actually dealing with
 the cube representations and in applying rotation moves
 to the cube.
+
 
