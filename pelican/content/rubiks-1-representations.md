@@ -33,15 +33,36 @@ curious properties of Rubik's Cubes.*
 
 * [Preview of Part 2](#rubiks1-preview)
 
+* [References](#rubiks1-references)
+
 
 
 <a name="rubiks1-intro"></a>
 # Introduction: Why The Rubik's Cube
 
-* Rubiks' Cube interesting mathematical system
-* Exhibits symmetry found in real systems
-* Applied combinatorics, group theory
-* Algorithms
+In this series of three posts, we'll take a look at the 
+4x4 Rubik's Cube. The Rubik's Cube is an interesting
+puzzle that has some profound mathematical connections
+to group theory and combinatorics.
+
+Group theory is a branch of mathematics that applies to 
+any system that exhibits symmetry; combinatorics is the 
+mathematics of counting things.
+
+The Rubik's Cube gives us the opportunity to apply
+concepts in group theory and combinatorics to 
+better understand how the cube works, and to learn
+how to apply these principles to real world systems.
+
+Finally, we will wrap up by discussing some of the 
+algorithms that are required to deal with a 
+Rubik's Cube computationally.
+
+In the next two posts, we'll talk more abou the
+mathematical representation of permutations of 
+the Rubik's Cube, and how to use this representation 
+to understand some of the properties of move 
+sequences when applied to the cube.
 
 <a name="rubiks1-intro-why"></a>
 ## Why The 4x4 Rubik's Cube
@@ -51,8 +72,7 @@ is larger than the standard 3x3 Rubik's Cube. The 4x4 cube
 exhibits some particularly interesting properties as a result
 of having an even number of squares on each edge. 
 
-I'm also interested in the 4x4 because I enjoy solving it!
-I can solve the cube in 4 to 4.5 minutes.
+We are also interested in the 4x4 because we enjoy solving it!
 
 <a name="rubiks1-how"></a>
 # How the Rubik's Cube Works
@@ -555,4 +575,30 @@ where each face index will end up.
 
 In Part 3 we will use these to predict properties of 
 rotations applied to the 4x4 Rubik's Cube.
+
+
+
+<a name="rubiks1-references"></a>
+# References
+
+1. "Rubik's Cube". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
+<[https://charlesreid1.com/wiki/Rubiks_Cube](https://charlesreid1.com/wiki/Rubiks_Cube)>
+
+1. "Rubik's Revenge". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
+<[https://charlesreid1.com/wiki/Rubiks_Revenge](https://charlesreid1.com/wiki/Rubiks_Revenge)>
+
+3. "Rubik's Cube/Tuple". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
+<[https://charlesreid1.com/wiki/Rubiks_Cube/Tuple](https://charlesreid1.com/wiki/Rubiks_Cube/Tuple)>
+
+3. "Rubik's Cube/Permutations". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
+<[https://charlesreid1.com/wiki/Rubiks_Cube/Permutations](https://charlesreid1.com/wiki/Rubiks_Cube/Permutations)>
+
+4. "Github - dwalton76/rubiks-cube-NxNxN-solver". dwalton76, Github Repository, Github Inc. Accessed 11 January 2017.
+<[https://github.com/dwalton76/rubiks-cube-NxNxN-solver](https://github.com/dwalton76/rubiks-cube-NxNxN-solver)>
+
+5. "Rubik's Cube NxNxN Solver". Git repository, git.charlesreid1.com. Charles Reid. Updated 11 January 2017.
+<[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)>
+
+6. "Rubiks Cube Cycles". Git repository, git.charlesreid1.com. Charles Reid. Updated 11 January 2017.
+<[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles)>
 
