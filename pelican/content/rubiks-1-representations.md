@@ -10,32 +10,32 @@ curious properties of Rubik's Cubes.*
 
 # Table of Contents
 
-* [Introduction: Why the Rubik's Cube](#intro)
-    * [Why the 4x4 Rubik's Cube](#intro-why)
+* [Introduction: Why the Rubik's Cube](#rubiks1-intro)
+    * [Why the 4x4 Rubik's Cube](#rubiks1-intro-why)
 
-* [How the Rubik's Cube Works](#how)
-    * [The Pieces](#how-pieces)
-    * [Face Notation](#how-face)
-    * [Color Notation](#how-color)
-    * [Move Notation](#how-move)
-        * [Regular Face Rotations](#how-move-regular)
-        * [Reverse Face Rotations](#how-move-reverse)
-        * [Double Face Rotations](#how-move-double)
-        * [Second Layer Face Rotations](#how-move-second)
+* [How the Rubik's Cube Works](#rubiks1-how)
+    * [The Pieces](#rubiks1-how-pieces)
+    * [Face Notation](#rubiks1-how-face)
+    * [Color Notation](#rubiks1-how-color)
+    * [Move Notation](#rubiks1-how-move)
+        * [Regular Face Rotations](#rubiks1-how-move-regular)
+        * [Reverse Face Rotations](#rubiks1-how-move-reverse)
+        * [Double Face Rotations](#rubiks1-how-move-double)
+        * [Second Layer Face Rotations](#rubiks1-how-move-second)
 
-* [Computer Representation of a Rubik's Cube](#computer)
-    * [Operations an Functionality](#computer-operations)
-    * [Face Numbering](#computer-face)
+* [Computer Representation of a Rubik's Cube](#rubiks1-computer)
+    * [Operations an Functionality](#rubiks1-computer-operations)
+    * [Face Numbering](#rubiks1-computer-face)
 
-* [Tuple](#tuple)
-    * [Tuple Representation Requirements](#tuple-requirements)
-    * [Tuple Representation](#tuple-representation)
+* [Tuple](#rubiks1-tuple)
+    * [Tuple Representation Requirements](#rubiks1-tuple-requirements)
+    * [Tuple Representation](#rubiks1-tuple-representation)
 
-* [Preview of Part 2](#preview-part-2)
+* [Preview of Part 2](#rubiks1-preview)
 
 
 
-<a name="intro"></a>
+<a name="rubiks1-intro"></a>
 # Introduction: Why The Rubik's Cube
 
 * Rubiks' Cube interesting mathematical system
@@ -43,7 +43,7 @@ curious properties of Rubik's Cubes.*
 * Applied combinatorics, group theory
 * Algorithms
 
-<a name="intro-why"></a>
+<a name="rubiks1-intro-why"></a>
 ## Why The 4x4 Rubik's Cube
 
 The 4x4 Rubik's cube, also known as the Rubik's Revenge cube, 
@@ -54,14 +54,14 @@ of having an even number of squares on each edge.
 I'm also interested in the 4x4 because I enjoy solving it!
 I can solve the cube in 4 to 4.5 minutes.
 
-<a name="how"></a>
+<a name="rubiks1-how"></a>
 # How the Rubik's Cube Works
 
 Let's start with a discussion of cube mechanics, since this 
 is important to coming up with an accurate mathematical model
 of the cube.
 
-<a name="how-pieces"></a>
+<a name="rubiks1-how-pieces"></a>
 ## The Pieces
 
 The 4x4 Rubik's Cube consists of six faces of sixteen squares 
@@ -94,7 +94,7 @@ face, for a total of 24 center pieces. Note that each of the
 center pieces of a givne color are interchangeable, unlike 
 the double edge pieces or corners.
 
-<a name="how-face"></a>
+<a name="rubiks1-how-face"></a>
 ## Face Notation
 
 To refer to particular faces on the cube, we use six
@@ -114,7 +114,7 @@ letters to indicate different faces:
 
 This will help refer to how we will roate the cube.
 
-<a name="how-color"></a>
+<a name="rubiks1-how-color"></a>
 ## Color Notation
 
 In the solved state, each cube face has one of six colors.
@@ -142,7 +142,7 @@ interchangeable, and there is no link between the
 center colors on a 4x4 cube and the final color
 that will be on that face when the cube is solved.
 
-<a name="how-move"></a>
+<a name="rubiks1-how-move"></a>
 ## Move Notation
 
 using the face notation explained above, we can denote 
@@ -167,7 +167,7 @@ B' b' f' F'
 
 Let's go through those a little more slowly.
 
-<a name="how-move-regular"></a>
+<a name="rubiks1-how-move-regular"></a>
 ### Regular Face Rotations
 
 The regular face turns are denoted with capital letters:
@@ -175,14 +175,14 @@ The regular face turns are denoted with capital letters:
 respective face. Here, "clockwise" means *the direction
 that is clockwise when facing the given face head-on.*
 
-<a name="how-move-reverse"></a>
+<a name="rubiks1-how-move-reverse"></a>
 ### Reverse Face Rotations
 
 The `'` apostrophe following moves, as in `L' R' U' D' B' F'`,
 indicates that the move shoud be a *counter-clockwise* 
 rotation of the given face, instead of clockwise.
 
-<a name="how-move-double"></a>
+<a name="rubiks1-how-move-double"></a>
 ### Double Face Rotations
 
 Rotations that are indicated using a lowercase letter
@@ -207,7 +207,7 @@ We have covered the first 24 moves -
 clockwise and counter-clockwise rotations
 of single and double layers.
 
-<a name="how-move-second"></a>
+<a name="rubiks1-how-move-second"></a>
 ### Second Layer Face Rotations
 
 <img src="images/cube5.jpg" width="300"/>
@@ -220,7 +220,7 @@ layer from the top. This is equivalent to the move sequence
 
 Likewise, the apostrophe indicates a counterclockwise rotation.
 
-<a name="computer"></a>
+<a name="rubiks1-computer"></a>
 # Computer Representation of a Rubik's Cube
 
 The computer representation we are using is the 
@@ -259,7 +259,7 @@ L L L L  F F F F  R R R R  B B B B
          D D D D
 ```
 
-<a name="computer-operations"></a>
+<a name="rubiks1-computer-operations"></a>
 ## Operations and Functionality
 
 Some important functionality:
@@ -340,7 +340,7 @@ L L L L  F F F F  R R R R  B B B U
          B D D D
 ```
 
-<a name="computer-face"></a>
+<a name="rubiks1-computer-face"></a>
 ## Face Numbering
 
 Here is the numerical representation of the faces,
@@ -366,7 +366,7 @@ In [6]: cube.print_cube_layout()
 
 
 
-<a name="tuple"></a>
+<a name="rubiks1-tuple"></a>
 # Tuple Representation
 
 We have a goal of finding a way of representing the 
@@ -390,7 +390,7 @@ does not actually matter, so long as we can
 represent each unique state of the cube using a sequence
 of integers of arbitrary length.
 
-<a name="tuple-requirements"></a>
+<a name="rubiks1-tuple-requirements"></a>
 ## Tuple Representation Requirements
 
 The 4x4 cube, in the solved state, has a few representations:
@@ -504,7 +504,7 @@ a cube state uniquely represented by the following
 (13 9 5 1 14 10 6 2 15 11 7 3 48 44 40 36 33 34 35 84 21 22 23 24 25 26 27 28 29 30 31 32 61 57 53 49 37 38 39 88 41 42 43 92 45 46 47 96 16 66 67 68 62 58 54 50 63 59 55 51 64 60 56 52 17 18 19 20 12 70 71 72 8 74 75 76 4 78 79 80 81 82 83 77 85 86 87 73 89 90 91 69 93 94 95 65)
 ```
 
-<a name="tuple-representation"></a>
+<a name="rubiks1-tuple-representation"></a>
 ## Tuple Representation 
 
 Now, we have managed to find a unique representation for any given cube state 
@@ -542,7 +542,7 @@ Following is a preview of Part 2 of this 3-part blog post.
 
 
 
-<a name="preview-part-2"></a>
+<a name="rubiks1-preview"></a>
 # Preview of Part 2
 
 In Part 2 of this series, we will utilize the n-tuple representation
