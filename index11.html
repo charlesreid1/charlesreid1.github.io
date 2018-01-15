@@ -108,6 +108,379 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Enigma Cipher Implementation: Part 2: Pseudocode
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-03-21T21:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
+                in 
+                <a href="/category/enigma.html">Enigma</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/enigma-cipher-implementation-part-2-pseudocode.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>This is the second of several posts walking through an implementation of the Enigma cipher in code.</p>
+<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
+detailed, accurate information entirely free of graduate level mathematics, 
+and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
+<h2>The Goal</h2>
+<p>The goal of analyzing the Enigma machine is to better understand the workings of a device that played an important role in the history of computing.
+It is also an excellent system to better understand some of the design decisions we make when creating a code representation of a problem. </p>
+<p>The intention is to replicate some of the encryption mechanisms of the original Enigma. 
+From the Part 1 post, which covered more about how Enigma works, we have built up a basic understanding of what each step does.
+In this post we discuss how to implement this functionality.</p>
+<p>The basic idea is to start with a plaintext input (typed by the operator) and apply a rotating cripher to encrypt it, resulting in a ciphertext output:</p>
+<div class="highlight"><pre><span></span>                _________
+               |         |
+PLAINTEXT ---&gt; | ENIGMA  | ----&gt; CIPHERTEXT
+               |_________|
+</pre></div>
+
+
+<h2>Function or Object?</h2>
+<p>One of the first decisions typically made (sometimes implicitly) is whether to implement the Enigma as a function or an object.
+Is the Enigma a noun, or a verb?</p>
+<h3>The Noun Approach</h3>
+<p>Programming in a language like Java or C++, the noun approach seems perfectly natural:
+start with an Enigma object (the noun), and create more objects to represent more of the nouns (the switchboard, the rotor wheels, and the reflector). 
+Each component is modeled as a black box function taking a character in and returning a character out. 
+Each component stores and organizes information important for it to perform its particular transformation.
+For example, the rotors would store the scrambled version of the alphabet that they implement, 
+while the switchboard and the reflector would store the connected letter pairs.</p>
+<p>This approach reflects the kind of engineering approach that was taken to the design of the Enigma: 
+many simple components, working together in concert, result in a more complex integrated system.</p>
+<p>But one of the reasons the Enigma machine is an interesting system for implementing in code 
+is because of the simplicity of the mechanical operations performed. 
+This can help identify where a person actually begins the software design process. 
+If the design process starts with one foot in the world of objects already, the object approach will be adopted by default.</p>
+<p>With this approach, we are reshaping our data structures to fit the problem. 
+This makes the implementation more modular and the driver easier to read at a high level. 
+However, reshaping the data structures to fit the problem and our abstraction of it 
+can lead to more inefficient code and implementations.</p>
+<h3>The Verb Approach</h3>
+<p>Instead, we can start by examining the encryption process itself - the verb of encryption. 
+The action of encryption consists of elementary steps - swapping out two characters. 
+Each of these actions is simple enough that it can be implemented using built-in string manipulation methods,
+and all of the quantities being stored are likewise simple enough that no exotic data structures are required. </p>
+<p>The verb approach requires considering the problem up-front (possibly recasting it in different terms),
+and thinking through the actions involved in order to best utilize simple, built-in data structures and functionality.</p>
+<p>With this approach we essentially reshape the problem to fit our data structures, rather than the other way around.</p>
+<h2>Applying the Verb Approach to the Rotors</h2>
+<h3>Rotors</h3>
+<p>To get a better sense of what the verb approach looks like, let's look at the Enigma rotors.</p>
+<p>Each rotor implements a particular permutations of the 26 letters of the alphabet: </p>
+<p><img alt="Enigma rotor" src="/images/enigma_rotor.jpg"></p>
+<p>This is equivalent to matching up two strings. To make things slightly more concrete, let's look at Rotor I, nicknamed Royal
+(due to the location of its notch at the letter R), implemented the scrambled alphabet "EKMFLGDQVZNTOWYHXUSPAIBRCJ".
+With an offset of 0, this would therefore implement the following shift:</p>
+<div class="highlight"><pre><span></span>ABCDEFGHIJKLMNOPQRSTUVWXYZ
+||||||||||||||||||||||||||
+EKMFLGDQVZNTOWYHXUSPAIBRCJ
+</pre></div>
+
+
+<p>This operation, when broken down, is trivial: we are matching two characters from two strings, both at a particular location.</p>
+<p>Starting with a char, representing the character coming into the rotor,
+we can perform a two-step operation: 
+1. Get the index of the incoming character in the normal alphabet <code>ABCDEF...</code>.
+2. Get the corresponding character at that index in the scrambled alphabet <code>EKMFLG...</code>.</p>
+<p>We will also need to perform the reverse operation when we return the signal back through the machine from the reflector.
+In that case, we're actually performing the opposite lookup, for the same wheel:</p>
+<div class="highlight"><pre><span></span>EKMFLGDQVZNTOWYHXUSPAIBRCJ
+||||||||||||||||||||||||||
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+</pre></div>
+
+
+<p>When we were going through Rotor I the first time, A became E, and E became L;
+when going through in reverse, E now becomes A, and L now becomes E.</p>
+<p>The procedure can also be reversed:
+1. Get the index of the incoming character in the scrambled alphabet <code>EKMFLG...</code>.
+2. Get the corresponding character at that index in the normal alphabet <code>ABCDEF...</code>.</p>
+<p>Applying this multiple times in sequence applies multiple scrambles
+and replicates multiple rotors.</p>
+<h3>Example of Verb Approach: Rotor Rotation</h3>
+<p>One of the reasons an object-oriented approach may seem natural,
+besides the chosen language suggesting it, 
+is because the Enigma is an object with a <em>state</em>.
+Objects provide a natural way of representing things with an internal state, 
+or information specific to that entity and required for its operation.</p>
+<p>For this reason, it may seem at first blush that the Engima <em>requires</em> an object-oriented implementation.
+However, we can continue with our verb-centric thinking, and examine how the operations change when the wheels are rotated.</p>
+<div class="highlight"><pre><span></span>After 2 rotations:
+
+ABCDEFGHIJKLMNOPQRSTUVWXYZAB
+  ||||||||||||||||||||||||||
+  EKMFLGDQVZNTOWYHXUSPAIBRCJ
+
+After 4 rotations:
+
+ABCDEFGHIJKLMNOPQRSTUVWXYZABCD
+    ||||||||||||||||||||||||||
+    EKMFLGDQVZNTOWYHXUSPAIBRCJ
+</pre></div>
+
+
+<p>As the wheels rotate, we are still performing the same index lookup operations, 
+we are just rotating each scrambled alphabet by one character. 
+Again, this is a trivial operation that is probably built in for string types. </p>
+<h3>Rotor Pseudocode</h3>
+<p>Putting all of this together, here's pseudocode for a single forward transformation by an Engima rotor: </p>
+<div class="highlight"><pre><span></span>define plaintext message
+define normal alphabet and scrambled alphabet 
+for each character in plaintext message:
+    get index of input character in normal alphabet
+    get new character at that index in scrambled alphabet
+    concatenate transformed character to ciphertext message 
+</pre></div>
+
+
+<p>Because the Enigma has multiple rotors, we also want pseudocode for multiple rotors:</p>
+<div class="highlight"><pre><span></span>define plaintext message
+define normal alphabet and scrambled alphabets
+for each character in plaintext message:
+    for each scrambled alphabet:
+        get index of character in normal alphabet
+        get new character at that index in scrambled alphabet
+        replace character with new character 
+    concatenate transformed character to ciphertext message 
+</pre></div>
+
+
+<p>Likewise, to apply multiple rotations in reverse, we just swap the alphabets out:</p>
+<div class="highlight"><pre><span></span>define plaintext message
+define normal alphabet and scrambled alphabets
+for each character in plaintext message:
+    for each scrambled alphabet:
+        get index of character in scrambled alphabet
+        get new character at that index in normal alphabet
+        replace character with new character 
+    concatenate transformed character to ciphertext message 
+</pre></div>
+
+
+<h3>A More Complete Enigma Pseudocode</h3>
+<p>To combine these operations, or add additional operations, we just add them before concatenating the final transformed character to the ciphertext message.
+Thus, a more complete pseudocode would include other steps:</p>
+<div class="highlight"><pre><span></span>define plaintext message
+define normal alphabet and scrambled alphabets
+for each character in plaintext message:
+
+    # Apply switchboard transformation
+
+    # Apply forward rotor transformation
+    for each scrambled alphabet:
+        get index of character in normal alphabet
+        get new character at that index in scrambled alphabet
+        replace character with new character 
+
+    # Apply reflector transformation
+
+    # Apply reverse rotor transformation
+    for each scrambled alphabet:
+        get index of input character in scrambled alphabet
+        get new character at that index in normal alphabet
+        replace character with new character 
+
+    # Apply switchboard transformation
+
+    concatenate transformed character to ciphertext message 
+</pre></div>
+
+
+<p>Now let's cover the switchboard and reflector transformations.</p>
+<h2>The Switchboard</h2>
+<p>We can take the same verb-based approach to the switchboard as we took for the rotors.
+When we think through the actual operation being performed by the switchboard, 
+it is even simpler than the operation performed by the rotor wheels.
+We have pairs of letters, and we are simply looking for one letter in a pair, and swapping it out with the other letter in the pair.
+In the case of the switchboard, Enigma operators utilized 7-10 wires to connect pairs of letters; the remaining letters were unchanged.
+So the switchboard step is very simple:</p>
+<div class="highlight"><pre><span></span>define plaintext message
+define list of switchboard swap pairs
+for each character in message:
+    for each pair in swap pairs:
+        if character in swap pair, swap its value
+    add character to ciphertext
+</pre></div>
+
+
+<p>That's it! No need for a reverse function, since the swap procedure is symmetric. 
+(Note that if there is no wire connecting a letter to another letter, there is no swap operation, and the character is added to the ciphertext directly.)</p>
+<h2>The Reflector</h2>
+<p>The reflector pseudocode looks identical to the switchboard pseudocode,
+except the reflector defines pairings for all 13 posible letter pairs, instead of only 7-10.</p>
+<div class="highlight"><pre><span></span>define plaintext message
+define list of reflector swap pairs
+for each character in message:
+    for each pair in swap pairs:
+        if character in swap pair, swap its value
+    add character to ciphertext
+</pre></div>
+
+
+<p>Again, no need for a reverse version, since the reflector is a symmetric transformation.</p>
+<h2>Nearing a Complete Enigma Pseudocode</h2>
+<p>Almost there. We have one more thing going on - those rotor wheels are moving.
+Add the "increment rotor wheels" verb, and define that below.</p>
+<div class="highlight"><pre><span></span>define plaintext message
+define normal alphabet and scrambled alphabets
+define list of switchboard swap pairs
+define list of reflector swap pairs
+for each character in plaintext message:
+
+    # Apply switchboard transformation
+    for each pair in switchboard swap pairs:
+        if character in swap pair, swap its value
+
+    # Apply forward rotor transformation
+    for each rotor/scrambled alphabet:
+        get index of character in normal alphabet
+        get new character at that index in scrambled alphabet
+        replace character with new character 
+
+    # Apply reflector transformation
+    for each pair in reflector swap pairs:
+        if character in swap pair, swap its value
+
+    # Apply reverse rotor transformation
+    for each scrambled alphabet:
+        get index of input character in scrambled alphabet
+        get new character at that index in normal alphabet
+        replace character with new character 
+
+    # Apply switchboard transformation
+    for each pair in switchboard swap pairs:
+        if character in swap pair, swap its value
+
+    concatenate transformed input character to ciphertext message 
+
+    increment rotor wheels
+</pre></div>
+
+
+<h2>Incrementing the Rotor Wheels</h2>
+<p>Each rotor wheel has a notch located at a particular letter.
+The wheels were identified by the letter on which the notch was located 
+(Rotor I was "Royal" because the notch was located at "R", and so on).</p>
+<p>The notches were designed to catch on the notches of other rotor wheels,
+in such a way that the wheels would turn together periodically.
+The right-most wheel would rotate once per keypress. 
+Once per 26 letters (if S = 26), the notch would catch the notch of the next rotor over
+and advance it forward by 1 letter. It was this mechanism that kept the machine
+constantly skipping through the space of possible keys, mapping each character to each other character,
+with one distinct key (alphabet scramble) used per letter of the message.</p>
+<p>To increment the wheels in pseudocode:</p>
+<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">increment</span> <span class="nx">rotors</span>:
+    <span class="kt">for</span> <span class="nx">each</span> <span class="nx">rotor</span><span class="o">/</span><span class="nx">scrambled</span> <span class="nx">alphabet</span><span class="p">,</span> <span class="nx">left</span> <span class="nx">to</span> <span class="nx">right</span>:
+        <span class="kt">get</span> <span class="nx">index</span> <span class="nx">of</span> <span class="nx">left</span> <span class="nx">notch</span> <span class="k">in</span> <span class="nx">left</span> <span class="nx">alphabet</span>
+        <span class="nx">get</span> <span class="nx">index</span> <span class="nx">of</span> <span class="nx">right</span> <span class="nx">notch</span> <span class="k">in</span> <span class="nx">right</span> <span class="nx">alphabet</span>
+        <span class="k">if</span> <span class="nx">left</span> <span class="nx">index</span> <span class="nx">equals</span> <span class="nx">right</span> <span class="nx">index</span>:
+            <span class="kt">cycle</span> <span class="nx">left</span> <span class="nx">alphabet</span> <span class="nx">forward</span> <span class="mi">1</span> <span class="nx">character</span>
+    <span class="nx">cycle</span> <span class="nx">right</span><span class="o">-</span><span class="nx">most</span> <span class="nx">alphabet</span> <span class="nx">forward</span> <span class="mi">1</span> <span class="nx">character</span>
+</pre></div>
+
+
+<h2>Enigma Pseudocode</h2>
+<p>Almost there. We have one more thing going on - those rotor wheels are moving.
+Add the "increment rotor wheels" verb, and define that below.</p>
+<div class="highlight"><pre><span></span>define plaintext message
+define normal alphabet and scrambled alphabets
+define list of switchboard swap pairs
+define list of reflector swap pairs
+for each character in plaintext message:
+
+    # Apply switchboard transformation
+    for each pair in switchboard swap pairs:
+        if character in swap pair, swap its value
+
+    # Apply forward rotor transformation
+    for each rotor/scrambled alphabet:
+        get index of character in normal alphabet
+        get new character at that index in scrambled alphabet
+        replace character with new character 
+
+    # Apply reflector transformation
+    for each pair in reflector swap pairs:
+        if character in swap pair, swap its value
+
+    # Apply reverse rotor transformation
+    for each scrambled alphabet:
+        get index of input character in scrambled alphabet
+        get new character at that index in normal alphabet
+        replace character with new character 
+
+    # Apply switchboard transformation
+    for each pair in switchboard swap pairs:
+        if character in swap pair, swap its value
+
+    concatenate transformed input character to ciphertext message 
+
+    # Increment rotor wheels
+    for each rotor/scrambled alphabet, left to right:
+        get index of left notch in left alphabet
+        get index of right notch in right alphabet
+        if left index equals right index:
+            cycle left alphabet forward 1 character
+    cycle right-most alphabet forward 1 character
+</pre></div>
+
+
+<h2>Sources</h2>
+<ol>
+<li>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</li>
+</ol></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/ciphers.html">ciphers</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/enigma.html">enigma</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/encryption.html">encryption</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Enigma Cipher Implementation: Part 1: How It Works
             </b></h1>
         
@@ -357,6 +730,9 @@ Large numbers of combinations indeed.</p>
 
             <h2>January 2018</h2>
 
+            <p class="archive">
+            <a href="/4x4-rubiks-cube-part-2-permutations.html">4x4 Rubik's Cube: Part 2: Permutations</a>
+            </p>
             <p class="archive">
             <a href="/4x4-rubiks-cube-part-1-representations.html">4x4 Rubik's Cube: Part 1: Representations</a>
             </p>
