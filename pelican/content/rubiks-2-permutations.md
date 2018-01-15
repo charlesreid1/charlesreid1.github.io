@@ -31,6 +31,7 @@ curious properties of Rubik's Cubes.*
     * [Face Map Code](#rubiks2-maps-code)
 
 * [Tuples for Move Sequences](#rubiks2-tuples)
+    * [Applying Rotation Maps for Sequences](#rubiks2-tuples-sequences)
 
 * [Preview of Part 3](#rubiks2-preview)
 
@@ -312,6 +313,7 @@ U:
  (68, 20)]
 ```
 
+<a name="rubiks2-maps-d"></a>
 ## D Rotation Map
 
 ```
@@ -351,6 +353,7 @@ D:
  (80, 64)]
 ```
 
+<a name="rubiks2-maps-l"></a>
 ## L Rotation Map
 
 ```
@@ -390,6 +393,7 @@ L:
  (80, 81)]
 ```
 
+<a name="rubiks2-maps-r"></a>
 ## R Rotation Map
 
 ```
@@ -429,6 +433,7 @@ L:
  (77, 4)]
 ```
 
+<a name="rubiks2-maps-f"></a>
 ## F Rotation Map
 
 ```
@@ -468,6 +473,7 @@ L:
  (61, 16)]
 ```
 
+<a name="rubiks2-maps-b"></a>
 ## B Rotation Map
 
 ```
@@ -580,6 +586,7 @@ In Part 3, we'll develop an algebra of permutations to use
 and understand the tuple representations we are presenting in 
 this post.
 
+<a name="rubiks2-tuples-sequences"></a>
 ## Applying Rotation Maps for Sequences
 
 The concept here is simple: we use the rotation maps that we defined

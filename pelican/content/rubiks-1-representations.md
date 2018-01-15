@@ -24,7 +24,7 @@ curious properties of Rubik's Cubes.*
         * [Second Layer Face Rotations](#rubiks1-how-move-second)
 
 * [Computer Representation of a Rubik's Cube](#rubiks1-computer)
-    * [Operations an Functionality](#rubiks1-computer-operations)
+    * [Operations and Functionality](#rubiks1-computer-operations)
     * [Face Numbering](#rubiks1-computer-face)
 
 * [Tuple](#rubiks1-tuple)
