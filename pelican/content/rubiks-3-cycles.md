@@ -1,8 +1,7 @@
 Title: 4x4 Rubik's Cube: Part 3: Factoring Permutations
-Date: 2018-01-20 8:00
+Date: 2018-01-20 12:00
 Category: Rubiks Cube
 Tags: rubiks cube, combinatorics, permutations, python, puzzles, art of computer programming, knuth
-Status: draft
 
 *This is Part 3 of a 4-part blog post 
 on the mathematics of the 4x4 Rubik's Cube, 
