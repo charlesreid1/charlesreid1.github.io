@@ -3,7 +3,7 @@ Date: 2018-01-11 15:00
 Category: Rubiks Cube
 Tags: rubiks cube, mathematics, combinatorics, permutations, python, puzzles
 
-*This is Part 1 of a 3-part blog post 
+*This is Part 1 of a 4-part blog post 
 on the mathematics of the 4x4 Rubik's Cube, 
 its relation to algorithms, and some 
 curious properties of Rubik's Cubes.*
@@ -36,11 +36,15 @@ curious properties of Rubik's Cubes.*
 * [References](#rubiks1-references)
 
 
+<br />
+<br />
+<br />
+
 
 <a name="rubiks1-intro"></a>
 # Introduction: Why The Rubik's Cube
 
-In this series of three posts, we'll take a look at the 
+In this series of four posts, we'll take a look at the 
 4x4 Rubik's Cube. The Rubik's Cube is an interesting
 puzzle that has some profound mathematical connections
 to group theory and combinatorics.
@@ -584,21 +588,21 @@ rotations applied to the 4x4 Rubik's Cube.
 1. "Rubik's Cube". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
 <[https://charlesreid1.com/wiki/Rubiks_Cube](https://charlesreid1.com/wiki/Rubiks_Cube)>
 
-1. "Rubik's Revenge". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
+2. "Rubik's Revenge". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
 <[https://charlesreid1.com/wiki/Rubiks_Revenge](https://charlesreid1.com/wiki/Rubiks_Revenge)>
 
 3. "Rubik's Cube/Tuple". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
 <[https://charlesreid1.com/wiki/Rubiks_Cube/Tuple](https://charlesreid1.com/wiki/Rubiks_Cube/Tuple)>
 
-3. "Rubik's Cube/Permutations". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
+4. "Rubik's Cube/Permutations". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
 <[https://charlesreid1.com/wiki/Rubiks_Cube/Permutations](https://charlesreid1.com/wiki/Rubiks_Cube/Permutations)>
 
-4. "Github - dwalton76/rubiks-cube-NxNxN-solver". dwalton76, Github Repository, Github Inc. Accessed 11 January 2017.
+5. "Github - dwalton76/rubiks-cube-NxNxN-solver". dwalton76, Github Repository, Github Inc. Accessed 11 January 2017.
 <[https://github.com/dwalton76/rubiks-cube-NxNxN-solver](https://github.com/dwalton76/rubiks-cube-NxNxN-solver)>
 
-5. "Rubik's Cube NxNxN Solver". Git repository, git.charlesreid1.com. Charles Reid. Updated 11 January 2017.
+6. "Rubik's Cube NxNxN Solver". Git repository, git.charlesreid1.com. Charles Reid. Updated 11 January 2017.
 <[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)>
 
-6. "Rubiks Cube Cycles". Git repository, git.charlesreid1.com. Charles Reid. Updated 11 January 2017.
+7. "Rubiks Cube Cycles". Git repository, git.charlesreid1.com. Charles Reid. Updated 11 January 2017.
 <[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles)>
 

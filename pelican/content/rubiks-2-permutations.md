@@ -3,7 +3,7 @@ Date: 2018-01-14 20:00
 Category: Rubiks Cube
 Tags: rubiks cube, combinatorics, permutations, python, puzzles, art of computer programming, knuth
 
-*This is Part 2 of a 3-part blog post 
+*This is Part 2 of a 4-part blog post 
 on the mathematics of the 4x4 Rubik's Cube, 
 its relation to algorithms, and some 
 curious properties of Rubik's Cubes.*
@@ -35,8 +35,14 @@ curious properties of Rubik's Cubes.*
 
 * [Preview of Part 3](#rubiks2-preview)
 
+* [References](#rubiks2-references)
+
 * [Appendix: Cube with Numbered Faces](#rubiks2-appendix)
 
+
+<br />
+<br />
+<br />
 
 
 <a name="rubiks2-intro"></a>
@@ -677,7 +683,6 @@ in order to return the cube back to its solved state.
              89 90 91 92
              93 94 95 96
 ```
-
 
 
 
