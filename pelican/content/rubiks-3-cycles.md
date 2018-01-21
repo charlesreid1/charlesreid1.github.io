@@ -177,7 +177,7 @@ $$
 Now we define the intercalation product $\alpha \top \beta$ 
 of these permutations as the elements of each permutation
 organized in an interleaved way - 
-each element of $\alph$ and $\beta$ are grouped
+each element of $\alpha$ and $\beta$ are grouped
 by the letter that appears on the top row,
 and within those groups they are ordered 
 as they appear in $\alpha$, then as they appear
@@ -227,7 +227,7 @@ We can state some properties of the intercalation algebra already:
 
 If $\alpha \top \pi = \beta \top \pi$ 
 or $\pi \top \alpha = \pi \top \beta$, 
-this implies $\apha = \beta$.
+this implies $\alpha = \beta$.
 
 An identity element exists such that 
 $\epsilon \top \alpha = \alpha \top \epsilon = \alpha$.
