@@ -346,23 +346,20 @@ one factor. We're simply going to pull out those factors with this assumption.)
 
 Given this assumption, we know $\alpha$ must map $a$ to the same letter
 as the final permutation maps $a$ to, in the very first column of $\pi$.
-The first column of $pi$ is $\begin{smallmatrix} a \\ d \end{smallmatrix}$.
-That means that if our assumption holds, that $\alph$ contains $a$, then 
-it must turn $a$ into $d$ and thus $\alpha$ should contain the column 
-$\begin{smallmatrix} a \\ d \end{smallmatrix}$.
+The first column of $\pi$ is $( a d )$ (a on top, d on bottom). 
+That means that if our assumption holds, if $\alpha$ contains $a$, then 
+it must permute all $a$'s into $d$'s and thus $\alpha$ should contain the 
+same column $(a d )$.
 
 Now suppose that $\alpha$ contains $d$, which it must if our prior step
 is true. ($\alpha$ cannot turn $a$ into $d$ if it does not have a $d$!).
 We find the leftmost $d$ on the top line, and see that it maps to the 
-symbol $d$, due to the column $\begin{smallmatrix} d \\ d \end{smallmatrix}$.
-Thus, $\alpha$ should also contain the column 
-$\begin{smallmatrix} d \\ d \end{smallmatrix}$.
+symbol $d$, due to the column $( d d )$ (d on top, d on bottom). 
+Thus, $\alpha$ should also contain the column  $( d d )$.
 
 We keep going. Suppose that $\alpha$ contains another $d$, as a consequence
 of the prior step. Since we already used the first d column in $\pi$, we use
-the next column, $\begin{smallmatrix} d \\ b \end{smallmatrix}$. Thus,
-$\alpha$ should also contain the column 
-$\begin{smallmatrix} d \\ b \end{smallmatrix}$,
+the next column, $( d b )$ Thus, $\alpha$ should also contain the column $( d b )$,
 and we use the outcome $b$ as the starting point for the next step.
 
 The process stops as soon as the starting point for the next step
@@ -466,8 +463,8 @@ $$
 $$
 
 The third factor can be pulled out as well, which leaves the last factor, 
-$\bigl( \begin{smallmatrix} d \\ d \end{smallmatrix} \bigr)$,
-indicating an element that is not moved by the permutation.
+a single column $( d d )$ by itself, indicating an element that is 
+not moved by the permutation.
 
 $$
 \pi = \bigl( \begin{smallmatrix}
@@ -573,7 +570,7 @@ define function factor_permutations( top row, bottom row )
 
             break if next active location out of bounds
 
-            break if next active location
+            break if next active location is starting element
 
             append follower to this factor
 
