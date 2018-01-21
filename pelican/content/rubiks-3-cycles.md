@@ -187,7 +187,6 @@ For our example, the intercalation product is the following
 combination of $\alpha$ and $\beta$:
 
 $$
-<math>
 \alpha \top \beta = \bigl(\begin{smallmatrix}
   a & a & b & c & d \\
   c & a & d & a & b 
