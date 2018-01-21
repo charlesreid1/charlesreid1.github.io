@@ -8,6 +8,14 @@ on the mathematics of the 4x4 Rubik's Cube,
 its relation to algorithms, and some 
 curious properties of Rubik's Cubes.*
 
+**Part 1: Representations**
+
+[Part 2: Permutations](https://charlesreid1.github.io/4x4-rubiks-cube-part-2-permutations.html)
+
+[Part 3: Factoring Permutations](https://charlesreid1.github.io/4x4-rubiks-cube-part-3-factoring-permutations.html)
+
+Part 4: TBA
+
 # Table of Contents
 
 * [Introduction: Why the Rubik's Cube](#rubiks1-intro)
@@ -62,7 +70,7 @@ Finally, we will wrap up by discussing some of the
 algorithms that are required to deal with a 
 Rubik's Cube computationally.
 
-In the next two posts, we'll talk more abou the
+In the next two posts, we'll talk more about the
 mathematical representation of permutations of 
 the Rubik's Cube, and how to use this representation 
 to understand some of the properties of move 
@@ -72,11 +80,9 @@ sequences when applied to the cube.
 ## Why The 4x4 Rubik's Cube
 
 The 4x4 Rubik's cube, also known as the Rubik's Revenge cube, 
-is larger than the standard 3x3 Rubik's Cube. The 4x4 cube 
-exhibits some particularly interesting properties as a result
-of having an even number of squares on each edge. 
-
-We are also interested in the 4x4 because we enjoy solving it!
+is larger than the standard 3x3 Rubik's Cube - 96 faces, instead of 
+the ususal 36. The 4x4 cube exhibits some particularly interesting 
+properties as a result of having an even number of squares on each edge. 
 
 <a name="rubiks1-how"></a>
 # How the Rubik's Cube Works
@@ -115,7 +121,7 @@ into 12 left-handed and 12 right-handed dedge pieces.
 
 Lastly, there are 4 **center pieces** in the center of each
 face, for a total of 24 center pieces. Note that each of the 
-center pieces of a givne color are interchangeable, unlike 
+center pieces of a given color are interchangeable, unlike 
 the double edge pieces or corners.
 
 <a name="rubiks1-how-face"></a>
@@ -136,7 +142,7 @@ letters to indicate different faces:
 
 `R` - right face of the cube
 
-This will help refer to how we will roate the cube.
+This will help refer to how we will rotate the cube.
 
 <a name="rubiks1-how-color"></a>
 ## Color Notation
@@ -169,10 +175,10 @@ that will be on that face when the cube is solved.
 <a name="rubiks1-how-move"></a>
 ## Move Notation
 
-using the face notation explained above, we can denote 
-multiple types of moves on the Rubik's Cube.
+Using the face notation explained above, we can denote 
+multiple types of moves on the 4x4 Rubik's Cube.
 
-We have 36 total moves that we can make on the Rubik's Cube,
+We have 36 total moves that we can make on the 4x4 Rubik's Cube,
 which can be grouped by the dozen:
 
 ```
@@ -189,7 +195,7 @@ B' b' f' F'
 2B 2B' 2F 2F'
 ```
 
-Let's go through those a little more slowly.
+Let's go through the details of the notation.
 
 <a name="rubiks1-how-move-regular"></a>
 ### Regular Face Rotations
@@ -417,11 +423,12 @@ of integers of arbitrary length.
 <a name="rubiks1-tuple-requirements"></a>
 ## Tuple Representation Requirements
 
-The 4x4 cube, in the solved state, has a few representations:
+The 4x4 cube, in the solved state, has a few characteristics that can be used
+to indicate a particular permutation or configuration:
 
-* Face indciators UDFBLR
-* Colors WYGBRO
-* Integers 1-96
+* Face indciators `UDFBLR`
+* Colors `WYGBRO`
+* Integers 1-96 to number each face
 
 Here is how the faces representation looks:
 

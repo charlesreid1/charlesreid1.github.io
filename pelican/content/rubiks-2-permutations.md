@@ -8,6 +8,14 @@ on the mathematics of the 4x4 Rubik's Cube,
 its relation to algorithms, and some 
 curious properties of Rubik's Cubes.*
 
+[Part 1: Representations](https://charlesreid1.github.io/4x4-rubiks-cube-part-1-representations.html)
+
+**Part 2: Permutations**
+
+[Part 3: Factoring Permutations](https://charlesreid1.github.io/4x4-rubiks-cube-part-3-factoring-permutations.html)
+
+Part 4: TBA
+
 # Table of Contents
 
 * [Introduction: Sequences and Permutations](#rubiks2-intro)
