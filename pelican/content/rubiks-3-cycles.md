@@ -8,13 +8,13 @@ on the mathematics of the 4x4 Rubik's Cube,
 its relation to algorithms, and some 
 curious properties of Rubik's Cubes.*
 
-[Part 1: Representations](https://charlesreid1.github.io/4x4-rubiks-cube-part-1-representations.html)
+See Part 1 of this blog post here: [Part 1: Representations](https://charlesreid1.github.io/4x4-rubiks-cube-part-1-representations.html)
 
-[Part 2: Permutations](https://charlesreid1.github.io/4x4-rubiks-cube-part-2-permutations.html)
+See Part 2 of this blog post here: [Part 2: Permutations](https://charlesreid1.github.io/4x4-rubiks-cube-part-2-permutations.html)
 
-**Part 3: Factoring Permutations**
+You are currently reading Part 3 of this blog post: **Part 3: Factoring Permutations**
 
-Part 4: TBA
+See Part 4 of this blog post here: [Part 4: Sequence Order](#)
 
 # Table of Contents
 
@@ -161,9 +161,9 @@ In the discussion that follows we'll keep it general,
 and talk about multisets - the case in which the top row
 has multiple occurrences of different items.
 
-Now suppose we have two permutations $\alpha$ and $\beta$
-of the four objects $\{a, b, c, d,\}$, each occurring 
-multiple times:
+For the following discussion, we will suppose two permutations
+$\alpha$ and $\beta$ composed of four objects $\{a, b, c, d,\}$, 
+each occurring multiple times:
 
 $$
 \alpha = \bigl(\begin{smallmatrix}
@@ -671,24 +671,24 @@ permutation.
 <a name="rubiks3-references"></a>
 # References
 
-1. "Rubik's Cube". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
+1. "Rubik's Cube". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
 <[https://charlesreid1.com/wiki/Rubiks_Cube](https://charlesreid1.com/wiki/Rubiks_Cube)>
 
-2. "Rubik's Revenge". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
+2. "Rubik's Revenge". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
 <[https://charlesreid1.com/wiki/Rubiks_Revenge](https://charlesreid1.com/wiki/Rubiks_Revenge)>
 
-3. "Rubik's Cube/Tuple". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
+3. "Rubik's Cube/Tuple". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
 <[https://charlesreid1.com/wiki/Rubiks_Cube/Tuple](https://charlesreid1.com/wiki/Rubiks_Cube/Tuple)>
 
-4. "Rubik's Cube/Permutations". Charlesreid1.com wiki, Charles Reid. Edited 11 January 2017. Accessed 11 January 2017.
+4. "Rubik's Cube/Permutations". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
 <[https://charlesreid1.com/wiki/Rubiks_Cube/Permutations](https://charlesreid1.com/wiki/Rubiks_Cube/Permutations)>
 
 5. "Github - dwalton76/rubiks-cube-NxNxN-solver". dwalton76, Github Repository, Github Inc. Accessed 11 January 2017.
 <[https://github.com/dwalton76/rubiks-cube-NxNxN-solver](https://github.com/dwalton76/rubiks-cube-NxNxN-solver)>
 
-6. "Rubik's Cube NxNxN Solver". Git repository, git.charlesreid1.com. Charles Reid. Updated 11 January 2017.
+6. "Rubik's Cube NxNxN Solver". Git repository, git.charlesreid1.com. Charles Reid. Updated 20 January 2017.
 <[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)>
 
-7. "Rubiks Cube Cycles". Git repository, git.charlesreid1.com. Charles Reid. Updated 11 January 2017.
+7. "Rubiks Cube Cycles". Git repository, git.charlesreid1.com. Charles Reid. Updated 20 January 2017.
 <[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles)>
 
