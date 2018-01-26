@@ -19,6 +19,8 @@ You are currently reading Part 4 of this blog post: **Part 4: Sequence Order**
 # Table of Contents
 
 * [Introduction](#rubiks4-intro)
+    * [Order of a Sequence](#rubiks4-intro-order)
+    * [What We Have Covered So Far](#rubiks4-intro-sofar)
 
 * [Factoring Rubik's Cube Permutations](#rubiks4-factoring)
     * [Factoring Permutations: A Review](#rubiks4-factoring-review)
