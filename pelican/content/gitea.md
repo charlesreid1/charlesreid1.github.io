@@ -1,6 +1,6 @@
 Title: Setting Up a Self-Hosted Github Clone with Gitea
 Date: 2017-04-01 22:00
-Category: Git
+Category: Charlesreid1
 Tags: git, go, gitea
 
 ## Table of Contents
