@@ -1,8 +1,9 @@
-Title: Charlesreid1.com Technology Stack
-Date: 2018-02-21 14:00
+Title: Charlesreid1.com Stack: Part 1: Web
+Date: 2018-03-31 23:00
 Category: Charlesreid1
 Tags: web, git, pelican, nginx, apache, mediawiki, javascript, php, docker, security
-Status: draft
+
+
 
 # Web
 
