@@ -108,6 +108,388 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Teaching Recursion with the N Queens Problem
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-05-16T18:00:00-07:00" pubdate>Tuesday 05/16/2017</time>
+                in 
+                <a href="/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/teaching-recursion-with-the-n-queens-problem.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>Table of Contents:</p>
+<ul>
+<li>
+<p><a href="#8q-gentle-intro">A Gentle Introduction to Recursion</a></p>
+</li>
+<li>
+<p><a href="#8q-backtrack">Recursive Backtracking</a></p>
+</li>
+<li>
+<p><a href="#8q-decision">Paring Down the Decision Tree</a></p>
+</li>
+<li>
+<p><a href="#8q-pseudocode">The Pseudocode</a></p>
+</li>
+<li>
+<p><a href="#8q-diag">Accounting for Diagonal Attacks</a></p>
+</li>
+<li>
+<p><a href="#8q-why">Why the N Queens Problem?</a></p>
+</li>
+</ul>
+<p><a name="8q-gentle-intro"></a></p>
+<h2>A Gentle Introduction to Recursion</h2>
+<p>Recursion, particularly recursive backtracking, is far and away the most challenging topic 
+I cover when I teach the CSE 143 (Java Programming II) course at South Seattle College.
+Teaching the concept of recursion, on its own, is challenging: 
+the concept is a hard one to encounter in everyday life, making it unfamiliar, 
+and that creates a lot of friction when students try to understand how to apply recursion. </p>
+<p>The key, as I tell students from day one of the recursion unit,
+is to always think in terms of the base case and the recursive case.
+The base case gives your brain a "trapdoor" to exit out of an otherwise 
+brain-bending infinite conceptual loop. It helps recursion feel more manageable.
+But most importantly: it enables thinking about recursion 
+in terms of its inputs and outputs. </p>
+<p>More specifically, to understand recursion requires (no, not recursion)
+thinking about two things: <strong>where you enter the function</strong> 
+and <strong>when you stop calling the function</strong>.
+These are the two <em>least</em> complicated cases, and they 
+also happen to be the two <em>most</em> important cases.</p>
+<p>College courses move at an artificially inflated pace, 
+ill-suited for most community college students,
+and the material prescribed must be presented at the given pace
+mostly independent of any real difficulties the students face
+(there is only minimal room for adjustment, <em>at most</em> 2-3 lectures).</p>
+<p>This means that, before the students have had an opportunity to get comfortable 
+with the concept of recursion, and really nail it down, they're introduced to yet another
+mind-bending topic: recursive backtracking algorithms. </p>
+<p>These bring a whole new set of complications to the table.
+Practice is crucial to students' understanding, and all too often,
+the only way to get students to practice (particularly with difficult subject matter 
+like recursion) is to spend substantial amounts of time in class.
+My recursion lectures routinely throw my schedule off by nearly a week,
+because even the simplest recursion or backtracking exercise can eat up
+an hour or more.</p>
+<p><a name="8q-backtrack"></a></p>
+<h2>Recursive Backtracking</h2>
+<p>Backtracking is an approach for exploring problems that involve
+making choices from a set of possible choices. A classic example of 
+backtracking is the 8 Queens problem, which asks: "How many ways are there
+of placing 8 queens on a chessboard, such that no queen attacks any other queen?"</p>
+<p>The problem is deceptively simple; solving it requires some mental gymnastics.
+(By the way, most people who have actually heard of the problem are computer scientists
+who were exposed to it <strong>in the process of learning how to solve it</strong>, 
+leading to the hipster effect - it's often dismissed by computer scientists as 
+an "easy" problem. The curse of knowledge at work.)</p>
+<p>The recursive backtracking algorithm requires thinking about the squares on which 
+to place the 8 queens in question as the set of choices to be made. </p>
+<p>The naive approach ignores the constraints, and makes all 8 choices of where to place
+the 8 queens before ever checking if the queen placements are valid. Thus, we could start
+by placing all 8 queens in one single row on the top, or along one single column on the left.
+Using this approach, we have 64 possibilities (64 open squares) for the first queen,
+then 63 possibilities for the second queen, then 62 possibilities for the third queen,
+and so on. This gives a total number of possible combinations of:</p>
+<div class="math">$$
+\dfrac{64!}{(64-8)!} = 178,462,987,637,760
+$$</div>
+<p>(By the way, for those of you following along at home, you can do this calculation with Python:)</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">math</span><span class="o">.</span><span class="n">factorial</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span><span class="o">/</span><span class="n">math</span><span class="o">.</span><span class="n">factorial</span><span class="p">(</span><span class="mi">64</span><span class="o">-</span><span class="mi">8</span><span class="p">)</span>
+<span class="il">178462987637760L</span>
+</pre></div>
+
+
+<p>Even for someone without a sense of big numbers, like someone in Congress, 
+that's still a pretty big number. Too many for a human being to actually try 
+in a single lifetime.</p>
+<p><a name="8q-decision"></a></p>
+<h2>Paring Down the Decision Tree</h2>
+<p>But we can do better - we can utilize the fact that the queen, in chess,
+attacks horizontally and vertically, by doing two things:</p>
+<ul>
+<li>
+<p>Limit the placement of queens so that there is one queen per column;</p>
+</li>
+<li>
+<p>Limit the placement of queens so that there is one queen per row.</p>
+</li>
+</ul>
+<p>(Note that this is ignoring diagonal attacks; we'll get there in a minute.)</p>
+<p>This limits the number of solutions as follows: the first queen placed on the board
+must go in the first column, and has 8 possible squares in which it can go.
+The second queen must go in the second column, and has 7 possible squares in which 
+it can go - ignoring the square corresponding to the row that would be attacked
+by the first queen. The third queen goes into the third column, which has 6 open
+squares (ignoring the two rows attacked by the two queens already placed).</p>
+<p>That leads to far fewer solutions:</p>
+<div class="math">$$
+8! = 40,320
+$$</div>
+<p>and for those following along at home in Python:</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">math</span><span class="o">.</span><span class="n">factorial</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="mi">40320</span>
+</pre></div>
+
+
+<p>To visualize how this utilization of information
+helps reduce the problem space, I often make use of 
+a decision tree, to get the students to think about
+recursive backtracking as a depth-first tree
+traversal. </p>
+<p>(By the way, this is a strategy whose usefulness 
+extends beyond the 8 queens problem, or even 
+recursive backtracking problems. For example,
+the problem of finding cycles in a directed graph
+can be re-cast in terms of trees.)</p>
+<p><img src="images/8-queens-decision-tree.png" width="500px" /></p>
+<p>So far, we have used two of the three directions of attack for queens.
+This is also enough information to begin an implementation of an algorithm - 
+a backtracking algorithm can use the fact that we place one queen per column,
+and one queen per row, to loop over each row, and steadily march through each 
+column sequentially (or vice-versa).</p>
+<p><a name="8q-pseudocode"></a></p>
+<h2>The Pseudocode</h2>
+<p>There is still a bit more to do to cut down on the problem space
+that needs to be explored, but before we do any of that,
+we should first decide on an approach and sketch out the psuedocode.</p>
+<p>The structure of the explore method pseudocode thus looks like:</p>
+<div class="highlight"><pre><span></span>explore(column):
+    if last column:
+        # base case
+        add to solutions
+    else:
+        # recursive case
+        for each row:
+            if this is a safe row:
+                place queen on this row
+                explore(column+1)
+                remove queen from this row
+</pre></div>
+
+
+<h2>The Actual Code</h2>
+<p>Over at <a href="https://git.charlesreid1.com/charlesreid1/n-queens">git.charlesreid1.com/charlesreid1/n-queens</a> 
+I have several implementations of the N Queens problem:</p>
+<ul>
+<li>
+<p><a href="https://charlesreid1.com:3000/charlesreid1/n-queens/src/master/java/NQueens.java">Java solution</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com:3000/charlesreid1/n-queens/src/master/perl/nqueens.pl">Perl solution</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com:3000/charlesreid1/n-queens/src/master/python/nqueens.py">Python solution</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com:3000/charlesreid1/n-queens/src/master/cpp/nqueens.cpp">C++ solution</a></p>
+</li>
+</ul>
+<h2>Row, Column, and Diagonal Attacks</h2>
+<p>We have already utilized knowledge that there will only be one queen 
+per column, and one queen per row. But one last bit of information we can
+utilize is the fact that queens attack diagonally. 
+This allows us to eliminate any squares that are along the diagonals
+of queens that have already been placed on the board.</p>
+<p>How to eliminate the diagonals? It basically boils down to two approaches:</p>
+<ol>
+<li>
+<p>Use a Board class to abstract away details (and the Board class will implement "magic" like an <code>isValid()</code> method).</p>
+</li>
+<li>
+<p>Hack the index - implement some index-based math to eliminate 
+   any rows that are on the diagonals of queens already on the board.</p>
+</li>
+</ol>
+<p>The first approach lets you abstract away the details,
+possibly even using <a href="http://www.buildingjavaprograms.com/code-files/4ed/ch12/Board.java">a Board class written by a textbook</a>,
+which is <s>lazy</s> fine, if you are working on a practical problem
+and need some elbow grease, but not so much if you are a computer science
+student learning the basic principles of software design.</p>
+<p>The second approach requires some deep thinking about how the locations of 
+the N (or 8) queens are being represented in the program.</p>
+<p><a name="8q-diag"></a></p>
+<h2>Accounting for Diagonal Attacks</h2>
+<p>At some point, when you use the above pseudocode, 
+you are going to want to know the answer to the following question:
+<strong>for a given column k, what rows are invalid because they are on 
+diagonals of already-placed queens?</strong></p>
+<p>To answer this, think about where the diagonal indices of 
+chess board squares are located, and how to find the diagonals on column X 
+attacked by a queen placed in column Y.</p>
+<p>The following diagram shows a queen on row 3 of column 2, and the diagonal
+attack vectors of that queen. Each of the squares along those diagonal
+vectors can be ruled out as possible squares to place a queen. 
+When selecting a square for the third queen, which goes in the third column, 
+the second and fourth rows can both be ruled out due to the diagonals.
+(The third row, of course, can also be ruled out, due to the one-queen-per-row rule.)</p>
+<p>However, the effect of the already-placed queen propagates forward, 
+and affects the choice of possible squares for each queen after it. 
+If we jump ahead in the recursive algorithm, to say, queen number 6, 
+being placed on column number 6 (highlighted in blue), the queen in column 2 (row 3) 
+still affects the choice of squares for that column (as do all queens previously
+placed on the board).  In the case pictured in the figure, 
+the seventh row (as well as an off-the-board row) of column 6 
+can be ruled out as possible squares for the placement of the 
+6th queen.</p>
+<p><img src="images/8-queens-diag.png" width="500px" /></p>
+<p>Accounting for these diagonal attacks can lead to substantial speed-ups: 
+each queen that is placed can eliminate up to two additional squares per column,
+which means the overall decision tree for the N queens problem becomes a lot less
+dense, and faster to explore. </p>
+<p><a name="8q-why"></a></p>
+<h2>Why the N Queens Problem?</h2>
+<p>Invariably, some students will deal with this difficult problem
+by questioning the premise of the question - a reasonable 
+thing to wonder. </p>
+<p>This leads to a broader, more important question: 
+why do computer scientists focus so much on <em>games</em>?</p>
+<p>Games, like computers, are self-contained universes, 
+they are abstract systems, they remove messy details and complications.
+They allow you to start, from scratch, by setting up a board,
+a few rules, a few pieces - things that are easy to implement 
+in a computer.</p>
+<p>Mazes, crossword puzzles, card games, checkers, chess, 
+are all systems with a finite, small number of elements 
+that interact in finite, small numbers of ways.
+The beauty of games is that those small rule sets
+can result in immensely complex systems, so that there
+are more <a href="https://en.wikipedia.org/wiki/Shannon_number">branches in the chess decision tree</a>
+(the Shannon number, <span class="math">\(10^{120}\)</span>) than there are 
+<a href="https://en.wikipedia.org/wiki/Eddington_number">protons in the universe</a>
+(the Eddington number, <span class="math">\(10^{80}\)</span>).</p>
+<p>That simplicity is important in computer science.
+Any real-world problem is going to have to be broken down,
+eventually, into pieces, into rules, into a finite representation,
+so that anything we try to model with a computer, 
+any problem we attempt to solve computationally,
+no matter how complex, will always have a game-like representation.</p>
+<p>(Side note: much of the literature in systems operations research,
+which studies the application of mathematical optimization to
+determine the best way to manage resources, 
+came out of work on war games - which were 
+themselves game-ified, simplified representations
+of real, complex systems. Econometrics, or 
+"computational economics," is another field where 
+game theory has gained much traction and finds many 
+practical applications.)</p>
+<p>Recursion, too, is a useful concept in and of itself,
+one that shows up in sorting and searching algorithms,
+computational procedures, and even in nature. </p>
+<p>But it isn't just knowing <strong>where</strong> to look - 
+it's knowing what you're looking for in the first place. </p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    var location_protocol = (false) ? 'https' : document.location.protocol;
+    if (location_protocol !== 'http' && location_protocol !== 'https') location_protocol = 'https:';
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = location_protocol + '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/java.html">java</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/n-queens.html">n-queens</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Undergraduate Research Project: Wireless Sensor Networks for Internet of Things Applications (Part 2: The Technologies)
             </b></h1>
         
@@ -696,341 +1078,6 @@ more common in more industries.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Stunnel
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-04-30T20:00:00-07:00" pubdate>Sunday 04/30/2017</time>
-                in 
-                <a href="/category/security.html">Security</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/stunnel.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><ul>
-<li>
-<p><a href="#stunnel-intro">Introduction</a></p>
-<ul>
-<li><a href="#stunnel-what">What Does Stunnel Do?</a></li>
-<li><a href="#stunnel-work">How Does Stunnel Work?</a> </li>
-</ul>
-</li>
-<li>
-<p><a href="#stunnel-server">Setting Up an Stunnel Server</a></p>
-<ul>
-<li><a href="#stunnel-server-resoures">Charlesreid1.com Resources for Stunnel Servers</a></li>
-</ul>
-</li>
-<li>
-<p><a href="#stunnel-client">Setting Up an Stunnel Client</a></p>
-</li>
-<li>
-<p><a href="#stunnel-protocols">Example Protocols</a></p>
-</li>
-<li>
-<p><a href="#stunnel-docker">Stunnel with Docker</a></p>
-</li>
-<li>
-<p><a href="#stunnel-troubleshooting">Troubleshooting Stunnel Connections</a></p>
-</li>
-<li>
-<p><a href="#stunnel-refs">References</a></p>
-</li>
-</ul>
-<p><a name="stunnel-intro"></a></p>
-<h2>Introduction</h2>
-<p><a name="stunnel-what"></a></p>
-<h3>What Does Stunnel Do?</h3>
-<p>Stunnel is a tool for creating SSL tunnels between a client and a server.</p>
-<p>Creating SSL connections is a general task that is very useful.
-In particular, any packet of any protocol can always be wrapped in an
-additional SSL layer, with packets embedded within packets, so this means 
-you can wrap arbitrary traffic protocols in SSL using Stunnel.</p>
-<p>Stunnel requires a client and a server on either end of the tunnel.</p>
-<p>This writeup assumes access to both the server and the client.
-If you don't have access to the client, the server certificate
-needs to be signed by a certificate authority that the client trusts.
-You can either:</p>
-<ul>
-<li>
-<p>Shell out big bucks for a certificate signed by a certificate authority company, thereby contributing to the ongoing racketeering of said companies;</p>
-</li>
-<li>
-<p>Use a LetsEncrypt certificate, signed by a certificate authority for free; or</p>
-</li>
-<li>
-<p>Use a self-signed certificate and install the certificate authority onto the client computer.</p>
-</li>
-</ul>
-<p>(These are all difficult and confusing processes, 
-compounded by OpenSSL's lack of documentation
-and a proliferation of incorrect terminology.
-Good luck.)</p>
-<p><a name="stunnel-work"></a></p>
-<h3>How Does Stunnel Work?</h3>
-<p>The client stunnel instance will encrypt traffic, 
-and the server stunnel instance will decrypt traffic.</p>
-<p>When encrypting traffic, stunnel accepts incoming traffic by listening on
-a port (almost always a local port). It will wrap the traffic in an encrypted
-SSL layer (TCP wrapping) using the SSL certificate/key that is shared between
-the client and the server. The client then sends out the encrypted traffic 
-over an external connection, and on to the stunnel server.</p>
-<p>When decrypting traffic, stunnel will listen on an external connection for 
-incoming, encrypted SSL traffic. It will use its SSL certificate/key to 
-decrypt the traffic and unwrap the SSL layer. It will then forward this traffic
-on to another (usually local) port.</p>
-<p><img alt="Stunnel flowchart schematic" src="/images/stunnel1.png"></p>
-<p><a name="stunnel-server"></a></p>
-<h2>Setting Up an Stunnel Server</h2>
-<p>Stunnel servers can listen on any port, and the port you choose depends on the application. 
-The configuration we're showing here is intended to bypass a network that is tightly controlled
-and locked down except for HTTP and HTTPS traffic (ports 80 and 443).</p>
-<p>Consider an example of connecting a local service on local port 8443 (not open to the outside world)
-to an stunnel server listening on port 443 (open to the outside world).</p>
-<p>stunnel will listen on port 443, open to external traffic, for SSL-encrypted stunnel traffic. 
-This means that only stunnel can listen on 443 (so this cannot be a server for an HTTPS web 
-site - if a user points their browser to https://yourstunnelserver.com stunnel will not understand
-the HTTPS request and will discard it). 
-We can use stunnel on any port that we want, but communicating between stunnel clients 
-and servers on port 443 allows us to disguise arbitrary traffic (HTTP, HTTPS, SSH, database, 
-etc.) as legitimate HTTPS. </p>
-<p>This is very useful if we have a firewall that is actively inspecting
-the type of traffic inside of packets, and dropping packets with particular protocols like 
-SSH or OpenVPN. By wrapping that traffic in an SSL layer, there is no way for the 
-firewall to inspect the contents of the packet, so it just looks like ordinary HTTPS traffic.
-The firewall can't decrypt the packet contents, so it doesn't know if you are visiting 
-your bank, checking your email, or sneaking SSH/OpenVPN traffic through the firewall. </p>
-<p>(Note that other services like Iodine allow you to do similar things with other protocols,
-like disguising network connections using encrypted DNS on port 53.)</p>
-<p>Typically, stunnel is forwarding that traffic on to a local port, something like 8443. 
-(The common scenario is if you have a service only exposed to LOCAL traffic from localhost or 127.0.0.1 
-and not bound to an EXTERNAL ip address like 0.0.0.0). </p>
-<p><a name="stunnel-server-resources"></a></p>
-<h3>Charlesreid1.com Resources for Stunnel Servers</h3>
-<p>The charlesreid1.com wiki has an extensive guide to setting up an Stunnel server: </p>
-<ul>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/Server">charlesreid1.com/wiki/Stunnel/Server</a></p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/Docker">charlesreid1.com/wiki/Stunnel/Docker</a> - wiki page detailing the use of Docker and Docker containers to run an stunnel server.</p>
-</li>
-</ul>
-<p>The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel server: </p>
-<ul>
-<li><a href="https://charlesreid1.com:3000/docker/d-stunnel">d-stunnel repository</a> - repo containing Docker configuration files, for creating a Docker container that runs an stunnel server.
-    This repository contains example stunnel configuration files for running a number of different protocols over stunnel (ssh, http, and rsync).</li>
-</ul>
-<p><a name="stunnel-client"></a></p>
-<h2>Setting Up an Stunnel Client</h2>
-<p>Running an stunnel client requires installing stunnel and 
-setting up a configuration file just like if you were setting up an Stunnel/Server, 
-except swapping the accept and connect ports, since we want the client to accept local 
-traffic (e.g., on port 8443) and send it on to the server that it connects to with SSL 
-(e.g., on port 443).</p>
-<p><a name="stunnel-client-resources"></a></p>
-<h2>Charlesreid1.com Resources for Stunnel Clients</h2>
-<p>The charlesreid1.com wiki has an extensive guide to setting up an Stunnel client: </p>
-<ul>
-<li><a href="https://charlesreid1.com/wiki/Stunnel/Client">charlesreid1.com/wiki/Stunnel/Client</a> - wiki page detailing the stunnel configuration process for stunnel servers.</li>
-</ul>
-<p>The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel client: </p>
-<ul>
-<li>
-<p><a href="https://charlesreid1.com:3000/mac/m-stunnel">m-stunnel repository</a> - stunnel configuration files for running an stunnel client on Mac OS X</p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com:3000/rpi/pi-stunnel">pi-stunnel repository</a> - stunnel configuration files for running an stunnel client on Raspberry Pi</p>
-</li>
-</ul>
-<p><a name="stunnel-protocols"></a></p>
-<h2>Example Protocols</h2>
-<p>One of the most beautiful aspects of networking is that packets can be wrapped within other packets - 
-so theoretically it can be packets all the way down. This allows us to use stunnel's SSL TCP wrappers to wrap
-just about any traffic we want. This means we can run various services (encrypted or not) through stunnel,
-including but not limited to:</p>
-<ul>
-<li>
-<p>SSH (secure shell)</p>
-</li>
-<li>
-<p>SCP (secure copy)</p>
-</li>
-<li>
-<p>OpenVPN (virtual network)</p>
-</li>
-<li>
-<p>Rsync (file transfer)</p>
-</li>
-<li>
-<p>MongoDB (NoSQL database)</p>
-</li>
-<li>
-<p>Redis (local-only NoSQL database)</p>
-</li>
-</ul>
-<p>While stunnel has a few pre-configured services that it can deal with, 
-users can also define their own custom protocols, over whatever port they please.</p>
-<p>The charlesreid1.com wiki details stunnel configuration for all of the above protocols,
-excepting MongoDB and redis. Here are links to pages specifying how to configure stunnel
-for each protocol:</p>
-<ul>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/SSH">SSH over stunnel</a></p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/Scp">SCP over stunnel</a></p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/HTTP">HTTP over stunnel</a></p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/OpenVPN">OpenVPN over stunnel</a></p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/Rsync">Rsync over stunnel</a></p>
-</li>
-</ul>
-<p>The <a href="https://charlesreid1.com/wiki/Stunnel/Rsync">Rsync over stunnel</a> page, in particular,
-details the steps needed to define your own custom protocol and have stunnel wrap it 
-in an SSL layer <em>correctly</em>.</p>
-<p><a name="stunnel-docker"></a></p>
-<h2>Stunnel with Docker</h2>
-<p>Docker is a useful way of managing services in a self-contained and reproducible manner.
-Running stunnel through a Docker container is surprisingly easy: 
-once you've installed stunnel into the docker container, you just need to map 
-the incoming port (containing incoming encrypted traffic from the client, linked to the external network interface)
-to the outgoing port (containing decrypted traffic from stunnel, linked to a local-only service on a closed port).</p>
-<p>The charlesreid1.com wiki details how to create set up SSH over stunnel at the following page:
-* <a href="https://charlesreid1.com/wiki/Stunnel/Docker">charlesreid1.com/wiki/Stunnel/Docker</a></p>
-<p>The charlesreid1.com git server has an stunnel docker repository with configuration files
-for running a Docker stunnel server, along with several example stunnel server configuration files
-for handling protocols like rsync, ssh, and http:
-* <a href="https://charlesreid1.com:3000/docker/d-stunnel">d-stunnel repository</a></p>
-<p><a name="stunnel-troubleshooting"></a></p>
-<h2>Troubleshooting Stunnel Connections</h2>
-<p>In the <a href="https://charlesreid1.com:3000/docker/d-stunnel">d-stunnel repository</a> is a document called <code>DEBUGGING.md</code> 
-that contains a number of techniques for debugging an stunnel connection. </p>
-<p><a href="https://charlesreid1.com:3000/docker/d-stunnel/src/master/DEBUGGING.md">Here is the direct link to DEBUGGING.md</a>.</p>
-<p>The techniques covered include:</p>
-<ul>
-<li>
-<p>Configuring stunnel to run in the foreground (print log messages to console instead of to log file)</p>
-</li>
-<li>
-<p>Configuring stunnel to output debugging information </p>
-</li>
-<li>
-<p>Poking the stunnel server with telnet</p>
-</li>
-<li>
-<p>Inspecting open ports with nmap</p>
-</li>
-<li>
-<p>Watching <code>/var/log/syslog</code> for activity</p>
-</li>
-</ul>
-<p>See <a href="https://charlesreid1.com:3000/docker/d-stunnel/src/master/DEBUGGING.md">DEBUGGING.md</a> for details.</p>
-<p><a name="stunnel-refs"></a></p>
-<h2>References</h2>
-<ol>
-<li>
-<p>"Stunnel". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel">https://charlesreid1.com/wiki/Stunnel</a>&gt;</p>
-</li>
-<li>
-<p>"Category: Stunnel". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Category:Stunnel">https://charlesreid1.com/wiki/Category:Stunnel</a>&gt;</p>
-</li>
-<li>
-<p>"Stunnel/Server". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Server">https://charlesreid1.com/wiki/Stunnel/Server</a>&gt;</p>
-</li>
-<li>
-<p>"Stunnel/Client". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Client">https://charlesreid1.com/wiki/Stunnel/Client</a>&gt;</p>
-</li>
-<li>
-<p>"Stunnel/Docker". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Docker">https://charlesreid1.com/wiki/Stunnel/Docker</a>&gt;</p>
-</li>
-<li>
-<p>"Stunnel/Certificates". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Certificates">https://charlesreid1.com/wiki/Stunnel/Certificates</a>&gt;</p>
-</li>
-<li>
-<p>"Stunnel/Rsync". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Rsync">https://charlesreid1.com/wiki/Stunnel/Rsync</a>&gt;</p>
-</li>
-<li>
-<p>"Stunnel/SSH". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/SSH">https://charlesreid1.com/wiki/Stunnel/SSH</a>&gt;</p>
-</li>
-<li>
-<p>"Stunnel/Scp". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Scp">https://charlesreid1.com/wiki/Stunnel/Scp</a>&gt;</p>
-</li>
-<li>
-<p>"Stunnel/OpenVPN". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/OpenVPN">https://charlesreid1.com/wiki/Stunnel/OpenVPN</a>&gt;</p>
-</li>
-</ol></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/stunnel.html">stunnel</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/ssl.html">SSL</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/encryption.html">encryption</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/ssh.html">SSH</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/networking.html">networking</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/openvpn.html">OpenVPN</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1088,6 +1135,19 @@ that contains a number of techniques for debugging an stunnel connection. </p>
             </p>
             <p class="archive">
             <a href="/lets-generate-permutations.html">Let's Generate Permutations!</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>October 2017</h2>
+
+            <p class="archive">
+            <a href="/google-cloud-data-engineering-certification.html">Google Cloud Data Engineering Certification</a>
             </p>
 
         </div>
