@@ -2,12 +2,14 @@ Title: Charlesreid1.com Stack: Part 1: Web
 Date: 2018-03-31 23:00
 Category: Charlesreid1
 Tags: web, git, pelican, nginx, apache, mediawiki, javascript, php, docker, security
+Status: draft
 
 
 
 # Web
 
 Several components:
+
 * Main site - pelican
 * Wiki - MediaWiki (PHP), Old Reliable, same software running Wikipedia
 * Javascript playground - pelican, life, calendar, maps, Leaflet, D3, etc.
@@ -18,6 +20,7 @@ Several components:
 ### Design and Layout
 
 Consistent look and feel of site belies underlying heterogeneous elements:
+
 * HTML/JS for main page and Javascript sub-pages (Pelican)
 * Wiki with a skin and style files for wiki page layouts defined in PHP (MediaWiki)
 * Static content hosted on Github pages (also Pelican)
@@ -60,7 +63,8 @@ MediaWiki
 
 Highly customized skin limits amount of clutter
 
-chose mediawiki nearly a decade ago, and am still going strong with it. Important reasons:
+Chose mediawiki nearly a decade ago, and am still going strong with it. Important reasons:
+
 * The content features: simple as hell to create new pages, upload images, transclude content from one page in another, develop page templates, quickly create a sense of "there"-ness
 * The markdown: using a MW wiki every day means you are learning MW syntax, which translates directly to Wikipedia. This means you'll have a much deeper understanding of Wikipedia than the average bear.
 * The community: MW is a robust tool whose fate is forever tied to the fate of Wikipedia. It's a good bet Wikipedia will be around for a long time, and so will MW.
@@ -126,6 +130,7 @@ Goenv to keep my Go version up to date.
 # Docker
 
 Use Docker to run services, and to maintain patched, up-to-date software:
+
 * Rsync
 * Stunnel
 * Netdata
@@ -138,11 +143,13 @@ Use Docker to run services, and to maintain patched, up-to-date software:
 # Security
 
 Encryption 
+
 * Private keys, SSH connection, ECSA fingerprint over trusted connection
 * SSH endpoint first time will ask you to verify fingerprint
 * Linode provides root web shell
 
 VPN - management LAN
+
 * Concept of management LAN
 * Tinc for lightweight mesh VPN
 * OpenVPN is more complicated, server architecture
