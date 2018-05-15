@@ -393,10 +393,10 @@ that made this possible.
 Then have a look at the finished product at [git.charlesreid1.com](https://git.charlesreid1.com).
 
 Gitea allows you to create organizations, useful for organizing repos related to 
-particular functionality or platforms. For example, [rpi](https://charlesreid1.com:3000/rpi) 
+particular functionality or platforms. For example, [rpi](https://git.charlesreid1.com/rpi) 
 is an organization that owns repositories with scripts and software for raspberry pis,
-[docker](https://charlesreid1.com:3000/docker) is an organization that owns repositories
-with Dockerfiles, and [mac](https://charlesreid1.com:3000/mac) holds Mac-related things.
+[docker](https://git.charlesreid1.com/docker) is an organization that owns repositories
+with Dockerfiles, and [mac](https://git.charlesreid1.com/mac) holds Mac-related things.
 
 This organization allows better organization of project code - a dotfiles repository
 that works for a Mac laptop or a Unix server is not necessarily good for a Raspberry Pi

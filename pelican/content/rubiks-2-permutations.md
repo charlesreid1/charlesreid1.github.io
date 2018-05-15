@@ -533,7 +533,7 @@ L:
 
 The rotation map enables us to represent a 4x4 Rubik's Cube
 as a simple tuple, and just use a Rubik's Cube object from the 
-[forked rubikscubesolver library](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)
+[forked rubikscubesolver library](https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver)
 at git.charlesreid1.com to get the rotation maps.
 
 ```python
@@ -566,14 +566,14 @@ that actually generates these face maps. This functionality
 was not in the [original Rubik's Cube solver library](https://github.com/dwalton76/rubiks-cube-NxNxN-solver)
 from [Github user @dwalton76](https://github.com/dwalton76/),
 so the library was forked and the functionality added
-to the [forked Rubik's Cube solver library](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver).
+to the [forked Rubik's Cube solver library](https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver).
 
 The actual implementation is in the `rotation_map(action)` method,
 defined for the Rubik's Cube object at the same place as the 
 `rotate(action)` method. This definition is in 
 `rubikscubennnsolver/__init__.py` on line 581:
 
-[link to `rubikscubennnsolver/__init__.py`](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver/src/master/rubikscubennnsolver/__init__.py#L581)
+[link to `rubikscubennnsolver/__init__.py`](https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver/src/master/rubikscubennnsolver/__init__.py#L581)
 
 This method returns a list containing the tuples of index permutations 
 (old,new) that correspond to this particular move. Call it like this:
@@ -692,10 +692,10 @@ in order to return the cube back to its solved state.
 <[https://github.com/dwalton76/rubiks-cube-NxNxN-solver](https://github.com/dwalton76/rubiks-cube-NxNxN-solver)>
 
 6. "Rubik's Cube NxNxN Solver". Git repository, git.charlesreid1.com. Charles Reid. Updated 14 January 2017.
-<[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)>
+<[https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver](https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver)>
 
 7. "Rubiks Cube Cycles". Git repository, git.charlesreid1.com. Charles Reid. Updated 14 January 2017.
-<[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles)>
+<[https://git.charlesreid1.com/charlesreid1/rubiks-cube-cycles](https://git.charlesreid1.com/charlesreid1/rubiks-cube-cycles)>
 
 
 

@@ -229,7 +229,7 @@ fuction main():
 <a name="five3-python"></a>
 ## Python Code
 
-The code for this solution can be found here: [letter_coverage.py](https://charlesreid1.com:3000/cs/five-letter-words/src/master/letter_coverage.py)
+The code for this solution can be found here: [letter_coverage.py](https://git.charlesreid1.com/cs/five-letter-words/src/master/letter_coverage.py)
 
 This code is as follows:
 

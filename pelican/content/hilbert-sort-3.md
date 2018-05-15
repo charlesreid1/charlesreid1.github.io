@@ -241,6 +241,6 @@ This queue of points is then sorted and returned in order.
 <[http://acmicpc-pacnw.org/](http://acmicpc-pacnw.org/)>
 
 2. "Hilbert Sort." Git repository, git.charlesreid1.com. Charles Reid. Updated 16 June 2017.
-<[https://charlesreid1.com:3000/cs/finalproject-143/src/master/hilbert/HilbertSort.java](https://charlesreid1.com:3000/cs/finalproject-143/src/master/hilbert/HilbertSort.java)>
+<[https://git.charlesreid1.com/cs/finalproject-143/src/master/hilbert/HilbertSort.java](https://git.charlesreid1.com/cs/finalproject-143/src/master/hilbert/HilbertSort.java)>
 
 

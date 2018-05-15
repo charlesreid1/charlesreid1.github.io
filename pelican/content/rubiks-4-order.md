@@ -415,7 +415,7 @@ The order of the move sequence `U Rw` is 240.
 # Code
 
 The code that forms the permutation tuple for a given move sequence
-and performs the factoring of that tuple is in [sequence_order.py](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles/src/master/sequence_order.py).
+and performs the factoring of that tuple is in [sequence_order.py](https://git.charlesreid1.com/charlesreid1/rubiks-cube-cycles/src/master/sequence_order.py).
 
 The `sequence_order.py` file utilizes the 
 [dwalton76/rubiks-cube-NxNxN-solver](https://github.com/dwalton76/rubiks-cube-NxNxN-solver)
@@ -579,10 +579,10 @@ Our procedure was:
 <[https://github.com/dwalton76/rubiks-cube-NxNxN-solver](https://github.com/dwalton76/rubiks-cube-NxNxN-solver)>
 
 6. "Rubik's Cube NxNxN Solver". Git repository, git.charlesreid1.com. Charles Reid. Updated 25 January 2017.
-<[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)>
+<[https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver](https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver)>
 
 7. "Rubiks Cube Cycles". Git repository, git.charlesreid1.com. Charles Reid. Updated 25 January 2017.
-<[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles)>
+<[https://git.charlesreid1.com/charlesreid1/rubiks-cube-cycles](https://git.charlesreid1.com/charlesreid1/rubiks-cube-cycles)>
 
 
 <a name="rubiks4-appendix"></a>

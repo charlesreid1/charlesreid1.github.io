@@ -22,4 +22,19 @@ We have a lot of updating to do.
 * the snakemake snake pit
 * wrapping snakemake with command line interfaces
 
+more stuff:
+
+* magic flying camel
+* all the mind machines
+* yaml
+
+
+
+
+
+
+
+
+
+
 

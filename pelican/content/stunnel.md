@@ -115,7 +115,7 @@ The charlesreid1.com wiki has an extensive guide to setting up an Stunnel server
 
 The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel server: 
 
-* [d-stunnel repository](https://charlesreid1.com:3000/docker/d-stunnel) - repo containing Docker configuration files, for creating a Docker container that runs an stunnel server.
+* [d-stunnel repository](https://git.charlesreid1.com/docker/d-stunnel) - repo containing Docker configuration files, for creating a Docker container that runs an stunnel server.
 	This repository contains example stunnel configuration files for running a number of different protocols over stunnel (ssh, http, and rsync).
 
 
@@ -137,9 +137,9 @@ The charlesreid1.com wiki has an extensive guide to setting up an Stunnel client
 
 The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel client: 
 
-* [m-stunnel repository](https://charlesreid1.com:3000/mac/m-stunnel) - stunnel configuration files for running an stunnel client on Mac OS X
+* [m-stunnel repository](https://git.charlesreid1.com/mac/m-stunnel) - stunnel configuration files for running an stunnel client on Mac OS X
 
-* [pi-stunnel repository](https://charlesreid1.com:3000/rpi/pi-stunnel) - stunnel configuration files for running an stunnel client on Raspberry Pi
+* [pi-stunnel repository](https://git.charlesreid1.com/rpi/pi-stunnel) - stunnel configuration files for running an stunnel client on Raspberry Pi
 
 
 <a name="stunnel-protocols"></a>
@@ -199,16 +199,16 @@ The charlesreid1.com wiki details how to create set up SSH over stunnel at the f
 The charlesreid1.com git server has an stunnel docker repository with configuration files
 for running a Docker stunnel server, along with several example stunnel server configuration files
 for handling protocols like rsync, ssh, and http:
-* [d-stunnel repository](https://charlesreid1.com:3000/docker/d-stunnel)
+* [d-stunnel repository](https://git.charlesreid1.com/docker/d-stunnel)
 
 
 <a name="stunnel-troubleshooting"></a>
 ## Troubleshooting Stunnel Connections
 
-In the [d-stunnel repository](https://charlesreid1.com:3000/docker/d-stunnel) is a document called `DEBUGGING.md` 
+In the [d-stunnel repository](https://git.charlesreid1.com/docker/d-stunnel) is a document called `DEBUGGING.md` 
 that contains a number of techniques for debugging an stunnel connection. 
 
-[Here is the direct link to DEBUGGING.md](https://charlesreid1.com:3000/docker/d-stunnel/src/master/DEBUGGING.md).
+[Here is the direct link to DEBUGGING.md](https://git.charlesreid1.com/docker/d-stunnel/src/master/DEBUGGING.md).
 
 The techniques covered include:
 
@@ -222,7 +222,7 @@ The techniques covered include:
 
 * Watching `/var/log/syslog` for activity
 
-See [DEBUGGING.md](https://charlesreid1.com:3000/docker/d-stunnel/src/master/DEBUGGING.md) for details.
+See [DEBUGGING.md](https://git.charlesreid1.com/docker/d-stunnel/src/master/DEBUGGING.md) for details.
 
 <a name="stunnel-refs"></a>
 ## References

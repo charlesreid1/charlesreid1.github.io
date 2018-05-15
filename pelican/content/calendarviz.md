@@ -303,7 +303,7 @@ module in Python to convert between colors in
 various formats, and a function `make_cmap()`
 available from [Chris Slocum](http://schubert.atmos.colostate.edu/~cslocum/code/custom_cmap.py):
 
-[Link to `make_cmap.py`](https://charlesreid1.com:3000/d3/charlesreid1-calendar/src/master/make_cmaps.py)
+[Link to `make_cmap.py`](https://git.charlesreid1.com/d3/charlesreid1-calendar/src/master/make_cmaps.py)
 
 **make_cmap.py:**
 
@@ -540,13 +540,13 @@ and commits to [git.charlesreid1.com](http://git.charlesreid1.com),
 can be seen at the following links:
 
 * Wiki edits calendar: [https://charlesreid1.com/wiki_calendar](https://charlesreid1.com/wiki_calendar)
-* Git commits calendar: [https://git.charlesreid1.com](https://git.charlesreid1.com)
+* Git commits calendar: [https://git.charlesreid1.com/git_calendar](https://git.charlesreid1.com/git_calendar)
 
 <a href="https://charlesreid1.com/wiki_calendar">
 <img src="images/wiki_calendar.png" />
 </a>
 
-<a href="http://git.charlesreid1.com/">
+<a href="http://charlesreid1.com/git_calendar">
 <img src="images/git_calendar.png" />
 </a>
 

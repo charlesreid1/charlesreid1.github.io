@@ -301,7 +301,7 @@ is a method to rotate strings forward 1 character. Here's that method:
 
 ## Complete Enigma Implementation
 
-Here is a link to the complete Enigma code on git.charlesreid1.com: [Enigma.java](https://charlesreid1.com:3000/charlesreid1/java-crypto/src/master/enigma/Enigma.java)
+Here is a link to the complete Enigma code on git.charlesreid1.com: [Enigma.java](https://git.charlesreid1.com/charlesreid1/java-crypto/src/master/enigma/Enigma.java)
 
 Now that the Enigma machine implementation is finished, we can test it out.
 One feature of the Enigma that makes it easy to test is, it is symmetric.

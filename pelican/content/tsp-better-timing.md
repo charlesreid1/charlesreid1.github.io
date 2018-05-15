@@ -21,7 +21,7 @@ Tags: computer science, command line, guava, graph, TSP, make, awk, performance
 ## Before We Begin: The Code
 
 Note that all of the code discussed/shown in this post is available from the 
-traveling salesperson problem repository on [git.charlesreid1.com](https://charlesreid1.com:3000/charlesreid1/tsp).
+traveling salesperson problem repository on [git.charlesreid1.com](https://git.charlesreid1.com/charlesreid1/tsp).
 The `guava/` directory contains the guava solution to the traveling salesperson problem,
 along with the timing scripts discussed below, and several example output files.
 
@@ -150,7 +150,7 @@ clean:
 	rm -rf *.class
 ```
 
-[Link to code on git.charlesreid1.com](https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/Makefile)
+[Link to code on git.charlesreid1.com](https://git.charlesreid1.com/charlesreid1/tsp/src/master/guava/Makefile)
 
 This enables us to run 
 
@@ -263,7 +263,7 @@ echo ${OUTFILE}
 echo ""
 ```
 
-[Link to code on git.charlesreid1.com](https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/time_java.sh)
+[Link to code on git.charlesreid1.com](https://git.charlesreid1.com/charlesreid1/tsp/src/master/guava/time_java.sh)
 
 This creates a time-and-date-stamped output file in which 
 all of the output of this script goes - and which can be 
@@ -376,7 +376,7 @@ echo ${OUTFILE}
 echo ""
 ```
 
-[Link to code on git.charlesreid1.com](https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/avg_time_java.sh)
+[Link to code on git.charlesreid1.com](https://git.charlesreid1.com/charlesreid1/tsp/src/master/guava/avg_time_java.sh)
 
 This results in a file with a large amount of information, but it can be trimmed down 
 to the quantities of interest using a little command line fu.
@@ -503,7 +503,7 @@ do
 done
 ```
 
-[Link to code on git.charlesreid1.com](https://charlesreid1.com:3000/charlesreid1/tsp/src/master/guava/avg_calcs.sh)
+[Link to code on git.charlesreid1.com](https://git.charlesreid1.com/charlesreid1/tsp/src/master/guava/avg_calcs.sh)
 
 Example output:
 

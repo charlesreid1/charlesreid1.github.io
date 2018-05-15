@@ -178,13 +178,13 @@ explore(column):
 Over at [git.charlesreid1.com/charlesreid1/n-queens](https://git.charlesreid1.com/charlesreid1/n-queens) 
 I have several implementations of the N Queens problem:
 
-* [Java solution](https://charlesreid1.com:3000/charlesreid1/n-queens/src/master/java/NQueens.java)
+* [Java solution](https://git.charlesreid1.com/charlesreid1/n-queens/src/master/java/NQueens.java)
 
-* [Perl solution](https://charlesreid1.com:3000/charlesreid1/n-queens/src/master/perl/nqueens.pl)
+* [Perl solution](https://git.charlesreid1.com/charlesreid1/n-queens/src/master/perl/nqueens.pl)
 
-* [Python solution](https://charlesreid1.com:3000/charlesreid1/n-queens/src/master/python/nqueens.py)
+* [Python solution](https://git.charlesreid1.com/charlesreid1/n-queens/src/master/python/nqueens.py)
 
-* [C++ solution](https://charlesreid1.com:3000/charlesreid1/n-queens/src/master/cpp/nqueens.cpp)
+* [C++ solution](https://git.charlesreid1.com/charlesreid1/n-queens/src/master/cpp/nqueens.cpp)
 
 ## Row, Column, and Diagonal Attacks
 

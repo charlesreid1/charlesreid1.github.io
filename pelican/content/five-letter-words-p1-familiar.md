@@ -394,7 +394,7 @@ designed for graphs and networks (expect some code in Java using Google's
 excellent Guava library).
 
 You can follow all of this in my [five-letter-words](https://github.com/charlesreid1/five-letter-words) 
-repository on Github, and/or in the [five-letter-words](https://charlesreid1.com:3000/cs/five-letter-words) 
+repository on Github, and/or in the [five-letter-words](https://git.charlesreid1.com/cs/five-letter-words) 
 repository on git.charlesreid1.com.
 
 We have also provided additional information on the charlesreid1 wiki,

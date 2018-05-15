@@ -250,7 +250,7 @@ using "middle" in place of the empty stack.
 # Code
 
 Here is the entire Classy code, also available on 
-[git.charlesreid1.com](https://charlesreid1.com:3000/cs/finalproject-143/src/master/classy/Classy.java):
+[git.charlesreid1.com](https://git.charlesreid1.com/cs/finalproject-143/src/master/classy/Classy.java):
 
 ```
 import java.util.*; 
@@ -364,5 +364,5 @@ class Person implements Comparable<Person> {
 <[http://acmicpc-pacnw.org/](http://acmicpc-pacnw.org/)>
 
 2. "finalproject-143 (git repository)." Charles Reid. Modified 16 June 2017. Accessed 23 June 2017.
-<[https://charlesreid1.com:3000/cs/finalproject-143/src/master/classy/Classy.java](https://charlesreid1.com:3000/cs/finalproject-143/src/master/classy/Classy.java)>
+<[https://git.charlesreid1.com/cs/finalproject-143/src/master/classy/Classy.java](https://git.charlesreid1.com/cs/finalproject-143/src/master/classy/Classy.java)>
 

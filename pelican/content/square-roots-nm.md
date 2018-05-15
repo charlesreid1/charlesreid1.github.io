@@ -277,5 +277,5 @@ But more on that in a future post...
 1. Press, William et al. "Numerical Recipes in C." Cambridge Unviersity Press (2007).
 
 2. "SquareRoot.java". Charles Reid. git.charlesreid1.com.
-<[https://charlesreid1.com:3000/cs/java/src/master/numerics/newtons-method](https://charlesreid1.com:3000/cs/java/src/master/numerics/newtons-method)>
+<[https://git.charlesreid1.com/cs/java/src/master/numerics/newtons-method](https://git.charlesreid1.com/cs/java/src/master/numerics/newtons-method)>
 

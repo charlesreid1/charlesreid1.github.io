@@ -274,10 +274,10 @@ amount of pay (in gas) that the
 
 Here is a link to the full `RandomNodeGraph.java` file on the charlesreid1.com git server, 
 contained in the `tsp` repository (which has several codes related to the traveling salesperson problem):
-[https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava/RandomNodeGraph.java](https://charlesreid1.com:3000/charlesreid1/tsp/src/master/schoolteacher-guava/RandomNodeGraph.java)
+[https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava/RandomNodeGraph.java](https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava/RandomNodeGraph.java)
 
 And here is a link to the `tsp` repository on the same charlesreid1.com git server:
-[https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava](https://charlesreid1.com:3000/charlesreid1/tsp/src/master/schoolteacher-guava)
+[https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava](https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava)
 
 In a city with 10 routes connecting to other cities, having edges that the schoolteacher
 cannot travel, or nodes that limit the amount of gas the schoolteacher receives, 
@@ -304,7 +304,7 @@ and comparisons between the TSP and TSTP slopes will be added later.
 ## References
 
 1. "tsp (git repository)." Charles Reid. Modified 7 April 2017. Accesssed 30 April 2017.
-<[https://git.charlesreid1.com/charlesreid1/tsp](https://charlesreid1.com:3000/charlesreid1/tsp)>
+<[https://git.charlesreid1.com/charlesreid1/tsp](https://git.charlesreid1.com/charlesreid1/tsp)>
 
 2. "Solving the Traveling Salesperson Problem with Java and Guava." Charles Reid. 23 March 2017. Accessed 30 April 2017.
 <[https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html](https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html)>

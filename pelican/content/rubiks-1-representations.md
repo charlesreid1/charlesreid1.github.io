@@ -260,7 +260,7 @@ library by Github user [@dwalton](https://github.com/dwalton76/).
 We have modified this library to provide additional
 functionality needed in the project; the fork used 
 in this project is available at git.charlesreid1.com:
-[rubiks-cube-nnn-solver](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)
+[rubiks-cube-nnn-solver](https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver)
 
 Using this library, here's how we create a 4x4
 Rubik's Revenge cube:
@@ -608,8 +608,8 @@ rotations applied to the 4x4 Rubik's Cube.
 <[https://github.com/dwalton76/rubiks-cube-NxNxN-solver](https://github.com/dwalton76/rubiks-cube-NxNxN-solver)>
 
 6. "Rubik's Cube NxNxN Solver". Git repository, git.charlesreid1.com. Charles Reid. Updated 11 January 2017.
-<[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)>
+<[https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-nnn-solver)>
 
 7. "Rubiks Cube Cycles". Git repository, git.charlesreid1.com. Charles Reid. Updated 11 January 2017.
-<[https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles)>
+<[https://git.charlesreid1.com/charlesreid1/rubiks-cube-cycles](https://charlesreid1.com:3000/charlesreid1/rubiks-cube-cycles)>
 
