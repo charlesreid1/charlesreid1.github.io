@@ -503,6 +503,275 @@ $$</div>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Mad Combinatoric Castles
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-07-25T18:00:00-07:00" pubdate>Tuesday 07/25/2017</time>
+                in 
+                <a href="/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/mad-combinatoric-castles.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h1>Table of Contents</h1>
+<ul>
+<li><a href="#castles-problem">Overview: The Problem</a></li>
+<li><a href="#polyominoes">Polyominoes</a></li>
+<li>Generating Functions</li>
+<li>Problem 502 Analytical Model(s)</li>
+<li>Problem 502 Solution Approaches</li>
+</ul>
+<p><a name="castles-problem"></a></p>
+<h1>Overview: The Problem</h1>
+<p>In an earlier post, I mentioned <a href="https://charlesreid1.com/wiki/Project_Euler">my efforts on Project Euler</a>
+and the wide variety of problems there that can offer some profound mathematical insights.</p>
+<p>Given that the first post covered problem #1, I thought it would be nice
+if the next problem cranked up the difficulty factor by an order of magnitude.
+Problem 502 is a very hairy combinatorics problem that required me to learn about 
+a wide variety of combinatorial enumeration techniques.</p>
+<p>Let's start with the problem statement.</p>
+<h2>Building Castles</h2>
+<p>Problem 502 is about building castles. The problem gives an <span class="math">\(M \times N\)</span> rectangular grid,
+and asks us to count how many "caastles" can be built on the rectangular grid, given its maximum
+height. Here is how the game works:</p>
+<p>First, start by defining a block as a rectangle of height 1, and an integer-valued length.
+A castle is a configuation of stacked blocks.</p>
+<p>For a game grid of size <span class="math">\(M \times N\)</span>, we can construct castles according to
+the following rules:
+<em> Blocks can be placed on top of other blocks, but no sticking out past edge
+</em> All blocks aligned to grid
+<em> Two neighboring blocks must have 1 unit of space between them
+</em> Maximum achieved height of castle is EXACTLY M
+* Castle is made from even number of blocks</p>
+<p>Here is an example W = 8, H = 5 castle given in more compact notation:</p>
+<div class="highlight"><pre><span></span>  #   # 
+  #   ##
+ ## # ##
+##### ##
+########
+</pre></div>
+
+
+<p>We can also build more complicated castles, like this 10 by 100 castle:</p>
+<div class="highlight"><pre><span></span>X       X      XX    X     XX   XX X X                          X XX          XX   XX  X     X   XXX
+X       X      XX    X     XX X XX X X     X     X             XX XX          XX   XX  X     X   XXX
+X      XX      XX    X     XX X XXXX X     X     X             XX XX          XX   XX  X     X   XXX
+X      XX      XX    X     XX X XXXX X     X     X XXX         XX XX          XX X XX  X     X   XXX
+X      XX     XXX    X     XX X XXXX X  X  X     X XXX X X     XX XX          XX X XX  X  X  X   XXX
+X      XX  X  XXX  X X     XXXX XXXX X  XX X    XX XXX X X   X XX XX          XX XXXX  X XX XX  XXXX
+X  XX  XX  X  XXX  X X     XXXX XXXX XX XX XX XXXX XXX X XXX X XX XX    X     XX XXXXX X XX XX XXXXX
+X  XX  XXX X  XXX  X X   X XXXX XXXX XX XX XX XXXX XXXXX XXX XXXX XX  X X     XX XXXXX X XX XXXXXXXX
+X XXXXXXXX X XXXXXXX X XXXXXXXX XXXXXXX XX XX XXXXXXXXXXXXXX XXXX XX XX X  XX XX XXXXXXXXXX XXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+</pre></div>
+
+
+<p>Our objective in this problem is to enumerate all possible castles. Let <span class="math">\(F(x,y)\)</span> denote the number of 
+unique castles with a width of x and a height of exactly y. The problem gives use the trivial number
+<span class="math">\(F(4,2) = 10\)</span>. The problem also gives <span class="math">\(F(13,10)\)</span> and <span class="math">\(F(10,13)\)</span>, both of which are absolutely enormous numbers.</p>
+<p>This should be your first giant red flag that manual enumeration through a traversal of combinatoric space 
+is absolutely, positively out of the question. We'll explain why in more detail below, but suffice to say,
+there is a combinatoric explosion that occurs for castles larger than 10, so castles with a width of 
+1 trillion are going to get STUPID big.</p>
+<p>Then we're given <span class="math">\(F(100,100)\)</span>, which is so enormous it has to be reported mod 1,000,000,007.</p>
+<p>Finally, the problem asks us the following whopper of a question:</p>
+<p>What is <span class="math">\(F(10^{12},100) + F(10^4, 10^4) + F(100,10^{12}) mod 1,000,000,007\)</span>? </p>
+<p>Whew.</p>
+<h2>The Scale of the Problem</h2>
+<p>For solving this problem it is important to take a step back and think through
+the size of the combinatoric space being searched, and what methods we have for 
+carving out that space.</p>
+<p>As already mentioned, the size of this problem - the actual number of 
+castles - is surely larger than the <a href="https://charlesreid1.com/wiki/Eddington_Number">Eddington number</a>, 
+the number of protons in the known universe. The numbers of combinations are 
+STUPID big. There's no way for the mind to fully wrap itself around the concept.</p>
+<p>The huge numbers involved means, we must have a closed-form expression for <span class="math">\(F(x,y)\)</span> that we can
+evaluate once to get each of the <span class="math">\(F(10^{12},100), F(10^4,10^4), F(100,10^{12})\)</span> required by the answer.
+Doing so much as counting to 1 trillion takes minutes on modern computers, so if you're doing anything else
+1 trillion times, you'll end up waiting a loooong time.</p>
+<h2>Generating Functions</h2>
+<p>As it turns out, there is indeed a combinatorial enumeration method that does not require 
+explicitly finding or generating each permutation in order to count all permutations.
+I have covered <a href="https://charlesreid1.com/wiki/Generating_Functions">generating functions on the wiki</a>.
+The principal idea behind generating functions is the observation that we can rearrange the 
+infinite series:</p>
+<div class="math">$$
+G(z) = 1 + z + z^2 + z^3 + \dots
+$$</div>
+<p>into the equation </p>
+<div class="math">$$
+G(z) = \dfrac{1}{1-z}
+$$</div>
+<p>This single identity leads to a whole family of solution techniques for generating functions.
+The basic idea is to start by writing the rules of your system (see above), 
+then write a generating function that varies with characteristic variables of the problem 
+(width and height in this case, possibly others),
+and last, combine the generating functions of different rules or objects into a single generating function.</p>
+<h1>Overview of Polyominoes</h1>
+<p>Let us begin by considering a plane <span class="math">\(\pi\)</span> of positive integers, <span class="math">\(pi = \mathbb{N} \times \mathbb{N}\)</span>.</p>
+<p>Let a polyomino denote a two-dimensional shape formed by connecting contiguous unit square tiles
+together, all of which align to the 2D grid of integers <span class="math">\(\pi\)</span>. 
+(Keep the definition general here, because there are lots of kinds of polyomonioes.)
+If you have already played Tetris, or John Conway's Game of Life, you will recognize
+polyominoes from those contexts.</p>
+<p>Now, we set up our generating function in terms of characteristics of the problem.
+It is very important to note that, while most of the rules are fairly straightforward to translate into
+a polyomonio type of framework, Rule 6 is not. In fact, it is probably Rule 6 that makes Problem 502
+so challenging. Were it not for Rule 6, this would be a nearly-trivial problem.</p>
+<p>Let's revisit our rules and translate them into polyomino equivalents.</p>
+<h2>Castle Rules for Polyominoes</h2>
+<h3>Generating Function Variables</h3>
+<p>We want to construct a multivariate ordinary generating function for our castles, since we have 
+several variables we want to change, and get back a total count of castles.</p>
+<p>The two most obvious variable choices for our generating function independent variables 
+are width <span class="math">\(x\)</span> and height <span class="math">\(y\)</span>. Surely, these must be in the final generating function.</p>
+<p>However, this still doesn't give us enough information about the construction process 
+from step to step. Imagine that we place the first block on row 1.</p>
+<p>Then we may place as many blocks as we would like along row 2, wherever we would like 
+(level 2 is the least restricted layer of the castle).</p>
+<p>Now, when we get to row 3, we are only allowed to keep building where there is already 
+an existing tower from the prior row. This means, we have to pass along information 
+from the prior row - where the bricks are located and how many - so that we know where
+the next level may build towers.</p>
+<p>This will remain an open question until we cover a few other representations of 
+Problem 502 and ways of modeling it. Then we will cover what additional
+variables our generating function might need.</p>
+<h3>Rule 1: No Overhangs</h3>
+<p>Rule 1 stipulates that blocks can be placed on top of other blocks as long as nothing sticks out past the end or hags out.</p>
+<p>This ensures that the resulting polyomino is column convex. Column convexity is the property that 
+we can draw a vertical line through any column of the polyomino, and we only intersect the polyomino
+in two places. (No internal breaks.)</p>
+<p>This rule stipulates what kind of polyomino constructions are allowed.</p>
+<h3>Rule 2: Snap to Grid</h3>
+<p>This rule is just saying that the unit squares in the castle problem
+match the unit squares of polyominoes, ensuring the problems are 
+interchangeable.</p>
+<h3>Rule 3: Neighbor Blocks Need Space</h3>
+<p>Rule 3 is crucial for being able to count blocks. If two side-by-side
+contiguous unit squares could be either one or two blocks, this would make
+the final count of solutions much, much, much, much, much bigger than it should be.</p>
+<h3>Rule 4: Bottom Row is One Block</h3>
+<p>This is more of an accounting-based rule, but we define our castle construction process
+such that it begins with a completed row. This means that the number of blocks that we add
+on top of that single block must be odd overall.</p>
+<h3>Rule 5: Maximum Height is Exactly H</h3>
+<p>As it turns out, the last two rules are the toughest - in a sense, because they are 
+<strong>global</strong> conditions on the combinatoric solution that is being counted.
+In other words, we will use generating functions to "construct" our combinatoric objects 
+in a methodical way, and the challenge is on setting global conditions on the 
+generating function's counted solutions.</p>
+<h3>Rule 6: Even Number of Blocks</h3>
+<p>Rule 6 is definitely what makes this problem difficult. </p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/mathematics.html">mathematics</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/factors.html">factors</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/sequences.html">sequences</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Project Euler Problem 1
             </b></h1>
         
@@ -719,390 +988,6 @@ $$</div>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Shortest Lattice Paths and Multiset Permutations
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-07-18T08:00:00-07:00" pubdate>Tuesday 07/18/2017</time>
-                in 
-                <a href="/category/mathematics.html">Mathematics</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/shortest-lattice-paths-and-multiset-permutations.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2>Table of Contents</h2>
-<ul>
-<li><a href="#multiset-lattice">The Lattice Paths Problem</a></li>
-<li><a href="#multiset-permutations">Problem Formulation: Permutations</a><ul>
-<li><a href="#multiset-permutations-unique">Permutations of Unique Items (Factorial)</a></li>
-<li><a href="#multiset-permutations-dupes">Permutations of Items with Duplicates (Multichoose)</a></li>
-<li><a href="#multiset-permutations-example">Example</a></li>
-</ul>
-</li>
-<li><a href="#multiset-2d-rectangular">Solving 2D Rectangular Lattice</a><ul>
-<li><a href="#multiset-2d-examples">More Examples</a></li>
-</ul>
-</li>
-<li><a href="#multiset-2d-square">Solving 2D Square Lattice (Special Case)</a></li>
-<li><a href="#multiset-3d-rectangular">Solving 3D Cuboid Lattice</a></li>
-<li><a href="#multiset-3d-square">Solving 3D Cube Lattice (Special Case)</a></li>
-<li><a href="#multiset-ndim">Solving N-Dimensional Square Lattice (N-Dimensional Multisets)</a></li>
-</ul>
-<p><a name="multiset-lattice"></a></p>
-<h2>The Lattice Paths Problem</h2>
-<p>I first came across the lattice paths problem in <a href="https://projecteuler.net/problem=15">Project Euler problem 15</a>. 
-The question described a 2x2 square lattice,
-and illustrated the 6 ways of navigating from the top left corner to the bottom right corner by taking the minimum number
-of steps - 2 right steps and 2 down steps. </p>
-<p>The question then asks for the number of minimum paths on a 20 x 20 grid. Needless to say, even without seeing the number, 
-it should be obvious that enumerating all of these paths would get extremely expensive with grid dimensions growing beyond 10.
-That means this should be approached as an <strong>analytical</strong> combinatorics problem, not a computational combinatorics problem.
-As it turns out, there is a closed-form solution, and this is one of the few Project Euler questions that can be answered 
-with the straightforward use of Wolfram Alpha (I solved it while boarding a bus).</p>
-<p>But this is an interesting problem that goes beyond the Project Euler question - it has to do with 
-a combinatorics problem that is maddeningly simple, yet surprisingly difficult to formulate - the problem 
-of <strong>multisets</strong>.</p>
-<p><a name="multiset-permutations"></a></p>
-<h2>Problem Formulation: Permutations</h2>
-<p>Thinking through the 2x2 grid, we already stated that the shortest path must consist of 2 right moves and 2 down moves - 
-the number of paths is simply a question of the order in which these moves are made. Let us represent the path 
-that moves right twice, then down twice, using the string</p>
-<div class="highlight"><pre><span></span>RRDD
-</pre></div>
-
-
-<p>Now we have a way of representing paths through the lattice - and we've turned our very specific lattice problem 
-into a much more general combinatorics problem. How many unique permutations of the above path/string can we find?</p>
-<p><a name="multiset-permutations-unique"></a></p>
-<h3>Permutations of Unique Items (Factorial)</h3>
-<p>Let's suppose we have a string consisting of unique characters:</p>
-<div class="highlight"><pre><span></span>ABCDEFG
-</pre></div>
-
-
-<p>Now how many permutations of this string are there? The first letter can be any of the 7 characters, so we have 7 possibilities. 
-The second letter can be any of the remaining 6 characters, so we have 7 * 6 possibilities. And so on down the line, until we get a 
-total number of possible permutations of the string equal to</p>
-<div class="math">$$
-7! = 7 \times 6 \times 5 \times 4 \times 3 \times 2 \times 1 = 5040
-$$</div>
-<p>There are 5040 unique permutations of the string. </p>
-<p>Our situation is complicated by the fact that some of our permutations are repeated. For example, if we label the two down moves 
-as D1 and D2, we can choose the first move as D1 and the second move as D2, or the first move as D2 and the second move as D1 - the two are equivalent. 
-This will eliminate some of the permutations.</p>
-<p><a name="multiset-permutations-dupes"></a></p>
-<h3>Permutations of Items with Duplicates (Multichoose)</h3>
-<p>Our case is slightly different: we have items with duplicates. This fits into a general combinatorics framework called 
-<a href="https://en.wikipedia.org/wiki/Stars_and_bars_(combinatorics)">stars-and-bars</a> (link to Wikipedia article). 
-In this framework, we are trying to determine the number of ways that we can partition a set of n objects 
-into a set of <span class="math">\(k\)</span> bins. The <span class="math">\(n\)</span> objects are often denoted as star characters, and the k bins are formed by 
-k-1 bar characters. </p>
-<p>For example, if we are adding 5 components to a circuit board, and they can be any one of 9 possible components, we can represent this as
-the partitioning of 5 stars among 9 bins, or 8 bars. Here are some possibilities:</p>
-<div class="highlight"><pre><span></span>||||||||        &lt;-- No choices made yet (9 bins, 8 partitions)
-*|*||*||*|*||   &lt;-- Mix of different components
-||*|*||*|*||*   &lt;-- Mix of different components
-****|||*|||||   &lt;-- Heavy on component 1
-*|**|||**||||   &lt;-- Two pairs
-</pre></div>
-
-
-<p>In the case of our lattice path problem, we have only two unique characters, D and R. 
-We can think of the problem of generating permutations as inserting the down moves into a sequence of right moves. 
-We have a certain number of locations where we can insert the down moves, and down moves can be inserted in order.</p>
-<p>This is what's often called a stars-and-bars problem in combinatorics: trying to determine the number of permutations 
-of items from multisets can be described as partitioning star characters with bar characters.</p>
-<p>To formulate our problem in these terms, we can think of "distributing" our down moves as we move right through the lattice. 
-On the 20x20 grid, we are going to make 20 right moves, and we can distribute our 20 down moves at any of 21 possible locations 
-(columns of points on the lattice). </p>
-<p>Thus, our n items, the 20 down moves, are being placed between the 20 right moves, which are the 20 bars that create 
-21 bins (21 locations to place the down moves).</p>
-<p><a name="multiset-permutations-example"></a></p>
-<h3>Example</h3>
-<p>Considering the smaller 2x2 example, and replacing bars with R, we have, for a 2x2 lattice, six possibilities:</p>
-<div class="highlight"><pre><span></span>RR    &lt;-- No choices made yet
-**RR  &lt;-- all on left
-*R*R  &lt;-- distributed... etc...
-*RR*
-R**R
-R*R*
-RR**
-</pre></div>
-
-
-<p>To enumerate the number of possibilities, we use the multichoose function, denoted "n multichoose k". This counts the number of ways
-to place n objects (D) into <span class="math">\(k\)</span> bins (created by <span class="math">\(k-1\)</span> other objects, R). The multichoose function is defined as
-(see <a href="multisets">https://en.wikipedia.org/wiki/Multiset#Counting_multisets</a> wikipedia page for proper Latex notation - 
-it looks like the binomial coefficient but with 2 parentheses):</p>
-<div class="math">$$
-n \mbox{  multichoose  } k = \binom{n+k-1}{n} 
-$$</div>
-<p>where, again, n is number of objects, being split into <span class="math">\(k\)</span> partitions by <span class="math">\(k-1\)</span> other objects.</p>
-<p>Now, let's plug in the numbers for the 2 by 2 lattice. We get:</p>
-<div class="math">$$
-n = 2, k = 3
-$$</div>
-<p>We are partitioning 2 down moves among 3 possible columns in the lattice. This gives:</p>
-<div class="math">$$
-2 \mbox{  multichoose  } 3 = \binom{2+3-1}{2} = \binom{4}{2} = 10
-$$</div>
-<p>which is indeed the number of paths through the lattice.</p>
-<p><a name="multiset-2d-rectangular"></a></p>
-<h2>Solving 2D Rectangular Lattice</h2>
-<p>To generalize, on a lattice of width <span class="math">\(W\)</span> and height <span class="math">\(H\)</span>, we have <span class="math">\(W\)</span> right moves that form <span class="math">\(W+1\)</span> partitions,
-in which we are placing H items. The number of possible paths through the lattice is therefore 
-equivalent to permutations of the string:</p>
-<div class="highlight"><pre><span></span>RRRR...(W times)...RRRDDDD...(H times)...DDDD
-</pre></div>
-
-
-<p>Now n and k are given by:</p>
-<div class="math">$$
-n = H, k = W+1
-$$</div>
-<p>so the total number of possible paths through the W x H square lattice is:</p>
-<div class="math">$$
-(H) \mbox{  multichoose  } (W+1) = \binom{W+1+H-1}{H} = \binom{W+H}{H}
-$$</div>
-<p><a name="multiset-2d-examples"></a></p>
-<h3>More Examples</h3>
-<p>The number of minimal paths through a 4 x 2 lattice (identical to the number of paths 
-through a 2 x 4 lattice) is:</p>
-<div class="math">$$
-P = \binom{4+2}{2} = \binom{4+2}{4} = 15
-$$</div>
-<p>The number of minimal paths through an 8x8 lattice is given by:</p>
-<div class="math">$$
-P = \binom{8+8}{8} = 12,870
-$$</div>
-<p>and finally, the number of minimal paths through a 20 x 20 lattice is given by:</p>
-<div class="math">$$
-P = \binom{20+20}{20} = 137,846,528,\mbox{XXX}
-$$</div>
-<p>(This is the Project Euler problem 15 answer so last few digits are omitted.)</p>
-<h2>Solving 2D Square Lattice (Special Case)</h2>
-<p>If we use the above formulas for the special case where the dimensions of the grid
-are equal, such as the 20 x 20 case, we get the simpler and more symmetric formula:</p>
-<div class="math">$$
-P = \binom{2D}{D}
-$$</div>
-<p>where <span class="math">\(D\)</span> is the dimension of the square grid. </p>
-<p><a name="multiset-3d-rectangular"></a></p>
-<h2>Solving 3D Cuboid Lattice</h2>
-<p>(Note: <a href="https://en.wikipedia.org/wiki/Cuboid">cuboids</a> are the 3D analogue of 2D rectangles.)</p>
-<p>If we take this idea a step further, and use a slightly different combinatoric formula,
-we can generalize the problem to paths through higher dimensional lattices. 
-This is an approach I came up with through trial and error, 
-and some experimentation with Mathematica.</p>
-<p>Suppose we have a 3D lattice, composed of 8 cubes, 2 on each side.
-Now we wish to know: how many shortest Manhattan distance paths are there
-through the lattice, from one corner to the other?</p>
-<p>This can be re-cast, as we did above, as the problem of counting
-unique permutations of a string of the form:</p>
-<div class="highlight"><pre><span></span>UURRBB
-</pre></div>
-
-
-<p>where U denotes an up move, R denotes a right move, and B denotes a back move.</p>
-<p>While we could use the multiset approach from above to describe this problem, 
-it turns out that this approach is not powerful enough to describe the problem
-of arbitrary 3D lattices.</p>
-<p>Let's pose the problem slightly more generally: we have C bags of moves or characters,
-each of a different size. We must use each character i precisely as many times as we have 
-instances in its bag C_i. How many unique permutations are there?</p>
-<p>Consider the following example string of length <span class="math">\(N = 14\)</span>, consisting of:</p>
-<div class="math">$$
-\begin{array}
-N_x &amp;=&amp; 4 \mbox{  UP moves} \\
-N_x &amp;=&amp; 4 \mbox{  RIGHT moves} \\
-N_x &amp;=&amp; 6 \mbox{  BACK moves}
-\end{array}
-$$</div>
-<p>These form a path through a 3D lattice of size <span class="math">\(4 \times 4 \times 6\)</span>:</p>
-<div class="highlight"><pre><span></span>UUUURRRRBBBBBB
-</pre></div>
-
-
-<p>The number of unique permutations can be computed by breaking this into sub-problems.
-Start by asking how many permutations there are of the string:</p>
-<div class="highlight"><pre><span></span>UUUUXXXXXXXXXX
-</pre></div>
-
-
-<p>(Treating the Rs and Bs as identical). Then we get:</p>
-<div class="math">$$
-\binom{N}{N_x} = \binom{N_x + N_y + N_z}{N_x} = \binom{14}{10} = 1001
-$$</div>
-<p>Next, we deal with the other sub-problem, the Xs, by asking how many ways 
-we can permute the following string:</p>
-<div class="highlight"><pre><span></span>RRRRBBBBBB
-</pre></div>
-
-
-<p>which is solved via another binomial coefficient. This number of permutations is given by:</p>
-<div class="math">$$
-\binom{N_y + N_z}{N_y} = \binom{N_y + N_z}{N_z} = \binom{10}{4} = \binom{10}{6} = 210
-$$</div>
-<p>Now combining these, we get the overall number of permutations:</p>
-<div class="math">$$
-P = \binom{14}{4} \cdot \binom{10}{4} = 210,210
-$$</div>
-<p><a name="multiset-3d-square"></a></p>
-<h2>Solving 3D Cubic Lattice (Special Case)</h2>
-<p>If we have the special case of a perfect cubic lattice, the formula above reduces to the nice and symmetric:</p>
-<div class="math">$$
-\dfrac{(3n)!}{(n!)^3}
-$$</div>
-<p><a name="multiset-ndim"></a></p>
-<h2>Solving N-Dimensional Square Lattice (N-Dimensional Multisets)</h2>
-<p>Let's look at the example of a traversal of a 4D lattice, 
-which we can think of as the evolution of a 3D traversal in time
-(a step in the fourth dimension would represent a "pause" in the 3D traversal). </p>
-<p>Consider the traversal of a cube with dimensions <span class="math">\(3 \times 4 \times 5 \times 3\)</span>. Then</p>
-<div class="math">$$
-N = 3 + 4 + 5 + 3
-$$</div>
-<div class="math">$$
-N_x = 3
-$$</div>
-<div class="math">$$
-N_y = 4
-$$</div>
-<div class="math">$$
-N_z = 5
-$$</div>
-<div class="math">$$
-N_t = 3
-$$</div>
-<p>A path on this 4D lattice has the form:</p>
-<div class="highlight"><pre><span></span>UUURRRRBBBBBWWW
-</pre></div>
-
-
-<p>(where <span class="math">\(W\)</span> denotes wait, or a step in the time dimension).</p>
-<p>The number of permutations is given by:</p>
-<div class="math">$$
-P = \binom{N_x + N_y + N_z + N_t}{N_x} \cdot \binom{N_y + N_z + N_t}{N_y} \cdot \binom{N_z + N_t}{N_z} 
-$$</div>
-<p>For our specific example,</p>
-<div class="math">$$
-P = \binom{3+4+5+3}{3} \cdot \binom{4+5+3}{4} \cdot \binom{5+3}{5} = 455 \cdot 495 \cdot 56 = 12,612,600
-$$</div>
-<p>Confirmed by Mathematica:</p>
-<p><img alt="Permutations with Mathematica" src="/images/mathematica-lattice.png"></p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/mathematics.html">mathematics</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/combinatorics.html">combinatorics</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/permutations.html">permutations</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/lattice-paths.html">lattice paths</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/puzzles.html">puzzles</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/project-euler.html">project euler</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1229,6 +1114,9 @@ $$</div>
 
             <h2>July 2017</h2>
 
+            <p class="archive">
+            <a href="/mad-combinatoric-castles.html">Mad Combinatoric Castles</a>
+            </p>
             <p class="archive">
             <a href="/project-euler-problem-1.html">Project Euler Problem 1</a>
             </p>
