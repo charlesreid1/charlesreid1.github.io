@@ -1,9 +1,12 @@
-Title: AWSome Day Seattle Notes: Part 1: The Basics
+Title: AWSome Day Seattle Notes: Part 2: Networking, Security, and Miscellany
 Date: 2017-04-12 10:00
 Category: Charlesreid1
 Tags: aws, cloud, vpc, containers, data engineering
 
-These notes are also available on [git.charlesreid1.com](https://git.charlesreid1.com/charlesreid1/aws/src/branch/master/awsome-day-sea-2018)
+These notes are also available on git.charlesreid1.com 
+[here](https://git.charlesreid1.com/charlesreid1/aws/src/branch/master/awsome-day-sea-2018/Part2.md)
+or in
+[https://git.charlesreid1.com/charlesreid1/aws](https://git.charlesreid1.com/charlesreid1/aws).
 
 # AWSome Day Notes: Part 2: Networking, Security, and Miscellany
 
