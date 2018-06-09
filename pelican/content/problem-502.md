@@ -2,7 +2,6 @@ Title: Mad Combinatoric Castles
 Date: 2017-07-25 18:00
 Category: Mathematics
 Tags: computer science, mathematics, factors, sequences, project euler
-Status: draft
 
 # Table of Contents
 
