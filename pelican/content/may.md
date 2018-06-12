@@ -51,7 +51,8 @@ The rise of the mind machines:
 Each software package in the mind machine suite
 follows (or will follow) the prime number version
 system:
-* [Prime Number Version System](https://charlesreid1.com/wiki/Prime_Number_Version_System)
+
+* More info on the [Prime Number Version System](https://charlesreid1.com/wiki/Prime_Number_Version_System)
 * This is another bit of documentation that was being blocked by 
     the ability to visualize git repositories
 * [git-subway-maps](https://pages.charlesreid1.com/git-subway-maps) should
