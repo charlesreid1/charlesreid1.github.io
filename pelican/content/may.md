@@ -1,4 +1,4 @@
-Title: List of Ongoing Things
+Title: Current Projects
 Date: 2018-05-12 15:00
 Updated: 2018-05-20 9:00
 Category: General
