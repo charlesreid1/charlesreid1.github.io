@@ -81,7 +81,7 @@
         <div class="col-md-12 col-centered" style="text-align: center;">
             <div class="v50"></div>
             <div class="cosmojumbo">
-                <h1 class="jumbojumbo">charlesreid1.com research &amp; teaching<h1>
+                <h1 class="jumbojumbo">charlesreid1.com blog<h1>
             </div>
         </div>
     </div>
@@ -94,6 +94,410 @@
 
         <div class="col-md-8" style="text-align: center;">
 
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Enigma Cipher Implementation: Part 3: Enigma in Java Without Objects
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-03-22T18:00:00-07:00" pubdate>Wednesday 03/22/2017</time>
+                in 
+                <a href="/category/enigma.html">Enigma</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/enigma-cipher-implementation-part-3-enigma-in-java-without-objects.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>As the title suggests, we're continuing with the third in a series of posts 
+exploring a verb-oriented approach to programming - 
+in an attempt to free ourselves from the fetishization of objects,
+we are attempting to learn how to use languages against their will.</p>
+<p>This is all inspired by <a href="http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html">Steve Yegge's 2006 blog post</a>,
+"Execution in the Kingdom of Nouns," an excellent read that inspired me to 
+explore the subject more deeply. </p>
+<h2>Java Pseudocode</h2>
+<p>In the last post, we ran through the pseudocode for an Enigma machine 
+based entirely upon Strings, iterators, and integer indexes, 
+leading to a vastly simpler abstraction of the Enigma machine
+than would have resulted if we had implicitly chosen a noun-centric approach,
+divided the entire Enigma encryption process into its component nouns like rotor wheels and reflectors,
+and implemented each as an object.</p>
+<p>Here was the pseudocode:</p>
+<div class="highlight"><pre><span></span>define plaintext message
+define normal alphabet and scrambled alphabets
+define list of switchboard swap pairs
+define list of reflector swap pairs
+for each character in plaintext message:
+
+    # Apply switchboard transformation
+    for each pair in switchboard swap pairs:
+        if character in swap pair, swap its value
+
+    # Apply forward rotor transformation
+    for each scrambled alphabet:
+        get index of character in normal alphabet
+        get new character at that index in scrambled alphabet
+        replace character with new character 
+
+    # Apply reflector transformation
+    for each pair in reflector swap pairs:
+        if character in swap pair, swap its value
+
+    # Apply reverse rotor transformation
+    for each scrambled alphabet:
+        get index of input character in scrambled alphabet
+        get new character at that index in normal alphabet
+        replace character with new character 
+
+    # Apply switchboard transformation
+    for each pair in switchboard swap pairs:
+        if character in swap pair, swap its value
+
+    concatenate transformed input character to ciphertext message 
+
+    # Increment rotor wheels
+    for each rotor/scrambled alphabet, left to right:
+        get index of left notch in left alphabet
+        get index of right notch in right alphabet
+        if left index equals right index:
+            cycle left alphabet forward 1 character
+    cycle right-most alphabet forward 1 character
+</pre></div>
+
+
+<h2>Java Code</h2>
+<p>The Enigma code is defined in the Java program as follows:</p>
+<ul>
+<li>The Enigma class defines a set of constants for historically accurate cipher settings.</li>
+<li>The main method contains the encryption procedure.</li>
+<li>There is one static helper method called rotateString.</li>
+</ul>
+<p>Everything is in a public class. Starting with the definitions of constants:</p>
+<div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Enigma</span> <span class="o">{</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">ALPHA</span> <span class="o">=</span> <span class="s">&quot;ABCDEFGHIJKLMNOPQRSTUVWXYZ&quot;</span><span class="o">;</span>
+
+    <span class="c1">// Historically accurate rotor scrambles</span>
+    <span class="c1">// See http://www.codesandciphers.org.uk/enigma/rotorspec.htm</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span><span class="o">[]</span> <span class="n">WHEEL</span> <span class="o">=</span> <span class="o">{</span> <span class="n">ALPHA</span><span class="o">,</span>
+                        <span class="s">&quot;EKMFLGDQVZNTOWYHXUSPAIBRCJ&quot;</span><span class="o">,</span> <span class="c1">// Rotor I    - Royal</span>
+                        <span class="s">&quot;AJDKSIRUXBLHWTMCQGZNPYFVOE&quot;</span><span class="o">,</span> <span class="c1">// Rotor II   - Flags</span>
+                        <span class="s">&quot;BDFHJLCPRTXVZNYEIWGAKMUSQO&quot;</span><span class="o">,</span> <span class="c1">// Rotor III  - Wave</span>
+                        <span class="s">&quot;ESOVPZJAYQUIRHXLNFTGKDCMWB&quot;</span><span class="o">,</span> <span class="c1">// Rotor IV   - Kings</span>
+                        <span class="s">&quot;VZBRGITYUPSDNHLXAWMJQOFECK&quot;</span><span class="o">,</span> <span class="c1">// Rotor V    - Above</span>
+                        <span class="s">&quot;JPGVOUMFYQBENHZRDKASXLICTW&quot;</span><span class="o">,</span>
+                        <span class="s">&quot;NZJHGRCXMYSWBOUFAIVLPEKQDT&quot;</span><span class="o">,</span>
+                        <span class="s">&quot;FKQHTLXOCBJSPDZRAMEWNIUYGV&quot;</span><span class="o">};</span>
+
+    <span class="c1">// Knocking (notch and clasp) advances the wheel to the left</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span><span class="o">[]</span> <span class="n">NOTCH</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;&quot;</span><span class="o">,</span>  <span class="c1">// No notch</span>
+                                          <span class="s">&quot;R&quot;</span><span class="o">,</span> <span class="c1">// Royal</span>
+                                          <span class="s">&quot;F&quot;</span><span class="o">,</span> <span class="c1">// Flags</span>
+                                          <span class="s">&quot;W&quot;</span><span class="o">,</span> <span class="c1">// Wave</span>
+                                          <span class="s">&quot;K&quot;</span><span class="o">,</span> <span class="c1">// Kings</span>
+                                          <span class="s">&quot;A&quot;</span><span class="o">,</span> <span class="c1">// Above</span>
+                                          <span class="s">&quot;AN&quot;</span><span class="o">,</span>
+                                          <span class="s">&quot;AN&quot;</span><span class="o">,</span>
+                                          <span class="s">&quot;AN&quot;</span><span class="o">};</span>
+
+    <span class="c1">// Reflectors</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">REFLECTOR_ALPHA</span> <span class="o">=</span> <span class="s">&quot;AY:BR:CU:DH:EQ:FS:GL:IP:JX:KN:MO:TZ:VW&quot;</span><span class="o">;</span>
+</pre></div>
+
+
+<h2>Main Method: User Settings</h2>
+<p>The next part of the code is the main method, where we begin by defining variables 
+that correspond to settings that the Enigma operator would set from the daily Enigma code book.
+These included:</p>
+<ul>
+<li>The numbering and ordering of wheels (e.g., <code>IV II I</code>)</li>
+<li>The initial rotor settings for each wheel (position 0-25)</li>
+<li>The pairs of letters connected on the switch board</li>
+</ul>
+<p>The wheels are specified using the <code>WHEEL</code> array of Strings, above.
+Each element of the WHEEL array contains a different scrambled alphabet, 
+corresponding to the alphabet scrambles hard-coded into the historical rotor wheels.
+These go into <code>rotorAlpha</code>, which stores each rotor's alphabet in a String.</p>
+<p>The locations of the notches that advance neighboring wheels are fixed by the choice of wheels, 
+and are available through the <code>NOTCH</code> array.
+The notch locations implemented in <code>NOTCH</code> are historically accurate for each rotor wheel. </p>
+<p>The initial rotor settings were also contained in the code book as a sequence of 3 numbers,
+each 0-25, indicating how many turns each wheel was rotated before starting.</p>
+<p>The plugboard pairs specify the wired connections on the front of the machine.
+These plugboard pairs were also daily machine settings specified in the daily Enigma code book.
+The plugboard pairs are input as a single string, with pairs of letters separated by a ":", like this: <code>AB:CD:EF:GH</code>.
+Pairs must be unique (no letter can connect to itself). 
+Letters cannot be repeated (no letter can connect to more than 1 other letter).</p>
+<div class="highlight"><pre><span></span>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span> 
+
+        <span class="c1">// These two strings should encrypt/decrypt to each other when you run them through the Enigma.</span>
+        <span class="c1">//String message = &quot;ABCDE FG HIJKL MNOP QRS TUVWXYZ&quot;; </span>
+        <span class="n">String</span> <span class="n">message</span> <span class="o">=</span> <span class="s">&quot;TVVFT KS UNVYJ FAFV NPC DZJPWEJ&quot;</span><span class="o">;</span>
+
+
+        <span class="c1">//////////////////////////////////</span>
+        <span class="c1">// Operator Settings</span>
+        <span class="c1">// </span>
+        <span class="c1">// Enigma operators have code sheets that specify: </span>
+        <span class="c1">//  - The numbering/ordering of wheels </span>
+        <span class="c1">//  - The initial rotor settings</span>
+        <span class="c1">//  - The plugboard pairs</span>
+
+        <span class="c1">// Rotor scrambles are applied right-to-left</span>
+        <span class="c1">//              {LAST, MIDDLE, FIRST}</span>
+        <span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha</span> <span class="o">=</span> <span class="o">{</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
+        <span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch</span> <span class="o">=</span> <span class="o">{</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
+        <span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit</span> <span class="o">=</span> <span class="o">{</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">};</span>
+
+        <span class="n">String</span> <span class="n">plugboardPairs</span> <span class="o">=</span> <span class="s">&quot;IR:HQ:NT:WZ:VC:OY:GP:LF:BX:AK&quot;</span><span class="o">;</span>
+
+        <span class="n">String</span> <span class="n">coded</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">message</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">coded</span><span class="o">);</span>
+    <span class="o">}</span>
+</pre></div>
+
+
+<h2>Cipher Procedure</h2>
+<p>The next bit of code is the meat of the Enigma method.
+Notice that this is purely procedural code, and makes no use of objects other than the built-in String type. 
+This is the kind of verb-oriented code we are striving for
+when we write noun-free Java code.</p>
+<p>We also pass in any information that's required. 
+Normally we would wrap all of these quantities in an object,
+to keep the list of parameters short, but this implementation is entirely object-free.</p>
+<div class="highlight"><pre><span></span>    <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">enigma</span><span class="o">(</span><span class="n">String</span> <span class="n">message</span><span class="o">,</span>
+                                <span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha</span><span class="o">,</span>
+                                <span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch</span><span class="o">,</span>
+                                <span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit</span><span class="o">,</span>
+                                <span class="n">String</span><span class="o">[]</span> <span class="n">plugboardPairs</span><span class="o">)</span> <span class="o">{</span> 
+
+        <span class="n">StringBuilder</span> <span class="n">message_final</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
+
+        <span class="c1">//////////////////////////////////////</span>
+        <span class="c1">// Enigma Cipher</span>
+
+        <span class="c1">// Apply each transformation in sequence</span>
+        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">message</span><span class="o">.</span><span class="na">length</span><span class="o">();</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+
+            <span class="c1">// Starting char</span>
+            <span class="kt">char</span> <span class="n">c_orig</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+            <span class="kt">char</span> <span class="n">c</span> <span class="o">=</span> <span class="n">c_orig</span><span class="o">;</span>
+
+            <span class="c1">// Perform plugboard swap</span>
+            <span class="k">for</span><span class="o">(</span><span class="n">String</span> <span class="n">pair</span> <span class="o">:</span> <span class="n">plugboardPairs</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">))</span> <span class="o">{</span>
+                <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+                <span class="o">}</span> <span class="k">else</span> <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span> <span class="o">{</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+
+            <span class="c1">// Perform rotor letter substitutions</span>
+            <span class="c1">// (forward order: right-to-left)</span>
+            <span class="kt">int</span> <span class="n">ix</span> <span class="o">=</span> <span class="o">-</span><span class="mi">100</span><span class="o">;</span>
+            <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=(</span><span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">-</span><span class="mi">1</span><span class="o">);</span> <span class="n">j</span><span class="o">&gt;=</span><span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">--)</span> <span class="o">{</span> 
+                <span class="n">ix</span> <span class="o">=</span> <span class="n">ALPHA</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
+                <span class="n">String</span> <span class="n">thisAlpha</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
+                <span class="k">if</span><span class="o">(</span><span class="n">ix</span><span class="o">&gt;=</span><span class="mi">0</span><span class="o">)</span> <span class="o">{</span> 
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">thisAlpha</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">ix</span><span class="o">);</span>
+                <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">c_orig</span><span class="o">;</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+
+            <span class="c1">// Perform reflection</span>
+            <span class="k">for</span><span class="o">(</span><span class="n">String</span> <span class="n">pair</span> <span class="o">:</span> <span class="n">REFLECTOR_ALPHA</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">))</span> <span class="o">{</span>
+                <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+                <span class="o">}</span> <span class="k">else</span> <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span> <span class="o">{</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+
+            <span class="c1">// Perform rotor letter substitutions</span>
+            <span class="c1">// (backwards order: left-to-right) </span>
+            <span class="n">ix</span> <span class="o">=</span> <span class="o">-</span><span class="mi">100</span><span class="o">;</span>
+            <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">&lt;</span><span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span> 
+                <span class="n">String</span> <span class="n">thisAlpha</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
+                <span class="n">ix</span> <span class="o">=</span> <span class="n">thisAlpha</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
+                <span class="k">if</span><span class="o">(</span><span class="n">ix</span><span class="o">&gt;=</span><span class="mi">0</span><span class="o">)</span> <span class="o">{</span> 
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">ALPHA</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">ix</span><span class="o">);</span>
+                <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">c_orig</span><span class="o">;</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+
+
+            <span class="c1">// Perform plugboard swap</span>
+            <span class="k">for</span><span class="o">(</span><span class="n">String</span> <span class="n">pair</span> <span class="o">:</span> <span class="n">plugboardPairs</span><span class="o">.</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">))</span> <span class="o">{</span>
+                <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+                <span class="o">}</span> <span class="k">else</span> <span class="k">if</span><span class="o">(</span><span class="n">c</span><span class="o">==</span><span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">1</span><span class="o">))</span> <span class="o">{</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="mi">0</span><span class="o">);</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+
+
+            <span class="c1">// Final text</span>
+            <span class="k">if</span><span class="o">(</span> <span class="n">c</span><span class="o">&gt;=</span><span class="sc">&#39;A&#39;</span> <span class="o">&amp;&amp;</span> <span class="n">c</span><span class="o">&lt;=</span><span class="sc">&#39;Z&#39;</span><span class="o">)</span> <span class="o">{</span> 
+                <span class="n">message_final</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">c</span><span class="o">);</span>
+            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+                <span class="c1">// Could not resolve </span>
+                <span class="n">message_final</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">c_orig</span><span class="o">);</span>
+            <span class="o">}</span>
+
+            <span class="c1">// Increment rotors</span>
+            <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">&lt;(</span><span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">-</span><span class="mi">1</span><span class="o">);</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
+                <span class="n">String</span> <span class="n">alphaL</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">];</span>
+                <span class="kt">int</span> <span class="n">ixL</span> <span class="o">=</span> <span class="n">alphaL</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">rotorNotch</span><span class="o">[</span><span class="n">j</span><span class="o">]);</span>
+                <span class="n">String</span> <span class="n">alphaR</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="o">];</span>
+                <span class="kt">int</span> <span class="n">ixR</span> <span class="o">=</span> <span class="n">alphaR</span><span class="o">.</span><span class="na">indexOf</span><span class="o">(</span><span class="n">rotorNotch</span><span class="o">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="o">]);</span>
+                <span class="k">if</span><span class="o">(</span><span class="n">ixL</span><span class="o">!=</span><span class="n">ixR</span><span class="o">)</span> <span class="o">{</span> 
+                    <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">]</span> <span class="o">=</span> <span class="n">rotateString</span><span class="o">(</span><span class="n">rotorAlpha</span><span class="o">[</span><span class="n">j</span><span class="o">]);</span>
+                <span class="o">}</span>
+            <span class="o">}</span>
+            <span class="c1">// Always increment the right-most rotor</span>
+            <span class="kt">int</span> <span class="n">lenny</span> <span class="o">=</span> <span class="n">rotorAlpha</span><span class="o">.</span><span class="na">length</span><span class="o">;</span>
+            <span class="n">rotorAlpha</span><span class="o">[</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">]</span> <span class="o">=</span> <span class="n">rotateString</span><span class="o">(</span><span class="n">rotorAlpha</span><span class="o">[</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">]);</span>
+        <span class="o">}</span>
+
+        <span class="k">return</span> <span class="n">message_final</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+    <span class="o">}</span>
+</pre></div>
+
+
+<h2>Utility Method: String Rotator</h2>
+<p>One last piece that's needed to emulate the rotation of the rotor wheels 
+is a method to rotate strings forward 1 character. Here's that method:</p>
+<div class="highlight"><pre><span></span>    <span class="c1">/// Rotate a string forward by 1 character, so &quot;ABCDEF&quot; becomes &quot;FABCDE&quot;</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">rotateString</span><span class="o">(</span><span class="n">String</span> <span class="n">original</span><span class="o">)</span> <span class="o">{</span>
+        <span class="kt">int</span> <span class="n">lenny</span> <span class="o">=</span> <span class="n">original</span><span class="o">.</span><span class="na">length</span><span class="o">();</span>
+        <span class="n">StringBuilder</span> <span class="n">rotated</span> <span class="o">=</span> <span class="k">new</span> <span class="n">StringBuilder</span><span class="o">();</span>
+        <span class="n">rotated</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">original</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">));</span>
+        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span><span class="n">i</span><span class="o">&lt;</span><span class="n">lenny</span><span class="o">-</span><span class="mi">1</span><span class="o">;</span><span class="n">i</span><span class="o">++)</span> <span class="o">{</span> 
+            <span class="n">rotated</span><span class="o">.</span><span class="na">append</span><span class="o">(</span><span class="n">original</span><span class="o">.</span><span class="na">charAt</span><span class="o">(</span><span class="n">i</span><span class="o">));</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">rotated</span><span class="o">.</span><span class="na">toString</span><span class="o">();</span>
+    <span class="o">}</span>
+
+<span class="o">}</span> <span class="c1">// end Enigma class</span>
+</pre></div>
+
+
+<h2>Complete Enigma Implementation</h2>
+<p>Here is a link to the complete Enigma code on git.charlesreid1.com: <a href="https://git.charlesreid1.com/charlesreid1/java-crypto/src/master/enigma/Enigma.java">Enigma.java</a></p>
+<p>Now that the Enigma machine implementation is finished, we can test it out.
+One feature of the Enigma that makes it easy to test is, it is symmetric.
+If we feed a plain text into the Enigma and get the corresponding ciphertext,
+we can feed that ciphertext through the Enigma (with the same initial settings) 
+and recover the original plain text.</p>
+<p>Running the alphabet through the Enigma yields:</p>
+<div class="highlight"><pre><span></span>$ java Enigma
+IN:  ABCDE FG HIJKL MNOP QRS TUVWXYZ
+OUT: TVVFT KS UNVYJ FAFV NPC DZJPWEJ
+</pre></div>
+
+
+<p>Running this back through the Enigma yields:</p>
+<div class="highlight"><pre><span></span>$ java Enigma
+IN:  TVVFT KS UNVYJ FAFV NPC DZJPWEJ
+OUT: ABCDE FG HIJKL MNOP QRS TUVWXYZ
+</pre></div>
+
+
+<p><strong>NOTE:</strong> This code modifies the Enigma machine's settings in-place.
+This means multiple sequential calls to the <code>enigma()</code> method will not reset the rotors.
+The following code will not recover the original plain text <code>message</code>:</p>
+<div class="highlight"><pre><span></span><span class="c1">// This won&#39;t work:</span>
+<span class="n">String</span> <span class="n">coded</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">message</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
+<span class="n">String</span> <span class="n">original2</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">coded</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
+</pre></div>
+
+
+<p>To do this correctly, we would need multiple copies of the input arrays <code>rotorAlpha</code>, <code>rotorNotch</code>, and <code>rotorInit</code>:</p>
+<div class="highlight"><pre><span></span><span class="n">String</span> <span class="n">plugboardPairs</span> <span class="o">=</span> <span class="s">&quot;IR:HQ:NT:WZ:VC:OY:GP:LF:BX:AK&quot;</span><span class="o">;</span>
+
+<span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha</span> <span class="o">=</span> <span class="o">{</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
+<span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch</span> <span class="o">=</span> <span class="o">{</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
+<span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit</span> <span class="o">=</span> <span class="o">{</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">};</span>
+<span class="n">String</span> <span class="n">coded</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">message</span><span class="o">,</span> <span class="n">rotorAlpha</span><span class="o">,</span> <span class="n">rotorNotch</span><span class="o">,</span> <span class="n">rotorInit</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
+
+<span class="n">String</span><span class="o">[]</span> <span class="n">rotorAlpha2</span> <span class="o">=</span> <span class="o">{</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">WHEEL</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
+<span class="n">String</span><span class="o">[]</span> <span class="n">rotorNotch2</span> <span class="o">=</span> <span class="o">{</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">1</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">2</span><span class="o">],</span><span class="n">NOTCH</span><span class="o">[</span><span class="mi">3</span><span class="o">]};</span>
+<span class="kt">int</span><span class="o">[]</span> <span class="n">rotorInit2</span> <span class="o">=</span> <span class="o">{</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">,</span><span class="mi">0</span><span class="o">};</span>
+<span class="n">String</span> <span class="n">original</span> <span class="o">=</span> <span class="n">enigma</span><span class="o">(</span><span class="n">coded</span><span class="o">,</span> <span class="n">rotorAlpha2</span><span class="o">,</span> <span class="n">rotorNotch2</span><span class="o">,</span> <span class="n">rotorInit2</span><span class="o">,</span> <span class="n">plugboardPairs</span><span class="o">);</span>
+
+<span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;ORIGINAL:  &quot;</span><span class="o">+</span><span class="n">message</span><span class="o">);</span>
+<span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;RECOVERED: &quot;</span><span class="o">+</span><span class="n">original</span><span class="o">);</span>
+</pre></div>
+
+
+<p>This works fine:</p>
+<div class="highlight"><pre><span></span><span class="n">ORIGINAL</span><span class="o">:</span>  <span class="n">ABCDE</span> <span class="n">FG</span> <span class="n">HIJKL</span> <span class="n">MNOP</span> <span class="n">QRS</span> <span class="n">TUVWXYZ</span>
+<span class="n">RECOVERED</span><span class="o">:</span> <span class="n">ABCDE</span> <span class="n">FG</span> <span class="n">HIJKL</span> <span class="n">MNOP</span> <span class="n">QRS</span> <span class="n">TUVWXYZ</span> 
+</pre></div>
+
+
+<h2>Sources</h2>
+<ol>
+<li>
+<p>"Execution in the Kingdom of Nouns". Steve Yegge. March 2006. Accessed 18 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html">https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html</a>&gt;</p>
+</li>
+<li>
+<p>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</p>
+</li>
+</ol></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/ciphers.html">ciphers</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/enigma.html">enigma</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/encryption.html">encryption</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/java.html">java</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
   	            	<article>
 <header>
 <div class="row">
@@ -716,6 +1120,19 @@ Large numbers of combinations indeed.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>October 2018</h2>
+
+            <p class="archive">
+            <a href="/first-post-of-the-fall-part-1-data-commons.html">First Post of the Fall, Part 1: Data Commons</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

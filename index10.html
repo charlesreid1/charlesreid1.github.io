@@ -81,7 +81,7 @@
         <div class="col-md-12 col-centered" style="text-align: center;">
             <div class="v50"></div>
             <div class="cosmojumbo">
-                <h1 class="jumbojumbo">charlesreid1.com research &amp; teaching<h1>
+                <h1 class="jumbojumbo">charlesreid1.com blog<h1>
             </div>
         </div>
     </div>
@@ -94,6 +94,341 @@
 
         <div class="col-md-8" style="text-align: center;">
 
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Stunnel
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-04-30T20:00:00-07:00" pubdate>Sunday 04/30/2017</time>
+                in 
+                <a href="/category/security.html">Security</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/stunnel.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><ul>
+<li>
+<p><a href="#stunnel-intro">Introduction</a></p>
+<ul>
+<li><a href="#stunnel-what">What Does Stunnel Do?</a></li>
+<li><a href="#stunnel-work">How Does Stunnel Work?</a> </li>
+</ul>
+</li>
+<li>
+<p><a href="#stunnel-server">Setting Up an Stunnel Server</a></p>
+<ul>
+<li><a href="#stunnel-server-resoures">Charlesreid1.com Resources for Stunnel Servers</a></li>
+</ul>
+</li>
+<li>
+<p><a href="#stunnel-client">Setting Up an Stunnel Client</a></p>
+</li>
+<li>
+<p><a href="#stunnel-protocols">Example Protocols</a></p>
+</li>
+<li>
+<p><a href="#stunnel-docker">Stunnel with Docker</a></p>
+</li>
+<li>
+<p><a href="#stunnel-troubleshooting">Troubleshooting Stunnel Connections</a></p>
+</li>
+<li>
+<p><a href="#stunnel-refs">References</a></p>
+</li>
+</ul>
+<p><a name="stunnel-intro"></a></p>
+<h2>Introduction</h2>
+<p><a name="stunnel-what"></a></p>
+<h3>What Does Stunnel Do?</h3>
+<p>Stunnel is a tool for creating SSL tunnels between a client and a server.</p>
+<p>Creating SSL connections is a general task that is very useful.
+In particular, any packet of any protocol can always be wrapped in an
+additional SSL layer, with packets embedded within packets, so this means 
+you can wrap arbitrary traffic protocols in SSL using Stunnel.</p>
+<p>Stunnel requires a client and a server on either end of the tunnel.</p>
+<p>This writeup assumes access to both the server and the client.
+If you don't have access to the client, the server certificate
+needs to be signed by a certificate authority that the client trusts.
+You can either:</p>
+<ul>
+<li>
+<p>Shell out big bucks for a certificate signed by a certificate authority company, thereby contributing to the ongoing racketeering of said companies;</p>
+</li>
+<li>
+<p>Use a LetsEncrypt certificate, signed by a certificate authority for free; or</p>
+</li>
+<li>
+<p>Use a self-signed certificate and install the certificate authority onto the client computer.</p>
+</li>
+</ul>
+<p>(These are all difficult and confusing processes, 
+compounded by OpenSSL's lack of documentation
+and a proliferation of incorrect terminology.
+Good luck.)</p>
+<p><a name="stunnel-work"></a></p>
+<h3>How Does Stunnel Work?</h3>
+<p>The client stunnel instance will encrypt traffic, 
+and the server stunnel instance will decrypt traffic.</p>
+<p>When encrypting traffic, stunnel accepts incoming traffic by listening on
+a port (almost always a local port). It will wrap the traffic in an encrypted
+SSL layer (TCP wrapping) using the SSL certificate/key that is shared between
+the client and the server. The client then sends out the encrypted traffic 
+over an external connection, and on to the stunnel server.</p>
+<p>When decrypting traffic, stunnel will listen on an external connection for 
+incoming, encrypted SSL traffic. It will use its SSL certificate/key to 
+decrypt the traffic and unwrap the SSL layer. It will then forward this traffic
+on to another (usually local) port.</p>
+<p><img alt="Stunnel flowchart schematic" src="/images/stunnel1.png"></p>
+<p><a name="stunnel-server"></a></p>
+<h2>Setting Up an Stunnel Server</h2>
+<p>Stunnel servers can listen on any port, and the port you choose depends on the application. 
+The configuration we're showing here is intended to bypass a network that is tightly controlled
+and locked down except for HTTP and HTTPS traffic (ports 80 and 443).</p>
+<p>Consider an example of connecting a local service on local port 8443 (not open to the outside world)
+to an stunnel server listening on port 443 (open to the outside world).</p>
+<p>stunnel will listen on port 443, open to external traffic, for SSL-encrypted stunnel traffic. 
+This means that only stunnel can listen on 443 (so this cannot be a server for an HTTPS web 
+site - if a user points their browser to https://yourstunnelserver.com stunnel will not understand
+the HTTPS request and will discard it). 
+We can use stunnel on any port that we want, but communicating between stunnel clients 
+and servers on port 443 allows us to disguise arbitrary traffic (HTTP, HTTPS, SSH, database, 
+etc.) as legitimate HTTPS. </p>
+<p>This is very useful if we have a firewall that is actively inspecting
+the type of traffic inside of packets, and dropping packets with particular protocols like 
+SSH or OpenVPN. By wrapping that traffic in an SSL layer, there is no way for the 
+firewall to inspect the contents of the packet, so it just looks like ordinary HTTPS traffic.
+The firewall can't decrypt the packet contents, so it doesn't know if you are visiting 
+your bank, checking your email, or sneaking SSH/OpenVPN traffic through the firewall. </p>
+<p>(Note that other services like Iodine allow you to do similar things with other protocols,
+like disguising network connections using encrypted DNS on port 53.)</p>
+<p>Typically, stunnel is forwarding that traffic on to a local port, something like 8443. 
+(The common scenario is if you have a service only exposed to LOCAL traffic from localhost or 127.0.0.1 
+and not bound to an EXTERNAL ip address like 0.0.0.0). </p>
+<p><a name="stunnel-server-resources"></a></p>
+<h3>Charlesreid1.com Resources for Stunnel Servers</h3>
+<p>The charlesreid1.com wiki has an extensive guide to setting up an Stunnel server: </p>
+<ul>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/Server">charlesreid1.com/wiki/Stunnel/Server</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/Docker">charlesreid1.com/wiki/Stunnel/Docker</a> - wiki page detailing the use of Docker and Docker containers to run an stunnel server.</p>
+</li>
+</ul>
+<p>The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel server: </p>
+<ul>
+<li><a href="https://git.charlesreid1.com/docker/d-stunnel">d-stunnel repository</a> - repo containing Docker configuration files, for creating a Docker container that runs an stunnel server.
+    This repository contains example stunnel configuration files for running a number of different protocols over stunnel (ssh, http, and rsync).</li>
+</ul>
+<p><a name="stunnel-client"></a></p>
+<h2>Setting Up an Stunnel Client</h2>
+<p>Running an stunnel client requires installing stunnel and 
+setting up a configuration file just like if you were setting up an Stunnel/Server, 
+except swapping the accept and connect ports, since we want the client to accept local 
+traffic (e.g., on port 8443) and send it on to the server that it connects to with SSL 
+(e.g., on port 443).</p>
+<p><a name="stunnel-client-resources"></a></p>
+<h2>Charlesreid1.com Resources for Stunnel Clients</h2>
+<p>The charlesreid1.com wiki has an extensive guide to setting up an Stunnel client: </p>
+<ul>
+<li><a href="https://charlesreid1.com/wiki/Stunnel/Client">charlesreid1.com/wiki/Stunnel/Client</a> - wiki page detailing the stunnel configuration process for stunnel servers.</li>
+</ul>
+<p>The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel client: </p>
+<ul>
+<li>
+<p><a href="https://git.charlesreid1.com/mac/m-stunnel">m-stunnel repository</a> - stunnel configuration files for running an stunnel client on Mac OS X</p>
+</li>
+<li>
+<p><a href="https://git.charlesreid1.com/rpi/pi-stunnel">pi-stunnel repository</a> - stunnel configuration files for running an stunnel client on Raspberry Pi</p>
+</li>
+</ul>
+<p><a name="stunnel-protocols"></a></p>
+<h2>Example Protocols</h2>
+<p>One of the most beautiful aspects of networking is that packets can be wrapped within other packets - 
+so theoretically it can be packets all the way down. This allows us to use stunnel's SSL TCP wrappers to wrap
+just about any traffic we want. This means we can run various services (encrypted or not) through stunnel,
+including but not limited to:</p>
+<ul>
+<li>
+<p>SSH (secure shell)</p>
+</li>
+<li>
+<p>SCP (secure copy)</p>
+</li>
+<li>
+<p>OpenVPN (virtual network)</p>
+</li>
+<li>
+<p>Rsync (file transfer)</p>
+</li>
+<li>
+<p>MongoDB (NoSQL database)</p>
+</li>
+<li>
+<p>Redis (local-only NoSQL database)</p>
+</li>
+</ul>
+<p>While stunnel has a few pre-configured services that it can deal with, 
+users can also define their own custom protocols, over whatever port they please.</p>
+<p>The charlesreid1.com wiki details stunnel configuration for all of the above protocols,
+excepting MongoDB and redis. Here are links to pages specifying how to configure stunnel
+for each protocol:</p>
+<ul>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/SSH">SSH over stunnel</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/Scp">SCP over stunnel</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/HTTP">HTTP over stunnel</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/OpenVPN">OpenVPN over stunnel</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/Rsync">Rsync over stunnel</a></p>
+</li>
+</ul>
+<p>The <a href="https://charlesreid1.com/wiki/Stunnel/Rsync">Rsync over stunnel</a> page, in particular,
+details the steps needed to define your own custom protocol and have stunnel wrap it 
+in an SSL layer <em>correctly</em>.</p>
+<p><a name="stunnel-docker"></a></p>
+<h2>Stunnel with Docker</h2>
+<p>Docker is a useful way of managing services in a self-contained and reproducible manner.
+Running stunnel through a Docker container is surprisingly easy: 
+once you've installed stunnel into the docker container, you just need to map 
+the incoming port (containing incoming encrypted traffic from the client, linked to the external network interface)
+to the outgoing port (containing decrypted traffic from stunnel, linked to a local-only service on a closed port).</p>
+<p>The charlesreid1.com wiki details how to create set up SSH over stunnel at the following page:
+* <a href="https://charlesreid1.com/wiki/Stunnel/Docker">charlesreid1.com/wiki/Stunnel/Docker</a></p>
+<p>The charlesreid1.com git server has an stunnel docker repository with configuration files
+for running a Docker stunnel server, along with several example stunnel server configuration files
+for handling protocols like rsync, ssh, and http:
+* <a href="https://git.charlesreid1.com/docker/d-stunnel">d-stunnel repository</a></p>
+<p><a name="stunnel-troubleshooting"></a></p>
+<h2>Troubleshooting Stunnel Connections</h2>
+<p>In the <a href="https://git.charlesreid1.com/docker/d-stunnel">d-stunnel repository</a> is a document called <code>DEBUGGING.md</code> 
+that contains a number of techniques for debugging an stunnel connection. </p>
+<p><a href="https://git.charlesreid1.com/docker/d-stunnel/src/master/DEBUGGING.md">Here is the direct link to DEBUGGING.md</a>.</p>
+<p>The techniques covered include:</p>
+<ul>
+<li>
+<p>Configuring stunnel to run in the foreground (print log messages to console instead of to log file)</p>
+</li>
+<li>
+<p>Configuring stunnel to output debugging information </p>
+</li>
+<li>
+<p>Poking the stunnel server with telnet</p>
+</li>
+<li>
+<p>Inspecting open ports with nmap</p>
+</li>
+<li>
+<p>Watching <code>/var/log/syslog</code> for activity</p>
+</li>
+</ul>
+<p>See <a href="https://git.charlesreid1.com/docker/d-stunnel/src/master/DEBUGGING.md">DEBUGGING.md</a> for details.</p>
+<p><a name="stunnel-refs"></a></p>
+<h2>References</h2>
+<ol>
+<li>
+<p>"Stunnel". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel">https://charlesreid1.com/wiki/Stunnel</a>&gt;</p>
+</li>
+<li>
+<p>"Category: Stunnel". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Category:Stunnel">https://charlesreid1.com/wiki/Category:Stunnel</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Server". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Server">https://charlesreid1.com/wiki/Stunnel/Server</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Client". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Client">https://charlesreid1.com/wiki/Stunnel/Client</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Docker". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Docker">https://charlesreid1.com/wiki/Stunnel/Docker</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Certificates". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Certificates">https://charlesreid1.com/wiki/Stunnel/Certificates</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Rsync". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Rsync">https://charlesreid1.com/wiki/Stunnel/Rsync</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/SSH". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/SSH">https://charlesreid1.com/wiki/Stunnel/SSH</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Scp". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Scp">https://charlesreid1.com/wiki/Stunnel/Scp</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/OpenVPN". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/OpenVPN">https://charlesreid1.com/wiki/Stunnel/OpenVPN</a>&gt;</p>
+</li>
+</ol></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/stunnel.html">stunnel</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/ssl.html">SSL</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/encryption.html">encryption</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/ssh.html">SSH</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/networking.html">networking</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/openvpn.html">OpenVPN</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
   	            	<article>
 <header>
 <div class="row">
@@ -870,319 +1205,6 @@ You never know when you'll be designing a new computer device.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                AWSome Day Seattle Notes: Part 2: Networking, Security, and Miscellany
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-04-12T10:00:00-07:00" pubdate>Wednesday 04/12/2017</time>
-                in 
-                <a href="/category/charlesreid1.html">Charlesreid1</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/awsome-day-seattle-notes-part-2-networking-security-and-miscellany.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>These notes are also available on git.charlesreid1.com 
-<a href="https://git.charlesreid1.com/charlesreid1/aws/src/branch/master/awsome-day-sea-2018/Part2.md">here</a>
-or in
-<a href="https://git.charlesreid1.com/charlesreid1/aws">https://git.charlesreid1.com/charlesreid1/aws</a>.</p>
-<h1>AWSome Day Notes: Part 2: Networking, Security, and Miscellany</h1>
-<p>Following are some notes from Amazon's AWSome Day (Tuesday, February 27, 2018).</p>
-<h2>Nomenclature</h2>
-<p><strong>Elastic:</strong> You'll see the word "elastic" on a lot of Amazon's services. The "elastic" concept refers to a service that is able to handle huge increases in traffic (Pokemon Go - number of users grew orders of magnitude faster/larger than what they designed for).</p>
-<p><strong>Virtual Private Cloud (VPC):</strong> The AWS equivalent of a virtual private network (VPN). A VPC is a virtual network that allows a given set of nodes in the same region and zone to create a virtual network to communicate privately.</p>
-<h2>Services</h2>
-<p>This document will give a brief summary of some of the popular cloud services. The model for most of these technologies is, the Apache Software Foundation will release an open-source big data project (can be installed/run by anyone). But since most people are using cloud providers anyway, the cloud providers offer their own ready-to-go implementation of these services. These run stable versions of the Apache software, wrapped by the cloud provider's API. This is a win-win because you don't have to fiddle with wrangling servers, and they can use their resources more wisely.</p>
-<p>As an example, Apache Kafka is software for handling message streams. (Like a giant digital mail room - some services broadcast/publish messages, some services receive/subscribe to messages.) You can install Kafka locally or on a cluster, or rent cloud nodes and install it yourself. Or, you can use Kinesis on AWS, or PubSub on Google Cloud Platform (GCP), both of which are elastic (completely transparent to you) and charge for data throughput instead of compute time. Code written for Kafka can be uploaded and used without modification.</p>
-<p>A few other important services, listing the Apache, AWS, and GCP equivalents:</p>
-<table>
-<thead>
-<tr>
-<th>Apache</th>
-<th align="left">AWS</th>
-<th>GCP</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Hadoop</td>
-<td align="left">Kinesis Analytics</td>
-<td>Dataproc</td>
-<td>Running data-intensive parallel jobs</td>
-</tr>
-<tr>
-<td>Spark</td>
-<td align="left">Kinesis Analytics</td>
-<td>Dataproc</td>
-<td>Running data-intensive parallel jobs</td>
-</tr>
-<tr>
-<td>HDFS</td>
-<td align="left">S3</td>
-<td>GC Storage</td>
-<td>Object-based file storage</td>
-</tr>
-<tr>
-<td>Beam</td>
-<td align="left">Kinesis Streams</td>
-<td>Dataflow</td>
-<td>Sream/batch data processing pipelines</td>
-</tr>
-<tr>
-<td>Impala</td>
-<td align="left">Redshift/Athena</td>
-<td>BigQuery</td>
-<td>Handles SQL queries on massive (&gt;1 PB) data sets</td>
-</tr>
-<tr>
-<td>Kafka</td>
-<td align="left">Kinesis</td>
-<td>PubSub</td>
-<td>Message streaming</td>
-</tr>
-</tbody>
-</table>
-<p>There are many other cloud services, some without a corresponding Apache project (e.g., Google's Machine Learning APIs or Amazon's text-to-speech API) but these five are common in big data ecosystems.</p>
-<h2>Networking</h2>
-<p>Cloud networking is like the condiment bar of cloud providers - customers don't pay for it, but they can help themselves. </p>
-<p>Why set up a VPC? 
-<em> Scaling - having the ability to connect nodes via network means you can scale up client-server services (e.g., databases/web servers)
-</em> Security - VPC traffic is encrypted and not visible to outsiders, even when it occurs over public channels. Services can be set up to listen only for traffic from the VPC. You can also connect from an outside box (e.g., your laptop) to the VPC using a VPN client.
-* Learning - you have to deal with some nitty gritty details, but learning how to set up virtual networks gives you a real education in network security and in how the internet works. </p>
-<p>You can still accomplish a lot even with simple networking patterns.</p>
-<h3>Making a VPC: Plan</h3>
-<p>To create a VPC, you first define the entire VPC network, then define a subnet on the network. The subnet must have an internet gateway, a routing table, and DHCP/DNS added to it so that nodes on the subnet can access the outside internet and find each other.</p>
-<p>Here is a visual depiction of the architecture:</p>
-<div class="highlight"><pre><span></span>         +--------------------------------------------------------------------------+
-         | Whole Internet                                                           |
-         |                                                                          |
-         |                                                                          |
-         |  +--------------------------------------------------------------------+  |
-         |  |  Amazon                                                            |  |
-         |  |                                                                    |  |
-         |  |                                                                    |  |
-         |  |                                                                    |  |
-         |  |   +---------------------------------------------------+            |  |
-         |  |   |   Virtual Private Cloud: WAN                      |            |  |
-         |  |   |                                             +-----+-----+      |  |
-         |  |   |   Network IP Block: 10.117.0.0/16           | Internet  |      |  |
-         |  |   |                     10.117.*.*              | Gateway   |      |  |
-         |  |   |                                             +-----+-----+      |  |
-         |  |   |    +----------------------------------+           |            |  |
-         |  |   |    |  VPC Subnet: LAN                 |           |            |  |
-         |  |   |    |                                  |     +-----+-----+      |  |
-         |  |   |    |  Subnet IP Block: 10.117.0.0/24  |     |  Routing  |      |  |
-         |  |   |    |                   10.117.0.*     |     |  Table    |      |  |
-         |  |   |    |                                  |     +-----+-----+      |  |
-         |  |   |    |                                  |           |            |  |
-         |  |   |    +----------------------------------+           |            |  |
-         |  |   |                                             +-----+-----+      |  |
-         |  |   |                                             |   DHCP    |      |  |
-         |  |   |                                             +-----+-----+      |  |
-         |  |   |                                                   |            |  |
-         |  |   +---------------------------------------------------+            |  |
-         |  |                                                                    |  |
-         |  +--------------------------------------------------------------------+  |
-         |                                                                          |
-         +--------------------------------------------------------------------------+
-</pre></div>
-
-
-<h3>Making a VPC: Network and Subnet</h3>
-<p>To sepcify the network and subnet IP ranges, you use CIDR notation, which is an IP address
-with zeroes in several blocks, and a suffix indicating which blocks are available for this 
-network to assign. (For reference, <code>A.B.C.D/8</code> means "the last 3 blocks" or <code>B.C.D</code>;  <code>A.B.C.D/16</code> means "the last 2 blocks" or <code>C.D</code>; and <code>A.B.C.D/24</code> means "the last block" or <code>.D</code>).</p>
-<p>The network IP address can be specified as:</p>
-<div class="highlight"><pre><span></span>10.X.0.0/16
-</pre></div>
-
-
-<p>where X is any number between 0 and 254 (when you include the reserved 255 value, that totals 256, since IP addresses are just 32 bit strings, 4 blocks of 8 bits each - <code>2^8 = 256</code>). The subnet can be specified with the CIDR IP range:</p>
-<div class="highlight"><pre><span></span>10.X.Y.0/24
-</pre></div>
-
-
-<p>where X and Y are integers between 0 and 254. This means any node joining this subnet will have an IP address of the form <code>10.X.Y.*</code>. Two IP addresses with the same <code>X</code> value are on the same VPC network; two IP addresses with the same <code>Y</code> value are on the same subnet.</p>
-<p>In the example above, X = 117, and we have the VPC defined by:</p>
-<div class="highlight"><pre><span></span>10.117.0.0/16
-</pre></div>
-
-
-<p>and the subnet defined by:</p>
-<div class="highlight"><pre><span></span>10.117.0.0/24
-</pre></div>
-
-
-<h3>Making a VPC: The Essentials</h3>
-<p>Once you've added the VPC and the subnet, you'll also need to add three essential services to the VPC network:</p>
-<ul>
-<li>Internet gateway - this is something you create from the VPC section of the AWS console. It's like your home wifi router that's connected to the internet. actually, it <em>is</em> the VPC network router, and it <em>is</em> connected to the internet.</li>
-<li>Routing table - this tells computers on the network how to find each other and how to find the gateway.</li>
-<li>DHCP - domain host control protocol, this is the service that is used to hand out IP addresses</li>
-<li>(Bundled with DHCP) DNS - domain name service, this is used to turn web URLs into IP addresses</li>
-</ul>
-<p>Now you should be good to go. (Scratch that - make a security group first.) </p>
-<h3>Making a VPC: Security Group</h3>
-<p>One last step, after you've constructed the network, is to create a security group to control outside access to the VPC. This is an AWS-level firewall that will only allow traffic on ports you specify. Here we specify a single security group for every node on the network, and the security policy opens the following ports from and to computers in the same VPC:</p>
-<ul>
-<li>19999 - netdata</li>
-<li>9090 - prometheus</li>
-<li>3000 - grafana</li>
-<li>27017 - mongodb</li>
-<li>8080 - mongoexpress</li>
-</ul>
-<h3>Adding Nodes to the VPC</h3>
-<p>Test out your network by creating a t2.micro node and specifying the subnet you created as the network the node should connect to. Check to ensure you can access the internet.</p>
-<p>A good schema to use is:</p>
-<div class="highlight"><pre><span></span>10.X.0.1      gateway
-10.X.0.100    node0
-10.X.0.101    node1
-10.X.0.102    node2
-...
-</pre></div>
-
-
-<h2>Scaling Your Process</h2>
-<blockquote>
-<p>If you're SSHing into a machine, your automation is broken.
-- Alex the AWS trainer</p>
-</blockquote>
-<p>There are some tricks to getting your process to scale, but the essential part is figuring out how to remove SSH from the process. Cloud OS images (e.g. Ubuntu) have cloud-init, which runs an init script on boot. <a href="https://stackoverflow.com/a/10128171">More info in this Stack Overflow post</a>. This must be a bash script and size is limited to 16 KB. If it takes &gt; 10 minutes, AWS will treat it as hanging and kill the node, so keep it (relatively) simple.</p>
-<p>Example of what you can do:
-<em> Check out a git repo with initailization scripts
-</em> Install a hard-coded copy of your SSH <em>public</em> (not private) key, so you can get passwordless access to the node later
-<em> Spawn a server or process in the background
-</em> Start a server or process in a screen so that later you can SSH into the machine and attach to the screen to monitor the progress of the job or the service</p>
-<p>And so on.</p>
-<h2>SSH and Identity Management</h2>
-<p>Identity access management (IAM) and access controls are the most confusing part of any cloud platform - don't feel frustrated if you don't pick it up easily. </p>
-<p>IAM is a way for you to provide limited, specified access to resources that you own/have created, without sharing your credentials.</p>
-<p>IAM is useful for you to use yourself (e.g., if you are using Amazon Kinesis and you want it to access an Amazon Redshift database, you can create an IAM for your Amazon Kinesis script that gives it permission to access data in a particular Amazon Reshift database, and run your Kinesis script under that identity). </p>
-<p>IAM is also useful for sharing resources with other AWS users. You can create a VPC and create an IAM group that allows people to manage the network, and add any network administrators to the group. This gives them full control over the network. You can also create an IAM group that gives members the ability to see, but not modify, the network (e.g., billing manager).</p>
-<p><a href="https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_IAM.html">More info on IAM</a></p>
-<h2>Tricks with Disks</h2>
-<p>AMI (Amazon Machine Images) provide operating system images that you can use to initialize a new node. But you can also create your own AMIs. Use the EC2 console to create an AMI (image) from any of your running nodes; wait for the snapshot to complete (may take a few minutes); and now you can spawn a new node from the exact state of the existing node.</p>
-<p>This is useful for a couple of tasks:
-<em> If you're doing a parameter study of an analysis technique and need to run a process in parallel on the same data set, you can download the data set and set up your code on a single node, create an image once you're finished, then spawn new nodes using that snapshot
-</em> If you already have a node with a huge data set that took hours to download and process, and you realize your node needs another 32 GB of RAM, or a few extra CPUs, you won't be able to resize it on the fly. But you can create an AMI from the running node, shut it down, and create a new node from the image.
-<em> If you created a node in region <code>us-west-1a</code> and another node in region <code>us-east-1c</code> and you want to connect them together on a VPC, you won't be able to create a VPC that spans regions. But you can create an AMI from one of the running nodes, shut it down, and spawn a new node in the correct region.
-</em> If you have a particularly large data set, a complicated workflow setup, or a custom operating system, you can create a public AMI and share it with others. 
-* You can also <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharingamis-explicit.html">privately share AMIs</a></p>
-<h2>AWS CLI and Boto3</h2>
-<h3>AWS from the Command Line</h3>
-<p>If you've clicked the AWS web interface to death and are looking for a better way of interacting with AWS, you can use <code>aws-cli</code>, a command line interface to AWS. This is extremely convenient for scripting common tasks. </p>
-<p><a href="https://aws.amazon.com/cli/">aws-cli</a></p>
-<p>This is a really powerful way of interacting with S3 buckets, and makes copying files to/from S3 buckets as easy as copying files in local directories.</p>
-<h3>Boto3</h3>
-<p>The CLI is much more powerful than the web interface, but is still missing some of the options available through the web. For the complicated stuff, use boto3, the Python API for AWS services.</p>
-<p><a href="https://github.com/boto/boto3">boto3 on github</a></p>
-<p><a href="https://aws.amazon.com/sdk-for-python/">boto3 documentation</a></p>
-<p>The basic formula for boto scripts is, you create Python objects representing different consoles or resources (e.g., a VPC object or an EC2 object), and you call functions to perform actions on those resources or in those consoles. These functions can take complicated nested dictionaries as parameters and allow you to specify every option available in AWS.</p>
-<h3>To Infinity... And Beyond!</h3>
-<p>Other libraries like <a href="https://www.terraform.io/intro/">terraform</a> build on boto3 and simplify the routine tasks of juggling information and configuration details, providing a kubernetes-like dashboard to run and manage an AWS cluster.</p>
-<h2>Instance Metadata</h2>
-<p>One last topic - how to get access to information about your EC2 node, from your EC2 node.</p>
-<p>There are some special IP addresses - any IP address starting with 10 is reserved for private networks, as are networks starting with 192.168, and 127.0.0.1 is the IP address that points to yourself.</p>
-<p>The IP address 169.254 is another reserved IP block, and is normally used for crossover connections (direct ethernet-to-ethernet connections). Given its uselessness in the cloud, AWS repurposed that IP address to store instance metadata.</p>
-<p>This IP address exposes a restful API that you can call with curl. Information is organized hierarchically. For example:</p>
-<div class="highlight"><pre><span></span>$ curl http://169.254.169.254/latest/meta-data/
-
-ami-id
-ami-launch-index
-ami-manifest-path
-block-device-mapping/
-hostname
-iam/
-instance-action
-instance-id
-instance-type
-local-hostname
-local-ipv4
-mac
-metrics/
-network/
-placement/
-profile
-public-hostname
-public-ipv4
-public-keys/
-reservation-id
-security-groups
-services/
-</pre></div>
-
-
-<p>User data is also available:</p>
-<div class="highlight"><pre><span></span>http://169.254.169.254/latest/user-data
-</pre></div>
-
-
-<p>as are the IP addresses of network interfaces. The network interface can be specified if there are more than one. To get the private VPC IP, request the <code>local-ipv4</code> address:</p>
-<div class="highlight"><pre><span></span>http://169.254.169.254/local-ipv4
-</pre></div>
-
-
-<p>and to get the public IP address, use <code>public-ipv4</code>:</p>
-<div class="highlight"><pre><span></span>http://169.254.169.254/public-ipv4
-</pre></div>
-
-
-<p>by assigning these values to environment variables, you can write and run a single script across multiple machines, and control the execution behavior across those machines.</p>
-<p><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html#instancedata-user-data-retrieval">Link to more info on instance data</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/aws.html">aws</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/cloud.html">cloud</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/vpc.html">vpc</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/containers.html">containers</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/data-engineering.html">data engineering</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1204,6 +1226,19 @@ services/
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>October 2018</h2>
+
+            <p class="archive">
+            <a href="/first-post-of-the-fall-part-1-data-commons.html">First Post of the Fall, Part 1: Data Commons</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
