@@ -42,6 +42,7 @@ There are many other cloud services, some without a corresponding Apache project
 Cloud networking is like the condiment bar of cloud providers - customers don't pay for it, but they can help themselves. 
 
 Why set up a VPC? 
+
 * Scaling - having the ability to connect nodes via network means you can scale up client-server services (e.g., databases/web servers)
 * Security - VPC traffic is encrypted and not visible to outsiders, even when it occurs over public channels. Services can be set up to listen only for traffic from the VPC. You can also connect from an outside box (e.g., your laptop) to the VPC using a VPN client.
 * Learning - you have to deal with some nitty gritty details, but learning how to set up virtual networks gives you a real education in network security and in how the internet works. 
@@ -164,6 +165,7 @@ A good schema to use is:
 There are some tricks to getting your process to scale, but the essential part is figuring out how to remove SSH from the process. Cloud OS images (e.g. Ubuntu) have cloud-init, which runs an init script on boot. [More info in this Stack Overflow post](https://stackoverflow.com/a/10128171). This must be a bash script and size is limited to 16 KB. If it takes > 10 minutes, AWS will treat it as hanging and kill the node, so keep it (relatively) simple.
 
 Example of what you can do:
+
 * Check out a git repo with initailization scripts
 * Install a hard-coded copy of your SSH _public_ (not private) key, so you can get passwordless access to the node later
 * Spawn a server or process in the background
@@ -188,6 +190,7 @@ IAM is also useful for sharing resources with other AWS users. You can create a 
 AMI (Amazon Machine Images) provide operating system images that you can use to initialize a new node. But you can also create your own AMIs. Use the EC2 console to create an AMI (image) from any of your running nodes; wait for the snapshot to complete (may take a few minutes); and now you can spawn a new node from the exact state of the existing node.
 
 This is useful for a couple of tasks:
+
 * If you're doing a parameter study of an analysis technique and need to run a process in parallel on the same data set, you can download the data set and set up your code on a single node, create an image once you're finished, then spawn new nodes using that snapshot
 * If you already have a node with a huge data set that took hours to download and process, and you realize your node needs another 32 GB of RAM, or a few extra CPUs, you won't be able to resize it on the fly. But you can create an AMI from the running node, shut it down, and create a new node from the image.
 * If you created a node in region `us-west-1a` and another node in region `us-east-1c` and you want to connect them together on a VPC, you won't be able to create a VPC that spans regions. But you can create an AMI from one of the running nodes, shut it down, and spawn a new node in the correct region.
