@@ -1,4 +1,4 @@
-Title: Finding the Reverse Complement of a DNA String
+Title: Timing and Profiling Go Code
 Date: 2018-12-18 20:00
 Category: Rosalind
 Tags: go, golang, rosalind, bioinformatics
