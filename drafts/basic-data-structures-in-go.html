@@ -119,7 +119,126 @@ problems on Rosalind.info, this post will cover how
 some basic data structures work in Go, and how we
 used each to solve problems from the Chapter 1 Rosalind
 problems.</p>
-<h3>Hash Maps</h3>
+<h3>Maps</h3>
+<p>The simplest way to describe a map is to say it is a
+structure useful for storing key-value pairs.</p>
+<p>Before we walk through what maps look like in Go, let's
+talk about what a map is (in the data structure sense).
+And to do that, it's useful to talk a bit about mathematical
+functions and maps in the mathematical sense.</p>
+<h4>What is a map</h4>
+<p>The term "map" is taken from mathematics. A map is just a
+relationship - a general term, but still useful. Most 
+mathematics courses deal with functions, which are formally 
+defined as <strong>maps</strong> from one set of numbers onto another,
+such that one input corresponds to one output.</p>
+<p>A (data structure) map, similarly, is a relationship between
+two sets - a key set, and a value set. Each key corresponds
+to only one value. </p>
+<p>Maps are typically stored under the hood as either a hash
+map (which does not sort keys and has very fast O(1), or
+constant time, operations) or a tree map (which sorts keys 
+using a binary tree and has slower O(log N) operations).</p>
+<h4>Map notation in Go</h4>
+<p>In Go, map types are denoted <code>map[keyType]valueType</code>.</p>
+<p>For example, to map strings to integers, we would use
+a map of type <code>map[string]int</code>. </p>
+<p>We create a map variable by declaring its type:</p>
+<div class="highlight"><pre><span></span>var m map[string]int
+</pre></div>
+
+
+<p>However, this does not allocate any space for the map,
+and trying to add keys to the map at this point would
+result in an error.</p>
+<p>We need to actually allocate space for the map. In Go,
+you can allocate space for a map two ways: first, using
+Go's built-in <code>make()</code> function; and second, by creating
+and populating the map in one line.</p>
+<h4>Using <code>make()</code> with maps</h4>
+<p>To allocate space for a map, you can use the <code>make()</code>
+function and pass it the map type. This will actually
+create space in memory for the map, and allow you to 
+add items or look up keys in the map.</p>
+<div class="highlight"><pre><span></span>var m map[string]int
+m = make(map[string]int)
+</pre></div>
+
+
+<h4>Creating and populating</h4>
+<p>If you want to create and populate the map in one line,
+you can specify the type, then have trailing brackets
+containing the items you want to add:</p>
+<div class="highlight"><pre><span></span>// Create an empty map
+m := map[string]int{}
+</pre></div>
+
+
+<div class="highlight"><pre><span></span>// Create and populate a map
+m := map[string]int{&quot;A&quot;:10, &quot;T&quot;:15, &quot;G&quot;:20, &quot;C&quot;:25}
+</pre></div>
+
+
+<h4>Zero values</h4>
+<p>One feature of maps that makes them really easy to work
+with is, if you try and look up a key, and the key does
+not exist in the map, the map will not raise an exception
+(which Python does), it will return the zero value of 
+the value type. </p>
+<p>For example, the zero value of the <code>int</code> type is 0, 
+so if we create a map like <code>m := map[string]int{"A":10}</code>
+and we then look up a key that isn't in the map, like 
+<code>m["G"]</code>, Go will return 0.</p>
+<p>Similarly, the zero value for booleans is false, so you
+can utilize the zero value behavior to create a set data
+structure using maps. By creating a <code>map[keyType]bool</code>
+map, you can use the boolean value to indicate membership
+of a key in the given set. Then, if you look up keys that
+do not exist in the map, Go will return the zero value of
+booleans by default, which will be false.</p>
+<h4>Example: Assembling kmer histogram</h4>
+<p>Here is an example using maps: this function assembles
+a kmer histogram from a strand of DNA base pairs. To do
+this, it loops over every codon in the DNA strand and
+increments a counter in a map. Finally, this histogram
+map is returned. (This function is useful for determining
+the most frequent kmer.)</p>
+<div class="highlight"><pre><span></span><span class="c1">// Return the histogram of kmers of length k </span>
+<span class="c1">// found in the given input</span>
+<span class="kd">func</span> <span class="nx">KmerHistogram</span><span class="p">(</span><span class="nx">input</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">k</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span><span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="nx">result</span> <span class="o">:=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{}</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)&lt;</span><span class="mi">1</span> <span class="p">{</span>
+        <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Error: input string was not DNA. Only characters ATCG are allowed, you had %s&quot;</span><span class="p">,</span><span class="nx">input</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nx">result</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Number of substring overlaps</span>
+    <span class="nx">overlap</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span> <span class="o">-</span> <span class="nx">k</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="c1">// If overlap &lt; 1, we are looking</span>
+    <span class="c1">// for kmers longer than our input</span>
+    <span class="k">if</span> <span class="nx">overlap</span><span class="p">&lt;</span><span class="mi">1</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">result</span><span class="p">,</span><span class="kc">nil</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Iterate over each position,</span>
+    <span class="c1">// extract the string,</span>
+    <span class="c1">// increment the count.</span>
+    <span class="k">for</span> <span class="nx">i</span><span class="o">:=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">i</span><span class="p">&lt;</span><span class="nx">overlap</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="c1">// Get the kmer of interest</span>
+        <span class="nx">substr</span> <span class="o">:=</span> <span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">:</span><span class="nx">i</span><span class="o">+</span><span class="nx">k</span><span class="p">]</span>
+
+        <span class="c1">// If it doesn&#39;t exist, the value is 0</span>
+        <span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">result</span><span class="p">,</span><span class="kc">nil</span>
+<span class="p">}</span>
+</pre></div>
+
+
 <h3>Strings</h3>
 <h3>Bit Vectors</h3></div>
 
