@@ -1,6 +1,6 @@
 Title: First Post of the Fall, Part 2: Flaskadillo
-Date: 2018-12-01 16:00
-Updated: 2018-12-01 16:00
+Date: 2018-10-30 16:00
+Updated: 2018-10-30 16:00
 Category: Python
 Tags: Github, Software, Python, Flask
 
