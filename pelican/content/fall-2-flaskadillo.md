@@ -1,8 +1,7 @@
 Title: First Post of the Fall, Part 2: Flaskadillo
 Date: 2018-12-01 16:00
 Updated: 2018-12-01 16:00
-Category: General
-Status: draft
+Category: Python
 Tags: Github, Software, Python, Flask
 
 ## Flask + ILLO = Flaskadillo
