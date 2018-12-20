@@ -102,6 +102,782 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Traveling Schoolteacher Problem
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-04-30T13:00:00-07:00" pubdate>Sunday 04/30/2017</time>
+                in 
+                <a href="/category/java.html">Java</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/traveling-schoolteacher-problem.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><ul>
+<li><a href="#tstp-intro">The Traveling Schoolteacher Problem</a></li>
+<li><a href="#tstp-math">The Mathematical Model</a></li>
+<li><a href="#tstp-pseudocode">The Pseudocode</a> </li>
+<li><a href="#tstp-java">The Java Code</a> <ul>
+<li><a href="#tstp-classes">TSTP Class Fields and Methods</a> </li>
+<li><a href="#tstp-base">Explore: Base Case</a> </li>
+<li><a href="#tstp-recursive">Explore: Recursive Case</a> </li>
+</ul>
+</li>
+<li><a href="#tstp-graphs">Example Graphs</a> </li>
+<li><a href="#tstp-results">Results</a><ul>
+<li><a href="#tstp-walltime-nodes">Walltime vs Number of Nodes</a></li>
+</ul>
+</li>
+<li><a href="#tstp-conclusion">Conclusion</a></li>
+<li><a href="#tstp-references">References</a></li>
+</ul>
+<p><a name="tstp-intro"></a></p>
+<h2>The Traveling Schoolteacher Problem</h2>
+<p>The Traveling Schoolteacher Problem (TSTP) is a variation on the Traveling Salesperson Problem (TSP).</p>
+<p>The Traveling Schoolteacher Problem supposes a schoolteacher that is traveling from school to school
+in order to give lessons at different schools. Being a poor schoolteacher, they are only able to afford an older car that gets bad mileage and has a small gas tank.</p>
+<p>After visiting each school, the schoolteacher receives payment from the school, in the currency of <span class="math">\(P\)</span> gallons of gasoline. 
+Different schools pay the teacher different amounts of gasoline, further complicating matters. The schoolteacher's car has a 
+small gas tank that can only hold a maximum of <span class="math">\(M\)</span> gallons of gas, and the schoolteacher cannot travel with cans of gasoline. 
+Any gasoline the schoolteacher receives above <span class="math">\(M\)</span> gallons of gas must be left behind. </p>
+<p>Traveling from a source node to a target node incurs a cost of <span class="math">\(C\)</span> gallons of gas, deducted from the gas tank's total at the source node.</p>
+<p>In an attempt to minimize losses and avoid running out of gas, the traveling schoolteacher must plan out a route 
+that both avoids running out of gas and minimizes the total distance traveled.</p>
+<p><a name="tstp-math"></a></p>
+<h2>The Mathematical Model</h2>
+<p>To represent this problem in the computer, we can use a graph - just like the Traveling Salesperson Problem solution - but modified a bit. Like the TSP, we can also solve the Traveling Schoolteacher Problem with recursive backtracking.</p>
+<p>Each edge will represent a cost in gas, and each school arrived at will result in a payment in gas. Thus, the "real cost" of an edge will change depending on the state of the gas tank and the path taken to arrive there. </p>
+<p>We can add a number to each node to represent the amount of gas that that school pays the schoolteacher.
+We can use a number in each edge to represent the amount of gas that it costs to travel from one school to another.
+The backtracking solution will explore various paths through teh graph, keeping track of the gas tank's running total and rejecting any paths that lead to an empty gas tank.</p>
+<p><a name="tstp-pseudocode"></a></p>
+<h2>The Pseudocode</h2>
+<p>Revisiting the original Traveling Salesperson Problem, the recursive backtracking method we implemented was described with the following pseudocode:</p>
+<div class="highlight"><pre><span></span>explore(neighbors):
+
+    if(no more unvisited neighbors):
+        # This is the base case.
+        if total distance is less than current minimum:
+            save path and new minimum
+
+    else:
+        # This is the recursive case.
+        if current distance is greater than current minimum:
+            skip
+        else:
+            for neighbor in unvisited neighbors:
+                visit neighbor
+                explore(new_neighbors)
+                unvisit neighbor
+</pre></div>
+
+
+<p>To modify this to solve the Traveling Schoolteacher Problem, we want to make a few additions:</p>
+<ul>
+<li>Check if the gas tank is empty, and if so, don't explore this path</li>
+<li>Check if the current distance is greater than our current minimum-distance path through the graph</li>
+<li>Add gas from each school to the gas tank (up to the tank's maximum), subtract gas from each path from the gas tank</li>
+</ul>
+<p>This results in the following pseudocode:</p>
+<div class="highlight"><pre><span></span>explore(neighbors):
+
+    if(no more unvisited neighbors):
+        # This is the base case.
+        if total distance is less than current minimum:
+            save path and new minimum
+
+    else:
+        # This is the recursive case.
+        if gas tank is below empty:
+            skip
+        if current distance is greater than current minimum:
+            skip
+        else:
+            add gas from this school to gas tank
+            for neighbor in unvisited neighbors:
+                visit neighbor
+                deduct gas to get to neighbor from gas tank
+
+                explore(new_neighbors)
+
+                unvisit neighbor
+                add gas back into gas tank
+</pre></div>
+
+
+<p>Once you have a backtracking algorithm for the original Traveling Salesperson Problem TSP, it's quite easy to make the few modifications required to solve the Traveling Schoolteacher Problem TSTP.</p>
+<p><a name="tstp-java"></a></p>
+<h2>The Java Code</h2>
+<p>The Java code to solve the TSTP is organized into several classes:</p>
+<ul>
+<li>TSTP class - implements the recursive backtracking solution method, and owns temporary variables used by backtracking.</li>
+<li>Node class - the Node is a lightweight class that stores an integer, representing the amount of gas this school pays the teacher. (Note, Node stores no links. Graph links handled by Guava.)</li>
+<li>Edge class - the Edge class is a lightweight class that stores an integer for each edge, representing the amount of gas this path costs to travel.</li>
+<li>RandomNodeGraph - a static class that builds random graphs with nodes and edges pre-populated with values. Parameters like connectivity and maximum gas tank capacity can be passed to introduce variation and ensure the graph is solvable (or not).</li>
+</ul>
+<p><a name="tstp-classes"></a></p>
+<h3>TSTP Class Fields and Methods</h3>
+<p>The TSTP class implements several fields to store the graph, and to store temporary information about the current solution during recursive backtracking (such that it is accessible by each instance of the recursive method). </p>
+<p>The class stores the current route in an integer array, along with the current path distance, the current minimum distance, and the current state of the gas tank.</p>
+<p>The TSTP class has a public <code>solve()</code> method, which calls a private recursive backtracking <code>explore()</code> method to solve the problem. </p>
+<p>The recursive method will have a base case and a recursive case.</p>
+<ul>
+<li>
+<p>The <strong>base case</strong> is that we have visited all cities on the graph. Check if this is a new solution, and if so, save it.</p>
+</li>
+<li>
+<p>In the <strong>recursive case</strong>, we explore all solutions possible starting at the current node (passed in as a parameter), having already made N choices (passed in as a parameter). We do this by making a choice (and marking the node as visited), then exploring the consequences (through a recursive call), then unmaking the choice (rmarking the node as unvisited).</p>
+</li>
+</ul>
+<p>Here is the explore method header:</p>
+<div class="highlight"><pre><span></span>    /** Recursive backtracking method: 
+        explore possible solutions starting 
+        at this node, having made nchoices */
+    public void explore(Node node, int nchoices) {
+</pre></div>
+
+
+<p><a name="tstp-base"></a></p>
+<h3>Explore: Base Case</h3>
+<p>The base case begins by checking if the minimum distance has been set, and if so, whether the current distance is larger than the minimum distance. If so, this route is abandoned; otherwise, we have a new solution.</p>
+<div class="highlight"><pre><span></span>        if(nchoices == graphSize) {
+            // 
+            // BASE CASE
+            //
+            if(this.this_distance &lt; this.min_distance || this.min_distance &lt; 0) {
+                this.min_distance = this.this_distance;
+                printSolution();
+            } else {
+                printFailure();
+            }
+
+        } else {
+</pre></div>
+
+
+<p><a name="tstp-recursive"></a></p>
+<h3>Explore: Recursive Case</h3>
+<p>Next, the recursive case will explore each of the possible choices open to it by iterating over each choice available at a node, and for each node, choosing it, exploring the results, and unchoosing it. </p>
+<div class="highlight"><pre><span></span>        } else {
+            //
+            // RECURSIVE CASE
+            //  
+            if(this.gas_tank &lt;= 0) {
+                // Bummer, man.
+                return;
+            }
+            if(this.min_distance &gt; 0 &amp;&amp; this.this_distance &gt; this.min_distance) {
+                // Give up, there&#39;s no hope.
+                return;
+            }
+
+            // Now the teacher teaches,
+            // Now the teacher gets some gas. 
+            // If the tank is full...  bummer, man.
+            this.gas_tank += Math.min(this.tankSize, this.gas_tank + node.pay);
+
+            // For each neighbor:
+            Set&lt;Node&gt; neighbors = graph.adjacentNodes(node);
+            for(Node neighbor : neighbors) {
+                if(neighbor.visited == false) {
+
+                    int distance_btwn = -10000;
+
+                    // Using a for loop, 
+                    // but there should only be one edge.
+                    for( Edge edge : graph.edgesConnecting(node, neighbor) ) {
+                        distance_btwn = edge.cost;
+                    }
+
+                    // Make a choice
+                    this.route[nchoices] = neighbor.id;
+                    neighbor.visit();
+                    this.this_distance += distance_btwn;
+
+                    // Explore the consequences
+                    explore(neighbor,nchoices+1);
+
+                    // Unmake the choice
+                    this.route[nchoices] = -1;
+                    neighbor.unvisit();
+                    this.this_distance -= distance_btwn;
+                }
+                // Move on to the next choice (continue loop)
+            }               
+        } // End base/recursive case
+    }
+</pre></div>
+
+
+<p><a name="tstp-graphs"></a></p>
+<h2>Example Graphs</h2>
+<p>Just so you can see what they look like, here are a couple of graphs 
+generated for the traveling schoolteacher problem:</p>
+<p><img src="/images/graphviz_tstp_6.png" width="400px" /></p>
+<p><img src="/images/graphviz_tstp_8.png" width="400px" /></p>
+<p><img src="/images/graphviz_tstp_12.png" width="400px" /></p>
+<p><a name="tstp-results"></a></p>
+<h2>Results</h2>
+<p><a name="tstp-walltime-nodes"></a></p>
+<h3>Walltime vs. Number of Nodes</h3>
+<p>The following is a plot of walltime versus number of nodes:</p>
+<p><img src="/images/tstp-java-scaling.png" width="500px" /></p>
+<p>This plot shows that the traveling schoolteacher problem 
+is solved faster than the traveling salesperson problem.
+This makes sense - for a given city, many of the possible routes can be
+eliminated from the list of routes to explore, due to the additional constraint
+of the gas tank needing to remain full. If there are only 2 gallons of gas 
+in the tank, this constrains the choices of nodes to explore to those 
+requiring 2 gallons of gas or less.</p>
+<p>This is particularly true for the scenario used when generating the above graph - 
+the constraint of the gas tank size is used to construct an "interesting" graph
+tand ensure that we don't end up with a graph where the traveling schoolteacher 
+gets "stuck" somewhere without enough gas to continue. Here is the relevant section
+of the <code>RandomNodeGraph.java</code> class. </p>
+<p>The <code>getNextCost()</code> method generates a random edge
+between two cities, with a <span class="math">\(\frac{T}{T+1}\)</span> percent chance of it being impossible for the 
+teacher to travel that route due to a gas tank that's too small:</p>
+<div class="highlight"><pre><span></span>    private static int getNextCost(int T) {
+        Random r = new Random();
+        return 1+r.nextInt(T);
+    }
+</pre></div>
+
+
+<p>Likewise, here is the <code>getNextPay()</code> method, which generates a random 
+amount of pay (in gas) that the </p>
+<div class="highlight"><pre><span></span>    private static int getNextPay(int T) {
+        Random r = new Random();
+        return (int)(0.5*T + 0.5*(r.nextInt(T)+1));
+    }
+</pre></div>
+
+
+<p>Here is a link to the full <code>RandomNodeGraph.java</code> file on the charlesreid1.com git server, 
+contained in the <code>tsp</code> repository (which has several codes related to the traveling salesperson problem):
+<a href="https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava/RandomNodeGraph.java">https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava/RandomNodeGraph.java</a></p>
+<p>And here is a link to the <code>tsp</code> repository on the same charlesreid1.com git server:
+<a href="https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava">https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava</a></p>
+<p>In a city with 10 routes connecting to other cities, having edges that the schoolteacher
+cannot travel, or nodes that limit the amount of gas the schoolteacher receives, 
+can constrain the number of possible routes and reduce the number of routes that need to be 
+explored. The methods above ensure that this will not happen very often, but that it will happen
+some of the time. These routes that can be eliminated can lead to a significant reduction
+in computational time.</p>
+<p><a name="tstp-conclusion"></a></p>
+<h2>Conclusion</h2>
+<p>This project shows how easy it is to utilize the Guava library to solve computational problems
+in Java and create computing benchmarks and graphs of scaling behavior. The original code to 
+solve the traveling salesperson problem using recursive backtracking was fairly straightforward to 
+implement on a graph, and extending this code to implement additional constraints and solve the 
+traveling schoolteacher problem was surprisingly easy to do. </p>
+<p>Fitting the scaling behavior to a line and computing the slope would make the scaling study
+more quantitative, and needs to be done, but unfortunately the Google Sheets tool does not have 
+this capability, so this information will be done with Python (scipy linear algebra package)
+and comparisons between the TSP and TSTP slopes will be added later.</p>
+<p><a name="tstp-references"></a></p>
+<h2>References</h2>
+<ol>
+<li>
+<p>"tsp (git repository)." Charles Reid. Modified 7 April 2017. Accesssed 30 April 2017.
+&lt;<a href="https://git.charlesreid1.com/charlesreid1/tsp">https://git.charlesreid1.com/charlesreid1/tsp</a>&gt;</p>
+</li>
+<li>
+<p>"Solving the Traveling Salesperson Problem with Java and Guava." Charles Reid. 23 March 2017. Accessed 30 April 2017.
+&lt;<a href="https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html">https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html</a>&gt;</p>
+</li>
+<li>
+<p>"Better Timing of Guava Traveling Salesperson Problem Code: Timing Scripts." Charles Reid. 1 April 2017. Accessed 30 April 2017.
+&lt;<a href="https://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html">https://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/guava.html">guava</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/graph.html">graph</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/tsp.html">TSP</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                The Z-Machine: A Simple Turing Machine
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-04-24T20:00:00-07:00" pubdate>Monday 04/24/2017</time>
+                in 
+                <a href="/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/the-z-machine-a-simple-turing-machine.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2>Table of Contents</h2>
+<ul>
+<li><a href="#z-bkg">Background</a></li>
+<li><a href="#z-setup">The Z-Machine: Setup</a></li>
+<li><a href="#z-instructions">The Z-Machine: Instructions</a></li>
+<li><a href="#z-loop">Simple Example: Loop</a></li>
+<li><a href="#z-addition">Implementing an Addition Operator on the Z-Machine</a><ul>
+<li><a href="#z-solution-approach">The Solution Approach (The Maths)</a></li>
+<li><a href="#z-addition1">Solution 1: Positive Integers Only</a></li>
+<li><a href="#z-addition2">Solution 2: Dealing with Zeros</a></li>
+</ul>
+</li>
+<li><a href="#z-subtraction">Implementing a Decrement Operator on the Z-Machine</a></li>
+<li><a href="#z-lessthan">Implementing a Less Than Operator on the Z-Machine</a></li>
+<li><a href="#z-whocares">Who Cares? (Or, How To Build A Computer)</a></li>
+<li><a href="#z-sources">Sources</a></li>
+</ul>
+<p><a name="z-bkg"></a></p>
+<h2>Background</h2>
+<p>Recently I discovered the wonderful blog of <a href="http://blog.jgc.org/2013/05/the-two-problems-i-had-to-solve-in-my.html">John Graham-Cumming</a>.
+One of hist posts, from 2013, details a question that he had to answer for the Oxford University Department of Computer Science's "interviews" 
+(which, I believe, are a kind of final examination "interview" to graduate, not an interview for admittance to the program).
+Graham-Cumming describes one of the quetions he was presented with during his interview.</p>
+<p><a name="z-setup"></a></p>
+<h2>The Z-Machine: Setup</h2>
+<p>Here is the problem setup:</p>
+<p>Suppose you have a computer with a very simple memory layout. 
+The memory consists of a series of numbered locations, each of which can store numbers. 
+These numbers are positive or negative integers. Here is an illustration of an example of this memory layout:</p>
+<p><img alt="Z Machine Memory Layout" src="https://charlesreid1.com/w/images/2/22/Z-Machine1.png"></p>
+<p><a name="z-instructions"></a></p>
+<h2>The Z-Machine: Instructions</h2>
+<p>Z-Machine Instructions</p>
+<p>The machine can only perform three instructions: Zero (Z), Increment (I), and Jump (J).</p>
+<p>The <strong>Z operator</strong> zeros out a location in memory. The operation specifies which index should be zeroed out. For example, Z4 will zero out index 4 (which is the 5th item in memory, since indexing starts at 0).</p>
+<p>The <strong>I operator</strong> increments the value at a location in memory by 1. The operation specifies which index should be incremented. For example, I6 will increment index 6 (the 7th item in memory) by 1.</p>
+<p>The <strong>J operator</strong> compares two locations in memory. If the values are different, the jump operator will branch (that is, jump to a different location in the code). The two locations are specified when calling the operator, and an arrow (or operation number) indicates where the operator should branch TO if the values are not the same. If the values are the same, the code continues.</p>
+<p>The program stops when it reaches the end of the instruction list.</p>
+<p><a name="z-loop"></a></p>
+<h2>Simple Example: Loop</h2>
+<p>Here is an example of a loop program. This program sets memory index 4 to zero, 
+then increments it until it is equal to the value in memory index 20:</p>
+<div class="highlight"><pre><span></span>001   Z4
+002   I4
+003   J4,20 --&gt; 002
+</pre></div>
+
+
+<p>The instruction <code>J4,20 --&gt; 002</code> indicates that the values in cell 4 and cell 20 
+should be compared, and if they are not equal, the machine should jump to instruction <code>002</code>.</p>
+<p><a name="z-addition"></a></p>
+<h2>Implementing an Addition Operation on the Z-Machine</h2>
+<p>Graham-Cumming includes the following programming challenge in his <a href="http://blog.jgc.org/2013/05/the-two-problems-i-had-to-solve-in-my.html">blog post</a>:</p>
+<p>Suppose a machine has two numbers in the first two locations in memory. Utilize these three operations to add the two numbers together and put the result into the third location in memory.</p>
+<p>Under what circumstances does the program fail?</p>
+<p><a name="z-solution-approach"></a></p>
+<h3>The Solution Approach (The Maths)</h3>
+<p>To approach the solution, start with the maths. What we're doing is trying to define a "complex" arithmetical operation (addition) from simpler "unit" operations (increment by one), so it will be helpful to wipe our mental slate clean and start at the very beginning of the problem.</p>
+<p>When I teach a math class, whether it be a developmental math class, an algebra class, or a calculus class, I always spend the first "full" lecture by guiding the students through this very procedure. Here's how I set the tone: "Imagine that you are stranded on a desert island, with no calculators, no math books, nothing but your fingers and toes. Now suppose you are tasked with reinventing all of mathematics, entirely from scratch. How would you do it?"</p>
+<p>This is a challenging task - and part of the challenge is just knowing where to begin (just how clean should you wipe the mental slate?). The Z-Machine problem formulation resolves that problem by explicitly enumerating valid operations. But let's continue with the desert island analogy for a bit.</p>
+<p>If we begin at what is truly the beginning, we can start with a single unit, the number 1. (If we want to fast forward through thousands of years of human history, we can instead start with the number 0 in addition to the number 1.) Having only a single number is boring, because we can't count anything. We need a way to generate more numbers. So, we begin by defining an increment operation. We begin with the unit, 1. We declare that we can combine 1 with any other number. When we combine 1 with another 1, we get a new, larger number - which we arbitrarily call two, and represent using this funny squiggle: 2.</p>
+<p>Now that we have defined the increment operation, adding a unit, we can begin to generate new numbers. We start with 1+1, which gives 2. The next number can be found by adding 1 to 2, which gives us a new number that we arbitrarily call three, and represent with a funny squiggle: 3.</p>
+<p>We continue in this manner, until we reach 9, and run out of squiggles to write. The next number we will get is a special number, because it is equal to the total number of fingers. When we get to 9, and add one more, we get "two hands", which we arbitrarily call ten. If we want to keep counting beyond ten, we're stuck, because we've run out of fingers. But we can take a shortcut - we can let one toe represent "two hands". So, we hold up one toe, to represent ten. To write ten, we can let the first digit represent how many toes we are holding up, and the second digit represent how many fingers we are holding up. That means we can write our "two hands" quantity as 10 - one toe, no fingers.</p>
+<p>We can keep on incrementing by 1, and using this system we can count all the way up to 99, at which point we will need another pair of hands or feet to keep generating new numbers, or we can suppose that after counting to 99, we are able to hold numbers in our head.</p>
+<p>But once again, we're generating numbers slowly. We want a way to generate more numbers, faster, so we can count higher. So, we define a new addition operation. Rather than adding 1, we define the general operation of addition recursively. To add two numbers like a and b, we can define this addition in terms of a unit increment:</p>
+<div class="math">$$
+a + b = a + 1 + 1 + 1 + \dots + 1
+$$</div>
+<p>We increment the quantity a by 1, b times. This gives us a way to add arbitrary numbers together, so now we can reach much larger numbers by taking the largest number that we can count to, and adding that number to itself.</p>
+<p>Extending this approach can lead us from an increment operation (performed b times) to an addition operation (<code>+b</code>).</p>
+<p>It can also lead from an addition operation (performed b times) to a multiplication operation (<code>*b</code>).</p>
+<p>Extending the idea further, we can apply the multiplication operation (performed b times) and obtain an exponentiation operation (<code>^b</code>).</p>
+<p>This recursive definition of new operations can continue as long as we'd like: applying the exponentiation operation b times yields tetration (<code>^b^b^b^b^b...^b</code>).</p>
+<p>But let's get back to addition.</p>
+<p><a name="z-addition1"></a></p>
+<h3>Solution 1: Positive Integers Only</h3>
+<p>Adding two positive integers is the simplest case. 
+Essentially, we just perform two loops: 
+the first loop increments the result and increments a temporary variable 1, 
+and does that until the temporary variable 1 is equal to the first number. 
+The second loop increments the result and increments the result by 1 
+for a number of times equal to the number at index 1.</p>
+<div class="highlight"><pre><span></span>001   Z2                    // clear space for the result
+002   Z3                    // clear space for temp variable 1
+003   I2                    // increment result
+004   I3                    // increment temp variable 1
+005   J3,0 --&gt; 003
+006   Z4                    // clear space for temp variable 2
+007   I2                    // increment result
+008   I3                    // increment temp variable 2
+009   J4,1 --&gt; 007
+010   Z3                    // clean up
+</pre></div>
+
+
+<p>(Because we only have an increment operation at our disposal, 
+there is no way for us to deal with negative numbers. 
+Dittos for non-integer real numbers.) </p>
+<p>This method will fail when either of the two numbers we are adding are zero.</p>
+<p><a name="z-addition2"></a></p>
+<h3>Solution 2: Dealing With Zeros</h3>
+<p>A second solution that is a bit more challenging is dealing with the case of possible zeros 
+in the first or second position. The algorithm above will increment the result and the 
+temporary variable <em>at least once</em> (similar to a do-while loop structure), 
+which will always cause the comparison operation <code>J2,0</code> or <code>J3,1</code> to fail
+if either cell 0 or cell 1 holds a zero.</p>
+<p>Here is code that can deal more gracefully with a zero in either 
+the first or second positions. This utilizes some extra space in memory
+to keep track of whether index 0 is a zero and whether index 1 is a zero.</p>
+<div class="highlight"><pre><span></span>// initialize
+001     Z3
+002     Z4 // temp 0
+003     Z5 // temp 1
+004     Z6 // is index 0 a zero?
+005     Z7 // is index 1 a zero?
+006     Z8 // zero
+007     Z9 // one
+008     I9
+
+// increment by amount in index 0
+009     J0,8 --&gt; 014
+010     I6
+011     J4,6 --&gt; 014
+012     I4
+013     I3
+014     J0,4 --&gt; 009
+
+// increment by amount in index 1
+015     J1,8 --&gt; 020
+016     I7
+017     J7,8 --&gt; 020
+018     I5
+019     I3
+020     J1,5 --&gt; 017
+
+// clean up
+021     Z4
+022     Z5
+023     Z6
+024     Z7
+</pre></div>
+
+
+<p>The central idea behind this algorithm is, we keep incrementing the target cell while a 
+condition is false, and the condition we are checking is based on a separate, independent counter.
+That allows us to correctly increment (and stop incrementing) based on the two numbers 
+in index 0 and index 1. 
+(We don't want the final result cell to be involved in our final condition check.) </p>
+<p>This pattern can also be expanded to work for adding an arbitrary number of numbers; 
+one simply needs to add an additional temp variable and an additional "is zero" variable 
+for each new number being added to the total, then another block of 6 statements
+to increment by the amount in the given index.
+The block of 6 statements checks if the number we are adding is zero, 
+and if it is not, the result is incremented by that many times. </p>
+<p><a name="z-decrement"></a></p>
+<h2>Implementing a Decrement Operator on the Z-Machine</h2>
+<p>Suppose an operator places a number into cell 0 of the Z-Machine's memory. 
+We require that the Z-Machine subtract 1 from that number, and place it in cell 1. </p>
+<p>The pseudocode approach here is to increment two cells in a particular order:
+cell 2, which contains a sentinel value, is incremented. The program them checks if 
+cell 2 is equal to cell 0. If it is not, the program increments cell 1, and repeats.
+If cell 2 is equal to cell 0, the program stops before cell 1 is incremented, leaving it 
+one less than the original value in cell 0.</p>
+<div class="highlight"><pre><span></span>001   Z1            // decrement result
+002   Z2            // zero
+003   Z3            // one
+004   I3
+005   J2,3 --&gt; 007  // always false
+006   I1
+007   I2
+008   J2,0 --&gt; 006
+</pre></div>
+
+
+<p>This pseudocode uses hard-coded constants (zero and one) to create a jump condition
+that is always false and therefore always followed. This allows the machine to 
+skip a line of code like instruction 006, and perform the increment operation 
+in a staggered manner, as described above.</p>
+<p><a name="z-lessthan"></a></p>
+<h2>Implementing a Less Than Operator on the Z-Machine</h2>
+<p>Another challenging operation to implement with the Z-Machine is a comparison operator. 
+Suppose that an operator places two numbers into the first two memory positions of 
+the Z-Machine. That is, index 0 contains a number A, and index 1 contains a number B. 
+Supposing these numbers are both natural numbers (either 0 or positive integers), 
+a comparison operator will compare the two numbers, select the smaller of the two numbers, 
+and place it into the third position in memory (index 2).</p>
+<p>The pseudocode approach to implement the comparison operator is to create 
+a counter that start at zero, and check if it is equal to A or B 
+(the numbers at index 0 and index 1). 
+If we continue to increment our counter, and check if it is equal to A or B, 
+and stop when it reaches either A or B, we can guarantee that we will stop 
+when the counter reaches the smaller of the two numbers.</p>
+<p>In order to increment the memory cell at index 2 to hold the smaller of the two numbers 
+at index 0 and index 1, we can use the following Z-Machine code, 
+which continually checks if the number at index 2 is equal to 
+either the number at index 0 or the number at index 1, increments if false, 
+and stops when true (when it reaches the smaller of the two). </p>
+<div class="highlight"><pre><span></span>001     Z2 // smaller of the two numbers
+002     Z3 // zero
+003     Z4 // one
+004     I4
+
+005     J0,2 --&gt; 007
+006     J3,4 --&gt; 011
+007     J1,2 --&gt; 009
+008     J3,4 --&gt; 011
+009     I2
+010     J3,4 --&gt; 005
+011     Z4
+</pre></div>
+
+
+<p>Note that this code successfully handles the case where either number (or both) 
+is 0 or any positive integer.</p>
+<p><a name="z-whocares"></a></p>
+<h2>Who Cares? (Or, How To Build A Computer)</h2>
+<p>This whole exercise may appear, at first glance, to be an exercise in trivial pursuit. 
+Why bother reinventing the wheel? Isn't this nothing more than an entertaining puzzle?</p>
+<p>To the contrary - the process of assembling a sequence of simple operations into a cascade of
+more complex operations is precisely how computational devices are assembled from 
+circuit components. For example, a <a href="https://en.wikipedia.org/wiki/Flip-flop_%28electronics%29">flip flop circuit</a>
+utilizes a pair of NOR (negation of OR) gates to store bits. The <a href="https://en.wikipedia.org/wiki/Apollo_Guidance_Computer">Apollo Guidance Computer</a>
+was composed entirely of NOR gates. </p>
+<p>In fact, the Apollo Guidance Computer is a fantastic example of a computational device 
+constructed from a set of such simple instructions as the ones available in the Z-Machine.
+A few example operations from the Wikipedia article on the Apollo Guidance Computer:</p>
+<div class="highlight"><pre><span></span>AD (add)
+    Add the contents of memory to register A and store the result in A.
+
+INDEX
+    Add the data retrieved at the address specified by the instruction 
+    to the next instruction. INDEX can be used to add or subtract 
+    an index value to the base address specified by the operand 
+    of the instruction that follows INDEX. This method is used 
+    to implement arrays and table look-ups.
+</pre></div>
+
+
+<p>It is not unusual for a hardware platform to have a small set of basic commands or instructions
+that can be carried out, and for that set of instructions to be different from hardware platform
+to hardware platform. Designing a new computational device requires the system designer
+to adapt to the hardware's capabilities - not the other way around. 
+For that reason, it is important to keep those engineering and puzzle-solving skills sharp.
+You never know when you'll be designing a new computer device.</p>
+<p><a name="z-sources"></a></p>
+<h2>Sources</h2>
+<ol>
+<li>
+<p>"The Two Problems I Had To Solve In My Oxford Interview." John Graham-Cumming. Published 2 May 2013. Accessed 24 April 2017.
+&lt;<a href="http://blog.jgc.org/2013/05/the-two-problems-i-had-to-solve-in-my.html">http://blog.jgc.org/2013/05/the-two-problems-i-had-to-solve-in-my.html</a>&gt;</p>
+</li>
+<li>
+<p>"Flip Flop (electronics)." Wikipedia. The Wikimedia Foundation. Edited 13 April 2017. Accessed 24 April 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Flip-flop_%28electronics%29">https://en.wikipedia.org/wiki/Flip-flop_%28electronics%29</a>&gt;</p>
+</li>
+<li>
+<p>"Apollo Guidance Computer." Wikipedia. The Wikimedia Foundation. Edited 5 April 2017. Accessed 24 April 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Apollo_Guidance_Computer">https://en.wikipedia.org/wiki/Apollo_Guidance_Computer</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/turing-machine.html">turing machine</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/computer-engineering.html">computer engineering</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/apollo.html">apollo</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/assembly.html">assembly</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 AWSome Day Seattle Notes: Part 2: Networking, Security, and Miscellany
             </b></h1>
         
@@ -413,626 +1189,6 @@ services/
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                AWSome Day Seattle Notes: Part 1: The Basics
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-04-11T10:00:00-07:00" pubdate>Tuesday 04/11/2017</time>
-                in 
-                <a href="/category/charlesreid1.html">Charlesreid1</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/awsome-day-seattle-notes-part-1-the-basics.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>These notes are also available on git.charlesreid1.com 
-<a href="https://git.charlesreid1.com/charlesreid1/aws/src/branch/master/awsome-day-sea-2018/Part1.md">here</a>
-or in
-<a href="https://git.charlesreid1.com/charlesreid1/aws">https://git.charlesreid1.com/charlesreid1/aws</a>.</p>
-<h1>AWSome Day Notes: Part 1: The Basics</h1>
-<p>Following are some notes from Amazon's AWSome Day (Tuesday, February 27, 2018).</p>
-<h2>EC2 Costs and Scheduling</h2>
-<p>Cost of a node:</p>
-<ul>
-<li>Important to understand Amazon's price model: users pay for <em>access</em>, not for <em>hardware</em></li>
-<li>Cost of AWS node is cost for <em>on the spot access</em></li>
-</ul>
-<p>Scheduling:</p>
-<ul>
-<li>If you can anticipate your usage, you can schedule instances in advance, and get a discount</li>
-<li>Discount of 50% for one-year reservation (if you keep it busy for 6 months, you've made your money back)</li>
-<li>Spot instances also available - need to be robust to sudden starts/stops (good for embarrassingly parallel jobs)</li>
-<li>Cheaper to anticipate your usage and plan ahead</li>
-</ul>
-<h2>EC2 Transfer Costs</h2>
-<p>EC2 Instances:</p>
-<ul>
-<li>See <a href="https://aws.amazon.com/ec2/pricing/on-demand/">EC2 Instance Pricing - Data Transfer</a> section</li>
-<li>Network costs for AWS nodes are an important consideration for high-traffic nodes (&gt;10 TB)</li>
-</ul>
-<p>EC2-Internet:</p>
-<ul>
-<li>Traffic going from the internet <em>into</em> a node is always free</li>
-<li>Traffic going from the node <em>out</em> to the internet incurrs costs after 10 TB</li>
-<li>Outbound traffic costs ~$90/TB</li>
-</ul>
-<p>AWS Regions:</p>
-<ul>
-<li>Traffic <em>within</em> a region does not incur costs (well... it's complicated)</li>
-<li>Traffic <em>between</em> regions will incur costs</li>
-</ul>
-<p>EC2-S3:</p>
-<ul>
-<li>Transfer <em>into</em> an EC2 node from S3 bucket in same AWS region does not incur costs</li>
-<li>Transfer <em>out of</em> an EC2 node into S3 bucket in same AWS region does not incur costs</li>
-<li>(If they did charge you, they would be double-dipping...)</li>
-</ul>
-<p>Note: the list of prices is like a legal document, so use the <a href="https://calculator.s3.amazonaws.com/index.html">AWS Monthly Calculator</a> to estimate monthly costs with more detail.</p>
-<h2>S3 Transfer Costs</h2>
-<ul>
-<li>See <a href="https://aws.amazon.com/s3/pricing/">S3 Pricing - Data Transfer</a></li>
-<li>Price model for storage is simliar to price model for AWS nodes: you pay for <em>access</em>, not for <em>hardware</em></li>
-<li>To give a sense of why, think about logistics of a large "disk farm": all the intensive operations are done by the head nodes, disks are just passive</li>
-<li>Busier disk farm needs sophisticated hardware for parallel read/write, high-bandwidth network lines, fast encryption</li>
-</ul>
-<p>S3 storage pricing:</p>
-<ul>
-<li>Rule of thumb: ~$20/TB to store the data</li>
-</ul>
-<p>S3-Internet:</p>
-<ul>
-<li>Transfer <em>into</em> an S3 bucket from the internet is always free (getting stuff into the bucket is the easy part - that's how they get ya)</li>
-<li>Transfer <em>out</em> of an S3 bucket to the internet costs ~$90/TB</li>
-</ul>
-<p>S3-EC2:</p>
-<ul>
-<li>Transfer <em>out</em> of an S3 bucket to most other Amazon regions costs ~$20/TB</li>
-<li>Transfer <em>out</em> of an S3 bucket into an EC2 node in the same AWS region does not incur costs</li>
-<li>Transfer <em>into</em> an S3 bucket from an EC2 node in the same AWS region does not incur costs</li>
-</ul>
-<p>As mentioned above, this means you won't be double-charged for transferring data from an S3 bucket to an EC2 node, then from the EC2 node out to the internet.</p>
-<h2>S3 Storage Hierarchies</h2>
-<p>Continuing with the theme of planning ahead...</p>
-<p>Storage hierarchies:</p>
-<ul>
-<li>Biggest cost of storage is not disk space, it's transfer</li>
-<li>Paying for speed, paying for timeliness, paying for <em>on the spot access</em> to your data</li>
-<li>Your data will be cheaper if you're willing to wait a few minutes or deal with a slow connection</li>
-</ul>
-<p>Storage hierarchies:</p>
-<ul>
-<li>Standard (~$20/TB)</li>
-<li>Infrequent access (~$13/TB) - less frequent access, but at same transfer speed</li>
-<li>Glacier (~$4/TB) - delay of up to 12 hours (smaller files = faster), deleting data <em>newer</em> than 3 months incurrs costs</li>
-</ul>
-<p><a href="https://aws.amazon.com/glacier/pricing/">Glacier Pricing</a></p>
-<p>Lifecycle rules:
-* Can create rules to move old data from S3 buckets into Glacier</p>
-<h2>EFS vs EBS vs S3</h2>
-<p>When do you use EFS, EBS, or S3?</p>
-<p>Elastic Block Storage (EBS):</p>
-<ul>
-<li><strong>This is probably what you want</strong></li>
-<li>EBS is block storage for one EC2 node - designed for general purpose applications</li>
-<li>Cost: ~$120/TB/mo</li>
-</ul>
-<p>Elastic File System (EFS):</p>
-<ul>
-<li>EFS is block storage for multiple EC2 nodes - designed for fast read-write operations, many incremental changes to files</li>
-<li>"Elastic" part of EFS - can dynamically grow as hard drive grows (PB+ scale)</li>
-<li>Hard drive on steroids - like plugging in a hard drive over a network, but big/fast/smart enough to be accessible to thousands+ of machines</li>
-<li>Expensive: ~$300/TB/mo</li>
-</ul>
-<p>S3:</p>
-<ul>
-<li>S3 is object storage - it stores blobs of raw data, creates snapshots in time</li>
-<li>If you change a single character of a large file, bucket has to create new shapshot</li>
-<li>Booting from S3 as a hard disk would take you about a thousand years... don't do that</li>
-<li>Cheapest: ~$20/TB</li>
-</ul>
-<p>Cool but <span class="math">\($\)</span>:</p>
-<ul>
-<li>You may see "appliances" mentioned in Amazon documentation - Amazon will ship you a physical data transfer appliance that encrypts and copies data on site (<a href="https://docs.aws.amazon.com/snowball/latest/ug/images/Snowball-closed-600w.png">Snowball</a>)</li>
-<li>Can also purchase special network connections that bypass the public internet - like ISP putting alligator clips between your network lines and Amazon's network lines</li>
-</ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/aws.html">aws</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/cloud.html">cloud</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/vpc.html">vpc</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/containers.html">containers</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/data-engineering.html">data engineering</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Setting Up a Self-Hosted Github Clone with Gitea
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-04-01T22:00:00-07:00" pubdate>Saturday 04/01/2017</time>
-                in 
-                <a href="/category/charlesreid1.html">Charlesreid1</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/setting-up-a-self-hosted-github-clone-with-gitea.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2>Table of Contents</h2>
-<ul>
-<li><a href="#gitea-intro">Intro</a></li>
-<li><a href="#gitea-running">Running with Gitea</a><ul>
-<li><a href="#gitea-bin">Binary or Source</a></li>
-<li><a href="#gitea-config-dir">Configuring Gitea Directories</a></li>
-<li><a href="#gitea-fw">Opening the Firewall</a></li>
-<li><a href="#gitea-config-server">Setting Up and Configuring Gitea Server</a></li>
-</ul>
-</li>
-<li><a href="#gitea-use">How To Use Gitea</a><ul>
-<li><a href="#gitea-pushing-local">Pushing a Local Repo Into Gitea</a></li>
-<li><a href="#gitea-copying">Copying Repos from Github to Gitea</a></li>
-<li><a href="#gitea-moving">"Moving" Repos from Github to Gitea</a></li>
-<li><a href="#gitea-pushing-commits">Pushing Commits to Github or Gitea</a></li>
-<li><a href="#gitea-backing-up">Backing Up Gitea</a></li>
-</ul>
-</li>
-<li><a href="#gitea-patterns">How Gitea Fits Into Git Patterns</a></li>
-<li><a href="#gitea-wrapup">Wrapup</a></li>
-</ul>
-<p><a name="gitea-intro"></a></p>
-<h2>Intro</h2>
-<p>In this post we'll cover how to set up a web-hosted git server that uses Gitea,
-a Github clone that is written in Go. 
-While this post is not, strictly speaking, research, 
-having your own hosted git server certainly makes it easier to
-manage research codes and set up organizations to own different bits of code.</p>
-<p>Here's an image of a git repository in the finished product:</p>
-<p><img alt="Image of finished product" src="/images/gitea1.png"></p>
-<p>We will start by covering the server configuration for Gitea, 
-and then we'll cover how to use Gitea's git repository.</p>
-<p><a name="gitea-running"></a></p>
-<h2>Running with Gitea</h2>
-<p>Gitea is a web app for running a self-hosted Github clone. 
-It is implemented entirely in the Go language,
-so all of the pages that are served up are assembled by the Go binary.
-The Go binary also has a local instance of git running, 
-and any actions taken through the Gitea web interface
-are translated, by the Go binary, into actions in the git reopsitory.</p>
-<p>Out of the box, Gitea provides all of this functionality, and takes care of all the details,
-so you don't have to worry about any of this. But if you build it yourself,
-you can modify the content the binary serves up and the actions it takes. </p>
-<p>In this guide, we'll stick to the binary.</p>
-<p><img alt="DIagram of how the gitea binary runs as an http server on port 3000." src="/images/gitea-diagram.png"></p>
-<p><a name="gitea-bin"></a></p>
-<h3>Binary or Source</h3>
-<p>There are some problems with the source code that may make compilation from source impossible.
-(See <a href="https://charlesreid1.com/wiki/Gitea#Using_Binary">charlesreid1.com wiki notes</a>.)
-The binary version of Gitea is recommended. </p>
-<p><a name="gitea-config-dir"></a></p>
-<h3>Configuring Gitea Directories</h3>
-<p>Gitea expects a certain directory organization, specifically, a folder for binaries, 
-certificates, a database, git repositories, and the log.</p>
-<p>The recommended arrangment is:</p>
-<div class="highlight"><pre><span></span>/path/to/www/gitea/
-   \
-    \---------- bin/
-     \--------- certs/
-      \-------- data/
-       \------- repositories/
-        \------ log/
-</pre></div>
-
-
-<p>Once the files are organized in this way, navigate to the bin directory
-and (preferrably using tmux or screen to send to background) 
-execute the command:</p>
-<div class="highlight"><pre><span></span>./gitea web
-</pre></div>
-
-
-<p>This runs a setup page on port 3000.</p>
-<p>Note that you may or may not need to set your <code>$GOPATH</code> variable:</p>
-<div class="highlight"><pre><span></span>export GOPATH=&quot;<span class="cp">${</span><span class="n">HOME</span><span class="cp">}</span>/gocode&quot;
-</pre></div>
-
-
-<p>Go ahead and follow the instructions on the page to get Gitea set up.
-The <a href="https://gitea.io">gitea.io</a> page has good documentation.</p>
-<p><a name="gitea-fw"></a></p>
-<h3>Opening the Firewall</h3>
-<p>Assuming your port 3000 was closed on the firewall,
-and assuming you plan to run the gitea service as a public service listening on an external port, 
-you will want to open your firewall to accept incoming traffic on port 3000:</p>
-<div class="highlight"><pre><span></span># allow traffic on port 3000
-iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
-#  to allow forwarding for 3000 to internal LAN 
-iptables -A FORWARD -p tcp -j ACCEPT --dport 3000 -m state --state NEW
-</pre></div>
-
-
-<p><a name="gitea-config-server"></a></p>
-<h3>Setting Up and Configuring Gitea Server</h3>
-<p>To configure gitea, you will use a <code>.ini</code> configuration file contained in:</p>
-<div class="highlight"><pre><span></span>/path/to/www/gitea/custom/conf/app.ini
-</pre></div>
-
-
-<p>Here is an example gitea configuration file. It starts with a header, then has sections
-for different aspects like databases, the git repository, and the server:</p>
-<div class="highlight"><pre><span></span>;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Example Gitea Config File
-;;
-;; https://github.com/go-gitea/gitea/blob/master/conf/app.ini
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-APP_NAME = big ugly git repo (BUGR)
-RUN_USER = git
-RUN_MODE = prod
-
-[database]
-DB_TYPE  = sqlite3
-SSL_MODE = disable
-PATH     = /www/gitea/data/gitea.db
-
-[repository]
-ROOT = /www/gitea/repositories
-PREFERRED_LICENSES = MIT License
-
-[server]
-PROTOCOL     = https
-DOMAIN       = yourdomain.com
-CERT_FILE    = /www/gitea/certs/cert.pem
-KEY_FILE     = /www/gitea/certs/key.pem
-SSH_DOMAIN   = git.yourdomain.com
-HTTP_PORT    = 3000
-ROOT_URL     = https://yourdomain.com:3000
-DISABLE_SSH  = false
-SSH_PORT     = 22
-OFFLINE_MODE = false
-
-[log]
-ROOT_PATH = /www/gitea/log
-</pre></div>
-
-
-<p>Ultimately, there are many configuration examples available for Gitea,
-so we won't go into any more detail on that.</p>
-<p>For details on how to configure Gitea with HTTPS, see <a href="https://charlesreid1.com/wiki/Gitea">charlesreid1.com/wiki/Gitea</a>.</p>
-<p>Let's move on to how we actually utilize Gitea,
-and focus especially on how to make gitea work in tandem with github
-and other git servers, instead of being yet another complication in the toolchain.</p>
-<p><a name="gitea-use"></a></p>
-<h2>How To Use Gitea</h2>
-<p>As we mentioned before, the gitea binary is actually wrapping a git repo, 
-and interactions with the binary (via the web) are translated into actions in that repo.
-This is important to understand, since it will prevent us from thinking about 
-gitea as a "centralized" server, and get us thinking about gitea as just another 
-computer with a copy of the repository on it.</p>
-<p>Understanding how to use gitea also requires correct thinking about how 
-distributed version control works - the way that each collaborator 
-with a copy of the repo can also act as a decentralized git server. 
-In this way, the gitea server becomes just another git client,
-with some extra frosting on top in the form of a web interface.</p>
-<p><a name="gitea-pushing-local"></a></p>
-<h3>Pushing a Local Repo Into Gitea</h3>
-<p>If you want to move existing local repositories into gitea, it's easy.
-Remember that with git, everything is local, so all you need to do 
-is push a copy to gitea, and gitea will have the whole repository locally too,
-including its entire history and any branches and tags that were on your local machine.
-If you have remotes, you'll need to get local copies of any branches or tags you want
-from that remote server (covered in more detail below).</p>
-<p>The basic steps:
-<em> Get everything you want locally (including branches and tags)
-</em> Fetch from remotes, if you have any.
-<em> Add new remote (gitea)
-</em> Push to new remote</p>
-<p>The end result will be a gitea repo fully-populated with the project's commit history.</p>
-<p>Here are the steps in a bit more detail:</p>
-<p>Start by creating a git repository, or cloning an existing one:</p>
-<div class="highlight"><pre><span></span>mkdir my_git_repo/
-cd my_git_repo
-git init .
-</pre></div>
-
-
-<p>or</p>
-<div class="highlight"><pre><span></span>git clone http://github.com/mot_pesli/coune_car
-</pre></div>
-
-
-<p>Next, create an empty git repo on the gitea server.
-Sign in using a gitea username and password. 
-There will be a plus sign in the upper right,
-just like on Github. Click the plus sign, and choose create new repo.
-Enter the repo name, and a description.
-Make sure the repo will NOT automatically create
-a readme or a LICENSE file, as we will be importing all files
-from another repo anyway.</p>
-<p>Once you've got a local copy of the repo with everything you want to push,
-and you have an empty repository on the gitea server ready for commits,
-add the gitea repository as a new remote to your local repository.</p>
-<p>Example: suppose you have a gitea user named <code>zappa</code> who has created a new empty repo 
-named <code>linol-aquabus</code> on the gitea server. 
-Zappa would then cd to the local copy of the git repo,
-and add the gitea repository's url as a new remote called <code>gitea</code>:</p>
-<div class="highlight"><pre><span></span>git remote add gitea https://git.mydomain.com/zappa/linol-aquabus.git
-
-# alternatively,
-
-git remote add gitea https://mydomain.com:3000/zappa/linol-aquabus.git
-</pre></div>
-
-
-<p>Now Zappa can push the entire commit history of the current repo
-to the gitea remote git server:</p>
-<div class="highlight"><pre><span></span>git push origin gitea
-
-# alternatively,
-
-git push --all origin gitea
-</pre></div>
-
-
-<p>If Zappa now visits <code>mydomain.com:3000/zappa/linol-aquabus</code> the entire
-contents of the repository and its commit history in gitea's web interface
-will be available for browsing.</p>
-<p><a name="gitea-copying"></a></p>
-<h3>Copying Repos from Gitub to Gitea</h3>
-<p>The process for copying Github repositories to Gitea follows the above procedure closely:</p>
-<div class="highlight"><pre><span></span>git clone https://github.com/user/repo.git
-</pre></div>
-
-
-<p>Check out any branches or tags you may want to push to gitea.</p>
-<p>Then add the gitea remote to the repo:</p>
-<div class="highlight"><pre><span></span>git remote add gitea https://git.mydomain.com/zappa/linol-aquabus.git
-</pre></div>
-
-
-<p>Now push the contents of the local repository to the remote gitea repository:</p>
-<div class="highlight"><pre><span></span>git push origin gitea
-</pre></div>
-
-
-<p>Once this command is executed, the gitea remote will have the entire commit history of the repo,
-which it will render and display through its web interface. Thus, the entire commit history
-will be immediately available to browse through gitea.</p>
-<p>(Note that information about Github issues or Github user profiles is not stored in the git repo,
-just as Gitea comments and Gitea user profiles are not stored in the git repo.)</p>
-<p><img alt="Gitea and Github - same repo, side by side." src="/images/gitea-n-github.png"></p>
-<p><a name="gitea-moving"></a></p>
-<h3>"Moving" Repos from Gitub to Gitea</h3>
-<p>First, it should be stated up front that you do not have to choose 
-between gitea and github - you can have a copy of a repo on both,
-frequently push to one or the other, and occasionally update the other
-as a kind of "mirror."</p>
-<p>If you do want to <em>move</em> a repo from github to gitea,
-remember that github does not "own" the repo,
-so what you're actually doing is deleting the copy of your repo 
-that lives on github's server.</p>
-<p>To move the repo, all you have to do is copy it from github to somewhere else
-(whether it be your local computer, or to the gitea server), then delete it from github.
-You will not lose any information about the git repository history.
-Github does not keep/store that information - git does.</p>
-<p><a name="gitea-pushing-commits"></a></p>
-<h3>Where to Push Commits: Github or Gitea?</h3>
-<p>It may seem confusing to use multiple repositories side-by-side,
-but this is precisely how the designers of git intended it to be used - 
-for decentralized version control.</p>
-<p>That means Github or Gitea are not "centralized" servers that "own" the repository,
-they are merely another instance of git, running on a server, with a local copy of the repo.</p>
-<p>Accordingly, if your project exists as a repo on gitea and as a repo on github, 
-it is like the project existing as a repo on your hard drive and as a repo on your collaborator's hard drive -
-there is no contradiction. If you make changes to your local copy of the repo, you can commit those changes,
-then push the commits to someone else. In the same way, you can make changes to your local copy of the repo 
-and commit those changes, then push the commits to either gitea, or github, or both - wherever you want.</p>
-<p><a name="gitea-backing-up"></a></p>
-<h3>Backing Up Gitea</h3>
-<p>It's important to say a few words about backups.</p>
-<p>Because Gitea is configured (with the above config file) to use sqlite,
-it stores its entire database (the extra "frosting" of stars, wiki pages,
-issues, user pictures, etc.) in a single file on disk, in the <code>data/</code> directory
-of the gitea installation.</p>
-<p>The git repository is, similarly, a single file on disk, with the entire database 
-of commits, blogs, commit histories, etc., all contained in the <code>.git</code> directory,
-which is contained in the <code>repositories</code> directory of the gitea installation.</p>
-<p>That means backing up your git server is as easy as copying the gitea folder.
-No need to back up a MySQL database or do a funny pants dance to export your database
-to a proprietary format. </p>
-<p>This is another central tenent of git's design philosophy - 
-be fast, pack light, and travel easily.</p>
-<p><a name="gitea-patterns"></a></p>
-<h2>How Gitea Fits Into Git Patterns</h2>
-<p>There are <a href="https://charlesreid1.com/wiki/Git_Resources">many resources on git</a>,
-and some cover the concept of "git patterns," 
-or templates for how to use git.</p>
-<p>Because git is designed to be decentralized, 
-gitea provides a "centralized" node for collaboration
-within a decentralized system.
-So you could use gitea to collaborate with 
-your local Team A, and push and pull branches 
-and work on various features together.
-Then, once Team A has put together a branch they've found useful,
-they can push it to a different remote server that is more widely accessed.</p>
-<p>(Note that this is the logic behind why you need to 
-check out all the branches and tags, <em>locally</em>, that you want to push 
-to the gitea remote server - this allows you the flexibility to 
-only share select branches, so that you might have 
-some branches shared in common wth gitea and github,
-and other branches only existing on gitea.)</p>
-<p>Team B and Team C may use github, and not gitea, to access the project code.
-The gitea server may for example be a private server on a local network,
-whereas github is better suited for collaboration.
-By pushing select branches from the Team A git server, gitea,
-to the github server, Team B and Team C will then be able to 
-access them from github.</p>
-<p>You could also have multiple gitea/gitlab/github enterprise servers 
-for multiple organizations running on git, and they could share a code base 
-by sharing git repositories, commit histories, branches, and so on.</p>
-<p><a name="gitea-wrapup"></a></p>
-<h2>Wrapup</h2>
-<p>Have a look at the <a href="http://gitea.io">Gitea project</a>, <a href="https://golang.org">the Go language</a>,
-<a href="https://git-scm.com">git</a>, <a href="https://github.com">Github</a> for all the nice software
-that made this possible. </p>
-<p>Then have a look at the finished product at <a href="https://git.charlesreid1.com">git.charlesreid1.com</a>.</p>
-<p>Gitea allows you to create organizations, useful for organizing repos related to 
-particular functionality or platforms. For example, <a href="https://git.charlesreid1.com/rpi">rpi</a> 
-is an organization that owns repositories with scripts and software for raspberry pis,
-<a href="https://git.charlesreid1.com/docker">docker</a> is an organization that owns repositories
-with Dockerfiles, and <a href="https://git.charlesreid1.com/mac">mac</a> holds Mac-related things.</p>
-<p>This organization allows better organization of project code - a dotfiles repository
-that works for a Mac laptop or a Unix server is not necessarily good for a Raspberry Pi
-or a Docker container, so code is organized accordingly.</p>
-<p>Organizations can also be used to organize project-level code. 
-This git repo is in its beginning phases, but has great potential
-as a great tool that makes git even more functional and provides 
-one more reason to switch to git.</p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/git.html">git</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/go.html">go</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/gitea.html">gitea</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1054,6 +1210,22 @@ one more reason to switch to git.</p></div>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>December 2018</h2>
+
+            <p class="archive">
+            <a href="/learning-bioinformatics-with-go-and-rosalind.html">Learning Bioinformatics with Go and Rosalind</a>
+            </p>
+            <p class="archive">
+            <a href="/first-post-of-the-fall-part-2-flaskadillo.html">First Post of the Fall, Part 2: Flaskadillo</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
