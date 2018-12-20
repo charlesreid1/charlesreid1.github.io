@@ -45,13 +45,13 @@ use for variable and type declarations.
 For example, in Java, you declare an integer array like this:
 
 ```
-public int[] arr;
+public int[5] arr;
 ```
 
 while in Go, you would declare an analogous data structure like this:
 
 ```
-var arr []int
+var arr [5]int
 ```
 
 While this reversal is a bit confusing at first, it is different enough 
