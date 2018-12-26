@@ -1,5 +1,5 @@
 Title: Timing and Profiling Go Code
-Date: 2018-12-18 20:00
+Date: 2018-12-XX 20:00
 Category: Rosalind
 Tags: go, golang, rosalind, bioinformatics
 Status: draft
