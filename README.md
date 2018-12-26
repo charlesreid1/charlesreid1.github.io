@@ -1,9 +1,9 @@
 # charlesreid1.github.io
 
-This repository contains a Pelican blog. Link: [http://charlesreid1.github.io](http://charlesreid1.github.io)
+This repository contains a Pelican blog for charlesreid1.com.
 
-source/ branch contains the meat of the site.
+Link to blog: [http://charlesreid1.github.io](http://charlesreid1.github.io)
 
-old-octopress-source/ contains the old Octopress source. Goodbye, Ruby and Jekyll. Don't let the door whack you on the way out.
+`source` branch - contains the files used to generate the blog site (using Pelican). All blog posts are in the `content/` folder of this branch.
 
-
+`master` branch - this branch contains the static files hosted by Github Pages. This branch would normally be called `gh-pages`, but this is the top-level `<username>.github.io` site associated with this username.
