@@ -143,7 +143,11 @@ in the Go programming language.</em></p>
 </ul>
 </li>
 <li><a href="#final">Final Counting Formula</a></li>
-<li><a href="#golang">Implementing in Go</a></li>
+<li><a href="#golang">Implementing in Go</a><ul>
+<li><a href="#golang-bionomial-factorial">Binomial and Factorial Functions in Go</a></li>
+<li><a href="#variations">Variations Counting Function in Go</a></li>
+</ul>
+</li>
 </ul>
 <p>Addendum:</p>
 <ul>
@@ -329,8 +333,108 @@ distance of less than or equal to <span class="math">\(d\)</span>, with <span cl
 (A, T, G, C), we will need to sum over Hamming distances
 from 0 to <span class="math">\(d\)</span>:</p>
 <div class="math">$$
-V = \sum_{dd = 0}^{d} \binom{n}{dd} (c-1)^{dd}
+V = \sum_{k = 0}^{d} \binom{n}{k} (c-1)^{k}
 $$</div>
+<p><a name="golang"></a></p>
+<h2>Implementing in Go</h2>
+<p>Now, let's look at how we would implement this counting
+formula in Go. This will be useful, since programs run 
+much faster when they are able to allocate all the sapce
+they need in memory ahead of time. Counting the number
+of variations of our DNA input string will allow us to
+do just that.</p>
+<p><a name="golang-binomial-factorial"></a></p>
+<h3>Binomial and Factorial Functions in Go</h3>
+<p>We'll start with binomial and factorial functions in Go:
+continuing with our theme of recursion, we implement
+a recursive factorial function.</p>
+<div class="highlight"><pre><span></span><span class="c1">// Compute the factorial of an integer.</span>
+<span class="kd">func</span> <span class="nx">Factorial</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="nx">n</span> <span class="p">&lt;</span> <span class="mi">2</span> <span class="p">{</span>
+        <span class="c1">// base case</span>
+        <span class="k">return</span> <span class="mi">1</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// recursive case</span>
+        <span class="k">return</span> <span class="nx">n</span> <span class="o">*</span> <span class="nx">Factorial</span><span class="p">(</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>The factorial function will behave correctly for the
+case of <span class="math">\(n=1\)</span> and <span class="math">\(n=0\)</span>, and will return 1 if <span class="math">\(n\)</span> is
+negative (which is reasonable behavior for our purposes.)</p>
+<p>The binomial function utilizes the factorial function:</p>
+<div class="highlight"><pre><span></span><span class="c1">// Returns value of the binomial coefficient Binom(n, k).</span>
+<span class="kd">func</span> <span class="nx">Binomial</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">k</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
+
+    <span class="nx">result</span> <span class="o">:=</span> <span class="mi">1</span>
+
+    <span class="c1">// Since C(n, k) = C(n, n-k)</span>
+    <span class="k">if</span> <span class="nx">k</span> <span class="p">&gt;</span> <span class="p">(</span><span class="nx">n</span> <span class="o">-</span> <span class="nx">k</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">k</span> <span class="p">=</span> <span class="nx">n</span> <span class="o">-</span> <span class="nx">k</span>
+    <span class="p">}</span>
+
+    <span class="c1">// Calculate value of:</span>
+    <span class="c1">//</span>
+    <span class="c1">// ( n * (n-1) * ... * (n-k+1) )</span>
+    <span class="c1">// -----------------------------</span>
+    <span class="c1">//   ( k * (k-1) * ... * 1 )</span>
+    <span class="c1">// </span>
+    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">k</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
+        <span class="nx">result</span> <span class="o">*=</span> <span class="nx">n</span> <span class="o">-</span> <span class="nx">i</span>
+        <span class="nx">result</span> <span class="o">/=</span> <span class="nx">i</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">result</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>(Note that we might want to add some additional error checks to the
+<code>Binomial()</code> function.)</p>
+<p><a name="variations"></a></p>
+<h3>Variations Counting Function in Go</h3>
+<p>Now we can put everything together into a function to count
+the number of "Hamming neighbors" - variations on a given 
+DNA string that are a Hamming distance of up to <span class="math">\(d\)</span> away
+from the original DNA string.</p>
+<p>To count the number of Hamming neighbors, we implement
+the formula above. We leave out the error checks on the
+parameter values here, for brevity.</p>
+<div class="highlight"><pre><span></span><span class="c1">// Given an input string of DNA of length n,</span>
+<span class="c1">// a maximum Hamming distance of d,</span>
+<span class="c1">// and a number of codons c, determine</span>
+<span class="c1">// the number of Hamming neighbors of</span>
+<span class="c1">// distance less than or equal to d</span>
+<span class="c1">// using a combinatorics formula.</span>
+<span class="kd">func</span> <span class="nx">CountHammingNeighbors</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">d</span><span class="p">,</span> <span class="nx">c</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="c1">// We require the following:</span>
+    <span class="c1">// n &gt; 0</span>
+    <span class="c1">// d &gt;= 0</span>
+    <span class="c1">// c &gt; 0</span>
+
+    <span class="c1">// Use combinatorics to calculate number of variations</span>
+    <span class="nx">nv</span> <span class="o">:=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="nx">dd</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">dd</span> <span class="o">&lt;=</span> <span class="nx">d</span><span class="p">;</span> <span class="nx">dd</span><span class="o">++</span> <span class="p">{</span>
+
+        <span class="c1">// Binomial(n,d) =&gt; number of ways we can</span>
+        <span class="c1">//                  pick codons to edit</span>
+        <span class="nx">next_term</span> <span class="o">:=</span> <span class="nx">Binomial</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">dd</span><span class="p">)</span>
+
+        <span class="c1">// (c-1)^d =&gt; number of ways that the codons</span>
+        <span class="c1">//            we picked to edit can be edited</span>
+        <span class="k">for</span> <span class="nx">j</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">j</span> <span class="p">&lt;</span> <span class="nx">dd</span><span class="p">;</span> <span class="nx">j</span><span class="o">++</span> <span class="p">{</span>
+            <span class="nx">next_term</span> <span class="o">*=</span> <span class="p">(</span><span class="nx">c</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="nx">nv</span> <span class="o">+=</span> <span class="nx">next_term</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="nx">nv</span><span class="p">,</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</pre></div>
+
+
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var align = "center",
         indent = "0em",
