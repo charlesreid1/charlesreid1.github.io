@@ -343,6 +343,12 @@ To count the number of Hamming neighbors, we implement
 the formula above. We leave out the error checks on the
 parameter values here, for brevity.
 
+The inputs are:
+
+* $n$ - length of DNA input string
+* $d$ - maximum Hamming distance
+* $c$ - number of codons (4, ATGC)
+
 ```go
 // Given an input string of DNA of length n,
 // a maximum Hamming distance of d,
@@ -377,4 +383,20 @@ func CountHammingNeighbors(n, d, c int) (int, error) {
 ```
 
 
+<a name="why"></a>
+## Addendum: Why is it important to count permutations anyway?
+
+We have [already seen permutation generation algorithms](http://charlesreid1.github.io/lets-generate-permutations.html)
+on this blog before - and it is obvious why we would be
+interested in generating permutations. But why count them?
+
+Counting the number of permutations, combinations, or 
+variations is important because it provides us with
+a problem size. We can allocate the appropriate amount
+of memory to store all of the outcomes. If the number
+of outcomes is astronomical, the program can quit
+before getting bogged down in an impossible problem.
+And it is always faster to allocate all of the memory
+that we will need ahead of time, rather than constantly
+allocate space bit by bit as we need it.
 
