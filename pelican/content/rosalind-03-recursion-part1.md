@@ -35,10 +35,6 @@ in the Go programming language._
     * [Binomial and Factorial Functions in Go](#golang-bionomial-factorial)
     * [Variations Counting Function in Go](#variations)
 
-Addendum:
-
-* [Why is it important to count permutations anyway?](#why)
-
 <br />
 <br />
 
@@ -382,21 +378,38 @@ func CountHammingNeighbors(n, d, c int) (int, error) {
 }
 ```
 
+We can run this with a few values of k and d to verify it returns
+the expected values:
 
-<a name="why"></a>
-## Addendum: Why is it important to count permutations anyway?
+```
+For kmer AAA k = 3:
+d = 0, count = 1
+d = 1, count = 10
+d = 2, count = 37
+d = 3, count = 64
+```
 
-We have [already seen permutation generation algorithms](http://charlesreid1.github.io/lets-generate-permutations.html)
-on this blog before - and it is obvious why we would be
-interested in generating permutations. But why count them?
+for a kmer of length 3, we can compute the first 3 values (1, 10, 37)
+by hand. The last value, when $d = k$, is a special case where every
+base pair in the DNA strand can be changed to any codon. Since there
+are 4 possible codons, this leads to $4^k = 2^{2k}$ possibilities.
 
-Counting the number of permutations, combinations, or 
-variations is important because it provides us with
-a problem size. We can allocate the appropriate amount
-of memory to store all of the outcomes. If the number
-of outcomes is astronomical, the program can quit
-before getting bogged down in an impossible problem.
-And it is always faster to allocate all of the memory
-that we will need ahead of time, rather than constantly
-allocate space bit by bit as we need it.
+For $d = k = 3$, we have $2^6 = 64$ possible DNA strings.
+
+Now, moving on to $k=5$:
+
+```
+For kmer AAAAA k = 5:
+d = 0, count = 1
+d = 1, count = 16
+d = 2, count = 106
+d = 3, count = 376
+d = 4, count = 781
+d = 5, count = 1024
+```
+
+We can calculate 1 and 16 by hand, verifying those two numbers.
+As before, the case of $k = d = 5$ gives a total of $4^5 = 2^{10} = 1024$
+possible DNA strings.
+
 
