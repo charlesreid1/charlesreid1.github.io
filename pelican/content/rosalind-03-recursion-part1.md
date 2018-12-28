@@ -55,12 +55,8 @@ generate variations on a DNA string, and present pseudocode
 for the recursive backtracking method that we use here.
 
 In part 3 of this series, we will cover our implementation
-of the recursive backtracking method using two of Go's
-unique features: channels, and Go routines. We implement
-code that can utilize concurrency to generate variations
-efficiently and collect results using a channel.
-
-
+of the recursive backtracking method in the Go programming
+language.
 
 <a name="functions"></a>
 ## Useful Functions

@@ -1,5 +1,5 @@
 Title: Recursive Backtracking in Go for Bioinformatics Applications: 3. Go Implementation of Backtracking
-Date: 2018-12-27 18:00
+Date: 2018-01-02 18:00
 Category: Rosalind
 Tags: go, golang, rosalind, bioinformatics, recursion, backtracking, strings, combinatorics
 Status: draft
@@ -50,15 +50,13 @@ construction of an analytical formula to count the number
 of variations of a given DNA string that can be generated,
 given the constraints of the problem.
 
-In [part 2 of this series](#), we cover several techniques to
+In part 2 of this series, we cover several techniques to
 generate variations on a DNA string, and present pseudocode
 for the recursive backtracking method that we use here.
 
-In [part 3 of this series](#), we will cover our implementation
-of the recursive backtracking method using two of Go's
-unique features: channels, and Go routines. We implement
-code that can utilize concurrency to generate variations
-efficiently and collect results using a channel.
+In part 3 of this series, we will cover our implementation
+of the recursive backtracking method in the Go programming
+language.
 
 <br />
 <br />
@@ -71,19 +69,12 @@ explore method:
     base case:
         visit this solution
     recursive case:
-        make a choice
-        explore the consequences
-        unmake the choice
-        move on to the next choice
+        for each available choice:
+            make a choice
+            explore outcomes
+            unmake the choice
+            move on to the next choice
 ```
-
-<a name="go-routines"></a>
-### Incorporating Go Routines
-
-
-
-<a name="channels"></a>
-### Incorporating Go Channels
 
 <br />
 <br />
