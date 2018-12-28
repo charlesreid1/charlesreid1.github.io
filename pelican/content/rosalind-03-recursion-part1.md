@@ -45,12 +45,12 @@ The task at hand is to take a given input strand of DNA,
 and generate variations from it that have up to $d$ differences
 (a Hamming distance of $d$) in the codons (base pairs).
 
-In [part 1 of this series](#), we walk through the
+In [part 1 of this series (you are here)](#), we walk through the
 construction of an analytical formula to count the number
 of variations of a given DNA string that can be generated,
 given the constraints of the problem.
 
-In part 2 of this series, we cover several techniques to
+In [part 2 of this series](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html), we cover several techniques to
 generate variations on a DNA string, and present pseudocode
 for the recursive backtracking method that we use here.
 
@@ -408,4 +408,7 @@ We can calculate 1 and 16 by hand, verifying those two numbers.
 As before, the case of $k = d = 5$ gives a total of $4^5 = 2^{10} = 1024$
 possible DNA strings.
 
+<br />
+<br />
 
+**Next: [ Recursive Backtracking in Go for Bioinformatics Applications: 2. Generating Variations](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html)**

@@ -1,8 +1,7 @@
 Title: Recursive Backtracking in Go for Bioinformatics Applications: 2. Generating Variations
-Date: 2018-12-30 18:00
+Date: 2018-12-28 14:00
 Category: Rosalind
 Tags: go, golang, rosalind, bioinformatics, recursion, backtracking, strings, combinatorics
-Status: draft
 
 _This is the second in a series of three blog posts describing our
 solution to a bioinformatics problem from Rosalind.info,
@@ -43,7 +42,7 @@ The task at hand is to take a given input strand of DNA,
 and generate variations from it that have up to $d$ differences
 (a Hamming distance of $d$) in the codons (base pairs).
 
-In [part 1 of this series](#), we walk through the
+In [part 1 of this series](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html), we walk through the
 construction of an analytical formula to count the number
 of variations of a given DNA string that can be generated,
 given the constraints of the problem.
@@ -68,7 +67,7 @@ that would imply that we were doing some kind of
 rearrangement of the elements of the input DNA string
 (for example, swapping two codons). This is not the
 problem that we are solving, and requires different
-formulas. (See [Permutations](#)
+formulas. (See [Permutations](http://mathworld.wolfram.com/Permutation.html)
 entry on Wolfram MathWorld.)
 
 The variations that we are referring to are not
