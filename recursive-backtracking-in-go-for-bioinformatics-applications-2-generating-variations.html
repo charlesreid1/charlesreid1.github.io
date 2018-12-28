@@ -84,18 +84,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Recursive Backtracking in Go for Bioinformatics Applications: 3. Go Implementation of Backtracking
+                Recursive Backtracking in Go for Bioinformatics Applications: 2. Generating Variations
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2018-01-02T18:00:00-08:00" pubdate>Tuesday 01/02/2018</time>
+                <time datetime="2018-12-28T14:00:00-08:00" pubdate>Friday 12/28/2018</time>
                 in 
                 <a href="/category/rosalind.html">Rosalind</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="/drafts/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">permalink</a>
+                <a href="/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">permalink</a>
             </span>
             </p>
         </div>
@@ -112,7 +112,7 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p><em>This is the third in a series of three blog posts describing our
+        <div class="entry-content"><p><em>This is the second in a series of three blog posts describing our
 solution to a bioinformatics problem from Rosalind.info,
 <a href="http://rosalind.info/problems/ba1i/">Problem BA1(i) (Find most frequent words with mismatches
 in a string)</a>.
@@ -121,35 +121,26 @@ as required, we implemented a recursive backtracking method
 in the Go programming language.</em></p>
 <ul>
 <li><em><a href="#">Part 1: Counting Variations</a></em></li>
-<li><em><a href="#">Part 2: Generating Variations</a></em></li>
-<li><em>Part 3: Go Implementation of Recursive Backtracking (you are here)</em></li>
+<li><em>Part 2: Generating Variations (you are here)</em></li>
+<li><em><a href="#">Part 3: Go Implementation of Recursive Backtracking</a></em></li>
 </ul>
 <p><br />
 <br /></p>
 <p><a name="toc"></a></p>
 <h2>Table of Contents</h2>
 <ul>
-<li>
-<p><a href="#problem-descr">Problem Description</a></p>
-</li>
-<li>
-<p><a href="#backtracking">Recursive Backtracking Pseudocode</a></p>
-<ul>
-<li><a href="#go-routines">Incorporating Go Routines</a></li>
-<li><a href="#channels">Incorporating Go Channels</a></li>
+<li><a href="#problem-descr">Problem Description</a></li>
+<li><a href="#perms-combs-vars">Permutations vs Combinations vs Variations</a></li>
+<li><a href="#transform">Transforming the Problem Space</a><ul>
+<li><a href="#binary">Generating Binary Numbers With Constraints</a></li>
+<li><a href="#bitvectors">Bitvectors</a></li>
+<li><a href="#recursion">Recursion</a></li>
 </ul>
 </li>
-<li>
-<p><a href="#go-implementation">Recursive Backtracking: Go Implementation</a></p>
-<ul>
-<li><a href="#visit-hamming">Visit Hamming Neighbors Method</a></li>
-<li><a href="#assemble-visit">Assemble Visit Variation Method</a></li>
-</ul>
-</li>
-<li>
-<p><a href="#examples">Examples and Usage</a></p>
-<ul>
-<li><a href="#tests">Tests</a></li>
+<li><a href="#backtracking">Recursive Backtracking Pseudocode</a></li>
+<li><a href="#dna">Appying to DNA Variations</a><ul>
+<li><a href="#generating-visits">Generating Visits</a></li>
+<li><a href="#assembling">Assembling the Variation</a></li>
 </ul>
 </li>
 </ul>
@@ -170,10 +161,122 @@ for the recursive backtracking method that we use here.</p>
 <p>In part 3 of this series, we will cover our implementation
 of the recursive backtracking method in the Go programming
 language.</p>
-<p><br />
-<br /></p>
+<p><a name="perms-combs-vars"></a></p>
+<h2>Permutations vs Combinations vs Variations</h2>
+<p>Before covering generation of variations of a DNA string,
+we should cover some terminology for clarification.</p>
+<p>If we were to use the term <em>permutations</em>, as in, we are
+counting (or generating) <em>permutations</em> of the input DNA string, 
+that would imply that we were doing some kind of
+rearrangement of the elements of the input DNA string
+(for example, swapping two codons). This is not the
+problem that we are solving, and requires different
+formulas. (See <a href="#">Permutations</a>
+entry on Wolfram MathWorld.)</p>
+<p>The variations that we are referring to are not
+exactly <em>combinations</em>, either, though. If we were
+to use the term <em>combinations</em>, it would imply that
+we were choosing a set of <span class="math">\(k\)</span> integers from a set
+of <span class="math">\(d\)</span> integers <span class="math">\({1, 2, \dots, d}\)</span>.</p>
+<p>The variations that we are counting are similar to
+combinations, but with the additional act of swapping
+out each codon at the position (integer) selected
+with three other possible codons, so there are
+more variations than combinations (and many
+more permutations than variations).</p>
+<p><a name="transform"></a></p>
+<h2>Transforming the Problem Space</h2>
+<p>A surprisingly large variety of problems in combinatorics 
+can be transformed into an equivalent problem involving 
+binary numbers, which are often well-covered and easier
+to think about. </p>
+<p>To generate variations, we can break up the process of
+producing a variation into two steps, or choices, and
+then convert these choices and the process of making them
+into an equivalent problem in terms of binary numbers.</p>
+<p>For example, if we think about the first step of creating
+variations of a DNA string, the first choice we make is 
+which codons to edit. </p>
+<p>Consider the case of an input string of DNA "AAAAA" and
+<span class="math">\(d = 1\)</span>. Then we can use a binary number as a "mask" to
+indicate which codon we will edit. For example, if we 
+pick the first codon, that is reprsented by the binary
+number <code>10000</code>. Then the task of selecting a codon to
+edit becomes the task of generating 5-digit binary 
+numbers with only one 1:</p>
+<div class="highlight"><pre><span></span>00001
+00010
+00100
+01000
+10000
+</pre></div>
+
+
+<p><a name="list"></a></p>
+<h2>List of Techniques</h2>
+<p>Want to have an algorithm that will allow us to iterate over
+every possible variation. This requires us to implement an
+algorithm that can:</p>
+<ul>
+<li>Choose <span class="math">\(d\)</span> codons to modify from an input DNA string of length <span class="math">\(n\)</span></li>
+<li>Swap out codons at these indices in every possible combination</li>
+</ul>
+<p>A general strategy is to reduce the problem to one
+involving binary numbers, which can be implemented
+in any decent programming language, are compact and 
+simple, and translate the problem into a more universal
+language of binary numbers.</p>
+<p><a name="binary">&gt;</a></p>
+<h3>Generating Binary Numbers with Constraints</h3>
+<p>To generate the codons to modify,
+want to generate numbers with <span class="math">\(n\)</span> digits
+and <span class="math">\(d\)</span> bits (1s). We swap out the codons
+at the positions with 1s.</p>
+<p>Algorithm: <a href="https://graphics.stanford.edu/~seander/bithacks.html#NextBitPermutation">next bit permutation</a></p>
+<p><a name="bitvectors"></a></p>
+<h3>Bitvectors</h3>
+<p>More a brief aside than anything else, as this is a very
+large topic that we don't have the space to cover,
+but we should mention here that bitvectors are 
+the data structure of choice for dealing with
+binary numbers and manipulating them for the
+algorithms covered here.</p>
+<p>For more information, see the following:</p>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Bit_array">Bitvector (wikipedia)</a></li>
+<li><a href="https://graphics.stanford.edu/~seander/bithacks.html">Bit Twiddling Hacks</a></li>
+</ul>
+<p><a name="recursion"></a></p>
+<h3>Recursion</h3>
+<p>Recursion is a common pattern to use for problems that require
+exploring a large problem space that requires us to make
+several selections.</p>
+<p>A recursive backtracking algorithm is analogous to exploring a
+maze but laying out a rope as you go, so tht you can revisit
+each possible route. In this case, we are using backtracking
+to make the choice of which indices of the input DNA string
+to modify. We want to explore all possible choices to generate
+all possible variations of the input DNA string, and backtracking
+gives us the framework to do that.</p>
+<p>For example, if we wanted to recursively generate codon choices
+for the case of an input DNA string like "AAAAA" and <span class="math">\(d = 2\)</span>,
+we would call a recursive method twice; the first time through,
+we would choose one of the five indices, and mark it as picked;
+then we would call the method again, and choose a second index
+(different from the first) and mark it as picked.</p>
+<p>When unrolled, this is equivalent to a nested for loop,</p>
+<div class="highlight"><pre><span></span>for i in range( 0 .. len(dna_string) ):
+    for j in range( 0 .. len(dna_string) ):
+        if (i != j):
+            Start with the binary number 00000
+            Set the digit at index i to 1
+            Set the digit at index j to 1
+</pre></div>
+
+
 <p><a name="backtracking"></a></p>
 <h2>Recursive Backtracking Pseudocode</h2>
+<p>Basic pseudocode for a backtracking method:</p>
 <div class="highlight"><pre><span></span>explore method:
     base case:
         visit this solution
@@ -186,20 +289,14 @@ language.</p>
 </pre></div>
 
 
-<p><br />
-<br /></p>
-<p><a name="go-implementation"></a></p>
-<h2>Recursive Backtracking: Go Implementation</h2>
-<p><a name="visit-hamming"></a></p>
-<h3>Visit Hamming Neighbors Method</h3>
-<p><a name="assemble-visit"></a></p>
-<h3>Assemble Visit Variation Method</h3>
-<p><br />
-<br /></p>
-<p><a name="examples"></a></p>
-<h2>Examples and Usage</h2>
-<p><a name="tests"></a></p>
-<h3>Tests</h3>
+<p><a name="dna"></a></p>
+<h2>Applying to DNA Variations</h2>
+<p>There are actually two places where we need to apply
+backtracking to our problem.</p>
+<p><a name="generating-visits"></a></p>
+<h3>Generating Visits</h3>
+<p><a name="assembling"></a></p>
+<h3>Assembling the Variation</h3>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var align = "center",
         indent = "0em",

@@ -102,6 +102,402 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Traveling Schoolteacher Problem
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-04-30T13:00:00-07:00" pubdate>Sunday 04/30/2017</time>
+                in 
+                <a href="/category/java.html">Java</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/traveling-schoolteacher-problem.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><ul>
+<li><a href="#tstp-intro">The Traveling Schoolteacher Problem</a></li>
+<li><a href="#tstp-math">The Mathematical Model</a></li>
+<li><a href="#tstp-pseudocode">The Pseudocode</a> </li>
+<li><a href="#tstp-java">The Java Code</a> <ul>
+<li><a href="#tstp-classes">TSTP Class Fields and Methods</a> </li>
+<li><a href="#tstp-base">Explore: Base Case</a> </li>
+<li><a href="#tstp-recursive">Explore: Recursive Case</a> </li>
+</ul>
+</li>
+<li><a href="#tstp-graphs">Example Graphs</a> </li>
+<li><a href="#tstp-results">Results</a><ul>
+<li><a href="#tstp-walltime-nodes">Walltime vs Number of Nodes</a></li>
+</ul>
+</li>
+<li><a href="#tstp-conclusion">Conclusion</a></li>
+<li><a href="#tstp-references">References</a></li>
+</ul>
+<p><a name="tstp-intro"></a></p>
+<h2>The Traveling Schoolteacher Problem</h2>
+<p>The Traveling Schoolteacher Problem (TSTP) is a variation on the Traveling Salesperson Problem (TSP).</p>
+<p>The Traveling Schoolteacher Problem supposes a schoolteacher that is traveling from school to school
+in order to give lessons at different schools. Being a poor schoolteacher, they are only able to afford an older car that gets bad mileage and has a small gas tank.</p>
+<p>After visiting each school, the schoolteacher receives payment from the school, in the currency of <span class="math">\(P\)</span> gallons of gasoline. 
+Different schools pay the teacher different amounts of gasoline, further complicating matters. The schoolteacher's car has a 
+small gas tank that can only hold a maximum of <span class="math">\(M\)</span> gallons of gas, and the schoolteacher cannot travel with cans of gasoline. 
+Any gasoline the schoolteacher receives above <span class="math">\(M\)</span> gallons of gas must be left behind. </p>
+<p>Traveling from a source node to a target node incurs a cost of <span class="math">\(C\)</span> gallons of gas, deducted from the gas tank's total at the source node.</p>
+<p>In an attempt to minimize losses and avoid running out of gas, the traveling schoolteacher must plan out a route 
+that both avoids running out of gas and minimizes the total distance traveled.</p>
+<p><a name="tstp-math"></a></p>
+<h2>The Mathematical Model</h2>
+<p>To represent this problem in the computer, we can use a graph - just like the Traveling Salesperson Problem solution - but modified a bit. Like the TSP, we can also solve the Traveling Schoolteacher Problem with recursive backtracking.</p>
+<p>Each edge will represent a cost in gas, and each school arrived at will result in a payment in gas. Thus, the "real cost" of an edge will change depending on the state of the gas tank and the path taken to arrive there. </p>
+<p>We can add a number to each node to represent the amount of gas that that school pays the schoolteacher.
+We can use a number in each edge to represent the amount of gas that it costs to travel from one school to another.
+The backtracking solution will explore various paths through teh graph, keeping track of the gas tank's running total and rejecting any paths that lead to an empty gas tank.</p>
+<p><a name="tstp-pseudocode"></a></p>
+<h2>The Pseudocode</h2>
+<p>Revisiting the original Traveling Salesperson Problem, the recursive backtracking method we implemented was described with the following pseudocode:</p>
+<div class="highlight"><pre><span></span>explore(neighbors):
+
+    if(no more unvisited neighbors):
+        # This is the base case.
+        if total distance is less than current minimum:
+            save path and new minimum
+
+    else:
+        # This is the recursive case.
+        if current distance is greater than current minimum:
+            skip
+        else:
+            for neighbor in unvisited neighbors:
+                visit neighbor
+                explore(new_neighbors)
+                unvisit neighbor
+</pre></div>
+
+
+<p>To modify this to solve the Traveling Schoolteacher Problem, we want to make a few additions:</p>
+<ul>
+<li>Check if the gas tank is empty, and if so, don't explore this path</li>
+<li>Check if the current distance is greater than our current minimum-distance path through the graph</li>
+<li>Add gas from each school to the gas tank (up to the tank's maximum), subtract gas from each path from the gas tank</li>
+</ul>
+<p>This results in the following pseudocode:</p>
+<div class="highlight"><pre><span></span>explore(neighbors):
+
+    if(no more unvisited neighbors):
+        # This is the base case.
+        if total distance is less than current minimum:
+            save path and new minimum
+
+    else:
+        # This is the recursive case.
+        if gas tank is below empty:
+            skip
+        if current distance is greater than current minimum:
+            skip
+        else:
+            add gas from this school to gas tank
+            for neighbor in unvisited neighbors:
+                visit neighbor
+                deduct gas to get to neighbor from gas tank
+
+                explore(new_neighbors)
+
+                unvisit neighbor
+                add gas back into gas tank
+</pre></div>
+
+
+<p>Once you have a backtracking algorithm for the original Traveling Salesperson Problem TSP, it's quite easy to make the few modifications required to solve the Traveling Schoolteacher Problem TSTP.</p>
+<p><a name="tstp-java"></a></p>
+<h2>The Java Code</h2>
+<p>The Java code to solve the TSTP is organized into several classes:</p>
+<ul>
+<li>TSTP class - implements the recursive backtracking solution method, and owns temporary variables used by backtracking.</li>
+<li>Node class - the Node is a lightweight class that stores an integer, representing the amount of gas this school pays the teacher. (Note, Node stores no links. Graph links handled by Guava.)</li>
+<li>Edge class - the Edge class is a lightweight class that stores an integer for each edge, representing the amount of gas this path costs to travel.</li>
+<li>RandomNodeGraph - a static class that builds random graphs with nodes and edges pre-populated with values. Parameters like connectivity and maximum gas tank capacity can be passed to introduce variation and ensure the graph is solvable (or not).</li>
+</ul>
+<p><a name="tstp-classes"></a></p>
+<h3>TSTP Class Fields and Methods</h3>
+<p>The TSTP class implements several fields to store the graph, and to store temporary information about the current solution during recursive backtracking (such that it is accessible by each instance of the recursive method). </p>
+<p>The class stores the current route in an integer array, along with the current path distance, the current minimum distance, and the current state of the gas tank.</p>
+<p>The TSTP class has a public <code>solve()</code> method, which calls a private recursive backtracking <code>explore()</code> method to solve the problem. </p>
+<p>The recursive method will have a base case and a recursive case.</p>
+<ul>
+<li>
+<p>The <strong>base case</strong> is that we have visited all cities on the graph. Check if this is a new solution, and if so, save it.</p>
+</li>
+<li>
+<p>In the <strong>recursive case</strong>, we explore all solutions possible starting at the current node (passed in as a parameter), having already made N choices (passed in as a parameter). We do this by making a choice (and marking the node as visited), then exploring the consequences (through a recursive call), then unmaking the choice (rmarking the node as unvisited).</p>
+</li>
+</ul>
+<p>Here is the explore method header:</p>
+<div class="highlight"><pre><span></span>    /** Recursive backtracking method: 
+        explore possible solutions starting 
+        at this node, having made nchoices */
+    public void explore(Node node, int nchoices) {
+</pre></div>
+
+
+<p><a name="tstp-base"></a></p>
+<h3>Explore: Base Case</h3>
+<p>The base case begins by checking if the minimum distance has been set, and if so, whether the current distance is larger than the minimum distance. If so, this route is abandoned; otherwise, we have a new solution.</p>
+<div class="highlight"><pre><span></span>        if(nchoices == graphSize) {
+            // 
+            // BASE CASE
+            //
+            if(this.this_distance &lt; this.min_distance || this.min_distance &lt; 0) {
+                this.min_distance = this.this_distance;
+                printSolution();
+            } else {
+                printFailure();
+            }
+
+        } else {
+</pre></div>
+
+
+<p><a name="tstp-recursive"></a></p>
+<h3>Explore: Recursive Case</h3>
+<p>Next, the recursive case will explore each of the possible choices open to it by iterating over each choice available at a node, and for each node, choosing it, exploring the results, and unchoosing it. </p>
+<div class="highlight"><pre><span></span>        } else {
+            //
+            // RECURSIVE CASE
+            //  
+            if(this.gas_tank &lt;= 0) {
+                // Bummer, man.
+                return;
+            }
+            if(this.min_distance &gt; 0 &amp;&amp; this.this_distance &gt; this.min_distance) {
+                // Give up, there&#39;s no hope.
+                return;
+            }
+
+            // Now the teacher teaches,
+            // Now the teacher gets some gas. 
+            // If the tank is full...  bummer, man.
+            this.gas_tank += Math.min(this.tankSize, this.gas_tank + node.pay);
+
+            // For each neighbor:
+            Set&lt;Node&gt; neighbors = graph.adjacentNodes(node);
+            for(Node neighbor : neighbors) {
+                if(neighbor.visited == false) {
+
+                    int distance_btwn = -10000;
+
+                    // Using a for loop, 
+                    // but there should only be one edge.
+                    for( Edge edge : graph.edgesConnecting(node, neighbor) ) {
+                        distance_btwn = edge.cost;
+                    }
+
+                    // Make a choice
+                    this.route[nchoices] = neighbor.id;
+                    neighbor.visit();
+                    this.this_distance += distance_btwn;
+
+                    // Explore the consequences
+                    explore(neighbor,nchoices+1);
+
+                    // Unmake the choice
+                    this.route[nchoices] = -1;
+                    neighbor.unvisit();
+                    this.this_distance -= distance_btwn;
+                }
+                // Move on to the next choice (continue loop)
+            }               
+        } // End base/recursive case
+    }
+</pre></div>
+
+
+<p><a name="tstp-graphs"></a></p>
+<h2>Example Graphs</h2>
+<p>Just so you can see what they look like, here are a couple of graphs 
+generated for the traveling schoolteacher problem:</p>
+<p><img src="/images/graphviz_tstp_6.png" width="400px" /></p>
+<p><img src="/images/graphviz_tstp_8.png" width="400px" /></p>
+<p><img src="/images/graphviz_tstp_12.png" width="400px" /></p>
+<p><a name="tstp-results"></a></p>
+<h2>Results</h2>
+<p><a name="tstp-walltime-nodes"></a></p>
+<h3>Walltime vs. Number of Nodes</h3>
+<p>The following is a plot of walltime versus number of nodes:</p>
+<p><img src="/images/tstp-java-scaling.png" width="500px" /></p>
+<p>This plot shows that the traveling schoolteacher problem 
+is solved faster than the traveling salesperson problem.
+This makes sense - for a given city, many of the possible routes can be
+eliminated from the list of routes to explore, due to the additional constraint
+of the gas tank needing to remain full. If there are only 2 gallons of gas 
+in the tank, this constrains the choices of nodes to explore to those 
+requiring 2 gallons of gas or less.</p>
+<p>This is particularly true for the scenario used when generating the above graph - 
+the constraint of the gas tank size is used to construct an "interesting" graph
+tand ensure that we don't end up with a graph where the traveling schoolteacher 
+gets "stuck" somewhere without enough gas to continue. Here is the relevant section
+of the <code>RandomNodeGraph.java</code> class. </p>
+<p>The <code>getNextCost()</code> method generates a random edge
+between two cities, with a <span class="math">\(\frac{T}{T+1}\)</span> percent chance of it being impossible for the 
+teacher to travel that route due to a gas tank that's too small:</p>
+<div class="highlight"><pre><span></span>    private static int getNextCost(int T) {
+        Random r = new Random();
+        return 1+r.nextInt(T);
+    }
+</pre></div>
+
+
+<p>Likewise, here is the <code>getNextPay()</code> method, which generates a random 
+amount of pay (in gas) that the </p>
+<div class="highlight"><pre><span></span>    private static int getNextPay(int T) {
+        Random r = new Random();
+        return (int)(0.5*T + 0.5*(r.nextInt(T)+1));
+    }
+</pre></div>
+
+
+<p>Here is a link to the full <code>RandomNodeGraph.java</code> file on the charlesreid1.com git server, 
+contained in the <code>tsp</code> repository (which has several codes related to the traveling salesperson problem):
+<a href="https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava/RandomNodeGraph.java">https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava/RandomNodeGraph.java</a></p>
+<p>And here is a link to the <code>tsp</code> repository on the same charlesreid1.com git server:
+<a href="https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava">https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava</a></p>
+<p>In a city with 10 routes connecting to other cities, having edges that the schoolteacher
+cannot travel, or nodes that limit the amount of gas the schoolteacher receives, 
+can constrain the number of possible routes and reduce the number of routes that need to be 
+explored. The methods above ensure that this will not happen very often, but that it will happen
+some of the time. These routes that can be eliminated can lead to a significant reduction
+in computational time.</p>
+<p><a name="tstp-conclusion"></a></p>
+<h2>Conclusion</h2>
+<p>This project shows how easy it is to utilize the Guava library to solve computational problems
+in Java and create computing benchmarks and graphs of scaling behavior. The original code to 
+solve the traveling salesperson problem using recursive backtracking was fairly straightforward to 
+implement on a graph, and extending this code to implement additional constraints and solve the 
+traveling schoolteacher problem was surprisingly easy to do. </p>
+<p>Fitting the scaling behavior to a line and computing the slope would make the scaling study
+more quantitative, and needs to be done, but unfortunately the Google Sheets tool does not have 
+this capability, so this information will be done with Python (scipy linear algebra package)
+and comparisons between the TSP and TSTP slopes will be added later.</p>
+<p><a name="tstp-references"></a></p>
+<h2>References</h2>
+<ol>
+<li>
+<p>"tsp (git repository)." Charles Reid. Modified 7 April 2017. Accesssed 30 April 2017.
+&lt;<a href="https://git.charlesreid1.com/charlesreid1/tsp">https://git.charlesreid1.com/charlesreid1/tsp</a>&gt;</p>
+</li>
+<li>
+<p>"Solving the Traveling Salesperson Problem with Java and Guava." Charles Reid. 23 March 2017. Accessed 30 April 2017.
+&lt;<a href="https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html">https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html</a>&gt;</p>
+</li>
+<li>
+<p>"Better Timing of Guava Traveling Salesperson Problem Code: Timing Scripts." Charles Reid. 1 April 2017. Accessed 30 April 2017.
+&lt;<a href="https://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html">https://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/guava.html">guava</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/graph.html">graph</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/tsp.html">TSP</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 The Z-Machine: A Simple Turing Machine
             </b></h1>
         
@@ -793,236 +1189,6 @@ services/
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                AWSome Day Seattle Notes: Part 1: The Basics
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-04-11T10:00:00-07:00" pubdate>Tuesday 04/11/2017</time>
-                in 
-                <a href="/category/charlesreid1.html">Charlesreid1</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/awsome-day-seattle-notes-part-1-the-basics.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>These notes are also available on git.charlesreid1.com 
-<a href="https://git.charlesreid1.com/charlesreid1/aws/src/branch/master/awsome-day-sea-2018/Part1.md">here</a>
-or in
-<a href="https://git.charlesreid1.com/charlesreid1/aws">https://git.charlesreid1.com/charlesreid1/aws</a>.</p>
-<h1>AWSome Day Notes: Part 1: The Basics</h1>
-<p>Following are some notes from Amazon's AWSome Day (Tuesday, February 27, 2018).</p>
-<h2>EC2 Costs and Scheduling</h2>
-<p>Cost of a node:</p>
-<ul>
-<li>Important to understand Amazon's price model: users pay for <em>access</em>, not for <em>hardware</em></li>
-<li>Cost of AWS node is cost for <em>on the spot access</em></li>
-</ul>
-<p>Scheduling:</p>
-<ul>
-<li>If you can anticipate your usage, you can schedule instances in advance, and get a discount</li>
-<li>Discount of 50% for one-year reservation (if you keep it busy for 6 months, you've made your money back)</li>
-<li>Spot instances also available - need to be robust to sudden starts/stops (good for embarrassingly parallel jobs)</li>
-<li>Cheaper to anticipate your usage and plan ahead</li>
-</ul>
-<h2>EC2 Transfer Costs</h2>
-<p>EC2 Instances:</p>
-<ul>
-<li>See <a href="https://aws.amazon.com/ec2/pricing/on-demand/">EC2 Instance Pricing - Data Transfer</a> section</li>
-<li>Network costs for AWS nodes are an important consideration for high-traffic nodes (&gt;10 TB)</li>
-</ul>
-<p>EC2-Internet:</p>
-<ul>
-<li>Traffic going from the internet <em>into</em> a node is always free</li>
-<li>Traffic going from the node <em>out</em> to the internet incurrs costs after 10 TB</li>
-<li>Outbound traffic costs ~$90/TB</li>
-</ul>
-<p>AWS Regions:</p>
-<ul>
-<li>Traffic <em>within</em> a region does not incur costs (well... it's complicated)</li>
-<li>Traffic <em>between</em> regions will incur costs</li>
-</ul>
-<p>EC2-S3:</p>
-<ul>
-<li>Transfer <em>into</em> an EC2 node from S3 bucket in same AWS region does not incur costs</li>
-<li>Transfer <em>out of</em> an EC2 node into S3 bucket in same AWS region does not incur costs</li>
-<li>(If they did charge you, they would be double-dipping...)</li>
-</ul>
-<p>Note: the list of prices is like a legal document, so use the <a href="https://calculator.s3.amazonaws.com/index.html">AWS Monthly Calculator</a> to estimate monthly costs with more detail.</p>
-<h2>S3 Transfer Costs</h2>
-<ul>
-<li>See <a href="https://aws.amazon.com/s3/pricing/">S3 Pricing - Data Transfer</a></li>
-<li>Price model for storage is simliar to price model for AWS nodes: you pay for <em>access</em>, not for <em>hardware</em></li>
-<li>To give a sense of why, think about logistics of a large "disk farm": all the intensive operations are done by the head nodes, disks are just passive</li>
-<li>Busier disk farm needs sophisticated hardware for parallel read/write, high-bandwidth network lines, fast encryption</li>
-</ul>
-<p>S3 storage pricing:</p>
-<ul>
-<li>Rule of thumb: ~$20/TB to store the data</li>
-</ul>
-<p>S3-Internet:</p>
-<ul>
-<li>Transfer <em>into</em> an S3 bucket from the internet is always free (getting stuff into the bucket is the easy part - that's how they get ya)</li>
-<li>Transfer <em>out</em> of an S3 bucket to the internet costs ~$90/TB</li>
-</ul>
-<p>S3-EC2:</p>
-<ul>
-<li>Transfer <em>out</em> of an S3 bucket to most other Amazon regions costs ~$20/TB</li>
-<li>Transfer <em>out</em> of an S3 bucket into an EC2 node in the same AWS region does not incur costs</li>
-<li>Transfer <em>into</em> an S3 bucket from an EC2 node in the same AWS region does not incur costs</li>
-</ul>
-<p>As mentioned above, this means you won't be double-charged for transferring data from an S3 bucket to an EC2 node, then from the EC2 node out to the internet.</p>
-<h2>S3 Storage Hierarchies</h2>
-<p>Continuing with the theme of planning ahead...</p>
-<p>Storage hierarchies:</p>
-<ul>
-<li>Biggest cost of storage is not disk space, it's transfer</li>
-<li>Paying for speed, paying for timeliness, paying for <em>on the spot access</em> to your data</li>
-<li>Your data will be cheaper if you're willing to wait a few minutes or deal with a slow connection</li>
-</ul>
-<p>Storage hierarchies:</p>
-<ul>
-<li>Standard (~$20/TB)</li>
-<li>Infrequent access (~$13/TB) - less frequent access, but at same transfer speed</li>
-<li>Glacier (~$4/TB) - delay of up to 12 hours (smaller files = faster), deleting data <em>newer</em> than 3 months incurrs costs</li>
-</ul>
-<p><a href="https://aws.amazon.com/glacier/pricing/">Glacier Pricing</a></p>
-<p>Lifecycle rules:
-* Can create rules to move old data from S3 buckets into Glacier</p>
-<h2>EFS vs EBS vs S3</h2>
-<p>When do you use EFS, EBS, or S3?</p>
-<p>Elastic Block Storage (EBS):</p>
-<ul>
-<li><strong>This is probably what you want</strong></li>
-<li>EBS is block storage for one EC2 node - designed for general purpose applications</li>
-<li>Cost: ~$120/TB/mo</li>
-</ul>
-<p>Elastic File System (EFS):</p>
-<ul>
-<li>EFS is block storage for multiple EC2 nodes - designed for fast read-write operations, many incremental changes to files</li>
-<li>"Elastic" part of EFS - can dynamically grow as hard drive grows (PB+ scale)</li>
-<li>Hard drive on steroids - like plugging in a hard drive over a network, but big/fast/smart enough to be accessible to thousands+ of machines</li>
-<li>Expensive: ~$300/TB/mo</li>
-</ul>
-<p>S3:</p>
-<ul>
-<li>S3 is object storage - it stores blobs of raw data, creates snapshots in time</li>
-<li>If you change a single character of a large file, bucket has to create new shapshot</li>
-<li>Booting from S3 as a hard disk would take you about a thousand years... don't do that</li>
-<li>Cheapest: ~$20/TB</li>
-</ul>
-<p>Cool but <span class="math">\($\)</span>:</p>
-<ul>
-<li>You may see "appliances" mentioned in Amazon documentation - Amazon will ship you a physical data transfer appliance that encrypts and copies data on site (<a href="https://docs.aws.amazon.com/snowball/latest/ug/images/Snowball-closed-600w.png">Snowball</a>)</li>
-<li>Can also purchase special network connections that bypass the public internet - like ISP putting alligator clips between your network lines and Amazon's network lines</li>
-</ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/aws.html">aws</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/cloud.html">cloud</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/vpc.html">vpc</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/containers.html">containers</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/data-engineering.html">data engineering</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1050,6 +1216,9 @@ or in
 
             <h2>December 2018</h2>
 
+            <p class="archive">
+            <a href="/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">Recursive Backtracking in Go for Bioinformatics Applications: 2. Generating Variations</a>
+            </p>
             <p class="archive">
             <a href="/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Recursive Backtracking in Go for Bioinformatics Applications: 1. Counting Variations</a>
             </p>
