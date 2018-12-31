@@ -149,15 +149,12 @@ in the Go programming language.</em></p>
 <ul>
 <li><a href="#problem-descr">Problem Description</a></li>
 <li><a href="#perms-combs-vars">Permutations vs Combinations vs Variations</a></li>
-<li><a href="#transform">Transforming the Problem Space</a><ul>
-<li><a href="#binary">Generating Binary Numbers With Constraints</a></li>
-<li><a href="#bitvectors">Bitvectors</a></li>
-<li><a href="#recursion">Recursion</a></li>
+<li><a href="#recursion">Recursion</a><ul>
+<li><a href="#backtracking">Recursive Backtracking Pseudocode</a></li>
 </ul>
 </li>
-<li><a href="#backtracking">Recursive Backtracking Pseudocode</a></li>
 <li><a href="#dna">Appying to DNA Variations</a><ul>
-<li><a href="#generating-visits">Generating Visits</a></li>
+<li><a href="#generating-visits">Generating Visits with Binary Numbers</a></li>
 <li><a href="#assembling">Assembling the Variation</a></li>
 </ul>
 </li>
@@ -206,22 +203,20 @@ more permutations than variations).</p>
 <h2>Transforming the Problem Space</h2>
 <p>A surprisingly large variety of problems in combinatorics 
 can be transformed into an equivalent problem involving 
-binary numbers, which are often well-covered and easier
-to think about. </p>
+binary numbers, which are usually easier to think about.</p>
 <p>To generate variations, we can break up the process of
 producing a variation into two steps, or choices, and
-then convert these choices and the process of making them
+then convert these choices (and the process of making them)
 into an equivalent problem in terms of binary numbers.</p>
-<p>For example, if we think about the first step of creating
-variations of a DNA string, the first choice we make is 
-which codons to edit. </p>
-<p>Consider the case of an input string of DNA "AAAAA" and
-<span class="math">\(d = 1\)</span>. Then we can use a binary number as a "mask" to
-indicate which codon we will edit. For example, if we 
-pick the first codon, that is reprsented by the binary
-number <code>10000</code>. Then the task of selecting a codon to
-edit becomes the task of generating 5-digit binary 
-numbers with only one 1:</p>
+<p>We can decompose the cration of a DNA string variation into
+the first step of choosing which codons (indices) to edit, 
+and the second step of cycling through every possible codon 
+(ATGC) at the selected indices.</p>
+<p>To translate this into an equivalent binary number problem,
+consider the input string of DNA "AAAAA" and let the Hamming
+distance that we are considering be <span class="math">\(d = 1\)</span>. Then we can code
+each index with a 0 (not chosen) or a 1 (chosen) and turn the
+problem into cycling throgh all binary numbers with 1 bit:</p>
 <div class="highlight"><pre><span></span>00001
 00010
 00100
@@ -230,42 +225,29 @@ numbers with only one 1:</p>
 </pre></div>
 
 
-<p><a name="list"></a></p>
-<h2>List of Techniques</h2>
-<p>Want to have an algorithm that will allow us to iterate over
-every possible variation. This requires us to implement an
-algorithm that can:</p>
-<ul>
-<li>Choose <span class="math">\(d\)</span> codons to modify from an input DNA string of length <span class="math">\(n\)</span></li>
-<li>Swap out codons at these indices in every possible combination</li>
-</ul>
-<p>A general strategy is to reduce the problem to one
-involving binary numbers, which can be implemented
-in any decent programming language, are compact and 
-simple, and translate the problem into a more universal
-language of binary numbers.</p>
-<p><a name="binary">&gt;</a></p>
-<h3>Generating Binary Numbers with Constraints</h3>
-<p>To generate the codons to modify,
-want to generate numbers with <span class="math">\(n\)</span> digits
-and <span class="math">\(d\)</span> bits (1s). We swap out the codons
-at the positions with 1s.</p>
-<p>Algorithm: <a href="https://graphics.stanford.edu/~seander/bithacks.html#NextBitPermutation">next bit permutation</a></p>
-<p><a name="bitvectors"></a></p>
-<h3>Bitvectors</h3>
-<p>More a brief aside than anything else, as this is a very
-large topic that we don't have the space to cover,
-but we should mention here that bitvectors are 
-the data structure of choice for dealing with
-binary numbers and manipulating them for the
-algorithms covered here.</p>
-<p>For more information, see the following:</p>
-<ul>
-<li><a href="https://en.wikipedia.org/wiki/Bit_array">Bitvector (wikipedia)</a></li>
-<li><a href="https://graphics.stanford.edu/~seander/bithacks.html">Bit Twiddling Hacks</a></li>
-</ul>
+<p>The second step is to cycle through each alternate codon at
+the given position, so that <code>00001</code> would generate the 
+variations:</p>
+<div class="highlight"><pre><span></span>AAAAC
+AAAAG
+AAAAT
+</pre></div>
+
+
+<p>and so on.</p>
+<p>We saw this two-part technique already when counting the total number of
+variations that could be created in <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1: Counting Variations</a>.
+It resulted in a counting formula with two terms, a binomial term
+for step 1 and an exponential term for step 2.</p>
+<p>We can think of the problem as forming a tree with several
+decision nodes that need to be explored; this type of problem
+structure is ideal for a recursive backtracking algorithm.</p>
+<p>We will cover the use of recursive backtracking to actually
+explore the entire tree of possible outcomes (not just count
+it), starting with some review and background on recursive 
+backtracking and how it works.</p>
 <p><a name="recursion"></a></p>
-<h3>Recursion</h3>
+<h2>Recursion</h2>
 <p>Recursion is a common pattern to use for problems that require
 exploring a large problem space that requires us to make
 several selections.</p>
@@ -293,7 +275,7 @@ then we would call the method again, and choose a second index
 
 
 <p><a name="backtracking"></a></p>
-<h2>Recursive Backtracking Pseudocode</h2>
+<h3>Recursive Backtracking Pseudocode</h3>
 <p>Basic pseudocode for a backtracking method:</p>
 <div class="highlight"><pre><span></span>explore method:
     base case:
@@ -312,7 +294,25 @@ then we would call the method again, and choose a second index
 <p>There are actually two places where we need to apply
 backtracking to our problem.</p>
 <p><a name="generating-visits"></a></p>
-<h3>Generating Visits</h3>
+<h3>Generating Visits with Binary Numbers</h3>
+<p>The first application of recursive backtracking is to
+carry out step 1, choosing indices in the original
+DNA string to modify or cycle through altnerate 
+codons. We showed above how generating variations
+on a kmer of length <span class="math">\(k\)</span> at a distance <span class="math">\(d\)</span> from the
+original kmer was equivalent to generating binary 
+numbers with <span class="math">\(d\)</span> bits set to 1.</p>
+<p>We can use recursive backtracking to generate these
+numbers. By creating a method that recursively selects
+an index to switch to 1, and passing that (and all prior
+choices) on to further recursive calls, the function
+can recurse to a given depth <span class="math">\(d\)</span> and visit all possible
+binary numbers with <span class="math">\(d\)</span> bits set to 1.</p>
+<p>The base case of this recursive method would be reached
+when all <span class="math">\(d\)</span> choices had been made and <span class="math">\(d\)</span> bits were 
+set to 1. Then the choice of indices to swap out with
+alternate codons would be passed on to a recursive method
+that would carry out Step 2 (see below).</p>
 <p><a name="assembling"></a></p>
 <h3>Assembling the Variation</h3>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
