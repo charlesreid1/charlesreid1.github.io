@@ -11,7 +11,7 @@ To solve this problem and generate variations of a DNA string
 as required, we implemented a recursive backtracking method
 in the Go programming language._
 
-* _[Part 1: Counting Variations](#)_
+* _[Part 1: Counting Variations](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html)_
 * _Part 2: Generating Variations (you are here)_
 * _[Part 3: Go Implementation of Recursive Backtracking](#)_
 
@@ -218,7 +218,107 @@ set to 1. Then the choice of indices to swap out with
 alternate codons would be passed on to a recursive method
 that would carry out Step 2 (see below).
 
+For example, to generate variations of the 5-mer `AAAAA`,
+we would start by selecting a Hamming distance $d$, then
+generate a binary number with $d$ bits set to 1 to select
+indices to modify. Suppose $d = 2$; then the first few
+binary numbers are:
+
+```
+AAAAA
+11000
+10100
+10010
+10001
+...
+```
+
+To expand on the pseudocode a bit more, to generate a
+binary number with $d$ bits flipped to 1 we will want
+to call a recursive method with a depth of $d$, making
+a choice at each recursive call of which index to set
+to 1 next.
+
+The $n^{th}$ recursive call picks the $n^{th}$ index for
+1. Each index can only be chosen once in the stack of 
+recursive calls, and the indices that have been chosen
+by prior recursive function calls are passed along.
+
+Thus we need a minimum of two parameters: an integer
+indicating the depth level of this recursive function
+call, and an integer array of index choices.
+
+```
+function generate_binary_numbers( depth, choices[], ... ):
+
+    if depth is 0,
+        base case
+        no more choices left to make
+        choices[] is full
+        pass along choices[] to assemble the variations
+
+    else,
+        recursive case
+        for each possible index,
+            if this index is not already in choices,
+                add this index to choices
+                generate_binary_numbers( depth+1, choices[] )
+                remove this index from choices
+```
+
 <a name="assembling"></a>
 ### Assembling the Variation
 
+Each binary number is then turned into variations by substituting
+every combination of 3 codons in every position with a 1
+possible, so the first binary number for $d=2$ would generate
+the variations:
+
+```
+AAAAA
+11000
+-----
+CCAAA
+GCAAA
+TCAAA
+CGAAA
+GGAAA
+TGAAA
+CTAAA
+GTAAA
+TTAAA
+```
+
+This would be repeated for all Hamming distances up to the
+maximum specified Hamming distance.
+
+Like the generation of binary numbers, the substitution of all
+possible combinations of codons at these positions is a
+task conducive to a recursive backtracking algorithm.
+
+Like the prior task's recursive method, this task's recursive 
+method will have one parameter for depth (number of choices
+left to make) and a range of choices to try (codons).
+
+```
+function assemble_variations( depth, choices[], ... ):
+
+    if depth is 0,
+        base case
+        no more choices left to make
+        choices[] is full
+        pass along choices[] to assemble the variations
+
+    else,
+        recursive case
+        for each possible index,
+            if this index is not already in choices,
+                add this index to choices
+                generate_binary_numbers( depth+1, choices[] )
+                remove this index from choices
+```
+
+
+In the last post we'll cover the actual Go implementation
+of these functions.
 
