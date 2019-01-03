@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <title>charlesreid1</title>
+        <meta charset="utf-8" />
+
+        <!--
+        CSS styles
+        -->
+        <link href="/theme/css/bootstrap.css"       rel="stylesheet" type="text/css">
+        <link href="/theme/css/slate.css"              rel="stylesheet" type="text/css">
+        <link href="/theme/css/font-awesome.css"       rel="stylesheet" type="text/css"/>
+        <link href="/theme/css/pygment-solarized.css"  rel="stylesheet" type="text/css"/>
+
+        <!--
+        my CSS styles
+        -->
+        <link href="/theme/css/main.css"            rel="stylesheet" type="text/css">
+        <link href="/theme/css/dox.css"             rel="stylesheet" type="text/css">
+
+
+        <!--
+        include Angular first
+        -->
+        <script type="text/javascript" src="/theme/js/angular-1.3.15.js"></script>
+        <script type="text/javascript" src="/theme/js/skrollr-0.6.29.js"></script>
+        <script type="text/javascript" src="/theme/js/d3-3.5.5.js"></script>
+
+        <!--
+        this seems like a bad idea.
+        but if I don't put jquery first, I get errors about unrecognized $s.
+        -->
+        <script type="text/javascript" src="/theme/js/jquery-1.11.2.js"></script>
+
+</head>
+<body id="index">
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span> 
+            </button>
+            <a href="https://charlesreid1.github.io" class="navbar-brand">charlesreid1.github.io</a>
+        </div>
+        <div>
+            <div class="collapse navbar-collapse" id="myNavbar">
+                <ul class="nav navbar-nav">
+
+                    <li>
+                        <a href="https://charlesreid1.com/wiki">Wiki</a>
+                    </li>
+                    <li>
+                        <a href="https://git.charlesreid1.com/explore">Git</a>
+                    </li>
+                    <li>
+                        <a href="http://spotify.charlesreid1.com">Music</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.com/life">Life</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.github.io">Blog</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.com/about">About Me</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+
+<div class="container">
+
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Recursive Backtracking in Go for Bioinformatics Applications: 3. Go Implementation of Backtracking
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2018-01-03T10:30:00-08:00" pubdate>Wednesday 01/03/2018</time>
+                in 
+                <a href="/category/rosalind.html">Rosalind</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><em>This is the third in a series of three blog posts describing our
+solution to a bioinformatics problem from Rosalind.info,
+<a href="http://rosalind.info/problems/ba1i/">Problem BA1(i) (Find most frequent words with mismatches
+in a string)</a>.
+To solve this problem and generate variations of a DNA string
+as required, we implemented a recursive backtracking method
+in the Go programming language.</em></p>
+<ul>
+<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1: Counting Variations</a></em></li>
+<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">Part 2: Generating Variations</a></em></li>
+<li><em>Part 3: Go Implementation of Recursive Backtracking (you are here)</em></li>
+</ul>
+<p><br />
+<br /></p>
+<p><a name="toc"></a></p>
+<h2>Table of Contents</h2>
+<ul>
+<li>
+<p><a href="#problem-descr">Problem Description</a></p>
+</li>
+<li>
+<p><a href="#backtracking">Recursive Backtracking Pseudocode</a></p>
+</li>
+<li>
+<p><a href="#go-implementation">Recursive Backtracking: Go Implementation</a></p>
+<ul>
+<li><a href="#visit-hamming">Visit Hamming Neighbors Function</a></li>
+<li><a href="#assemble-visit">Assemble Visit Variations Function</a></li>
+</ul>
+</li>
+<li>
+<p><a href="#tests">Tests</a></p>
+</li>
+<li>
+<p><a href="#fruitful">Go forth and be fruitful</a></p>
+</li>
+</ul>
+<p><br />
+<br /></p>
+<p><a name="problem-descr"></a></p>
+<h2>Problem Description</h2>
+<p>The task at hand is to take a given input strand of DNA,
+and generate variations from it that have up to <span class="math">\(d\)</span> differences
+(a Hamming distance of <span class="math">\(d\)</span>) in the codons (base pairs).</p>
+<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">part 1 of this series</a>, we walk through the
+construction of an analytical formula to count the number
+of variations of a given DNA string that can be generated,
+given the constraints of the problem.</p>
+<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">part 2 of this series</a>, we cover several techniques to
+generate variations on a DNA string, and present pseudocode
+for the recursive backtracking method that we use here.</p>
+<p>In <a href="#">part 3 of this series</a>, we will cover our implementation
+of the recursive backtracking method in the Go programming
+language.</p>
+<p><br />
+<br /></p>
+<p><a name="backtracking"></a></p>
+<h2>Recursive Backtracking Pseudocode</h2>
+<p>To review from the prior post, our pseudocode
+for recursive backtracking to explore variations
+or combinations looks like the following:</p>
+<div class="highlight"><pre><span></span>explore method:
+    base case:
+        visit this solution
+    recursive case:
+        for each available choice:
+            make a choice
+            explore outcomes
+            unmake the choice
+            move on to the next choice
+</pre></div>
+
+
+<p>The key elements there are the base and recursive
+cases, and the mechanism of iterating over each
+possible choice and making/exploring/unmaking
+the choice.</p>
+<p><a name="go-implementation"></a></p>
+<h2>Recursive Backtracking: Go Implementation</h2>
+<p>In total, we have three different methods to
+accomplish this task:</p>
+<ul>
+<li>
+<p><code>VisitHammingNeighbors(input,d)</code>: this is the public method
+  that the user calls to generate a string array of all
+  strings that are a Hamming distance of up to <code>d</code> from
+  the input string <code>input</code>. This public method performs
+  parameter and error checking, initializes space for
+  data, and collects results.</p>
+</li>
+<li>
+<p><code>visitHammingNeighbors_recursive(base_kmer, depth, choices, results_map)</code>:
+  this method is the private recursive method available
+  only to the package. This method performs the actual
+  recursive work. </p>
+</li>
+</ul>
+<p><strong>NOTE:</strong> the function name starts with a lower case letter,
+so it is not exported by the package - i.e., it is not available
+to the user when they import this package.</p>
+<p>The base case of the <code>visitHammingNeighbors_recursive()</code>
+function will pass the final set of choices to the final
+step:</p>
+<ul>
+<li><code>assemble_variations(base_kmer, choices, results_map)</code>: 
+  this method (private to the package) is a recursive
+  method that uses the chosen indices and </li>
+</ul>
+<p><a name="visit-hamming"></a></p>
+<h3>Visit Hamming Neighbors Function</h3>
+<p>The function call to visit all Hamming neighbors and add them to the <code>results</code> set
+is split into two parts: a non-recursive public function, which provides a public wrapper
+that is user-friendly and performs error-checking on the parameters provided, and a
+recursive private function that is used internally but not intended to be called by
+users directly.</p>
+<h4>Public, Non-Recursive Function</h4>
+<p>Here is the entry point function that the user calls
+when they wish to generate all variations on a given
+string of DNA, and have the variations returned as a
+string slice.</p>
+<div class="highlight"><pre><span></span>// Given an input string of DNA, generate variations
+// of said string that are a Hamming distance of
+// less than or equal to d.
+func VisitHammingNeighbors(input string, d int) (map[string]bool, error) {
+
+    // a.k.a. visit_kmer_neighbors
+
+    // number of codons
+    n_codons := 4
+
+    // Use combinatorics to calculate the total
+    // number of variation.
+    buffsize, _ := CountHammingNeighbors(len(input), d, n_codons)
+</pre></div>
+
+
+<p>The call to <code>CountHammingNeighbors()</code> uses the counting
+formula from <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1</a>
+to predict the number of variations. If the user has selected
+an astronomical problem size, the program warns the user.</p>
+<div class="highlight"><pre><span></span>    // This blows up quickly, so warn the user
+    // if their problem is too big
+    MAX := int(1e6)
+    if buffsize &gt; MAX {
+        msg := fmt.Sprintf(&quot;Error: you are generating over MAX = %d permutations, you probably don&#39;t want to do this.&quot;, d)
+        return nil, errors.New(msg)
+    }
+</pre></div>
+
+
+<p>Now the actual recursive backtracking algorithm begins.
+The code loops over every possible value of Hamming distance
+<span class="math">\(d\)</span> and calls the recursive method at each value of <span class="math">\(d\)</span>.</p>
+<div class="highlight"><pre><span></span>    // Store the final results in a set (string-&gt;bool map)
+    results := make(map[string]bool)
+
+    // Begin backtracking algorithm
+    for dd := 0; dd &lt;= d; dd++ {
+
+        // The choices array will change with each recursive call.
+        // Go passes all arguments by copy, which is good for us.
+        choices := []int{}
+
+        // Populate list of neighbors
+        visitHammingNeighbors_recursive(input, dd, choices, results)
+
+    }
+</pre></div>
+
+
+<p>We don't assign any results from the call to <code>visitHammingNeighbors_recursive()</code>
+because we pass in a data structure (actually a pointer to a
+data structure), <code>results</code>, that is modified in-place.</p>
+<p>Thus, when we complete a call to <code>visitHammingNeighbors_recursive()</code>,
+results will contain all variations already.</p>
+<div class="highlight"><pre><span></span>    // Check if we have the right number of results
+    if len(results) != buffsize {
+        fmt.Printf(&quot;WARNING: number of results (%d) did not match expected value (%d)\n&quot;, len(results), buffsize)
+    }
+
+    return results
+}
+</pre></div>
+
+
+<h4>Private, Recursive Function</h4>
+<p>In the above function, the call to the recursive
+function to visit all Hamming neighbors happens
+here:</p>
+<div class="highlight"><pre><span></span>        // Populate list of neighbors
+        visitHammingNeighbors_recursive(input, dd, choices, results)
+</pre></div>
+
+
+<p>The user passes the original kmer <code>input</code>, along with the
+Hamming distance parameter <code>dd</code>, the list of choices
+of indices that have already been selected <code>choices</code>,
+and the data structure storing all resulting strings
+<code>results</code>.</p>
+<p>As with the pseudocode, we have a base case and 
+a recursive case. The recursive function is being
+called repeatedly until it reaches a depth of 0,
+with the depth parameter being decremented each call.</p>
+<div class="highlight"><pre><span></span>// Recursive function: given an input string of DNA,
+// generate Hamming neighbors that are a Hamming
+// distance of exactly d. Populate the neighbors
+// array with the resulting neighbors.
+func visitHammingNeighbors_recursive(base_kmer string, depth int, choices []int, results map[string]bool) error {
+
+    if depth == 0 {
+
+        // Base case
+
+    } else {
+
+        // Recursive case
+
+    }
+}
+</pre></div>
+
+
+<p>The base case occurs when we reach a depth of 0 and have
+no further choices to make. We reach this base case for
+each binary number with <span class="math">\(d\)</span> digits set to 1; once the base
+case is reached, we call the <code>assemble_variations()</code> function
+to substitute all possible codons at the selected indices.</p>
+<div class="highlight"><pre><span></span>func visitHammingNeighbors_recursive(base_kmer string, depth int, choices []int, results map[string]bool) error {
+
+    if depth == 0 {
+
+        // Base case
+        assemble_variations(base_kmer, choices, results)
+        return nil
+</pre></div>
+
+
+<p>The recursive case is slightly more complicated, but it follows
+the same backtracking pseudocode covered previously: from a set
+of possible choices, try each choice, recursively call this 
+function, then unmake the choice and move on to the next choice.</p>
+<p>Here, the choice is which index <code>c</code> in the kmer to modify. Each
+kmer can only be modified once, so we have a for loop to
+check if the index <code>c</code> is in the list of choices already made.</p>
+<div class="highlight"><pre><span></span>    } else {
+
+        // Recursive case
+        for c := 0; c &lt;= len(base_kmer); c++ {
+
+            var indexAlreadyTaken bool
+            for _, choice := range choices {
+                if c == choice {
+                    indexAlreadyTaken = true
+                }
+            }
+</pre></div>
+
+
+<p>As before, the recursive call to this function will
+not return any values that need to be stored, since 
+<code>results</code> points to a data structure (map) that is 
+modified in-place.</p>
+<div class="highlight"><pre><span></span>            if !indexAlreadyTaken {
+
+                // This will make a new copy of choices
+                // for each recursive function call
+                choices2 := append(choices, c)
+                err := visitHammingNeighbors_recursive(base_kmer, depth-1, choices2, results)
+                if err != nil {
+                    return err
+                }
+
+            }
+        }
+
+    }
+
+    return nil
+}
+</pre></div>
+
+
+<p><a name="assemble-visit"></a></p>
+<h3>Assemble Visit Variation Function</h3>
+<p>Once we've generated each list of indices to modify,
+we call a second recursive function to substitute each
+codon into each index.</p>
+<p>In the recursive method above, each recursive function
+call added a new choice to <code>choices</code>; in this recursive
+function, each recursive funcction call pops a choice 
+from <code>choices</code>. Thus, the base case is when <code>choices</code>
+is empty.</p>
+<p>Here are the base and recursive cases:</p>
+<div class="highlight"><pre><span></span>// Given a base kmer and a choice of indices where
+// the kmer should be changed, generate all possible
+// variations on this base_kmer.
+func assemble_variations(base_kmer string, choices []int, results map[string]bool) {
+
+    if len(choices) &gt; 0 {
+
+        // Recursive case
+        ...
+
+    } else {
+
+        // Base case
+        ...
+
+    }
+}
+</pre></div>
+
+
+<p>The recursive case pops a choice from <code>choices</code>, 
+finds which nucleotide (AGCT) is at that location,
+and assembles the list of possible choices (the
+other 3 nucleotide values). It then performs
+the recursive backtracking algorithm, choosing 
+from each of the three possible nucleotide values,
+exploring the choice by making a recursive call,
+then un-making the choice.</p>
+<div class="highlight"><pre><span></span>func assemble_variations(base_kmer string, choices []int, results map[string]bool) {
+
+    if len(choices) &gt; 0 {
+
+        // Recursive case
+
+        all_codons := []string{&quot;A&quot;, &quot;T&quot;, &quot;G&quot;, &quot;C&quot;}
+
+        // Pop the next choice
+        // https://github.com/golang/go/wiki/SliceTricks
+        ch_ix, choices := choices[0], choices[1:]
+
+        // Get the value of the codon at that location
+        if ch_ix &lt; len(base_kmer) {
+            // slice of string is bytes,
+            // so convert back to string
+            this_codon := string(base_kmer[ch_ix])
+            for _, codon := range all_codons {
+
+                if codon != this_codon {
+                    // Swap out the old codon with the new codon
+                    new_kmer := base_kmer[0:ch_ix] + codon + base_kmer[ch_ix+1:]
+                    assemble_variations(new_kmer, choices, results)
+                }
+            }
+        }
+
+    } else {
+
+        // Base case
+        results[base_kmer] = true
+
+    }
+}
+</pre></div>
+
+
+<p><br />
+<br /></p>
+<p><a name="tests"></a></p>
+<h2>Tests</h2>
+<p>The last step after some debugging was to write tests for the
+function to generate all variations of a DNA string, to ensure
+the recursive backtracking functions work correctly.</p>
+<p>The pattern we use is to create a struct containing test parameters,
+then create a test matrix by initializing instances of the
+parameter struct with the parameters we want to test.</p>
+<p>Here is how we set up the tests:</p>
+<div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">TestMatrixVisitHammingNeighbors</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">tests</span> <span class="p">=</span> <span class="p">[]</span><span class="kd">struct</span> <span class="p">{</span>
+        <span class="nx">input</span> <span class="kt">string</span>
+        <span class="nx">d</span>     <span class="kt">int</span>
+        <span class="nx">gold</span>  <span class="p">[]</span><span class="kt">string</span>
+    <span class="p">}{</span>
+        <span class="p">{</span><span class="s">&quot;AAA&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;AAC&quot;</span><span class="p">,</span> <span class="s">&quot;AAT&quot;</span><span class="p">,</span> <span class="s">&quot;AAG&quot;</span><span class="p">,</span> <span class="s">&quot;AAA&quot;</span><span class="p">,</span> <span class="s">&quot;CAA&quot;</span><span class="p">,</span> <span class="s">&quot;GAA&quot;</span><span class="p">,</span> <span class="s">&quot;TAA&quot;</span><span class="p">,</span> <span class="s">&quot;ATA&quot;</span><span class="p">,</span> <span class="s">&quot;ACA&quot;</span><span class="p">,</span> <span class="s">&quot;AGA&quot;</span><span class="p">},</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">test</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">tests</span> <span class="p">{</span>
+
+        <span class="o">...</span>
+
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>Each test case should generate all Hamming neighbors, and compare to the list of
+Hamming neighbors provided. This requires two tricks:</p>
+<ul>
+<li>sort before comparing, to ensure a proper comparison</li>
+<li>use a custom <code>EqualStringSlices()</code> function that will iterate through
+  two string slices element-wise to check if they are equal.</li>
+</ul>
+<p>The <code>EqualStringSlices()</code> function is required because Go does not have 
+built-in equality checks for slices.</p>
+<p>Here is what the tests look like:</p>
+<div class="highlight"><pre><span></span>    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">test</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">tests</span> <span class="p">{</span>
+
+        <span class="c1">// Money shot</span>
+        <span class="nx">result</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">VisitHammingNeighbors</span><span class="p">(</span><span class="nx">test</span><span class="p">.</span><span class="nx">input</span><span class="p">,</span> <span class="nx">test</span><span class="p">.</span><span class="nx">d</span><span class="p">)</span>
+
+        <span class="c1">// Check if there was error</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="nx">msg</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Error: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+            <span class="nx">t</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span>
+        <span class="p">}</span>
+
+        <span class="c1">// Sort before comparing</span>
+        <span class="nx">sort</span><span class="p">.</span><span class="nx">Strings</span><span class="p">(</span><span class="nx">test</span><span class="p">.</span><span class="nx">gold</span><span class="p">)</span>
+        <span class="nx">sort</span><span class="p">.</span><span class="nx">Strings</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">!</span><span class="nx">EqualStringSlices</span><span class="p">(</span><span class="nx">result</span><span class="p">,</span> <span class="nx">test</span><span class="p">.</span><span class="nx">gold</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">msg</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Error testing VisitHammingNeighbors():\ncomputed = %v\ngold     = %v&quot;</span><span class="p">,</span>
+                <span class="nx">result</span><span class="p">,</span> <span class="nx">test</span><span class="p">.</span><span class="nx">gold</span><span class="p">)</span>
+            <span class="nx">t</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+</pre></div>
+
+
+<p><a name="fruitful"></a></p>
+<h2>Go Forth and Be Fruitful</h2>
+<p>Now that you have the basic tools to imlement a recursive
+backtracking algorithm in Go to generate string variations,
+you have one of the key ingredients to solve Rosalind.info
+problem <a href="http://rosalind.info/problems/ba1i/">BA1i, "Find Most Frequent Words with Mismatches by
+String"</a>.</p>
+<p>This problem is tricky principally because it requires generating
+every DNA string variation, so now you should have the key
+ingredient to solve BA1i (and several problems that follow).</p>
+<p>You can use the final version of the methods we covered by importing
+the <code>go-rosalind</code> library in your Go code
+(<a href="https://godoc.org/github.com/charlesreid1/go-rosalind/rosalind">link to go-rosalind documentation on godoc.org</a>)
+or you can implement your own version of these algorithms. 
+The Go code we covered in this post is also on Github in the
+<a href="https://github.com/charlesreid1/go-rosalind">charlesreid1/go-rosalind</a> repository.</p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/go.html">go</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/golang.html">golang</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/rosalind.html">rosalind</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/bioinformatics.html">bioinformatics</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/backtracking.html">backtracking</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/strings.html">strings</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/combinatorics.html">combinatorics</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+
+</div>
+
+
+<script type="text/javascript" src="/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="/theme/js/bootstrap-3.3.4.js"></script>
+<script type="text/javascript" src="/theme/js/d3-3.5.5.js"></script>
+<!--
+<script type="text/javascript" src="/theme/js/leaflet-0.7.3.js"></script>
+<script type="text/javascript" src="/theme/js/leaflet.ajax.min.js"></script>
+--><script type="text/javascript" src="/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="/theme/js/bootstrap-3.3.4.js"></script>
+
+<footer id="contentinfo" class="body">
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<center>
+	<hr />
+</center>
+<p>&nbsp;</p>
+<p style="text-align: center">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-terminal fa-stack-1x fa-inverse"></i>
+    </span>
+    Made from the command line with vim by 
+    <a href="http://charlesreid1.com">charlesreid1</a><br />
+    with help from <a href="https://getbootstrap.com/">Bootstrap</a> and <a href="http://getpelican.com">Pelican</a>.
+</p>
+
+<br />
+
+<p style="text-align: center">
+    <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-creative-commons fa-stack-1x fa-inverse"></i>
+    </span>
+    </a>
+    <br />
+    Licensed under the <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 License</a>.
+</p>
+
+<!-- Start of StatCounter Code for Default Guide -->
+<script type="text/javascript">
+var sc_project=11611748;
+var sc_invisible=1;
+var sc_security="9fcba820";
+</script>
+<script type="text/javascript"
+src="https://www.statcounter.com/counter/counter.js"
+async></script>
+
+<noscript><div class="statcounter"><a title="Web Analytics"
+href="http://statcounter.com/" target="_blank"><img
+class="statcounter"
+src="//c.statcounter.com/11611748/0/9fcba820/1/" alt="Web
+Analytics"></a></div></noscript>
+<!-- End of StatCounter Code for Default Guide -->
+</footer><!-- /#contentinfo -->
+</body>
+</html>

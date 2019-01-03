@@ -138,7 +138,7 @@ To solve this problem and generate variations of a DNA string
 as required, we implemented a recursive backtracking method
 in the Go programming language.</em></p>
 <ul>
-<li><em><a href="#">Part 1: Counting Variations</a></em></li>
+<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1: Counting Variations</a></em></li>
 <li><em>Part 2: Generating Variations (you are here)</em></li>
 <li><em><a href="#">Part 3: Go Implementation of Recursive Backtracking</a></em></li>
 </ul>
@@ -313,8 +313,99 @@ when all <span class="math">\(d\)</span> choices had been made and <span class="
 set to 1. Then the choice of indices to swap out with
 alternate codons would be passed on to a recursive method
 that would carry out Step 2 (see below).</p>
+<p>For example, to generate variations of the 5-mer <code>AAAAA</code>,
+we would start by selecting a Hamming distance <span class="math">\(d\)</span>, then
+generate a binary number with <span class="math">\(d\)</span> bits set to 1 to select
+indices to modify. Suppose <span class="math">\(d = 2\)</span>; then the first few
+binary numbers are:</p>
+<div class="highlight"><pre><span></span>AAAAA
+11000
+10100
+10010
+10001
+...
+</pre></div>
+
+
+<p>To expand on the pseudocode a bit more, to generate a
+binary number with <span class="math">\(d\)</span> bits flipped to 1 we will want
+to call a recursive method with a depth of <span class="math">\(d\)</span>, making
+a choice at each recursive call of which index to set
+to 1 next.</p>
+<p>The <span class="math">\(n^{th}\)</span> recursive call picks the <span class="math">\(n^{th}\)</span> index for
+1. Each index can only be chosen once in the stack of 
+recursive calls, and the indices that have been chosen
+by prior recursive function calls are passed along.</p>
+<p>Thus we need a minimum of two parameters: an integer
+indicating the depth level of this recursive function
+call, and an integer array of index choices.</p>
+<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">generate_binary_numbers</span><span class="p">(</span> <span class="nx">depth</span><span class="p">,</span> <span class="nx">choices</span><span class="p">[],</span> <span class="p">...</span> <span class="p">)</span><span class="o">:</span>
+
+    <span class="k">if</span> <span class="nx">depth</span> <span class="nx">is</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="nx">base</span> <span class="k">case</span>
+        <span class="nx">no</span> <span class="nx">more</span> <span class="nx">choices</span> <span class="nx">left</span> <span class="nx">to</span> <span class="nx">make</span>
+        <span class="nx">choices</span><span class="p">[]</span> <span class="nx">is</span> <span class="nx">full</span>
+        <span class="nx">pass</span> <span class="nx">along</span> <span class="nx">choices</span><span class="p">[]</span> <span class="nx">to</span> <span class="nx">assemble</span> <span class="nx">the</span> <span class="nx">variations</span>
+
+    <span class="k">else</span><span class="p">,</span>
+        <span class="nx">recursive</span> <span class="k">case</span>
+        <span class="k">for</span> <span class="nx">each</span> <span class="nx">possible</span> <span class="nx">index</span><span class="p">,</span>
+            <span class="k">if</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">is</span> <span class="nx">not</span> <span class="nx">already</span> <span class="k">in</span> <span class="nx">choices</span><span class="p">,</span>
+                <span class="nx">add</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">to</span> <span class="nx">choices</span>
+                <span class="nx">generate_binary_numbers</span><span class="p">(</span> <span class="nx">depth</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="nx">choices</span><span class="p">[]</span> <span class="p">)</span>
+                <span class="nx">remove</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">from</span> <span class="nx">choices</span>
+</pre></div>
+
+
 <p><a name="assembling"></a></p>
 <h3>Assembling the Variation</h3>
+<p>Each binary number is then turned into variations by substituting
+every combination of 3 codons in every position with a 1
+possible, so the first binary number for <span class="math">\(d=2\)</span> would generate
+the variations:</p>
+<div class="highlight"><pre><span></span>AAAAA
+11000
+-----
+CCAAA
+GCAAA
+TCAAA
+CGAAA
+GGAAA
+TGAAA
+CTAAA
+GTAAA
+TTAAA
+</pre></div>
+
+
+<p>This would be repeated for all Hamming distances up to the
+maximum specified Hamming distance.</p>
+<p>Like the generation of binary numbers, the substitution of all
+possible combinations of codons at these positions is a
+task conducive to a recursive backtracking algorithm.</p>
+<p>Like the prior task's recursive method, this task's recursive 
+method will have one parameter for depth (number of choices
+left to make) and a range of choices to try (codons).</p>
+<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">assemble_variations</span><span class="p">(</span> <span class="nx">depth</span><span class="p">,</span> <span class="nx">choices</span><span class="p">[],</span> <span class="p">...</span> <span class="p">)</span><span class="o">:</span>
+
+    <span class="k">if</span> <span class="nx">depth</span> <span class="nx">is</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="nx">base</span> <span class="k">case</span>
+        <span class="nx">no</span> <span class="nx">more</span> <span class="nx">choices</span> <span class="nx">left</span> <span class="nx">to</span> <span class="nx">make</span>
+        <span class="nx">choices</span><span class="p">[]</span> <span class="nx">is</span> <span class="nx">full</span>
+        <span class="nx">pass</span> <span class="nx">along</span> <span class="nx">choices</span><span class="p">[]</span> <span class="nx">to</span> <span class="nx">assemble</span> <span class="nx">the</span> <span class="nx">variations</span>
+
+    <span class="k">else</span><span class="p">,</span>
+        <span class="nx">recursive</span> <span class="k">case</span>
+        <span class="k">for</span> <span class="nx">each</span> <span class="nx">possible</span> <span class="nx">index</span><span class="p">,</span>
+            <span class="k">if</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">is</span> <span class="nx">not</span> <span class="nx">already</span> <span class="k">in</span> <span class="nx">choices</span><span class="p">,</span>
+                <span class="nx">add</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">to</span> <span class="nx">choices</span>
+                <span class="nx">generate_binary_numbers</span><span class="p">(</span> <span class="nx">depth</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="nx">choices</span><span class="p">[]</span> <span class="p">)</span>
+                <span class="nx">remove</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">from</span> <span class="nx">choices</span>
+</pre></div>
+
+
+<p>In the last post we'll cover the actual Go implementation
+of these functions.</p>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var align = "center",
         indent = "0em",
@@ -1376,6 +1467,9 @@ whether a key is in the map or not:</p>
             </p>
             <p class="archive">
             <a href="/4x4-rubiks-cube-part-1-representations.html">4x4 Rubik's Cube: Part 1: Representations</a>
+            </p>
+            <p class="archive">
+            <a href="/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Recursive Backtracking in Go for Bioinformatics Applications: 3. Go Implementation of Backtracking</a>
             </p>
             <p class="archive">
             <a href="/lets-generate-permutations.html">Let's Generate Permutations!</a>
