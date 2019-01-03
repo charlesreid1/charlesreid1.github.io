@@ -115,7 +115,7 @@ The second step is to cycle through each alternate codon at
 the given position, so that `00001` would generate the 
 variations:
 
-```
+```plain
 AAAAC
 AAAAG
 AAAAT
@@ -176,7 +176,7 @@ for i in range( 0 .. len(dna_string) ):
 
 Basic pseudocode for a backtracking method:
 
-```
+```plain
 explore method:
     base case:
         visit this solution
@@ -224,7 +224,7 @@ generate a binary number with $d$ bits set to 1 to select
 indices to modify. Suppose $d = 2$; then the first few
 binary numbers are:
 
-```
+```plain
 AAAAA
 11000
 10100
@@ -248,7 +248,7 @@ Thus we need a minimum of two parameters: an integer
 indicating the depth level of this recursive function
 call, and an integer array of index choices.
 
-```
+```plain
 function generate_binary_numbers( depth, choices[], ... ):
 
     if depth is 0,
@@ -274,7 +274,7 @@ every combination of 3 codons in every position with a 1
 possible, so the first binary number for $d=2$ would generate
 the variations:
 
-```
+```plain
 AAAAA
 11000
 -----
@@ -300,7 +300,7 @@ Like the prior task's recursive method, this task's recursive
 method will have one parameter for depth (number of choices
 left to make) and a range of choices to try (codons).
 
-```
+```plain
 function assemble_variations( depth, choices[], ... ):
 
     if depth is 0,
@@ -319,6 +319,6 @@ function assemble_variations( depth, choices[], ... ):
 ```
 
 
-In the last post we'll cover the actual Go implementation
-of these functions.
+In the final part, Part 3, of this blog post, we will cover the actual 
+Go implementation of these functions.
 

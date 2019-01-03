@@ -1,5 +1,5 @@
 Title: Recursive Backtracking in Go for Bioinformatics Applications: 3. Go Implementation of Backtracking
-Date: 2018-01-03 10:30
+Date: 2019-01-03 10:30
 Category: Rosalind
 Tags: go, golang, rosalind, bioinformatics, recursion, backtracking, strings, combinatorics
 
@@ -66,7 +66,7 @@ To review from the prior post, our pseudocode
 for recursive backtracking to explore variations
 or combinations looks like the following:
 
-```
+```plain
 explore method:
     base case:
         visit this solution
@@ -131,7 +131,7 @@ when they wish to generate all variations on a given
 string of DNA, and have the variations returned as a
 string slice.
 
-```
+```go
 // Given an input string of DNA, generate variations
 // of said string that are a Hamming distance of
 // less than or equal to d.
@@ -152,7 +152,7 @@ formula from [Part 1](https://charlesreid1.github.io/recursive-backtracking-in-g
 to predict the number of variations. If the user has selected
 an astronomical problem size, the program warns the user.
 
-```
+```go
 	// This blows up quickly, so warn the user
 	// if their problem is too big
 	MAX := int(1e6)
@@ -166,7 +166,7 @@ Now the actual recursive backtracking algorithm begins.
 The code loops over every possible value of Hamming distance
 $d$ and calls the recursive method at each value of $d$.
 
-```
+```go
 	// Store the final results in a set (string->bool map)
 	results := make(map[string]bool)
 
@@ -190,7 +190,7 @@ data structure), `results`, that is modified in-place.
 Thus, when we complete a call to `visitHammingNeighbors_recursive()`,
 results will contain all variations already.
 
-```
+```go
 	// Check if we have the right number of results
 	if len(results) != buffsize {
 		fmt.Printf("WARNING: number of results (%d) did not match expected value (%d)\n", len(results), buffsize)
@@ -206,7 +206,7 @@ In the above function, the call to the recursive
 function to visit all Hamming neighbors happens
 here:
 
-```
+```go
 		// Populate list of neighbors
 		visitHammingNeighbors_recursive(input, dd, choices, results)
 ```
@@ -222,7 +222,7 @@ a recursive case. The recursive function is being
 called repeatedly until it reaches a depth of 0,
 with the depth parameter being decremented each call.
 
-```
+```go
 // Recursive function: given an input string of DNA,
 // generate Hamming neighbors that are a Hamming
 // distance of exactly d. Populate the neighbors
@@ -247,7 +247,7 @@ each binary number with $d$ digits set to 1; once the base
 case is reached, we call the `assemble_variations()` function
 to substitute all possible codons at the selected indices.
 
-```
+```go
 func visitHammingNeighbors_recursive(base_kmer string, depth int, choices []int, results map[string]bool) error {
 
 	if depth == 0 {
@@ -267,7 +267,7 @@ Here, the choice is which index `c` in the kmer to modify. Each
 kmer can only be modified once, so we have a for loop to
 check if the index `c` is in the list of choices already made.
 
-```
+```go
 	} else {
 
 		// Recursive case
@@ -286,7 +286,7 @@ not return any values that need to be stored, since
 `results` points to a data structure (map) that is 
 modified in-place.
 
-```
+```go
 			if !indexAlreadyTaken {
 
 				// This will make a new copy of choices
@@ -321,7 +321,7 @@ is empty.
 
 Here are the base and recursive cases:
 
-```
+```go
 // Given a base kmer and a choice of indices where
 // the kmer should be changed, generate all possible
 // variations on this base_kmer.
@@ -350,7 +350,7 @@ from each of the three possible nucleotide values,
 exploring the choice by making a recursive call,
 then un-making the choice.
 
-```
+```go
 func assemble_variations(base_kmer string, choices []int, results map[string]bool) {
 
 	if len(choices) > 0 {
