@@ -52,7 +52,7 @@ In [part 2 of this series](https://charlesreid1.github.io/recursive-backtracking
 generate variations on a DNA string, and present pseudocode
 for the recursive backtracking method that we use here.
 
-In [part 3 of this series](#), we will cover our implementation
+In [part 3 of this series](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html), we will cover our implementation
 of the recursive backtracking method in the Go programming
 language.
 

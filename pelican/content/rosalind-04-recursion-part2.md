@@ -13,7 +13,7 @@ in the Go programming language._
 
 * _[Part 1: Counting Variations](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html)_
 * _Part 2: Generating Variations (you are here)_
-* _[Part 3: Go Implementation of Recursive Backtracking](#)_
+* _[Part 3: Go Implementation of Recursive Backtracking](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html)_
 
 <br />
 <br />
@@ -44,11 +44,11 @@ construction of an analytical formula to count the number
 of variations of a given DNA string that can be generated,
 given the constraints of the problem.
 
-In part 2 of this series, we cover several techniques to
+In [part 2 of this series](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html), we cover several techniques to
 generate variations on a DNA string, and present pseudocode
 for the recursive backtracking method that we use here.
 
-In part 3 of this series, we will cover our implementation
+In [part 3 of this series](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html), we will cover our implementation
 of the recursive backtracking method in the Go programming
 language.
 

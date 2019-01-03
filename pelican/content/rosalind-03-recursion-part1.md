@@ -12,8 +12,8 @@ as required, we implemented a recursive backtracking method
 in the Go programming language._
 
 * _Part 1: Counting Variations (you are here)_
-* _[Part 2: Generating Variations](#)_
-* _[Part 3: Go Implementation of Recursive Backtracking](#)_
+* _[Part 2: Generating Variations](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html)_
+* _[Part 3: Go Implementation of Recursive Backtracking](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html)_
 
 <br />
 <br />
@@ -45,7 +45,7 @@ The task at hand is to take a given input strand of DNA,
 and generate variations from it that have up to $d$ differences
 (a Hamming distance of $d$) in the codons (base pairs).
 
-In [part 1 of this series (you are here)](#), we walk through the
+In [part 1 of this series](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html), we walk through the
 construction of an analytical formula to count the number
 of variations of a given DNA string that can be generated,
 given the constraints of the problem.
@@ -54,7 +54,7 @@ In [part 2 of this series](https://charlesreid1.github.io/recursive-backtracking
 generate variations on a DNA string, and present pseudocode
 for the recursive backtracking method that we use here.
 
-In part 3 of this series, we will cover our implementation
+In [part 3 of this series](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html), we will cover our implementation
 of the recursive backtracking method in the Go programming
 language.
 
