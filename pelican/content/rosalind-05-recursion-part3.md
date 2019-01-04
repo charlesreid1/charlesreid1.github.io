@@ -31,6 +31,8 @@ in the Go programming language._
 
 * [Tests](#tests)
 
+* [Final Code](#final)
+
 * [Go forth and be fruitful](#fruitful)
 
 <br />
@@ -458,6 +460,20 @@ Here is what the tests look like:
     }
 ```
 
+<a name="final"></a>
+## Final Code
+
+The final version of the recursive function to visit all Hamming neighbors
+and return them in a string array can be found in the `go-rosalind` library
+on Github.
+
+Specifically, in the file [`rosalind_ba1.go`](https://github.com/charlesreid1/go-rosalind/blob/master/rosalind/rosalind_ba1.go),
+there is a [`VisitHammingNeighbors()`](https://github.com/charlesreid1/go-rosalind/blob/master/rosalind/rosalind_ba1.go#L711)
+function that is the public function that calls the private recursive
+function [`visitHammingNeighbors_recursive()`](https://github.com/charlesreid1/go-rosalind/blob/master/rosalind/rosalind_ba1.go#L778),
+and the recursive function to swap out codons is
+in the [`visit()`](https://github.com/charlesreid1/go-rosalind/blob/master/rosalind/rosalind_ba1.go#L819)
+funciont.
 
 <a name="fruitful"></a>
 ## Go Forth and Be Fruitful
