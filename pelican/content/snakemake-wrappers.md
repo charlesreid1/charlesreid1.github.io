@@ -1,7 +1,7 @@
 Title: Building Snakemake Command Line Wrappers
 Date: 2019-01-21 22:00
 Category: Snakemake
-Tags: python, bioinformatics, workflows, pipelines, snakemake
+Tags: python, bioinformatics, workflows, pipelines, snakemake, travis
 
 **NOTE:** These ideas are implemented in the repository
 [charlesreid1/2019-snakemake-cli](https://github.com/charlesreid/2019-snakemake-cli).
@@ -153,7 +153,7 @@ To do this, we moved the contents of `run` into
 a new file `command.py` in a new Python module 
 called `cli`:
 
-```python
+```plain
 cli/
 ├── Snakefile
 ├── __init__.py
@@ -315,6 +315,34 @@ setup(name='bananas',
       zip_safe=False)
 ```
 
+First, we grab the variables from `__init__.py`:
+
+```python
+from cli import __version__, _program
+```
+
+Next we specify where our package lives, the `cli` directory:
+
+```python
+setup(name='bananas',
+        ...
+        packages=['cli'],
+```
+
+and finally, we specify that we want to build a command line 
+interface, with the entrypoint being the `main()` method of the
+`cli/command.py` file using `entry_points`:
+
+```python
+setup(name='bananas',
+        ...
+        entry_points="""
+[console_scripts]
+{program} = cli.command:main
+      """.format(program = _program),
+``` 
+
+
 <a name="using"></a>
 # End Result: Using bananas
 
@@ -346,6 +374,12 @@ which bananas
 ```
 
 ## Quick Start: Running Tests
+
+```
+pytest
+```
+
+## Quick Start: Running Examples
 
 Change to the `test/` directory and run tests with
 the example config and param files.
@@ -379,7 +413,34 @@ bananas workflow-goodbye params-beth
 <a name="travis"></a>
 # Adding Travis CI Tests
 
+To test or workflow, we break down the necessary tasks:
+
+- Use a Python environment
+- Install our requirements (snakemake)
+- Install bananas with setup.py
+- Run pytest
+
+This is an easy Travis file to write, following the
+[Travis docs](https://docs.travis-ci.com/user/languages/python/).
+
 `.travis.yml`:
+
+```yaml
+language: python
+python:
+  - "3.5"
+  - "3.6"
+  #- "3.7-dev" # fails due to datrie build failure (snakemake dependency)
+
+# command to install dependencies
+install:
+  - pip install -r requirements.txt
+  - python setup.py build install
+
+# command to run tests
+script:
+  - pytest
+```
 
 <a name="next"></a>
 # Next Steps
