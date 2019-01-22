@@ -442,7 +442,41 @@ script:
   - pytest
 ```
 
+<a name="repo"></a>
+# Final Repository
+
+All of the code for this repository is in
+[charlesreid1/2019-snakemake-cli](https://github.com/charlesreid1/2019-snakemake-cli).
+
+See the [v2.0 tag](https://github.com/charlesreid1/2019-snakemake-cli/releases/tag/v2.0)
+in case there are changes to the code that are not reflected in
+this blog post.
+
 <a name="next"></a>
 # Next Steps
+
+This demo provides a starting point for creating executable Snakemake
+workflows that are installable.
+
+A few open question and directions:
+
+- Bundling the Snakefile vs. user-provided Snakefles
+    - There is obviously more utility and flexibility in letting the user provide Snakefiles.
+    - User-provided Snakefiles provide more ways for workflows to go wrong.
+    - Testing is either more difficult, or shifted to the workflow author.
+    - Bundled Snakefiles take the burden of writing the workflow off of the user,
+      so they can focus on param/config files.
+
+- Kubernetes
+    - Can we make the command line wrapper work with a Kubernetes cluster?
+    - See [charlesreid1/2019-snakemake-byok8s](https://github.com/charlesreid1/2019-snakemake-byok8s)
+      for proof of concept.
+
+- Applications
+    - How can we apply this concept?
+    - [spacegraphcats](https://github.com/spacegraphcats/spacegraphcats)
+    - [eelpond](https://github.com/dib-lab/eelpond)
+    - [dahak](https://github.com/dahak-metagenomics/dahak) and 
+      [dahak-taco](https://github.com/dahak-metagenomics/dahak-taco) 
 
 
