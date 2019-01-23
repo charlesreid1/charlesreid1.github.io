@@ -34,7 +34,7 @@ STATIC_PATHS = ['images']
 # Templates
 
 # template stuff 
-EXTRA_TEMPLATES_PATHS = []
+THEME_TEMPLATES_OVERRIDES = []
 TEMPLATE_PAGES = {}
 
 
