@@ -1,4 +1,4 @@
-Title: Building Snakemake Command Line Wrappers
+Title: Building Snakemake Command Line Wrappers for Workflows
 Date: 2019-01-21 22:00
 Category: Snakemake
 Tags: python, bioinformatics, workflows, pipelines, snakemake, travis
