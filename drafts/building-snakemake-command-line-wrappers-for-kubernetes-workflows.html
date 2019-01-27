@@ -135,12 +135,14 @@
 </ul>
 </li>
 <li><a href="#minikube">Local Kubernetes Clusters with Minikube</a><ul>
-<li><a href="#mac">Mac</a></li>
 <li><a href="#aws">AWS</a></li>
+<li><a href="#dns-aws">Fixing DNS issues with AWS</a></li>
+<li><a href="#travis">Travis</a></li>
+<li><a href="#dns-travis">Fixing DNS issues with Travis</a></li>
 </ul>
 </li>
-<li><a href="#travis">Travis Testing with Minikube</a></li>
 <li><a href="#byok8s3">End Product: byok8s</a></li>
+<li><a href="#docs">Documentation</a></li>
 <li><a href="#next">Next Steps</a></li>
 </ul>
 <p><br />
@@ -151,6 +153,8 @@
 we covered some approaches to making Snakemake
 workflows into executables that can be run as
 command line utilities.</p>
+<p>In this post, we extend those ideas to Snakemake workflows
+that run on Kubernetes clusters.</p>
 <p><a name="2018"></a></p>
 <h2>2018-snakemake-cli</h2>
 <p>To recap, back in March 2018 Titus Brown wrote a blog post titled
@@ -200,6 +204,22 @@ on a user-provided Kubernetes cluster. Furthermore,
 we demonstrate how to use minikube to run a local
 Kubernetes cluster to test Snakemake workflows on
 Kubernetes clusters.</p>
+<p>Here's what it looks like in practice:</p>
+<div class="highlight"><pre><span></span># Install byok8s
+python setup.py build install
+
+# Create virtual k8s cluster
+minikube start
+
+# Run the workflow on the k8s cluster
+cd /path/to/workflow/
+byok8s my-workflowfile my-paramsfile --s3-bucket=my-bucket
+
+# Clean up the virtual k8s cluster
+minikube stop
+</pre></div>
+
+
 <p>We cover the details below.</p>
 <p><a name="byok8s2"></a></p>
 <h1>Overview of 2019-snakemake-byok8s</h1>
@@ -260,11 +280,13 @@ entrypoint in <code>setup.py</code>:</p>
 
 
 <p>We want our new command line utility, <code>byok8s</code>, to work
-the same way, so we can do a <code>s/byok8s/bananas/</code>
+the same way, so we can do a <code>s/byok8s/bananas/g</code>
 across the package.</p>
 <p>The only change required happens in the file
 <code>command.py</code>, where the Snakemake API call 
 happens.</p>
+<p><a name="ns"></a></p>
+<h2>Nmespaces</h2>
 <p>Checking the <a href="https://snakemake.readthedocs.io/en/stable/api_reference/snakemake.html">Snakemake API documentation</a>,
 we can see that the API has a <code>kubernetes</code> option:</p>
 <blockquote>
@@ -279,7 +301,60 @@ we want to use) but we added a <code>-k</code> argument
 to the ArgParser to allow the user to specify
 the Kubernetes namespace name. By default
 the Kubernetes namespace used is <code>default</code>.</p>
-<p>Relevant portion of <code>cli/command.py</code>:</p>
+<p><a name="flags"></a></p>
+<h2>Adding flags</h2>
+<p>We add and modify some flags to make the workflow
+more flexible:</p>
+<ul>
+<li>
+<p>The user now provides the Snakefile, which is
+  called <code>Snakefile</code> in the current working directory
+  by default but can be specified with the <code>--snakefile</code>
+  or <code>-s</code> flag</p>
+</li>
+<li>
+<p>The user provides the k8s namespace using the
+  <code>--k8s-namespace</code> or <code>-k</code> flag</p>
+</li>
+<li>
+<p>The user provides the name of an S3 bucket for
+  Snakemake worker nodes to use for I/O using the
+  <code>--s3-bucket</code> flag</p>
+</li>
+</ul>
+<p>Finally, the user is also required to provide their
+AWS credentials to access the S3 bucket, via two
+environment variables that Snakemake passes through
+to the Kubernetes worker nodes:</p>
+<div class="highlight"><pre><span></span>AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+</pre></div>
+
+
+<p>For Travis CI testing, these environment variables
+can be set in the repository settings on the Travis
+website once Travis CI has been enabled.</p>
+<p>See <a href="https://charlesreid1.github.io/2019-snakemake-byok8s/travis_tests/">https://charlesreid1.github.io/2019-snakemake-byok8s/travis_tests/</a>
+for details.</p>
+<p><a name="minikube"><a></p>
+<h1>Local Kubernetes Clusters with Minikube</h1>
+<p><a name="aws"></a></p>
+<h2>AWS</h2>
+<p><a name="dns-aws"></a></p>
+<h2>Fixing DNS issues with AWS</h2>
+<p><a name="travis"></a></p>
+<h2>Travis</h2>
+<p><a name="dns-travis"></a></p>
+<h2>Fixing DNS issues with Travis</h2>
+<p><a name="byok8s3"></a></p>
+<h1>End Product: byok8s</h1>
+<p><a name="docs"></a></p>
+<h1>Documentation</h1>
+<p><a name="next"></a></p>
+<h1>Next Steps</h1>
+<hr>
+<p>Relevant portion of <code>cli/command.py</code> for
+2019-snakemake cli and <code>bananas</code>:</p>
 <div class="highlight"><pre><span></span>    <span class="o">...</span>
 
     <span class="k">print</span><span class="p">(</span><span class="s1">&#39;--------&#39;</span><span class="p">)</span>
