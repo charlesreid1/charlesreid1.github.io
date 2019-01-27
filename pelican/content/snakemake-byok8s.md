@@ -23,10 +23,12 @@ Status: draft
     - [Namespaces](#ns)
     - [Adding flags](#flags)
 - [Local Kubernetes Clusters with Minikube](#minikube)
-    - [Mac](#mac)
     - [AWS](#aws)
-- [Travis Testing with Minikube](#travis)
+    - [Fixing DNS issues with AWS](#dns-aws)
+    - [Travis](#travis)
+    - [Fixing DNS issues with Travis](#dns-travis)
 - [End Product: byok8s](#byok8s3)
+- [Documentation](#docs)
 - [Next Steps](#next)
 
 
@@ -40,6 +42,9 @@ In our previous blog post, [Building Snakemake Command Line Wrappers](https://ch
 we covered some approaches to making Snakemake
 workflows into executables that can be run as
 command line utilities.
+
+In this post, we extend those ideas to Snakemake workflows
+that run on Kubernetes clusters.
 
 <a name="2018"></a>
 ## 2018-snakemake-cli
@@ -85,6 +90,7 @@ bananas <workflow-config> <workflow-params>
 
 Relevant code is in [charlesreid1/2019-snakemake-cli](https://github.com/charlesreid1/2019-snakemake-cli).
 
+
 <a name="byok8s"></a>
 ## 2019-snakemake-byok8s
 
@@ -103,6 +109,23 @@ on a user-provided Kubernetes cluster. Furthermore,
 we demonstrate how to use minikube to run a local
 Kubernetes cluster to test Snakemake workflows on
 Kubernetes clusters.
+
+Here's what it looks like in practice:
+
+```
+# Install byok8s
+python setup.py build install
+
+# Create virtual k8s cluster
+minikube start
+
+# Run the workflow on the k8s cluster
+cd /path/to/workflow/
+byok8s my-workflowfile my-paramsfile --s3-bucket=my-bucket
+
+# Clean up the virtual k8s cluster
+minikube stop
+```
 
 We cover the details below.
 
@@ -181,12 +204,16 @@ setup(name='bananas',
 ``` 
 
 We want our new command line utility, `byok8s`, to work
-the same way, so we can do a `s/byok8s/bananas/`
+the same way, so we can do a `s/byok8s/bananas/g`
 across the package.
 
 The only change required happens in the file
 `command.py`, where the Snakemake API call 
 happens.
+
+
+<a name="ns"></a>
+## Nmespaces 
 
 Checking the [Snakemake API documentation](https://snakemake.readthedocs.io/en/stable/api_reference/snakemake.html),
 we can see that the API has a `kubernetes` option:
@@ -203,7 +230,78 @@ to the ArgParser to allow the user to specify
 the Kubernetes namespace name. By default
 the Kubernetes namespace used is `default`.
 
-Relevant portion of `cli/command.py`:
+<a name="flags"></a>
+## Adding flags
+
+We add and modify some flags to make the workflow
+more flexible:
+
+* The user now provides the Snakefile, which is
+  called `Snakefile` in the current working directory
+  by default but can be specified with the `--snakefile`
+  or `-s` flag
+
+* The user provides the k8s namespace using the
+  `--k8s-namespace` or `-k` flag
+
+* The user provides the name of an S3 bucket for
+  Snakemake worker nodes to use for I/O using the
+  `--s3-bucket` flag
+
+Finally, the user is also required to provide their
+AWS credentials to access the S3 bucket, via two
+environment variables that Snakemake passes through
+to the Kubernetes worker nodes:
+
+```plain
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+```
+
+For Travis CI testing, these environment variables
+can be set in the repository settings on the Travis
+website once Travis CI has been enabled.
+
+See <https://charlesreid1.github.io/2019-snakemake-byok8s/travis_tests/>
+for details.
+
+<a name="minikube"><a>
+# Local Kubernetes Clusters with Minikube
+
+<a name="aws"></a>
+## AWS
+
+<a name="dns-aws"></a>
+## Fixing DNS issues with AWS
+
+<a name="travis"></a>
+## Travis
+
+<a name="dns-travis"></a>
+## Fixing DNS issues with Travis
+
+
+<a name="byok8s3"></a>
+# End Product: byok8s
+
+<a name="docs"></a>
+# Documentation
+
+<a name="next"></a>
+# Next Steps
+
+
+
+
+-------
+
+
+
+
+
+
+Relevant portion of `cli/command.py` for
+2019-snakemake cli and `bananas`:
 
 ```python
     
