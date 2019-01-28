@@ -271,8 +271,157 @@ for details.
 <a name="aws"></a>
 ## AWS
 
+Using Minikube from AWS comes with two hangups.
+
+The first is that AWS nodes are virtual machines,
+and you can't run virtual machines within virtual
+machines, so it is not possible to use minikube's
+normal VirtualBox mode, which creates k8s nodes
+with VirtualBox machines. Instead, we must use 
+minikube's native driver, meaning minikube uses
+docker directly. This is tricky for several 
+reasons:
+
+- we can't bind-mount a local directory into the
+  kubernetes cluster
+- the minikube cluster must be run with sudo
+  privileges, which means permissions can be
+  a problem
+
+The second is that the DNS settings of AWS nodes
+are copied into the Kubernetes containers,
+including the DNS service container, which
+breaks DNS for the entire Kubernetes cluster.
+This must be fixed with a custom config file
+(provided with byok8s; details below).
+
+### Installing Python Prerequisites
+
+To use byok8s from a fresh Ubuntu AWS node
+(should work with both 18.04 bionic and 16.04
+xenial), you will want to install a version of
+conda; we recommend using pyenv and miniconda:
+
+```
+curl https://pyenv.run | bash
+```
+
+Restart your shell and install miniconda:
+
+```
+pyenv update
+pyenv install miniconda3-4.3.30
+pyenv global miniconda3-4.3.30
+```
+
+You will also need the virtualenv package to
+set up a virtual environment:
+
+```
+pip install virtualenv
+```
+
+
+### Installing byok8s
+
+Start by cloning the repo and installing byok8s:
+
+```
+git clone https://github.com/charlesreid1/2019-snakemake-byok8s.git byok8s
+cd byok8s
+```
+
+Next, you'll create a virtual environment:
+
+```
+virtualenv vp
+source vp/bin/activate
+
+pip install -r requirements.txt
+```
+
+### Starting a k8s cluster with minikube
+
+Install minikube:
+
+```
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 \
+  && sudo install minikube-linux-amd64 /usr/local/bin/minikube
+```
+
+Now you're ready to start a minikube k8s
+cluster on your AWS node! Start a k8s cluster
+as root with:
+
+```
+sudo minikube start
+```
+
+**NOTE:** The `minikube start` command will print
+some commands for you to run to fix permissions -
+it is importat you run them!
+
+Tear down the cluster with:
+
+```
+sudo minikube stop
+```
+
+While the k8s cluster is running, you can control
+it and interact with it like a normal k8s cluster
+using `kubectl`.
+
+However, as-is, the cluster's DNS settings are broken!
+We need to fix them before running 
+
+
 <a name="dns-aws"></a>
 ## Fixing DNS issues with AWS
+
+We mentioned a second hangup with AWS was with the
+DNS settings. 
+
+The problem is with `/etc/resolv.conf` on the
+AWS node. It is set up for AWS's internal 
+cloud network routing, but this is copied
+into the CoreDNS container, which is the
+kube-system container that manages DNS requests
+from all k8s containers.
+
+The fix requires setting the DNS nameservers 
+inside the CoreDNS container to Google's public
+DNS, `8.8.8.8` and `8.8.4.4`.
+
+Here is the YAML file, for completeness:
+
+```
+kind: ConfigMap
+apiVersion: v1
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+           upstream 8.8.8.8 8.8.4.4
+           pods insecure
+           fallthrough in-addr.arpa ip6.arpa
+        }
+        proxy .  8.8.8.8 8.8.4.4
+        cache 30
+        reload
+    }
+metadata:
+  creationTimestamp: 2019-01-25T22:55:15Z
+  name: coredns
+  namespace: kube-system
+```
+
+
+
+<a name="aws-byok8s"></a>
+## AWS + byok8s Workflow
+
 
 <a name="travis"></a>
 ## Travis
