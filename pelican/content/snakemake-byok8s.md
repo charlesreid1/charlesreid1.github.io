@@ -2,7 +2,6 @@ Title: Building Snakemake Command Line Wrappers for Kubernetes Workflows
 Date: 2019-01-28 20:00
 Category: Snakemake
 Tags: python, bioinformatics, workflows, pipelines, snakemake, travis, kubernetes, minikube
-Status: draft
 
 **NOTE:** These ideas are implemented in the repository
 [charlesreid1/2019-snakemake-byok8s](https://github.com/charlesreid/2019-snakemake-byok8s).
