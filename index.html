@@ -153,6 +153,7 @@
 </ul>
 </li>
 <li><a href="#minikube">Local Kubernetes Clusters with Minikube</a><ul>
+<li><a href="#minikube">What is minikube?</a></li>
 <li><a href="#aws">AWS</a></li>
 <li><a href="#dns-aws">Fixing DNS issues with AWS</a></li>
 <li><a href="#travis">Travis</a></li>
@@ -318,7 +319,7 @@ across the package.</p>
 <code>command.py</code>, where the Snakemake API call 
 happens.</p>
 <p><a name="ns"></a></p>
-<h2>Nmespaces</h2>
+<h2>Namespaces</h2>
 <p>Checking the <a href="https://snakemake.readthedocs.io/en/stable/api_reference/snakemake.html">Snakemake API documentation</a>,
 we can see that the API has a <code>kubernetes</code> option:</p>
 <blockquote>
@@ -370,18 +371,39 @@ website once Travis CI has been enabled.</p>
 for details.</p>
 <p><br />
 <br /></p>
-<p><a name="minikube"><a></p>
+<p><a name="minikube"></a></p>
 <h1>Local Kubernetes Clusters with Minikube</h1>
+<p><a name="minikube"></a></p>
+<h2>What is minikube?</h2>
+<p>Minikube is a Go program that allows users to simulate
+a single-node kubernetes cluster using a virtual machine.
+This is useful for local testing of Kubernetes workflows,
+as it does not require setting up or tearing down cloud
+infrastructure, or long waits for remote resources to
+become ready.</p>
+<p>We cover two ways to use it:</p>
+<ol>
+<li>
+<p>Installing and running a minikube virtual kubernetes cluster on
+   AWS (for development and testing of Snakemake + kubernetes
+   workflows)</p>
+</li>
+<li>
+<p>Running a minikube cluster on a Travis CI worker node
+   to enable us to <em>test</em> Snakemake + kubernetes workflows.</p>
+</li>
+</ol>
 <p><a name="aws"></a></p>
 <h2>AWS</h2>
-<p>Using Minikube from AWS comes with two hangups.</p>
+<p>Using Minikube from an AWS EC2 compute node comes 
+with two hangups.</p>
 <p>The first is that AWS nodes are virtual machines,
 and you can't run virtual machines within virtual
 machines, so it is not possible to use minikube's
-normal VirtualBox mode, which creates k8s nodes
-with VirtualBox machines. Instead, we must use 
-minikube's native driver, meaning minikube uses
-docker directly. This is tricky for several 
+normal VirtualBox mode, which creates a kubernetes
+cluster using a virutal machine.</p>
+<p>Instead, we must use minikube's native driver, meaning
+minikube uses docker directly. This is tricky for several
 reasons:</p>
 <ul>
 <li>we can't bind-mount a local directory into the
@@ -390,17 +412,19 @@ reasons:</p>
   privileges, which means permissions can be
   a problem</li>
 </ul>
-<p>The second is that the DNS settings of AWS nodes
-are copied into the Kubernetes containers,
-including the DNS service container, which
-breaks DNS for the entire Kubernetes cluster.
-This must be fixed with a custom config file
-(provided with byok8s; details below).</p>
+<p>The second hangup with minikube on AWS nodes is that the
+DNS settings of AWS nodes are copied into the Kubernetes
+containers, including the kubernetes system's DNS service
+container. Unfortunately, the AWS node's DNS settings are
+not valid in the kubernetes cluster, so the DNS container
+crashes, and no container in the kubernetes cluster can
+reach the outside world.  This must be fixed with a
+custom config file (provided with byok8s; details below).</p>
 <h3>Installing Python Prerequisites</h3>
 <p>To use byok8s from a fresh Ubuntu AWS node
-(should work with both 18.04 bionic and 16.04
-xenial), you will want to install a version of
-conda; we recommend using pyenv and miniconda:</p>
+(tested with Ubuntu 16.04 (xenial) and 18.04
+(bionic)), you will want to install a version
+of conda; we recommend using pyenv and miniconda:</p>
 <div class="highlight"><pre><span></span>curl https://pyenv.run | bash
 </pre></div>
 
@@ -431,6 +455,12 @@ cd ~/2019-snakemake-byok8s
 source vp/bin/activate
 
 pip install -r requirements.txt
+python setup.py build install
+</pre></div>
+
+
+<p>Now you should be ready to rock:</p>
+<div class="highlight"><pre><span></span>which byok8s
 </pre></div>
 
 
@@ -460,17 +490,19 @@ it is importat you run them!</p>
 it and interact with it like a normal k8s cluster
 using <code>kubectl</code>.</p>
 <p>However, as-is, the cluster's DNS settings are broken!
-We need to fix them before running </p>
+We need to fix them before running.</p>
 <p><a name="dns-aws"></a></p>
 <h2>Fixing DNS issues with AWS</h2>
 <p>We mentioned a second hangup with AWS was with the
 DNS settings. </p>
 <p>The problem is with <code>/etc/resolv.conf</code> on the
-AWS node. It is set up for AWS's internal 
+AWS host node. It is set up for AWS's internal 
 cloud network routing, but this is copied
 into the CoreDNS container, which is the
 kube-system container that manages DNS requests
-from all k8s containers.</p>
+from all k8s containers. The settings from the
+AWS host confuse the DNS container, and it cannot
+route any DNS requests.</p>
 <h3>The Problem</h3>
 <p>If you're having the problem, you will see
 something like this with <code>kubectl</code>, where the
