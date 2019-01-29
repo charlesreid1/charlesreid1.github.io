@@ -1,5 +1,5 @@
 Title: Building Snakemake Command Line Wrappers for Kubernetes Workflows
-Date: 2019-01-23 22:00
+Date: 2019-01-28 20:00
 Category: Snakemake
 Tags: python, bioinformatics, workflows, pipelines, snakemake, travis, kubernetes, minikube
 Status: draft
@@ -26,11 +26,10 @@ Status: draft
     - [AWS](#aws)
     - [Fixing DNS issues with AWS](#dns-aws)
     - [Travis](#travis)
-    - [Fixing DNS issues with Travis](#dns-travis)
+    - [`.travis.yml`](#travis-yml)
 - [End Product: byok8s](#byok8s3)
 - [Documentation](#docs)
 - [Next Steps](#next)
-
 
 <br />
 <br />
@@ -112,8 +111,17 @@ Kubernetes clusters.
 
 Here's what it looks like in practice:
 
-```
+```plain
+# Get byok8s
+git clone https://github.com/charlesreid1/2019-snakemake-byok8s.git
+cd ~/2019-snakemake-byok8s
+
+# Create a virtual environment
+virtualenv vp
+vp/bin/actiavte
+
 # Install byok8s
+pip install -r requirements.txt
 python setup.py build install
 
 # Create virtual k8s cluster
@@ -129,6 +137,8 @@ minikube stop
 
 We cover the details below.
 
+<br />
+<br />
 
 <a name="byok8s2"></a>
 # Overview of 2019-snakemake-byok8s
@@ -144,10 +154,11 @@ compute nodes and a way to remotely connect to each.
 Snakemake requires the compute nodes to have a 
 controller and a job submission system.
 
-When using cloud computing platforms like GCP or AWS,
+When using cloud computing platforms like GCP (Google 
+Cloud Platform) or AWS (Amazon Web Services),
 k8s is a simple and popular way to orchestrate
 multiple compute nodes (support for Docker images
-is also baked into k8s).
+is also baked directly into k8s).
 
 
 <a name="smkk8s"></a>
@@ -174,6 +185,9 @@ to control the Kubernetes cluster, you can
 run a Snakemake workflow on that cluster.
 
 Let's get into the changes required in the Python code.
+
+<br />
+<br />
 
 <a name="cli"></a>
 # Modifying the CLI
@@ -265,6 +279,9 @@ website once Travis CI has been enabled.
 See <https://charlesreid1.github.io/2019-snakemake-byok8s/travis_tests/>
 for details.
 
+<br />
+<br />
+
 <a name="minikube"><a>
 # Local Kubernetes Clusters with Minikube
 
@@ -302,13 +319,13 @@ To use byok8s from a fresh Ubuntu AWS node
 xenial), you will want to install a version of
 conda; we recommend using pyenv and miniconda:
 
-```
+```plain
 curl https://pyenv.run | bash
 ```
 
 Restart your shell and install miniconda:
 
-```
+```plain
 pyenv update
 pyenv install miniconda3-4.3.30
 pyenv global miniconda3-4.3.30
@@ -317,7 +334,7 @@ pyenv global miniconda3-4.3.30
 You will also need the virtualenv package to
 set up a virtual environment:
 
-```
+```plain
 pip install virtualenv
 ```
 
@@ -326,14 +343,15 @@ pip install virtualenv
 
 Start by cloning the repo and installing byok8s:
 
-```
-git clone https://github.com/charlesreid1/2019-snakemake-byok8s.git byok8s
-cd byok8s
+```plain
+cd 
+git clone https://github.com/charlesreid1/2019-snakemake-byok8s.git
+cd ~/2019-snakemake-byok8s
 ```
 
 Next, you'll create a virtual environment:
 
-```
+```plain
 virtualenv vp
 source vp/bin/activate
 
@@ -344,7 +362,7 @@ pip install -r requirements.txt
 
 Install minikube:
 
-```
+```plain
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 \
   && sudo install minikube-linux-amd64 /usr/local/bin/minikube
 ```
@@ -353,7 +371,7 @@ Now you're ready to start a minikube k8s
 cluster on your AWS node! Start a k8s cluster
 as root with:
 
-```
+```plain
 sudo minikube start
 ```
 
@@ -363,7 +381,7 @@ it is importat you run them!
 
 Tear down the cluster with:
 
-```
+```plain
 sudo minikube stop
 ```
 
@@ -388,13 +406,102 @@ into the CoreDNS container, which is the
 kube-system container that manages DNS requests
 from all k8s containers.
 
-The fix requires setting the DNS nameservers 
-inside the CoreDNS container to Google's public
-DNS, `8.8.8.8` and `8.8.4.4`.
+### The Problem
 
-Here is the YAML file, for completeness:
+If you're having the problem, you will see
+something like this with `kubectl`, where the
+coredns containers are in a `CrashLoopBackOff`:
 
+```plain
+$ kubectl get pods --namespace=kube-system
+
+NAME                               READY   STATUS             RESTARTS   AGE
+coredns-86c58d9df4-lvq8b           0/1     CrashLoopBackOff   5          5m17s
+coredns-86c58d9df4-pr52t           0/1     CrashLoopBackOff   5          5m17s
+etcd-minikube                      1/1     Running            15         4h43m
+kube-addon-manager-minikube        1/1     Running            16         4h43m
+kube-apiserver-minikube            1/1     Running            15         4h43m
+kube-controller-manager-minikube   1/1     Running            15         4h43m
+kube-proxy-sq77h                   1/1     Running            3          4h44m
+kube-scheduler-minikube            1/1     Running            15         4h43m
+storage-provisioner                1/1     Running            6          4h44m
 ```
+
+This will cause all Snakemake jobs to fail with a name
+resolution failure when it tries to write its output
+files to the AWS S3 bucket:
+
+```plain
+$ kubectl logs snakejob-c71fba38-f64b-5803-915d-933ae273d7a4
+
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 4
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	target1
+	1
+
+[Thu Jan 24 00:06:03 2019]
+rule target1:
+    output: cmr-smk-0123/alpha.txt
+    jobid: 0
+
+echo alpha blue > cmr-smk-0123/alpha.txt
+Traceback (most recent call last):
+  File "/opt/conda/lib/python3.7/site-packages/urllib3/connection.py", line 171, in _new_conn
+    (self._dns_host, self.port), self.timeout, **extra_kw)
+  File "/opt/conda/lib/python3.7/site-packages/urllib3/util/connection.py", line 56, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+  File "/opt/conda/lib/python3.7/socket.py", line 748, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+```
+
+and the kubernetes log for the CoreDNS container
+
+```plain
+$ kubectl logs --namespace=kube-system coredns-86c58d9df4-lvq8b
+
+.:53
+2019/01/25 14:54:48 [INFO] CoreDNS-1.2.2
+2019/01/25 14:54:48 [INFO] linux/amd64, go1.11, fc62f9c
+CoreDNS-1.2.2
+linux/amd64, go1.11, eb51e8b
+2019/01/25 14:54:48 [INFO] plugin/reload: Running configuration MD5 = 486384b491cef6cb69c1f57a02087373
+2019/01/25 14:54:48 [FATAL] plugin/loop: Seen "HINFO IN 9273194449250285441.798654804648663468." more than twice, loop detected
+```
+
+Basically, the AWS node's DNS name server settings cause 
+an infinite DNS loop to be set up.
+
+### The Fix
+
+Fixing this problem requires manually setting the DNS 
+name servers inside the CoreDNS container to Google's
+public DNS servers, `8.8.8.8` and `8.8.4.4`.
+
+To apply this fix, we use a YAML configuration file to patch the
+CoreDNS container image.
+
+Hat tip to [this long Github issue](https://github.com/kubernetes/minikube/issues/2027)
+in the minikube Github repo, and specifically 
+[this comment](https://github.com/kubernetes/minikube/issues/2027#issuecomment-381574807)
+by Github user [jgoclawski](https://github.com/jgoclawski).
+and also [this comment](https://github.com/kubernetes/minikube/issues/2027#issuecomment-419733791)
+by Github user [bw2](https://github.com/bw2).
+(Note that neither of these quite solve the problem -
+jgoclawski's solution is for kube-dns, not CoreDNS,
+and bw2's YAML is not valid, but both got me most
+of the way to a solution.)
+
+Here is the YAML file (also in the 2019-snakemake-byok8s
+repo here: <https://github.com/charlesreid1/2019-snakemake-byok8s/blob/master/test/fixcoredns.yml>):
+
+**`fixcoredns.yml`:**
+
+```yaml
 kind: ConfigMap
 apiVersion: v1
 data:
@@ -417,274 +524,289 @@ metadata:
   namespace: kube-system
 ```
 
+(**NOTE:** There is also a `fixkubedns.yml` if you are using
+an older Kubernetes version that uses kube-dns instead of
+CoreDNS.)
+
+To tell the k8s cluster to use this image
+when it creates a CoreDNS container, run
+this kubectl command *while the cluster is
+running*:
+
+```plain
+kubectl apply -f fixcoredns.yml
+```
+
+Last but not least, delete all `kube-system` containers
+and let Kubernetes regenerate them:
+
+```plain
+kubectl delete --all pods --namespace kube-system
+```
+
+The pods will regenerate quickly, and you can
+check to confirm that the CoreDNS container
+is no longer in the `CrashLoopBackOff` state
+and is `Running` nicely:
+
+```plain
+kubectl get pods --namespace=kube-system
+```
+
+This is all documented in [this comment](https://github.com/kubernetes/minikube/issues/2027#issuecomment-457808462)
+in the same Github issue in the minikube repo
+that was linked to above, [kubernetes/minikube
+issue \#2027: dnsmasq pod CrashLoopBackOff](https://github.com/kubernetes/minikube/issues/2027).
 
 
 <a name="aws-byok8s"></a>
 ## AWS + byok8s Workflow
 
+Now that the k8s cluster is running successfully,
+run the example byok8s workflow in the `test/` 
+directory of the byok8s repository (assuming
+you cloned the repo to `~/byok8s`, and are in
+the same virtual environment as before):
+
+```plain
+# Return to our virtual environment
+cd ~/2019-snakemake-byok8s/test/
+source vp/bin/activate
+
+# Verify k8s is running
+minikube status
+
+# Export AWS keys for Snakemake
+export AWS_ACCESS_KEY_ID="XXXXX"
+export AWS_SECRET_ACCESS_KEY="XXXXX"
+
+# Run byok8s
+byok8s workflow-alpha params-blue --s3-bucket=mah-bukkit 
+```
+
+The bucket you specify must be created in advance
+and be writable by the account whose credentials
+you are passing in via environment variables.
+
+When you do all of this, you should see the job
+running, then exiting successfully:
+
+```plain
+$ byok8s --s3-bucket=cmr-0123 -f workflow-alpha params-blue
+--------
+details!
+	snakefile: /home/ubuntu/2019-snakemake-byok8s/test/Snakefile
+	config: /home/ubuntu/2019-snakemake-byok8s/test/workflow-alpha.json
+	params: /home/ubuntu/2019-snakemake-byok8s/test/params-blue.json
+	target: target1
+	k8s namespace: default
+--------
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 1
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	target1
+	1
+Resources before job selection: {'_cores': 1, '_nodes': 9223372036854775807}
+Ready jobs (1):
+	target1
+Selected jobs (1):
+	target1
+Resources after job selection: {'_cores': 0, '_nodes': 9223372036854775806}
+
+[Mon Jan 28 18:06:08 2019]
+rule target1:
+    output: cmr-0123/alpha.txt
+    jobid: 0
+
+echo alpha blue > cmr-0123/alpha.txt
+Get status with:
+kubectl describe pod snakejob-e585b53f-f9d5-5142-ac50-af5a0d532e85
+kubectl logs snakejob-e585b53f-f9d5-5142-ac50-af5a0d532e85
+Checking status for pod snakejob-e585b53f-f9d5-5142-ac50-af5a0d532e85
+[Mon Jan 28 18:06:18 2019]
+Finished job 0.
+1 of 1 steps (100%) done
+Complete log: /home/ubuntu/2019-snakemake-byok8s/test/.snakemake/log/2019-01-28T180607.988313.snakemake.log
+unlocking
+removing lock
+removing lock
+removed all locks
+```
+
+Woo hoo! You've successfully run a Snakemake workflow 
+on a virtual Kubernetes cluster!
+
 
 <a name="travis"></a>
 ## Travis
 
-<a name="dns-travis"></a>
-## Fixing DNS issues with Travis
+Like running minikube on an AWS node, running minikube on Travis workers
+also suffers from DNS issues. Fortunately, Github user 
+[LiliC](https://github.com/LiliC) worked out how to run
+minikube on Travis, and importantly, _did so for multiple versions_
+of minikube and kubernetes.
 
+The relevant `.travis.yml` file is available in the 
+[LiliC/travis-minikube](https://github.com/LiliC/travis-minikube)
+repo on Github.
+
+We ended up using the [`minikube-30-kube-1.12`](https://github.com/LiliC/travis-minikube/tree/minikube-30-kube-1.12)
+branch of LiliC/travis-minikube, which used the most up-to-date
+version of minikube and kubernetes available in that repo. The `.travis.yml` file
+provided by LiliC on that branch is 
+[here](https://github.com/LiliC/travis-minikube/blob/minikube-30-kube-1.12/.travis.yml).
+
+The example script by LiliC provided 90% of the legwork (thanks!!!),
+and we only needed to modify a few lines of LiliC's Travis file
+(which launches a redis container using kubectl)
+to use Snakemake (launched via byok8s) instead.
+
+<a name="travis-yml"></a>
+## `.travis.yml`
+
+Here is the final `.travis.yml` file, which has explanatory comments.
+
+**`.travis.yml`:**
+
+```yaml
+# Modified from original:
+# https://raw.githubusercontent.com/LiliC/travis-minikube/minikube-30-kube-1.12/.travis.yml
+
+# byok8s and Snakemake both require Python,
+# so we make this Travis CI test Python-based.
+language: python
+python:
+- "3.6"
+
+# Running minikube via travis requires sudo
+sudo: required
+
+# We need the systemd for the kubeadm and it's default from 16.04+
+dist: xenial
+
+# This moves Kubernetes specific config files.
+env:
+- CHANGE_MINIKUBE_NONE_USER=true
+
+install:
+# Install byok8s requirements (snakemake, python-kubernetes)
+- pip install -r requirements.txt
+# Install byok8s cli tool
+- python setup.py build install
+
+before_script:
+# Do everything from test/
+- cd test
+# Make root mounted as rshared to fix kube-dns issues.
+- sudo mount --make-rshared /
+# Download kubectl, which is a requirement for using minikube.
+- curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+# Download minikube.
+- curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.30.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+- sudo minikube start --vm-driver=none --bootstrapper=kubeadm --kubernetes-version=v1.12.0
+# Fix the kubectl context, as it's often stale.
+- minikube update-context
+# Wait for Kubernetes to be up and ready.
+- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1; done
+
+################
+## easy test
+script:
+- kubectl cluster-info
+# Verify kube-addon-manager.
+# kube-addon-manager is responsible for managing other kubernetes components, such as kube-dns, dashboard, storage-provisioner..
+- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl -n kube-system get pods -lcomponent=kube-addon-manager -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-addon-manager to be available"; kubectl get pods --all-namespaces; done
+# Wait for kube-dns to be ready.
+- JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}'; until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do sleep 1;echo "waiting for kube-dns to be available"; kubectl get pods --all-namespaces; done
+
+################ 
+## hard test
+# run byok8s workflow on the k8s cluster
+- byok8s --s3-bucket=cmr-0123 -f workflow-alpha params-blue
+```
 
 <a name="byok8s3"></a>
 # End Product: byok8s
 
+The final byok8s package can be found in the
+[charlesreid1/2019-snakemake-byok8s](https://github.com/charlesreid1/2019-snakemake-byok8s)
+repository on Github.
+
+You can find documentation for 2019-snakemake-byok8s 
+here: <https://charlesreid1.github.io/2019-snakemake-byok8s/>
+
+To return to our quick start, here is what running
+byok8s end-to-end on a minikube kubernetes cluster 
+on an AWS node looks like (slightly modified from
+the intro of our post):
+
+```plain
+# Install minikube
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 \
+  && sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+# Get byok8s
+git clone https://github.com/charlesreid1/2019-snakemake-byok8s.git
+cd ~/2019-snakemake-byok8s
+
+# Create a virtual environment
+virtualenv vp
+vp/bin/actiavte
+
+# Install byok8s
+pip install -r requirements.txt
+python setup.py build install
+
+# Create virtual k8s cluster
+sudo minikube start
+
+# Fix CoreDNS
+kubectl apply -f fixcoredns.yml
+kubectl delete --all pods --namespace kube-system
+
+# Wait for kube-system to respawn
+kubectl get pods --namespace=kube-system
+
+# Run the workflow on the k8s cluster
+cd test/
+byok8s workflow-alpha params-blue --s3-bucket=mah-bukkit 
+
+# Clean up the virtual k8s cluster
+sudo minikube stop
+```
+
+<br />
+<br />
+
 <a name="docs"></a>
 # Documentation
 
-<a name="next"></a>
-# Next Steps
+You can find documentation for 2019-snakemake-byok8s 
+here: <https://charlesreid1.github.io/2019-snakemake-byok8s/>
 
+The documentation covers a quick start on AWS nodes, 
+similar to what is covered above, as well as more information
+about running byok8s on other types of Kubernetes clusters
+(e.g., AWS, Google Cloud, and Digital Ocean).
 
-
-
--------
-
-
-
-
-
-
-Relevant portion of `cli/command.py` for
-2019-snakemake cli and `bananas`:
-
-```python
-    
-    ...
-
-    print('--------')
-    print('details!')
-    print('\tsnakefile: {}'.format(snakefile))
-    print('\tconfig: {}'.format(workflowfile))
-    print('\tparams: {}'.format(paramsfile))
-    print('\ttarget: {}'.format(target))
-    print('--------')
-
-    # run bananas!!
-    status = snakemake.snakemake(snakefile, 
-                                 configfile=paramsfile,
-                                 targets=[target], 
-                                 printshellcmds=True,
-                                 dryrun=args.dry_run, 
-                                 forceall=args.force,
-                                 config=config)
-
-    if status: # translate "success" into shell exit code of 0
-       return 0
-    return 1
-
-
-if __name__ == '__main__':
-    main()
-```
-
-The last component here is to make the function
-in `cli/command.py` the entrypoint of a command line
-utility called `bananas`, which can be done via
-`setup.py`. This will put the executable `bananas`
-in the Python binaries folder when the package is
-installed.
-
-`setup.py`:
-
-```python
-from setuptools import setup, find_packages
-import glob
-import os
-
-with open('requirements.txt') as f:
-    required = [x for x in f.read().splitlines() if not x.startswith("#")]
-
-# Note: the _program variable is set in __init__.py.
-# it determines the name of the package/final command line tool.
-from cli import __version__, _program
-
-setup(name='bananas',
-      version=__version__,
-      packages=['cli'],
-      test_suite='pytest.collector',
-      tests_require=['pytest'],
-      description='bananas command line interface',
-      url='https://charlesreid1.github.io/2019-snakemake-cli',
-      author='@charlesreid1',
-      author_email='cmreid@ucdavis.edu',
-      license='MIT',
-      entry_points="""
-      [console_scripts]
-      {program} = cli.command:main
-      """.format(program = _program),
-      install_requires=required,
-      include_package_data=True,
-      keywords=[],
-      zip_safe=False)
-```
-
-First, we grab the variables from `__init__.py`:
-
-```python
-from cli import __version__, _program
-```
-
-Next we specify where our package lives, the `cli` directory:
-
-```python
-setup(name='bananas',
-        ...
-        packages=['cli'],
-```
-
-and finally, we specify that we want to build a command line 
-interface, with the entrypoint being the `main()` method of the
-`cli/command.py` file using `entry_points`:
-
-```python
-setup(name='bananas',
-        ...
-        entry_points="""
-[console_scripts]
-{program} = cli.command:main
-      """.format(program = _program),
-``` 
-
-
-<a name="using"></a>
-# End Result: Using bananas
-
-The end result is a command line utility that bundles a
-Snakemake workflow. The repository contains some tests,
-so let's run through the quick start installation and
-run the tests.
-
-## Quick Start: Installing
-
-Start by setting up a virtual environment:
-
-```bash
-virtualenv vp
-source vp/bin/activate
-```
-
-Install required components, then install the package:
-
-```bash
-pip install -r requirements.txt
-python setup.py build install
-```
-
-Now you should see `bananas` on your path:
-
-```
-which bananas
-```
-
-## Quick Start: Running Tests
-
-```
-pytest
-```
-
-## Quick Start: Running Examples
-
-Change to the `test/` directory and run tests with
-the example config and param files.
-
-```
-cd test
-```
-
-Run the hello workflow with Amy params:
-
-```
-rm -f hello.txt
-bananas workflow-hello params-amy
-```
-
-Run the hello workflow with Beth params:
-
-```
-rm -f hello.txt
-bananas workflow-hello params-beth
-```
-
-Run the goodbye workflow with Beth params:
-
-```
-rm -f goodbye.txt
-bananas workflow-goodbye params-beth
-```
-
-
-<a name="travis"></a>
-# Adding Travis CI Tests
-
-To test or workflow, we break down the necessary tasks:
-
-- Use a Python environment
-- Install our requirements (snakemake)
-- Install bananas with setup.py
-- Run pytest
-
-This is an easy Travis file to write, following the
-[Travis docs](https://docs.travis-ci.com/user/languages/python/).
-
-`.travis.yml`:
-
-```yaml
-language: python
-python:
-  - "3.5"
-  - "3.6"
-  #- "3.7-dev" # fails due to datrie build failure (snakemake dependency)
-
-# command to install dependencies
-install:
-  - pip install -r requirements.txt
-  - python setup.py build install
-
-# command to run tests
-script:
-  - pytest
-```
-
-<a name="repo"></a>
-# Final Repository
-
-All of the code for this repository is in
-[charlesreid1/2019-snakemake-cli](https://github.com/charlesreid1/2019-snakemake-cli).
-
-See the [v2.0 tag](https://github.com/charlesreid1/2019-snakemake-cli/releases/tag/v2.0)
-in case there are changes to the code that are not reflected in
-this blog post.
+<br />
+<br />
 
 <a name="next"></a>
 # Next Steps
 
-This demo provides a starting point for creating executable Snakemake
-workflows that are installable.
+Last year we were working on implementing metagenomic pipelines for
+shotgun sequencing data as part of the [dahak-metagenomics](https://github.com/dahak-metagenomics)
+project. We implemented several Snakemake workflows
+in the [dahak](https://github.com/dahak-metagenomics/dahak)
+repo, and began (but never completed) work on a command line utility
+to run these workflows called [dahak-taco](https://github.com/dahak-metagenomics/dahak-taco).
 
-A few open question and directions:
+Our next major goal is to reboot dahak-taco and redesign it to run metagenomic
+workflows from dahak on Kubernetes clusters, similar to the way byok8s works.
 
-- Bundling the Snakefile vs. user-provided Snakefles
-    - There is obviously more utility and flexibility in letting the user provide Snakefiles.
-    - User-provided Snakefiles provide more ways for workflows to go wrong.
-    - Testing is either more difficult, or shifted to the workflow author.
-    - Bundled Snakefiles take the burden of writing the workflow off of the user,
-      so they can focus on param/config files.
-
-- Kubernetes
-    - Can we make the command line wrapper work with a Kubernetes cluster?
-    - See [charlesreid1/2019-snakemake-byok8s](https://github.com/charlesreid1/2019-snakemake-byok8s)
-      for proof of concept.
-
-- Applications
-    - How can we apply this concept?
-    - [spacegraphcats](https://github.com/spacegraphcats/spacegraphcats)
-    - [eelpond](https://github.com/dib-lab/eelpond)
-    - [dahak](https://github.com/dahak-metagenomics/dahak) and 
-      [dahak-taco](https://github.com/dahak-metagenomics/dahak-taco) 
-
+Stay tuned for more!
 
