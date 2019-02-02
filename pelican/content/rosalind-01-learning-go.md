@@ -38,7 +38,7 @@ My initial impression of Go has been positive thus far.
 
 ### Syntax
 
-The first thing about Go that I will remark on is the syntax - it 
+The first thing about Go that we will remark on is the syntax - it 
 is unusual because it reverses the order that most programming languages
 use for variable and type declarations. 
 
