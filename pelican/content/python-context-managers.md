@@ -17,6 +17,11 @@ Tags: context managers, testing, python, programming
     * [Exit method](#_exit)
     * [In action](#action)
 * [Using the new dag flags](#using)
+* [Other context manager applications](#other)
+    * [SSH connections](#ssh)
+    * [Jupyter notebook](#ssh)
+    * [iPython (Jupyter) notebook and matplotlib figure management](#figs)
+    * [Database connection](#dbconn)
 * [References](#refs)
 
 <br />
@@ -586,12 +591,16 @@ and here is the result:
 ![elvers dag](/images/elvers_dag.png)
 
 
+<a name="other"></a>
 ## Other context manager applications
 
 Actions requiring temporary contexts, which are a bit like self-contained
 workspaces, are good candidates for context managers. Following are a
 few examples and references.
 
+<br />
+
+<a name="ssh"></a>
 **SSH connections:** the context manager's `__enter__` function creates/loads
 connection details, creates a connection object, and opens the connection.
 The `__exit__` function cleans up by closing the connection. This way,
@@ -612,10 +621,82 @@ decorated with a context manager utility function; this is a
 different approach than our class-based approach but is still
 valid.
 
+<br />
+
+<a name="figs"></a>
+**iPython notebook and matplotlib figure management:** Camille Scott has
+[a blog post](http://www.camillescott.org/2014/05/05/context-management/) 
+covering a way of managing large Jupyter notebooks with
+lots of figures using context managers. In this case, the context
+that is being set up and torn down is a matplotlib plot context,
+and it is creating each plot, saving it to a file, then closing
+the plot. This makes the notebook a lot faster than trying to render
+every single plot, and makes it a lot cleaner than littering the code
+with manual figure and axis management.
+
+Here is the example usage Camille gives:
+
+```python
+with FigManager('genes_per_sample', figsize=tall_size) as (fig, ax):
+    genes_support_df.sum().plot(kind='barh', fontsize=14, 
+                                color=labels_df.color, 
+                                figure=fig, ax=ax)
+    ax.set_title('Represented Genes per Sample')
+
+FileLink('genes_per_sample.svg')
+```
+
+(The `FileLink` function opens/processes the resulting image.)
+
+Nice!
+
+Blog post: [Context Managers and IPython Notebook](http://www.camillescott.org/2014/05/05/context-management/)
+
+<br />
+
+<a name="dbconn"></a>
+**Database Connection:** this example comes from Django's test suite.
+In it, a context manager is defined that creates new MySQL database
+connections when the context is opened, and closes them when the
+context is done.
+
+Here is the context manager, which again uses the decorator + generator
+approach rather than the class approach:
+
+**`django/tests/backends/mysql/tests.py`:**
+
+```python
+@contextmanager
+def get_connection():
+    new_connection = connection.copy()
+    yield new_connection
+    new_connection.close()
+```
+
+([Link to file on Github](https://github.com/django/django/blob/master/tests/backends/mysql/tests.py))
+
+The first two lines of this function are equivalent to an `__enter__` method,
+while the last line is equivalent to an `__exit__` method.
+
+This context manager is then used like so:
+
+```python
+    with get_connection() as new_connection:
+        new_connection.settings_dict['OPTIONS']['isolation_level'] = self.other_isolation_level
+        self.assertEqual(
+            self.get_isolation_level(new_connection),
+            self.isolation_values[self.other_isolation_level]
+        )
+```
+
+The context manager is a convenient way of creating a copy
+of an existing MySQL connection, then closing it when the
+requesting method is finished using it.
 
 <br />
 <br />
 
+<a name="refs"></a>
 ## References
 
 1. [elvers (dib-lab/eelpond on Github)](https://github.com/dib-lab/eelpond),
