@@ -47,7 +47,7 @@ to stdout.
 which was two task graphs that were independent, but 
 which were not supposed to be independent.)
 
-When creating the graphviz dot notation,
+When creating the Graphviz dot notation,
 Snakemake is kind enough to direct all of its output
 messages to stderr, and direct the dot graph output 
 to stdout, which makes it easy to redirect stdout
@@ -78,17 +78,17 @@ also prevents us from being able to print _anything_ to
 stdout before or after the dag is generated, since
 anything printed out by the program to stdout will
 be redirected to the final dot file along with all
-the graphviz dot output.
+the Graphviz dot output.
 
 So how to avoid the extra steps on the command line,
 while also improving the flexibility in printing to
-stdout (i.e., only capturing snakemake's output to
+stdout (i.e., only capturing Snakemake's output to
 a file)?
 
 Can we add two flags like `--dagfile` and `--dagpng`
 that would, respectively, save the task graph 
 directly into a .dot file, or render the dot output
-from snakemake directly into a png using dot?
+from Snakemake directly into a png using dot?
 
 We [implemented precisely this functionality](https://github.com/dib-lab/eelpond/pull/73)
 in dib-lab/eelpond PR \#73. To do this,
@@ -231,7 +231,7 @@ is the relevant snippet:
 Most of the code that comes before this API call is processing
 the flags provided by the user. We want to have the flexibility
 to print to stdout while processing flags, before we get to the
-snakemake API call; and we want those messages to be kept separate
+Snakemake API call; and we want those messages to be kept separate
 from the dag output.
 
 In other words, we only want to capture output to stdout between
@@ -241,9 +241,9 @@ else, stdout can go to stdout like normal.
 We can do this by recognizing that any Python program printing to
 stdout uses `sys.stdout` under the hood to send output to stdout -
 so if we can somehow tell Python to swap out stdout with a string
-buffer that has the same methods (print, printf, etc.), run snakemake,
+buffer that has the same methods (print, printf, etc.), run Snakemake,
 then replace stdout again, we can isolate and capture all stdout from
-the snakemake API call.
+the Snakemake API call.
 
 
 <a name="replacing"></a>
@@ -515,6 +515,9 @@ whether `dot` exists:
                 sys.stderr.write(f"\n\tError: Cannot find 'dot' utility, but --dotpng flag was specified. Fix this by installing graphviz dot.\n\n")
                 sys.exit(-1)
 ```
+
+The final code is implemented in the [`cmr_better_dag_handling` branch of eelpond/elvers](https://github.com/dib-lab/eelpond/tree/cmr_better_dag_handling)
+and [pull request \#73 in eelpond/elvers](https://github.com/dib-lab/eelpond/pull/73).
 
 
 <a name="using"></a>
