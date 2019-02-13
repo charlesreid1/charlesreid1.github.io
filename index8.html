@@ -102,6 +102,1488 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Five Letter Words: Part 3: Letter Coverage and Dynamic Programming
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-09-19T12:00:00-07:00" pubdate>Tuesday 09/19/2017</time>
+                in 
+                <a href="/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/five-letter-words-part-3-letter-coverage-and-dynamic-programming.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><em>NOTE: The code covered in this post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
+but the author would encourage any user of Python 2 to "put on your big kid pants" and 
+make the switch to Python 3. Let's all make this painful, drawn-out switch from Python 2 
+to Python 3 a thing of the past, shall we?</em></p>
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#five3-intro">Introduction</a></li>
+<li><a href="#five3-example">A Simple Manual Exmaple</a></li>
+<li><a href="#five3-pseudocode">Pseudocode</a></li>
+<li><a href="#five3-python">Python Code</a></li>
+<li><a href="#five3-output">Output and Timing</a></li>
+</ul>
+<p><a name="five3-intro"></a></p>
+<h2>Introduction</h2>
+<p>The letter/word coverage problem, as presented by Donald Knuth in Volume 4, Facsimile 0 
+of his masterpiece <u>Art of Computer Programming</u>, is the problem of finding
+the <em>minimum</em> number of words from the collection of five letter words that 
+"cover" (are drawn from) the first N letters of the alphabet.</p>
+<p>The problem has a couple of variations:</p>
+<ul>
+<li>Provided a set of letters, search for the smallest number of words that cover those particular letters.</li>
+<li>Given an integer <span class="math">\(N \leq 26\)</span>, search for the smallest number of words that cover the first N letters of the alphabet.</li>
+<li>The same problem as above, but drawing from the first <span class="math">\(M\)</span> words of the 5757 total five-letter words.</li>
+</ul>
+<p>For the sake of simplicity, we will focus on the simplest problem: considering the first <span class="math">\(N\)</span> 
+letters of the alphabet, find the shortest sequence of words that will provide coverage of the first 
+<span class="math">\(N\)</span> letters of the alphabet.</p>
+<p>This is an example of a dynamic programming problem: a combinatorics problem that can 
+be solved by breaking the overall down into smaller sub-problems, solving the sub-problems, and 
+assembling solutions to the sub-problems into an overall problem solution.</p>
+<p>The procedure is as follows:</p>
+<ul>
+<li>For each word <span class="math">\(w_i\)</span>, we begin by assuming this word is the best solution <em>on its own</em>. This forms the base case/starting solution.</li>
+<li>Next, examine all prior words <span class="math">\(w_j, j&lt;i\)</span>, and compare each to using the word <span class="math">\(w_i\)</span> by itself.</li>
+<li>For each pair of words, take the union (OR) of the character coverage for word <span class="math">\(w_i\)</span> 
+and the solution bit vector for word <span class="math">\(w_j\)</span> (that is, using the best-covered solution so far 
+for word <span class="math">\(w_j\)</span>)</li>
+<li>Note: for word <span class="math">\(w_i\)</span>, we need to store one of these unions as the best-covered solution so far for 
+word <span class="math">\(w_i\)</span>, but we aren't sure which one yet.)</li>
+<li>For the given pair of words <span class="math">\(w_j\)</span> and <span class="math">\(w_i\)</span>, we are looking at word <span class="math">\(w_j\)</span> and considering the possibility 
+of extending that with word <span class="math">\(w_i\)</span>. Adding <span class="math">\(w_i\)</span> to the best solution so far may or may not improve the best solution,
+so we need to decide whether to add <span class="math">\(w_i\)</span> to the best solution so far.</li>
+<li>Compute the number of letters covered in the union of <span class="math">\(w_i\)</span> and the best solution so far (by, e.g., 
+summing up the 1s in the bit vector of <span class="math">\(w_i\)</span> added to the bit vector representing the best solution so far for word <span class="math">\(w_j\)</span>)</li>
+<li>Compute the number of words in the best solution so far for word <span class="math">\(w_j\)</span>, and add one to it (representing the new word <span class="math">\(w_i\)</span> being added)</li>
+<li>We are searching for the prior solution for word <span class="math">\(w_j\)</span> that will lead to the maximum number of 1s in the bit vector</li>
+<li>We break ties by picking the word <span class="math">\(w_j\)</span> that will minimize the number of total words</li>
+<li>Once we find the best word <span class="math">\(w_j\)</span>, we save the union bit vector for word <span class="math">\(w_i\)</span> and word <span class="math">\(w_j\)</span> under the 
+word <span class="math">\(w_i\)</span> combined solution bit vector; we save the length of 1s in the combined solution bit vector; and we save 
+the number of words so far in that solution.</li>
+</ul>
+<p>Once we have gone through every word, we are ready to find the minimum. Do this by:</p>
+<ul>
+<li>Searching through the solutions for every word, and pick out the one that maximizes the number of 1s in the solution bit vector
+(or, rather, that has the correct number of 1s in the bit vector) while also minimizing the total number of words.</li>
+<li>To get the actual sequence of words, rather than just the minimum number of jwords, we need to save the prior word
+that leads to the maximum number of 1s in the solution bit vector and minimum number of words, for each word.
+Then, at the end, we can backtrack through the words that compose the solution.</li>
+</ul>
+<p>This is a bit complicated to explain in words, so we'll give a small example,
+then some pseudocode. Then we'll present the actual Python program that accomplishes
+this task.</p>
+<p><a name="five3-example"></a></p>
+<h2>A Simple Manual Example</h2>
+<p>Let's walk through an example manually to illustrate the approach:</p>
+<p>Suppose we are considering 2-letter words taken from a 5-letter alphabet <em>abcde</em>.
+We can represent a given word as a binary string or bit vector: for example,
+the two-letter word <code>aa</code> would be represented by the bit vector <code>10000</code>,
+<code>ab</code> would be represented by the bit vector <code>11000</code>, etc.</p>
+<p>Now let's consider a set of words, and step through the algorithm with them.</p>
+<div class="highlight"><pre><span></span>W0 = aa = 10000
+W1 = ab = 11000
+W2 = bc = 01100
+W3 = aa = 10000
+W4 = dd = 00010
+W5 = de = 00011
+W6 = bb = 01000
+</pre></div>
+
+
+<p>Now, we wish to write a dynamic program that will find the smallest set of 
+words such that taking the union of each bit vector for each of the words in 
+the set will yield the bit vector <code>11111</code>. At each step, we seek the words that will 
+maximize the number of 1s in the union of the bit vectors, while minimizing the number
+of words. We take the union of the "longest sequence of 1s" bit vector from the 
+prior step, plus the bit vector from the current step.</p>
+<p><em>W0: aa</em></p>
+<p>Start with word W0: this is the only bit vector, so it sets the starting "largest sequence of 1s" bit vector. 
+We wish to maximize "largest sequence of 1s" and minimize number of words.</p>
+<ul>
+<li>only W0 as solution is therefore <span class="math">\(10000\)</span>. The number of 1s is 1. The number of words is 1. (W0 SOLUTION)</li>
+</ul>
+<p><em>W1: ab</em></p>
+<p>Start with word W1: this is the only bit vector, so it sets the starting "largest sequence of 1s" bit vector. 
+We wish to maximize "largest sequence of 1s" and minimize number of words.</p>
+<ul>
+<li>only W1 as solution is therefore <span class="math">\(11000\)</span>. The number of 1s is 2. The number of words is 1. (W1 SOLUTION)</li>
+<li>union of W0 solution and W1 <span class="math">\(10000 \bigcup 11000 = 11000\)</span>. The number of 1s is 2. The number of words is 2.</li>
+</ul>
+<p><em>W2: bc</em></p>
+<p>Next is word W2: the "largest sequence of 1s" bit vector is the union of the prior step's "largest sequence of 1s" bit vector and the current word's bit vector. One option:</p>
+<ul>
+<li>only W2 as solution is <span class="math">\(01100\)</span>. The number of 1s is 2. The number of words is 1.</li>
+<li>union of W0 solution and W2 <span class="math">\(10000 \bigcup 01100 = 11100\)</span>. The number of 1s is 3. The number of words is 2. (W2 SOLUTION)</li>
+<li>union of W1 solution and W2 <span class="math">\(11000 \bigcup 01100 = 11100\)</span>. The number of 1s is 3. The number of words is 2.</li>
+</ul>
+<p><em>W3: aa</em></p>
+<p>Next is word W3: the "largest sequence of 1s" bit vector is the union that maximizes the number of 1s and minimizes the number of words. Two options:</p>
+<ul>
+<li>only W3 as solution is <span class="math">\(10000\)</span>. The number of 1s is 1. The number of words is 1.</li>
+<li>union of W0 solution and W3 <span class="math">\(10000 \bigcup 10000 = 10000\)</span>. The number of 1s is 1. The number of words is 2.</li>
+<li>union of W1 solution and W3 <span class="math">\(11000 \bigcup 10000 = 11000\)</span>. The number of 1s is 2. The number of words is 2.</li>
+<li>union of W2 solution and W3 <span class="math">\(11100 \bigcup 10000 = 11100\)</span>. The number of 1s is 3. The number of words is 3. (W3 SOLUTION)</li>
+</ul>
+<p><em>W4: dd</em></p>
+<p>Next is word W4: the "largest sequence of 1s" bit vector is the union that maximizes the number of 1s and minimizes the number of words. Three options:</p>
+<ul>
+<li>only W4 as solution is <span class="math">\(00010\)</span>. The number of 1s is 1. The number of words is 1.</li>
+<li>union of W0 solution and W4 <span class="math">\(10000 \bigcup 00010 = 10010\)</span>. The number of 1s is 2. The number of words is 2.</li>
+<li>union of W1 solution and W4 <span class="math">\(11000 \bigcup 00010 = 11010\)</span>. The number of 1s is 3. The number of words is 2.</li>
+<li>union of W2 solution and W4 <span class="math">\(11100 \bigcup 00010 = 11110\)</span>. The number of 1s is 4. The number of words is 3. (W4 SOLUTION)</li>
+<li>union of W3 solution and W4 <span class="math">\(11100 \bigcup 00010 = 11110\)</span>. The number of 1s is 4. The number of words is 4.</li>
+</ul>
+<p><em>W5: de</em></p>
+<p>Next is word W5: the "largest sequence of 1s" bit vector is the union maximizing number of 1s and minimizing number of words. Four options:</p>
+<ul>
+<li>only W5 as solution is <span class="math">\(00011\)</span>. The number of 1s is 2. The number of words is 1.</li>
+<li>union of W0 solution and W5 <span class="math">\(10000 \bigcup 00010 = 10010\)</span>. The number of 1s is 2. The number of words is 2.</li>
+<li>union of W1 solution and W5 <span class="math">\(11000 \bigcup 00011 = 11011\)</span>. The number of 1s is 4. The number of words is 2.</li>
+<li>union of W2 solution and W5 <span class="math">\(11100 \bigcup 00011 = 11111\)</span>. The number of 1s is 5. The number of words is 3. (W5 SOLUTION)</li>
+<li>union of W3 solution and W5 <span class="math">\(11100 \bigcup 00011 = 11111\)</span>. The number of 1s is 5. The number of words is 4.</li>
+<li>union of W4 solution and W5 <span class="math">\(11110 \bigcup 00111 = 11111\)</span>. The number of 1s is 5. The number of words is 4.</li>
+</ul>
+<p><em>W6:</em></p>
+<p>Next is word W6: the "largest sequence of 1s" bit vector is the union maximizing number of 1s and minimizing number of words. Five options:</p>
+<ul>
+<li>only W6 as solution is <span class="math">\(01000\)</span>. The number of 1s is 1. The number of words is 1.</li>
+<li>union of W0 solution and W6 <span class="math">\(10000 \bigcup 01000 = 11000\)</span>. The number of 1s is 2. The number of words is 2.</li>
+<li>union of W1 solution and W6 <span class="math">\(11000 \bigcup 01000 = 11000\)</span>. The number of 1s is 2. The number of words is 2.</li>
+<li>union of W2 solution and W6 <span class="math">\(11100 \bigcup 01000 = 11100\)</span>. The number of 1s is 3. The number of words is 3.</li>
+<li>union of W3 solution and W6 <span class="math">\(11100 \bigcup 01000 = 11100\)</span>. The number of 1s is 3. The number of words is 4.</li>
+<li>union of W4 solution and W6 <span class="math">\(11110 \bigcup 01000 = 11110\)</span>. The number of 1s is 4. The number of words is 4.</li>
+<li>union of W5 solution and W6 <span class="math">\(11111 \bigcup 01000 = 11111\)</span>. The number of 1s is 5. The number of words is 4. (W6 SOLUTION)</li>
+</ul>
+<p>(NOTE: We don't need to consider every possible combination of W1, W2, W3, W4, W5, and W6; we only need to consider each word once, because each word's current solution can be written in terms of the prior word's solution, so we only need to consider solutions for each word. We've already considered the non-solutions and can therefore ignore them because they don't maximize number of 1s and minimize number of words.)</p>
+<p>Thus far, we have found a ''local'' solution for each word. We can now compare all of these ''local'' solutions to find a ''global'' solution. The global solution will maximize the number of 1s found (meaning we can toss out any solutions that have less than 5 1s), and minimizes the total number of words (meaning, our W5 solution gives us the global optimum).</p>
+<p>Therefore our global solution is the W5 solution: 5 1s, and 3 words. Thus, backtracking, we see that the words W1, W2, W5 cover all of the first five letters, with the minimum number of total words.</p>
+<div class="highlight"><pre><span></span>W0 = aa = 10000
+W2 = bc = 01100
+W5 = de = 00011
+</pre></div>
+
+
+<p><a name="five3-pseudocode"></a></p>
+<h2>Pseudocode</h2>
+<p>Here is the pseudocode for the program. We utilize one function to compute
+the letter coverage bit vector for a single word, and the rest of the 
+functionality will go in the main method:</p>
+<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">word2bitvector</span><span class="p">(</span><span class="nx">word</span><span class="p">)</span><span class="o">:</span>
+    <span class="nx">initialize</span> <span class="mi">26</span><span class="o">-</span><span class="nx">element</span> <span class="nx">bit</span> <span class="nx">vector</span> <span class="kd">with</span> <span class="mi">0</span><span class="nx">s</span> <span class="p">(</span><span class="nx">one</span> <span class="mi">0</span> <span class="nx">per</span> <span class="nx">letter</span><span class="p">)</span>
+    <span class="k">for</span> <span class="nx">each</span> <span class="nx">letter</span> <span class="k">in</span> <span class="nx">word</span>:
+        <span class="kt">turn</span> <span class="nx">the</span> <span class="nx">bit</span> <span class="k">for</span> <span class="k">this</span> <span class="nx">letter</span> <span class="nx">to</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="nx">bit</span> <span class="nx">vector</span>
+
+<span class="nx">fuction</span> <span class="nx">main</span><span class="p">()</span><span class="o">:</span>
+
+    <span class="c1">// initialization step:</span>
+    <span class="nx">initialize</span> <span class="nx">best</span> <span class="nx">coverage</span> <span class="nx">bit</span> <span class="nx">vector</span>
+    <span class="nx">initialize</span> <span class="nx">maximum</span> <span class="kt">number</span> <span class="nx">of</span> <span class="mi">1</span><span class="nx">s</span> <span class="p">(</span><span class="nx">the</span> <span class="kt">number</span> <span class="nx">of</span> <span class="nx">letters</span> <span class="nx">N</span> <span class="nx">we</span> <span class="nx">wish</span> <span class="nx">to</span> <span class="nx">cover</span><span class="p">)</span>
+    <span class="nx">initialize</span> <span class="kt">number</span> <span class="nx">of</span> <span class="nx">words</span> <span class="k">in</span> <span class="nx">current</span> <span class="nx">solution</span>
+    <span class="nx">initialize</span> <span class="nx">backtracking</span> <span class="nx">array</span> <span class="p">(</span><span class="k">for</span> <span class="nx">constructing</span> <span class="kr">final</span> <span class="nx">solution</span><span class="p">)</span>
+
+    <span class="c1">// outer loop fencepost step:</span>
+    <span class="nx">set</span> <span class="nx">things</span> <span class="nx">up</span> <span class="k">for</span> <span class="nx">word</span> <span class="mi">0</span> <span class="p">(</span><span class="nx">base</span> <span class="k">case</span><span class="p">)</span>
+
+    <span class="c1">// loop through each word</span>
+    <span class="k">for</span> <span class="nx">each</span> <span class="nx">word</span> <span class="k">in</span> <span class="nx">words</span><span class="o">:</span>
+        <span class="c1">// skip word 0 (base case)</span>
+
+        <span class="c1">// inner loop fencepost step:</span>
+        <span class="nx">initialize</span> <span class="nx">things</span> <span class="k">for</span> <span class="nx">word</span> <span class="p">(</span><span class="nx">i</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="nx">each</span> <span class="nx">prior</span> <span class="nx">word</span> <span class="nx">j</span> <span class="o">&lt;</span> <span class="nx">i</span>:
+            <span class="kt">compute</span> <span class="nx">the</span> <span class="k">new</span> <span class="nx">potential</span> <span class="nx">best</span> <span class="nx">coverage</span> <span class="nx">bitvector</span>
+            <span class="nx">compute</span> <span class="nx">the</span> <span class="kt">number</span> <span class="nx">of</span> <span class="mi">1</span><span class="nx">s</span> <span class="k">in</span> <span class="nx">the</span> <span class="nx">bnew</span> <span class="nx">potential</span> <span class="nx">best</span> <span class="nx">coverage</span> <span class="nx">bit</span> <span class="nx">vector</span>
+            <span class="nx">compute</span> <span class="nx">numbr</span> <span class="nx">of</span> <span class="nx">words</span> <span class="k">in</span> <span class="k">new</span> <span class="nx">potential</span> <span class="nx">best</span> <span class="nx">solution</span>
+            <span class="k">if</span> <span class="k">this</span> <span class="nx">solution</span> <span class="nx">is</span> <span class="nx">better</span> <span class="nx">than</span> <span class="nx">current</span> <span class="nx">best</span> <span class="nx">solution</span>:
+                <span class="kt">overwrite</span> <span class="nx">best</span> <span class="nx">solution</span> <span class="kd">with</span> <span class="nx">current</span> <span class="nx">solution</span>
+
+    <span class="c1">// get solution:</span>
+    <span class="nx">find</span> <span class="nx">maximum</span> <span class="nx">indices</span> <span class="nx">of</span> <span class="nx">vector</span> <span class="nx">of</span> <span class="kt">number</span> <span class="nx">of</span> <span class="mi">1</span><span class="nx">s</span> 
+    <span class="c1">// (this is potentially multiple indices, representing multiple </span>
+    <span class="c1">//  solutions that satisfy the coverage we want)</span>
+    <span class="nx">find</span> <span class="nx">minimum</span> <span class="kt">number</span> <span class="nx">of</span> <span class="nx">words</span> <span class="nx">corresponding</span> <span class="nx">to</span> <span class="nx">each</span> <span class="nx">of</span> <span class="nx">the</span> <span class="nx">coverage</span> <span class="nx">indices</span>
+    <span class="nx">backtrack</span> <span class="nx">through</span> <span class="nx">solution</span> <span class="nx">indices</span>
+</pre></div>
+
+
+<p><a name="five3-python"></a></p>
+<h2>Python Code</h2>
+<p>The code for this solution can be found here: <a href="https://git.charlesreid1.com/cs/five-letter-words/src/master/letter_coverage.py">letter_coverage.py</a></p>
+<p>This code is as follows:</p>
+<p>Start with the word-to-bit vector function:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">word2bitvector</span><span class="p">(</span><span class="n">word</span><span class="p">,</span><span class="n">N</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Turns a five-letter word into a bit vector representing character coverage.</span>
+<span class="sd">    Uses 26 letters by default.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">bit_vector</span> <span class="o">=</span> <span class="p">[</span><span class="bp">False</span><span class="p">,]</span><span class="o">*</span><span class="n">N</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">word</span><span class="p">:</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">-</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">bit_vector</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+            <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">bit_vector</span><span class="p">)</span>
+</pre></div>
+
+
+<p>We also implement a few helper methods: the first turns a boolean bit vector into 
+a pretty string of 0s and 1s:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">printbv</span><span class="p">(</span><span class="n">bv</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">bit</span> <span class="ow">in</span> <span class="n">bv</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">bit</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="s2">&quot;1&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">+=</span> <span class="s2">&quot;0&quot;</span>
+    <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+
+
+<p>The second method is our all-important backtracking to obtain the actual sequence of words
+that leads to the minimum coverage, instead of just getting a count of the minimum number 
+of words that it takes to cover the first <span class="math">\(N\)</span> letters:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">btsolution</span><span class="p">(</span><span class="n">min_key</span><span class="p">,</span> <span class="n">min_val</span><span class="p">,</span> <span class="n">words</span><span class="p">,</span> <span class="n">bt</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reconstruct the sequence of words that gives maximum coverage and minimum word count.</span>
+
+<span class="sd">    Input: minimum word key (last word), minimum value (number of words), backtrack (prior word)</span>
+
+<span class="sd">    Output: list of words</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">solution</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">solution</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">min_key</span><span class="p">])</span>
+    <span class="n">prior_key</span> <span class="o">=</span> <span class="n">bt</span><span class="p">[</span><span class="n">min_key</span><span class="p">]</span>
+    <span class="k">while</span> <span class="n">prior_key</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">solution</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">prior_key</span><span class="p">])</span>
+        <span class="n">prior_key</span> <span class="o">=</span> <span class="n">bt</span><span class="p">[</span><span class="n">prior_key</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">solution</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Finally, we get to the meat of the method: the dynamic program.
+Start with some initialization. This is where we set the number of letters
+we want to cover, and limit the "vocabulary" if desired: </p>
+<div class="highlight"><pre><span></span><span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="c1"># Searching for words covering first N letters</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="mi">13</span>
+
+    <span class="n">words</span> <span class="o">=</span> <span class="n">get_words</span><span class="p">()</span>
+
+    <span class="c1"># If we want to restrict our search to the first M letters,</span>
+    <span class="c1">#words = words[:1000]</span>
+</pre></div>
+
+
+<p>We begin with the initialization step:</p>
+<div class="highlight"><pre><span></span>    <span class="c1"># Initialization:</span>
+    <span class="c1"># ----------------</span>
+
+    <span class="c1"># Store best coverage bitvectors for each word</span>
+    <span class="n">bestcoverage_bv</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">False</span><span class="p">]</span><span class="o">*</span><span class="n">N</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">))]</span>
+
+    <span class="c1"># Store number of 1s for best coverage vector for each word</span>
+    <span class="n">ones_bv</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+
+    <span class="c1"># Store number of words in best solution for each word</span>
+    <span class="n">ws</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+
+    <span class="c1"># Store prior word for backtracking</span>
+    <span class="n">bt</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Next comes the fencepost initialization step, where we intiialize the solution
+for word 0:</p>
+<div class="highlight"><pre><span></span>    <span class="c1"># Fencepost: Initial Step</span>
+    <span class="c1"># Word 0</span>
+    <span class="c1"># ----------------</span>
+
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1"># Start with word 0</span>
+    <span class="n">wi</span> <span class="o">=</span> <span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="c1"># Best letter coverage bit vector</span>
+    <span class="n">bestcoverage_bv</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">word2bitvector</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">N</span><span class="p">)</span>
+
+    <span class="c1"># Length of 1s</span>
+    <span class="n">ones_bv</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">bestcoverage_bv</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="c1"># Number of words in best solution:</span>
+    <span class="n">ws</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># Backtracking: first word has no prior word</span>
+    <span class="n">bt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+</pre></div>
+
+
+<p>Next, we loop over each word <span class="math">\(w_i, i&gt;0\)</span>: </p>
+<div class="highlight"><pre><span></span>    <span class="c1"># Start by assuming the word by itself, </span>
+    <span class="c1"># and then examine each possible pairing</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)):</span>
+        <span class="n">wi</span> <span class="o">=</span> <span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="c1"># Start with bitvector of word i&#39;s coverage</span>
+        <span class="n">wi_bv</span> <span class="o">=</span> <span class="n">word2bitvector</span><span class="p">(</span><span class="n">wi</span><span class="p">,</span><span class="n">N</span><span class="p">)</span>
+
+        <span class="c1"># Fencepost: initial step</span>
+        <span class="c1"># Word i by itself</span>
+        <span class="c1"># Assume word i is the first word in the solution,</span>
+        <span class="c1"># and if we find a better combination with prior word,</span>
+        <span class="c1"># overwrite this solution.</span>
+        <span class="c1"># ------------------------</span>
+
+        <span class="c1"># Best coverage so far (first guess) is word i by itself</span>
+        <span class="n">bestcoverage_bv</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">wi_bv</span>
+
+        <span class="c1"># Count ones in (first guess) best bitvector</span>
+        <span class="n">ones_bv</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">bestcoverage_bv</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+        <span class="c1"># Number of words in new best solution:</span>
+        <span class="n">ws</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Backtracking</span>
+        <span class="n">bt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="c1"># Boolean: is this the first word in the sequence of solutions?</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="bp">True</span>
+</pre></div>
+
+
+<p>We started by assuming that each word <span class="math">\(w_i\)</span> provides a best solution by itself;
+the next step is to consider each pairing of <span class="math">\(w_i\)</span> with prior words <span class="math">\(w_j\)</span>,
+and update our current solution if we find a better one: </p>
+<div class="highlight"><pre><span></span>        <span class="c1"># Now loop over the rest of the words,</span>
+        <span class="c1"># and look for a better solution.</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">i</span><span class="p">)):</span>
+
+            <span class="c1"># Get the prior word</span>
+            <span class="n">wj</span> <span class="o">=</span> <span class="n">words</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+            <span class="c1"># Get best coverage bitvector </span>
+            <span class="n">wj_bv</span> <span class="o">=</span> <span class="n">bestcoverage_bv</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+            <span class="c1"># (potential) new combined coverage vector</span>
+            <span class="n">bestcoverage_bv_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">wi_bv</span><span class="p">,</span> <span class="n">wj_bv</span><span class="p">)</span>
+
+            <span class="c1"># Number of ones in (potential) new combined coverage vector</span>
+            <span class="n">ones_bv_i</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">bestcoverage_bv_i</span><span class="p">)</span>
+
+            <span class="c1"># Number of words in (potential) new best solution</span>
+            <span class="n">ws_i</span> <span class="o">=</span> <span class="n">ws</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span>
+
+            <span class="c1"># If this solution is better than our current one,</span>
+            <span class="c1"># overwrite the current solution.</span>
+            <span class="c1"># (Better means, &quot;more ones&quot;, or &quot;same ones and fewer words&quot;.)</span>
+
+            <span class="c1">#import pdb; pdb.set_trace();</span>
+
+            <span class="k">if</span><span class="p">(</span> <span class="p">(</span><span class="n">ones_bv_i</span> <span class="o">&gt;</span> <span class="n">ones_bv</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="ow">or</span> <span class="p">(</span><span class="n">ones_bv_i</span><span class="o">==</span><span class="n">ones_bv</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">and</span> <span class="n">ws_i</span> <span class="o">&lt;</span> <span class="n">ws</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="p">):</span>
+                <span class="n">bestcoverage_bv</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">bestcoverage_bv_i</span>
+                <span class="n">ones_bv</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ones_bv_i</span>
+                <span class="n">ws</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ws_i</span>
+                <span class="n">bt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
+
+                <span class="c1"># This word now follows another word in the sequence of solutions</span>
+                <span class="n">first</span> <span class="o">=</span> <span class="bp">False</span>
+
+            <span class="c1"># It&#39;s tempting to stop early,</span>
+            <span class="c1"># but what if we find the perfect </span>
+            <span class="c1"># solution right at the end?!?</span>
+</pre></div>
+
+
+<p>Now that we have found the coverage for each word, and the corresponding number of words 
+in that coverage solution, we find the solution that achieves the desired coverage 
+while minimizing the number of words, so that we can construct the actual solution:</p>
+<div class="highlight"><pre><span></span>    <span class="c1"># Okay, now actually get the solution.</span>
+    <span class="c1"># The solution is the maximum of ones_bv and the minimum of ws</span>
+    <span class="c1"># </span>
+    <span class="c1"># Start by finding the maximum(s) of ones_bv</span>
+    <span class="c1"># Then check each corresponding index of ws</span>
+    <span class="n">ones_bv_indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ones_bv</span><span class="p">)</span> <span class="k">if</span> <span class="n">v</span><span class="o">==</span><span class="nb">max</span><span class="p">(</span><span class="n">ones_bv</span><span class="p">)]</span>
+
+    <span class="n">min_key</span> <span class="o">=</span> <span class="n">ones_bv_indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">min_val</span> <span class="o">=</span> <span class="n">ones_bv</span><span class="p">[</span><span class="n">ones_bv_indices</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">ones_bv_indices</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">ones_bv</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">min_key</span><span class="p">):</span>
+            <span class="n">min_key</span> <span class="o">=</span> <span class="n">ix</span>
+            <span class="n">min_val</span> <span class="o">=</span> <span class="n">ones_bv</span><span class="p">[</span><span class="n">ix</span><span class="p">]</span>
+
+
+
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Min key: word &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">min_key</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot; = &quot;</span><span class="o">+</span><span class="n">words</span><span class="p">[</span><span class="n">min_key</span><span class="p">])</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Min val: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">min_val</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot; words to cover &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">N</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot; letters&quot;</span><span class="p">)</span>
+
+    <span class="n">pprint</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">btsolution</span><span class="p">(</span><span class="n">min_key</span><span class="p">,</span> <span class="n">min_val</span><span class="p">,</span> <span class="n">words</span><span class="p">,</span> <span class="n">bt</span><span class="p">)))</span>
+</pre></div>
+
+
+<p><a name="output"></a></p>
+<h2>Output and Timing</h2>
+<p>Let's take a look at some example output from the program. 
+This program only considers the first 1,000 words in the five-letter word list:</p>
+<div class="highlight"><pre><span></span>$ <span class="nb">time</span> py letter_coverage.py
+Takes <span class="m">9</span> words to cover <span class="m">15</span> letters
+<span class="o">[</span><span class="s1">&#39;which&#39;</span>,
+ <span class="s1">&#39;their&#39;</span>,
+ <span class="s1">&#39;about&#39;</span>,
+ <span class="s1">&#39;could&#39;</span>,
+ <span class="s1">&#39;after&#39;</span>,
+ <span class="s1">&#39;right&#39;</span>,
+ <span class="s1">&#39;think&#39;</span>,
+ <span class="s1">&#39;major&#39;</span>,
+ <span class="s1">&#39;level&#39;</span><span class="o">]</span>
+
+real    0m17.226s
+user    0m17.090s
+sys     0m0.087s
+</pre></div>
+
+
+<p>Here's the same program, considering all 5,757 words:</p>
+<div class="highlight"><pre><span></span>$ <span class="nb">time</span> py letter_coverage.py
+akes <span class="m">9</span> words to cover <span class="m">15</span> letters
+<span class="o">[</span><span class="s1">&#39;which&#39;</span>,
+ <span class="s1">&#39;their&#39;</span>,
+ <span class="s1">&#39;about&#39;</span>,
+ <span class="s1">&#39;could&#39;</span>,
+ <span class="s1">&#39;after&#39;</span>,
+ <span class="s1">&#39;right&#39;</span>,
+ <span class="s1">&#39;think&#39;</span>,
+ <span class="s1">&#39;major&#39;</span>,
+ <span class="s1">&#39;level&#39;</span><span class="o">]</span>
+
+real    9m29.619s
+user    9m24.360s
+sys 0m1.958s
+</pre></div>
+
+
+<p>Note that the algorithm is <span class="math">\(O(N^2)\)</span>, since it iterates over each word, and for each word,
+it examines each possible pairing with a preceding word. Thus, if we increase the number of words
+by a factor of 6, we expect the runtime to increase by a factor of 36, for an estimated runtime of 
+<span class="math">\(36 \times 17 \mbox{ seconds} \approx 10 \mbox{ minutes}\)</span>, which is pretty close to what we see above.</p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/dynamic-programming.html">dynamic programming</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/graphs.html">graphs</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/art-of-computer-programming.html">art of computer programming</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Five Letter Words: Part 2: More Five-Word Algorithms
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-09-02T21:00:00-07:00" pubdate>Saturday 09/02/2017</time>
+                in 
+                <a href="/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/five-letter-words-part-2-more-five-word-algorithms.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><em>NOTE: The code covered in this post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
+but the author would encourage any user of Python 2 to "put on your big kid pants" and 
+make the switch to Python 3. Let's all make this painful, drawn-out switch from Python 2 
+to Python 3 a thing of the past, shall we?</em></p>
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#five2-intro">Introduction</a></li>
+<li><a href="#five2-distinct">Five-Letter Words with k Distinct Letters</a><ul>
+<li><a href="#five2-variation">Examining a Variation</a></li>
+</ul>
+</li>
+<li><a href="#five2-lex">Lexicographic Ordering of Letters</a><ul>
+<li><a href="#five2-lexicographic">Five-Letter Words with Lexicographically Ordered Letters</a></li>
+<li><a href="#five2-rlexicographic">Five-Letter Words with Lexicographically Reversed Letters</a></li>
+</ul>
+</li>
+<li><a href="#five2-findpalindromes">Finding Palindromes</a><ul>
+<li><a href="#five2-palindromes">Palindromes</a></li>
+<li><a href="#five2-palindromepairs">Palindrome Pairs</a></li>
+<li><a href="#five2-nearpalindromes">Near Palindromes</a></li>
+</ul>
+</li>
+<li><a href="#five2-references">References</a></li>
+</ul>
+<p><a name="five2-intro"></a></p>
+<h2>Introduction</h2>
+<p>As mentioned in <a href="http://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html">Five Letter Words: Part 1</a>,
+we covered Donald Knuth's list of five letter words, one of the data sets in the 
+<a href="http://www3.cs.stonybrook.edu/~algorith/implement/graphbase/implement.shtml">Stanford Graph Base</a>
+that is covered in greater detail in Knuth's coverage of graph theory in Volume 4, Facsimile 0
+of his magnum opus, <u>The Art of Computer Programming</u>.</p>
+<p>In the section where Knuth introduces the set of words, he also gives readers 
+several exercises to get to know the list of words. This multi-part series of posts
+(also see <a href="http://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html">Five Letter Words: Part 1</a>)
+is covering some of the solutions to these exercises, and expanding on them 
+to illustrate some of the interesting and surprising properties of this data set.</p>
+<p><a name="five2-distinct"></a></p>
+<h2>Five-Letter Words with k Distinct Letters</h2>
+<p>In Exercise 27, Knuth asks the reader to make a list of words composed of 
+a specific number of distinct letters (1, 2, 3, 4, or 5). </p>
+<p>In the list of five-letter words, there are 0 words composed of a single letter,
+4 words with two distinct letters (0.07%), 
+163 words with three distinct letters (2.8%), 
+1756 words with four distinct letters (30.5%), 
+and 3834 words with five distinct letters (66.5%).</p>
+<p>Here are a few examples:
+<em> Two distinct letters: mamma, ahhhh, esses, ohhhh
+</em> Three distinct letters: added, seems, sense, level, teeth
+<em> Four distinct letters: which, there, these, where, three
+</em> Five distinct letters: their, about, would, other, words</p>
+<p>To find these, we can design an algorithm that does the following:
+split each string into characters,
+add them to a set data type (a set discards any duplicates), 
+and get the size of the set. 
+This will give us the number of unique letters in a given word,
+and we can use a list of lists to store all words with 
+a specified number of unique letters. </p>
+<p>Once again, we're using our <code>get_words</code> function,
+which we covered in <a href="http://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html">Part 1</a>.
+See <a href="https://github.com/charlesreid1/five-letter-words/blob/master/get_words.py">get_words.py</a>
+for that script.</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/distinct.py">distinct.py</a></p>
+<div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">distinct.py</span>
+
+<span class="sd">Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0</span>
+<span class="sd">Exercise #27</span>
+
+<span class="sd">How many SGB words contain exactly k distinct letters, for 1 &lt;= k &lt;= 5?</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="kn">from</span> <span class="nn">get_words</span> <span class="kn">import</span> <span class="n">get_words</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">get_words</span><span class="p">()</span>
+
+    <span class="n">lengths</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">word</span><span class="p">))</span>
+        <span class="n">lengths</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">40</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Number of words with {0:d} letters: {1:d}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">lengths</span><span class="p">[</span><span class="n">i</span><span class="p">])))</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lengths</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">:</span><span class="mi">5</span><span class="p">]))</span>
+</pre></div>
+
+
+<p>The principal operation here is the statement that gets the length, k:</p>
+<div class="highlight"><pre><span></span>k = len(set(word))
+lengths[k].append(word)
+</pre></div>
+
+
+<p>The operation of turning a word into a set is <span class="math">\(O(M)\)</span>, where M is the number of 
+letters in the word, and the algorithm performs this operation on each word in sequence,
+so overall, the algorithm is <span class="math">\(O(N)\)</span>, where N is the number of words.</p>
+<p>The storage space used by the algorithm is also <span class="math">\(O(N)\)</span>, since for each word,
+the number of distinct letters <span class="math">\(k \in \{ 0 \dots 5 \}\)</span>.</p>
+<p>If we were dealing with a lot of words, and needed to save some space,
+we could represent the list of words with <span class="math">\(k\)</span> distinct letters using five bit vectors,
+where each bit vector represents the words that are composed of <span class="math">\(k\)</span> distinct 
+letters, and has a length of <span class="math">\(N\)</span>, the number of words. A 0 would indicate the word is 
+not in the set (is not composed of <span class="math">\(k\)</span> letters), and a 1 would indicate the opposite.</p>
+<p>But here, we keep it simple, since we have a small, known set of words.</p>
+<p><a name="first2-variation"></a></p>
+<h3>Examining a Variation</h3>
+<p>While that's essentially all there is to this algorithm, 
+and it takes all of 10 seconds to come up with the idea,
+there are some nuances and some bookkeeping details, 
+as there are with the design of any algorithm.</p>
+<p>For example, compare the following two approaches;
+Approach 1 is used in the program, Approach 2 is a less efficient approach:</p>
+<div class="highlight"><pre><span></span>    # Approach 1:
+    for word in words:
+        k = len(set(word))
+        lengths[k].append(word)
+
+
+    # Approach 2:
+    for k in range(1,5+1):
+        if(len(set(word))==k):
+            lengths[k].append(word)
+</pre></div>
+
+
+<p>While these are both <span class="math">\(O(N)\)</span> runtime, the latter approach is inefficient:
+we loop over each word five times, and each time we perform the same operation
+(turning the letters of a word into a set). </p>
+<p>Is there ever a case where we would want an approach like #2?</p>
+<p>The short answer is, never.</p>
+<p>To give a longer answer, let's consider a case where approach #2 might provide an advantage.
+Suppose we were considering a case where <span class="math">\(k\)</span> could be larger - 
+a list of 15-letter words, for example, so k could be up to 15 - 
+and we were only interested in a particular value, or small set of values, of <span class="math">\(k\)</span>, like 3 and 4.<br>
+Approach 1 would store unnecessary intermediate results (the values of k for all words)
+and therefore use extra space, compared with approach #2 where we could change the 
+for loop to <code>for k in [3,4]:</code>.</p>
+<p>Even here, though, approach #2 results in unnecessary work, because approach #1
+is still computationally more efficient by looping over the list of words only once,
+compared with approach #2, which would loop over the list of words twice.</p>
+<p>We may further consider a case where approach #2 would give us an advantage,
+and that is the case where we are copying data into the list <code>lengths</code>, instead of 
+just storing a reference to a string. 
+Because we only deal with references in Python, we aren't making copies in the 
+code given above. But because strings are immutable, we could conceivably be 
+making copies if we stored <code>word.upper()</code> instead of <code>word</code>.
+Approach #2 would use less space, because it only considers the values of k 
+that are of interest.</p>
+<p>But even here, approach #1 requires only a small modification to wipe out
+the space advantage of approach #2: add an if statement before calling the 
+append function: <code>if k in [3,4]</code>. Now the calculation of turning a word
+into a set of characters is performed only once for approach #1, 
+and we don't end up storing unnecessary intermediate results.</p>
+<p>The take-home lesson: even if the core idea behind an algorithm is
+straightforward, there are still many ways to do it better or worse. </p>
+<p><a name="five2-lex"></a></p>
+<h2>Lexicographic Ordering of Letters</h2>
+<p>Knuth points out that the word "first" contains letters that occur
+in lexicograhpic order. Exercise #30 of <a href="https://charlesreid1.com/wiki/AOCP">AOCP</a>
+Volume 4 Facsimile 0 asks us to find the first and last such word that occurs 
+in Knuth's set of five letter words.</p>
+<p>To do this, we'll take each word and turn it into a list of characters.
+We'll then sort the characters, and turn the sorted list of characters 
+back into a string. If the string constructed from sorted characters
+equals the original string, we have our word, formed from lexicographically 
+ordered letters.</p>
+<p>We can also perform the reverse - search for words whose letters are 
+in reverse lexicographic order. One such word is "spied". 
+Implementing this task requires a bit more care, 
+because of the fact that Python 3 returns generators where Python 2 
+would return lists, but we can get around this with the <code>list()</code> function, 
+as we shall see shortly.</p>
+<p><a name="five2-lexicographic"></a></p>
+<h3>Five-Letter Words with Lexicographically Ordered Letters</h3>
+<p>Exercise 30 asks us to find the first and last word in the set of 
+five letter words whose letters occur in sorted lexicographic order.
+We begin by sorting all of the words, and we find the first such word
+is "abbey", while the last such word is "pssst".</p>
+<p>There are 105 total words that fit this description. 
+As we might expect, a majority of them begin with 
+letters at the beginning of the alphabet:</p>
+<ul>
+<li>abbey</li>
+<li>abbot</li>
+<li>abhor</li>
+<li>abort</li>
+<li>abuzz</li>
+<li>achoo</li>
+<li>adder</li>
+<li>adept</li>
+<li>adios</li>
+<li>adopt</li>
+<li>aegis</li>
+<li>affix</li>
+<li>afoot</li>
+<li>aglow</li>
+<li>ahhhh</li>
+<li>allot</li>
+<li>allow</li>
+<li>alloy</li>
+<li>ammos</li>
+<li>annoy</li>
+<li>beefs</li>
+<li>beefy</li>
+<li>beeps</li>
+<li>beers</li>
+<li>beery</li>
+<li>befit</li>
+<li>begin</li>
+<li>begot</li>
+<li>bells</li>
+<li>belly</li>
+<li>below</li>
+<li>berry</li>
+<li>bills</li>
+<li>billy</li>
+<li>bitty</li>
+<li>blowy</li>
+<li>boors</li>
+<li>boost</li>
+<li>booty</li>
+<li>bossy</li>
+<li>ceils</li>
+<li>cello</li>
+<li>cells</li>
+</ul>
+<p>The full output is here:</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/output/lexico">lexico output</a></p>
+<p>The code to find these words is given below:</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/lexico.py">lexico.py</a></p>
+<div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">lexico.py</span>
+
+<span class="sd">Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0</span>
+<span class="sd">Exercise #30</span>
+
+<span class="sd">Each letter of the word &quot;first&quot; appears in correct lexicographic order.</span>
+<span class="sd">Find the first and last such words in the SGB words.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">get_words</span> <span class="kn">import</span> <span class="n">get_words</span>
+
+<span class="k">def</span> <span class="nf">in_sorted_order</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+    <span class="n">chars</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+    <span class="k">if</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">chars</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">chars</span><span class="p">))):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="n">words</span> <span class="o">=</span> <span class="n">get_words</span><span class="p">()</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">40</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;ALL lexicographically sorted words:&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">in_sorted_order</span><span class="p">(</span><span class="n">word</span><span class="p">)):</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;{0:d} total.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">count</span><span class="p">))</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">40</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">in_sorted_order</span><span class="p">(</span><span class="n">word</span><span class="p">)):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;First lexicographically sorted word:&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+            <span class="k">break</span>
+
+    <span class="n">words</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">40</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">in_sorted_order</span><span class="p">(</span><span class="n">word</span><span class="p">)):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Last lexicographically sorted word:&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+            <span class="k">break</span>
+</pre></div>
+
+
+<p>The heart of the method here is the <code>in_sorted_order()</code> method:
+this performs the task, as described above. We take the word 
+passed to the function (a string), and turn it into a list 
+using the <code>list()</code> function. We then turn this list 
+back into a string (which is the same as the variable <code>word</code>),
+and compare it to the <em>sorted</em> list of characters, turned back 
+into a string, using the call <code>str(sorted(chars))</code>.</p>
+<p>If the two match, we have not affected the order of characters
+by sorting them in lexicographic (alphabetic) order,
+and therefore the original string was in sorted order,
+and we return True. Otherwise, we return False.</p>
+<p>Here's that method one more time:</p>
+<div class="highlight"><pre><span></span>def in_sorted_order(word):
+    chars = list(word)
+    if(str(chars)==str(sorted(chars))):
+        return True
+    else:
+        return False
+</pre></div>
+
+
+<p><a name="five2-lexicographic"></a></p>
+<h3>Five-Letter Words with Lexicographically Reversed Letters</h3>
+<p>There are significantly fewer five-letter words whose letters are in 
+<em>reverse</em> lexicographic order - 37, compared to the 105 in sorted order.
+Here is the full list:</p>
+<ul>
+<li>mecca</li>
+<li>offed</li>
+<li>ohhhh</li>
+<li>plied</li>
+<li>poked</li>
+<li>poled</li>
+<li>polka</li>
+<li>skied</li>
+<li>skiff</li>
+<li>sniff</li>
+<li>soled</li>
+<li>solid</li>
+<li>sonic</li>
+<li>speed</li>
+<li>spied</li>
+<li>spiff</li>
+<li>spoke</li>
+<li>spoof</li>
+<li>spook</li>
+<li>spool</li>
+<li>spoon</li>
+<li>toked</li>
+<li>toned</li>
+<li>tonic</li>
+<li>treed</li>
+<li>tried</li>
+<li>troll</li>
+<li>unfed</li>
+<li>upped</li>
+<li>urged</li>
+<li>vroom</li>
+<li>wheee</li>
+<li>wooed</li>
+<li>wrong</li>
+<li>yoked</li>
+<li>yucca</li>
+<li>zoned</li>
+</ul>
+<p>The code to do this requires only minor modifications to the original, sorted order code.</p>
+<p>To reverse the procedure, we just need to modify the <code>in_sorted_order()</code> function
+to reverse the sorted list of characters before we reassemble it into a string.
+We can feed the output of the call to <code>sorted()</code> to the <code>reversed()</code> function.
+However, in Python 3, this returns a generator object, which is lazy - 
+it does not automatically enumerate every character. Unless, of course, 
+we force it to.</p>
+<p>That's where the call to <code>list()</code> comes in handy - by passing a generator 
+to <code>list()</code>, we force Python to enumerate the output of the reversed, sorted list 
+generator. Then we turn the reversed, sorted list into a reversed, sorted string:</p>
+<div class="highlight"><pre><span></span>def in_reverse_sorted_order(word):
+    chars = list(word)
+    # Note: reversed returns a generator,
+    # so we have to pass it to list()
+    # to explicitly enumerate the reversed results.
+    if(str(chars)==str(list(reversed(sorted(chars))))):
+        return True
+    else:
+        return False
+</pre></div>
+
+
+<p>Meanwhile, the rest of the script can stay virtually the same.</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/reverse_lexico.py">reverse_lexico.py</a></p>
+<div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">reverse_lexico.py</span>
+
+<span class="sd">Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0</span>
+<span class="sd">Variation on Exercise #30</span>
+
+<span class="sd">Each letter of the word &quot;spied&quot; appears in reversed lexicographic order.</span>
+<span class="sd">Find more words whose letters appear in reverse lexicographic order.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">get_words</span> <span class="kn">import</span> <span class="n">get_words</span>
+
+<span class="k">def</span> <span class="nf">in_reverse_sorted_order</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+    <span class="n">chars</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+    <span class="c1"># Note: reversed returns a generator, </span>
+    <span class="c1"># so we have to pass it to list() </span>
+    <span class="c1"># to explicitly enumerate the reversed results.</span>
+    <span class="k">if</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">chars</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">chars</span><span class="p">))))):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="n">words</span> <span class="o">=</span> <span class="n">get_words</span><span class="p">()</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">40</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;ALL lexicographically reversed words:&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">in_reverse_sorted_order</span><span class="p">(</span><span class="n">word</span><span class="p">)):</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;{0:d} total.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">count</span><span class="p">))</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">40</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">in_reverse_sorted_order</span><span class="p">(</span><span class="n">word</span><span class="p">)):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;First reverse lexicographically sorted word:&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+            <span class="k">break</span>
+
+    <span class="n">words</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">40</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">in_reverse_sorted_order</span><span class="p">(</span><span class="n">word</span><span class="p">)):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Last lexicographically sorted word:&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+            <span class="k">break</span>
+</pre></div>
+
+
+<p><a name="five2-findpalindromes"></a></p>
+<h2>Finding Palindromes</h2>
+<p>Palindromes are words or sets of words that have a reflective property,
+namely, they spell the same thing forward and reverse (e.g., "race car",
+or "Ere I was able, I saw Malta", or "Doc, note I dissent - a fast never prevents a fatness. I diet on cod.").</p>
+<p>In Exercise 29, Knuth asks the reader to perform a straightforward task - 
+find the palindromes in the list of five letter words. (An example of one such
+word is "kayak".) But Knuth goes further, and points out that palindromes 
+can <em>also</em> be formed from pairs of words.  He gives the example "regal lager".
+He asks the reader to find all palindrome pairs as well.</p>
+<p>When working on these exercises, we became curious about palindromic near-misses.
+How many words are <em>almost</em> palindromes? (Example: "going" is very close to a 
+palindrome, if we just changed the n to an o or vice-versa.)
+In fact, we already have all the tools we need at our disposal,
+as we already covered a script to perform a Euclidean distance calculation.</p>
+<p>We will cover Python code to find words that fit into each of these categories,
+and provide some interesting examples. (One of the most surprising things
+to us was just how many words meet these criteria!)</p>
+<p><a name="five2-palindromes"></a></p>
+<h3>Palindromes</h3>
+<p>The first task is finding palindromes in the set of five letter words.
+There are 18 such words. They are given below:</p>
+<ul>
+<li>level</li>
+<li>refer</li>
+<li>radar</li>
+<li>madam</li>
+<li>rotor</li>
+<li>civic</li>
+<li>sexes</li>
+<li>solos</li>
+<li>sagas</li>
+<li>kayak</li>
+<li>minim</li>
+<li>tenet</li>
+<li>shahs</li>
+<li>stats</li>
+<li>stets</li>
+<li>kaiak</li>
+<li>finif</li>
+<li>dewed </li>
+</ul>
+<p>The code to check if a word is a palindrome consists of two simple logical test:
+Is the character at position 0 equal to the character at position 4?
+Is the character at position 1 equal to the character at position 3?
+If both of these are true, the word is a palindrome. Here's the Python function
+to check if a word is a palindrome:</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/palindromes.py">palindromes.py</a></p>
+<div class="highlight"><pre><span></span>def is_palindrome(word):
+    test1 = word[0]==word[4]
+    test2 = word[1]==word[3]
+    if(test1 and test2):
+        return True
+    return False
+</pre></div>
+
+
+<p>and the main driver method, which actually runs the function on each word:</p>
+<div class="highlight"><pre><span></span>if __name__==&quot;__main__&quot;:
+    words = get_words()
+
+    kp = 0
+    palindromes = []
+
+    # Check for palindromes
+    for i in range(len(words)):
+        if(is_palindrome(words[i])):
+            kp += 1
+            palindromes.append(words[i])
+
+    print(&quot;-&quot;*40)
+    print(&quot;Palindromes: \n&quot;)
+    print(&quot;, &quot;.join(palindromes))
+    print(&quot;There are {0:d} palindromes.&quot;.format(kp))
+</pre></div>
+
+
+<p><a name="five2-palindromepairs"></a></p>
+<h3>Palindrome Pairs</h3>
+<p>There are 34 palindromic pairs, if we disallow palindromes from being
+considered palindromic pairs with themselves. These are:</p>
+<ul>
+<li>parts, strap</li>
+<li>lived, devil</li>
+<li>speed, deeps</li>
+<li>sleep, peels</li>
+<li>straw, warts</li>
+<li>faced, decaf</li>
+<li>spots, stops</li>
+<li>fires, serif</li>
+<li>lever, revel</li>
+<li>smart, trams</li>
+<li>ports, strop</li>
+<li>pools, sloop</li>
+<li>stool, loots</li>
+<li>draws, sward</li>
+<li>mined, denim</li>
+<li>spins, snips</li>
+<li>alley, yella</li>
+<li>loops, spool</li>
+<li>sleek, keels</li>
+<li>repel, leper</li>
+<li>snaps, spans</li>
+<li>depot, toped</li>
+<li>timed, demit</li>
+<li>debut, tubed</li>
+<li>laced, decal</li>
+<li>stink, knits</li>
+<li>regal, lager</li>
+<li>tuber, rebut</li>
+<li>remit, timer</li>
+<li>pacer, recap</li>
+<li>snoot, toons</li>
+<li>namer, reman</li>
+<li>hales, selah</li>
+<li>tarps, sprat</li>
+</ul>
+<p>The code to check for palindrome pairs is a little more involved,
+but also consists of a few logical tests to see if letters in 
+one position of the first word match letters in another position of 
+the second word:</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/palindromes.py">palindromes.py</a></p>
+<div class="highlight"><pre><span></span>def is_palindrome_pair(word1,word2):
+    test0 = word1[0]==word2[4]
+    test1 = word1[1]==word2[3]
+    test2 = word1[2]==word2[2]
+    test3 = word1[3]==word2[1]
+    test4 = word1[4]==word2[0]
+    if(test0 and test1 and test2 and test3 and test4):
+        return True
+    return False
+</pre></div>
+
+
+<p>and the main driver method:</p>
+<div class="highlight"><pre><span></span>if __name__==&quot;__main__&quot;:
+    words = get_words()
+
+    kpp = 0
+    palindrome_pairs = []
+
+    # Check for palindrome pairs
+    for i in range(len(words)):
+        for j in range(i,len(words)):
+            if(is_palindrome_pair(words[i],words[j])):
+                # Palindromes shouldn&#39;t count as palindrome pairs
+                if(words[i] is not words[j]):
+                    kpp += 1
+                    palindrome_pairs.append((words[i],words[j]))
+
+    print(&quot;-&quot;*40)
+    print(&quot;Palindrome Pairs: \n&quot;)
+    for pair in palindrome_pairs:
+        print(&quot;, &quot;.join(pair))
+    print(&quot;There are {0:d} palindrome pairs.&quot;.format(kpp))
+</pre></div>
+
+
+<p><a name="five2-nearpalindromes"></a></p>
+<h3>Near Palindromes</h3>
+<p>A near-palindrome is a word that would be a palindrome,
+if one of its letters were slightly modified. We use a 
+"tolerance" parameter to specify how much modification 
+we are willing to live with to consider a word a 
+near-palindrome.</p>
+<p>There are several ways to do this, but we'll keep it simple:
+we consider the totla number of changes to all characters in the word
+required to make a word a palindrome, and test whether the changes
+required to make the word a palindrome are less than or equal to 
+a specified parameter, tolerance.</p>
+<p>For example, if our tolerance were 1, we would consider the 
+words "going" and "moron" to be near-palindromes; 
+if our tolerance were 2, we would consider the words
+"tsars" and "jewel" to be near-palindromes.</p>
+<p>Here is the list of 37 off-by-one palindromes:</p>
+<ul>
+<li>going</li>
+<li>seeds</li>
+<li>tight</li>
+<li>trust</li>
+<li>suits</li>
+<li>sends</li>
+<li>plump</li>
+<li>slums</li>
+<li>sighs</li>
+<li>erase</li>
+<li>serfs</li>
+<li>soaps</li>
+<li>sewer</li>
+<li>soups</li>
+<li>sever</li>
+<li>slams</li>
+<li>scabs</li>
+<li>moron</li>
+<li>ceded</li>
+<li>scads</li>
+<li>suets</li>
+<li>fugue</li>
+<li>seder</li>
+<li>tryst</li>
+<li>educe</li>
+<li>twixt</li>
+<li>tutus</li>
+<li>shags</li>
+<li>slims</li>
+<li>abaca</li>
+<li>anima</li>
+<li>celeb</li>
+<li>selfs</li>
+<li>scuds</li>
+<li>tikis</li>
+<li>topos</li>
+<li>rajas</li>
+</ul>
+<p>and the list of off-by-two palindromes:</p>
+<ul>
+<li>often</li>
+<li>stars</li>
+<li>sight</li>
+<li>visit</li>
+<li>towns</li>
+<li>climb</li>
+<li>flame</li>
+<li>reads</li>
+<li>sings</li>
+<li>hatch</li>
+<li>tends</li>
+<li>naval</li>
+<li>robot</li>
+<li>reeds</li>
+<li>cocoa</li>
+<li>stout</li>
+<li>spins</li>
+<li>onion</li>
+<li>sinks</li>
+<li>edged</li>
+<li>spurs</li>
+<li>jewel</li>
+<li>snaps</li>
+<li>silks</li>
+<li>nasal</li>
+<li>theft</li>
+<li>pagan</li>
+<li>reefs</li>
+<li>stirs</li>
+<li>snips</li>
+<li>tufts</li>
+<li>truss</li>
+<li>strut</li>
+<li>spans</li>
+<li>smelt</li>
+<li>spars</li>
+<li>flake</li>
+<li>rusts</li>
+<li>skims</li>
+<li>sways</li>
+<li>runts</li>
+<li>tsars</li>
+<li>tress</li>
+<li>feted</li>
+<li>rends</li>
+<li>romps</li>
+<li>cilia</li>
+<li>ephod</li>
+<li>fluke</li>
+<li>reset</li>
+<li>farad</li>
+<li>peter</li>
+<li>natal</li>
+<li>thugs</li>
+<li>newel</li>
+<li>paean</li>
+<li>emend</li>
+<li>snoot</li>
+<li>fiche</li>
+<li>porno</li>
+<li>flume</li>
+<li>toons</li>
+<li>roans</li>
+<li>offen</li>
+<li>klunk</li>
+<li>feued</li>
+<li>nihil</li>
+<li>pavan</li>
+<li>relet</li>
+<li>heigh</li>
+<li>revet</li>
+<li>sicks</li>
+<li>spoor</li>
+</ul>
+<p>The check for near-palindromes follows the palindrome test 
+fairly closely, except instead of checking if letters in two positions
+are equal, we check of those two letters are a certain specified 
+distance from one another.</p>
+<p>Here is the code for finding near-palindromes:</p>
+<div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">near_palindromes.py</span>
+
+<span class="sd">Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0</span>
+<span class="sd">Variation on Exercise #29</span>
+
+<span class="sd">Find SGB words that are near-palindromes</span>
+<span class="sd">(edit distance of one or two letters away from a palindrome).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">get_words</span> <span class="kn">import</span> <span class="n">get_words</span>
+<span class="kn">from</span> <span class="nn">euclidean_distance</span> <span class="kn">import</span> <span class="n">euclidean_distance</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+
+<span class="k">def</span> <span class="nf">is_near_palindrome</span><span class="p">(</span><span class="n">word</span><span class="p">,</span><span class="n">lo</span><span class="p">,</span><span class="n">hi</span><span class="p">):</span>
+    <span class="n">d1</span> <span class="o">=</span> <span class="n">euclidean_distance</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">word</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+    <span class="n">d2</span> <span class="o">=</span> <span class="n">euclidean_distance</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">word</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+
+    <span class="k">if</span><span class="p">(</span> <span class="p">(</span><span class="n">d1</span><span class="o">+</span><span class="n">d2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">lo</span> <span class="ow">and</span> <span class="p">(</span><span class="n">d1</span><span class="o">+</span><span class="n">d2</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">hi</span> <span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">return</span> <span class="bp">False</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">get_words</span><span class="p">()</span>
+
+    <span class="n">knp</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">near_palindromes</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Euclidean distance tolerance</span>
+    <span class="n">lo</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">hi</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)):</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">is_near_palindrome</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">lo</span><span class="p">,</span><span class="n">hi</span><span class="p">)):</span>
+            <span class="n">knp</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">near_palindromes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">40</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Near Palindromes: </span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">near_palindromes</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;The number of near-palindromes is {0:d}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">near_palindromes</span><span class="p">)))</span>
+</pre></div>
+
+
+<p><a name="five2-references"></a></p>
+<h2>References</h2>
+<ol>
+<li>
+<p>Knuth, Donald. <u>The Art of Computer Programming</u>. Upper Saddle River, NJ: Addison-Wesley, 2008.</p>
+</li>
+<li>
+<p>Knuth, Donald. <u>The Stanford GraphBase: A Platform for Combinatorial Computing</u>. New York: ACM Press, 1994. 
+&lt;<a href="http://www-cs-faculty.stanford.edu/~knuth/sgb.html">http://www-cs-faculty.stanford.edu/~knuth/sgb.html</a>&gt;</p>
+</li>
+<li>
+<p>"Five Letter Words." Git repository, git.charlesreid1.com. Charles Reid. Updated 1 September 2017.
+&lt;<a href="http://git.charlesreid1.com/cs/five-letter-words">http://git.charlesreid1.com/cs/five-letter-words</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/graphs.html">graphs</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/art-of-computer-programming.html">art of computer programming</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/knuth.html">knuth</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/language.html">language</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Five Letter Words: Part 1: Getting Familiar With The List
             </b></h1>
         
@@ -591,712 +2073,6 @@ page of the wiki.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Euler's Theorem, the Totient Function, and Calculating Totients By Hand
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-08-31T11:00:00-07:00" pubdate>Thursday 08/31/2017</time>
-                in 
-                <a href="/category/mathematics.html">Mathematics</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/eulers-theorem-the-totient-function-and-calculating-totients-by-hand.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2>Table of Contents</h2>
-<ul>
-<li><a href="#totient-intro">Introduction</a></li>
-<li><a href="#totient-complete-reduced">Complete and Reduced Residue Systems</a></li>
-<li><a href="#totient-totient">Euler's Totient Function</a></li>
-<li><a href="#totient-byhand">Calculating the Totient Function by Hand</a></li>
-</ul>
-<!--
-* [Applications](#totient-applications)
-    * [Euler's Theorem and Fermat's Little Theorem](#totient-eulers-theorem)
-    * [RSA Cryptography](#totient-rsa)
-    * [Ramanujan's Sum](#totient-ramanujan)
-    * [Vinogradov's Theorem](#totient-vinogradov)
--->
-
-<p><a name="totient-intro"></a></p>
-<h2>Introduction</h2>
-<p>Today we're going to delve into a little bit of number theory.</p>
-<p>In number theory, we are usually dealing with modular arithmetic - 
-expressions of the form:</p>
-<div class="math">$$
-a \equiv b \mod m
-$$</div>
-<p>or</p>
-<div class="math">$$
-f(x) \equiv 0 \mod m
-$$</div>
-<p>The mod indicates we're doing modular arithmetic, 
-which is (formally) an algebraic system called a ring,
-which consists of the integers 0 through m.</p>
-<p>An analogy to modular arithmetic is the way that the sine 
-and cosine function "wrap around," and </p>
-<div class="math">$$
-\sin \left( \dfrac{2 \pi}{3}  \right) \equiv
-\sin \left( \dfrac{8 \pi}{3}  \right) \equiv 
-\sin \left( \dfrac{14 \pi}{3} \right) \equiv \dots
-$$</div>
-<p>On a ring, this happens with the integers. So, for example,</p>
-<div class="math">$$
-2 \equiv 6 \equiv 10 \equiv \dots \mod 4
-$$</div>
-<p>Modular arithmetic uses the <span class="math">\(\equiv\)</span> symbol, and not the <span class="math">\(=\)</span> symbol,
-because we can't manipulate the left and right side using normal 
-rules of algebra - solving equations on a ring requires some care.</p>
-<p>The value of <span class="math">\(m\)</span> need not be prime, generally, but if it is, we have 
-some special properties that hold.</p>
-<p><a name="totient-complete-reduced"></a></p>
-<h2>Complete and Reduced Residue Systems</h2>
-<p>Consider the ring of integers <span class="math">\(\mod 10\)</span>, which consists of the numbers</p>
-<div class="math">$$
-\{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 \}
-$$</div>
-<p>This is called the complete residue system mod 10.
-If we want to solve an equation like </p>
-<div class="math">$$
-2x \equiv 8 \mod 10
-$$</div>
-<p>we would <em>normally</em> just divide both sides by 2.
-But because of the "mod 10" we have to be a bit more careful.
-Dividing by 2 is just a way of saying, we want to multiply
-2 by some number that will make 2 into 1. </p>
-<p>However, because 2 is a factor of 10, there is no number 
-in the complete residue system that will yield 1 mod 10 when 
-we multiply it by 2:</p>
-<div class="math">$$
-\begin{eqnarray*}
-0 * 2 &amp; \equiv &amp; 0 \mod 10 \\
-1 * 2 &amp; \equiv &amp; 2 \mod 10 \\
-2 * 2 &amp; \equiv &amp; 4 \mod 10 \\ 
-3 * 2 &amp; \equiv &amp; 6 \mod 10 \\
-4 * 2 &amp; \equiv &amp; 8 \mod 10 \\
-5 * 2 \equiv 10 &amp; \equiv &amp; 0 \mod 10 \\
-6 * 2 \equiv 12 &amp; \equiv &amp; 2 \mod 10 \\
-7 * 2 \equiv 14 &amp; \equiv &amp; 4 \mod 10 \\
-8 * 2 \equiv 16 &amp; \equiv &amp; 6 \mod 10 \\
-9 * 2 \equiv 18 &amp; \equiv &amp; 8 \mod 10
-\end{eqnarray*}
-$$</div>
-<p>The same difficulty appears if we try and solve an equation like</p>
-<div class="math">$$
-5x \equiv 8 \mod 10
-$$</div>
-<p>for the same reason - 5 is a factor of 10, so it has no inverse mod 10.</p>
-<p>Contrast that with solving an equation like</p>
-<div class="math">$$
-3x \equiv 8 \mod 10
-$$</div>
-<p>which, because 3 does not share any factors with 10, means we can find a number
-such that 3 times that number yields 1 mod 10:</p>
-<div class="math">$$
-3 \times 7 \equiv 21 \equiv 1 \mod 10
-$$</div>
-<p>so we can solve the equation by multiplying both sides by 7, the inverse of 3:</p>
-<div class="math">$$
-\begin{eqnarray*}
-3 x &amp; \equiv &amp; 8 \mod 10 \\
-(7 \times 3) x &amp; \equiv &amp; (7 \times 8) \mod 10 \\
-x &amp;=&amp; 56 \mod 10 \\
-x &amp;=&amp; 6 \mod 10
-\end{eqnarray*}
-$$</div>
-<p>We can resolve this by creating a reduced residue system, which is a set of 
-integers that have inverses mod 10. The reduced residue system consists of 
-integers that </p>
-<ul>
-<li>Have no common factors with the ring size <span class="math">\(m\)</span></li>
-<li>Have no two elements that are congruent \mod m</li>
-</ul>
-<p>So a reduced residue system <span class="math">\(\mod 10\)</span> could be, for example,</p>
-<div class="math">$$
-\{ 1, 3, 7, 9 \}
-$$</div>
-<p>(other reduced residue systems are possible as well).</p>
-<p>It is important to note that we do not include 0, in general, because
-0 shares all factors with <span class="math">\(m\)</span> - that is, every number in the complete
-residue system divides 0, so the greatest common factor of <span class="math">\(0\)</span> and <span class="math">\(m\)</span> is <span class="math">\(m\)</span>
-and not 1!</p>
-<p>(The only exception to this rule is <span class="math">\(m=1\)</span>, but this is a trivial case,
-since <em>every</em> integer is congruent mod 1.)</p>
-<p>The reduced residue system has the property that any number in the complete
-residue system can be generated from the reduced residue system via addition.</p>
-<p>Further, the size of the reduced residue system can be expressed using a function
-called the Euler totient function, denoted <span class="math">\(\phi(m)\)</span>. The totient function
-quantifies the number of integers less than <span class="math">\(m\)</span> that are relatively prime 
-with <span class="math">\(m\)</span> (that is, two numbers such that the greatest common factor, denoted
-with the shorthand <span class="math">\((a,m)\)</span>, is 1).</p>
-<p><a name="totient-totient"></a></p>
-<h2>Euler's Totient Function</h2>
-<p>Euler's totient function, <span class="math">\(\phi(m)\)</span>, turns out to be an extremely useful 
-quantity in number theory. It also provides a quantitative measure of how 
-divisible a number is. Take the two numbers 960 and 961 as examples:</p>
-<div class="math">$$
-\phi(960) = 256 \qquad \phi(961) = 930
-$$</div>
-<p>from this, we can see that 960 has many more factors than 961.
-Here are their prime factorizations:</p>
-<div class="math">$$
-\begin{eqnarray*}
-960 = 2^6 \times 3 \times 5 \\
-961 = 31^2
-\end{eqnarray*}
-$$</div>
-<p>This means that the ring of integers mod 960 will have far more 
-congruences that cannot be solved compared to the ring of integers mod 961.</p>
-<p><em>Historical Note:</em> The notation <span class="math">\(\phi(n)\)</span> was first used by the mathematician
-Carl Friedrich Gauss in his incredible book <em>Disquisitiones Arithmeticae</em>, 
-an important historical textbook that focused on gathering all of the results
-known to that point about number theory in a single work. (Gauss did omit the 
-parenthesis, however, writing the totient function simply as <span class="math">\(\phi n\)</span>.)</p>
-<p><a name="totient-byhand"></a></p>
-<h2>Calculating the Totient Function by Hand</h2>
-<p>It may be obvious that the totient function is simple to compute using a computer;
-but the question naturally arises: can we compute totient functions for large integers
-by hand?</p>
-<p>It turns out we can - we just need to be able to factor the number in question.
-(Note that this requirement is true generally; see the section on RSA Cryptography
-in a post to follow).</p>
-<p>Let's first illustrate some rules for computing the totient function of composite numbers
-with some simple examples. </p>
-<h3>Totient Property: Prime Power</h3>
-<p>The first useful property is computing the totient function of a number
-that is a prime number raised to some power. Let's take the simple example of 
-<span class="math">\(81 = 9^2 = 3^4\)</span>. We know that any number that shares factors with 81
-is a multiple of 3 less than or equal to 81, which is the set of numbers</p>
-<div class="math">$$
-\{ 1 \times 3, 2 \times 3, 3 \times 3, \dots, 3^{4-1} \times 3 \}
-$$</div>
-<p>and there are <span class="math">\(3^{4-1}\)</span> of these numbers. Thus, of all of the integers 
-from <span class="math">\(1\)</span> to <span class="math">\(3^4\)</span>, there are <span class="math">\(3^3\)</span> of them that are not relatively prime 
-with <span class="math">\(3^4\)</span>. So the totient function can be written:</p>
-<div class="math">$$
-\begin{eqnarray*}
-\phi(81) &amp;=&amp; \phi(3^4) = 3^{4} - 3^{4-1} \\
-\phi(81) &amp;=&amp; 81 - 27 \\
-\phi(81) &amp;=&amp; = 54
-\end{eqnarray*}
-$$</div>
-<p>In general, if we are considering the totient function of a prime power <span class="math">\(p^k\)</span>,
-we can write the totient function as </p>
-<div class="math">$$
-\phi(p^k) = p^{k} - p^{k-1}
-$$</div>
-<h3>Totient Property: Product of Primes</h3>
-<p>If we take a composite number like 20, we can split the totient function 
-of 20 into the product of the totient function of the factors of 20:</p>
-<div class="math">$$
-\begin{eqnarray*}
-20 = 5 \times 4 \\
-\phi(20) = \phi(5) \times \phi(4) \\
-\phi(20) = 4 \times 2 = 8
-\end{eqnarray*}
-$$</div>
-<p>which is, indeed, the value of <span class="math">\(\phi(20)\)</span>. However, this does not hold <em>generally</em>,
-as we can see from computing the totient of 50:</p>
-<div class="math">$$
-\begin{eqnarray*}
-50 = 5 \times 10 \\
-\phi(50) \neq \phi(5) \times \phi(10)
-\phi(50) \neq 4 \times 4
-\phi(50) \neq 16
-\end{eqnarray*}
-$$</div>
-<p>In fact, the value of <span class="math">\(\phi(50)\)</span> is 20, not 16! The problem is with our choice
-of factors, 5 and 10. These two numbers share a common factor of 5, meaning
-their totient functions do not account for <em>all</em> of the numbers that will be 
-relatively prime with 50. </p>
-<p>To fix this, we can further break down 50 into its prime factorization,
-and compute the totient function of those primes:</p>
-<div class="math">$$
-\begin{eqnarray*}
-50 &amp;=&amp; 2 \times 5^2 \\
-\phi(50) &amp;=&amp; \phi(2) \times \phi(5^2) \\
-\phi(50) &amp;=&amp; 1 \times ( 5^2 - 5 ) \\
-\phi(50) &amp;=&amp; 1 \times 20 \\
-\phi(50) &amp;=&amp; 20
-\end{eqnarray*}
-$$</div>
-<p>which gives us the correct result of 20.</p>
-<p><em>Generalizing</em> this rule, we can say that we can break down the totient function
-of a product of two numbers <span class="math">\(s \times t\)</span> into the product of totient functions 
-<span class="math">\(\phi(s)\)</span> and <span class="math">\(\phi(t)\)</span> only if the greatest common factor between <span class="math">\(s\)</span> and <span class="math">\(t\)</span> is 1.</p>
-<h3>Totient Example</h3>
-<p>Let's consider the following example: suppose we wish to compute </p>
-<div class="math">$$
-\phi( 280 )
-$$</div>
-<p>We can start by recognizing some factors of 280 - we can pull out the factors 
-7 and 4, and 2 and 5. These can be further factored to yield the prime factorization 
-of 280:</p>
-<div class="math">$$
-280 = 2^3 \times 5 \times 7
-$$</div>
-<p>Now we can use the property that the totient function of an integer <span class="math">\(m\)</span> 
-can be expressed as the product of the totient functions of the factors of <span class="math">\(m\)</span>.
-So we can write <span class="math">\(\phi(280)\)</span> as any of the following equivalent expressions:</p>
-<div class="math">$$
-\begin{eqnarray*}
-\phi(280) &amp;=&amp; \phi(10) \times \phi(7) \times \phi(2^2) \\
-\phi(280) &amp;=&amp; \phi( 2^3 ) \times \phi(5) \times \phi(7) 
-\end{eqnarray*}
-$$</div>
-<p>Using the second expression, we know that</p>
-<div class="math">$$
-\begin{eqnarray*}
-\phi(2^3) &amp;=&amp; (2^3 - 2^2) = 4 \\
-\phi(5)   &amp;=&amp; 4 \\
-\phi(7)   &amp;=&amp; 6
-\end{eqnarray*}
-$$</div>
-<p>for an overall totient function value of </p>
-<div class="math">$$
-\begin{eqnarray*}
-\phi(280) &amp;=&amp; 4 \times 4 \times 6 \\
-\phi(280) &amp;=&amp; 96
-\end{eqnarray*}
-$$</div>
-<p>which is indeed the correct result:</p>
-<p><img alt="Totient function calculation with Wolfram Alpha" src="/images/alpha-totient.png"></p>
-<!--
-
-<a name="totient-applications"></a>
-## Other Applications
-
-<a name="totient-eulers-theorem"></a>
-### Euler's Theorem and Fermat's Little Theorem
-
-<a name="totient-rsa"></a>
-### RSA Cryptography
-
-<a name="totient-ramanujan"></a>
-### Ramanujan's Sum
-
-<a name="totient-vinogradov"></a>
-### Vinogradov's Theorem
-
--->
-
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/mathematics.html">mathematics</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/factors.html">factors</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/number-theory.html">number theory</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/euler.html">euler</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Mad Combinatoric Castles
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-07-25T18:00:00-07:00" pubdate>Tuesday 07/25/2017</time>
-                in 
-                <a href="/category/mathematics.html">Mathematics</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/mad-combinatoric-castles.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h1>Table of Contents</h1>
-<ul>
-<li><a href="#castles-problem">Overview: The Problem</a></li>
-<li><a href="#polyominoes">Polyominoes</a><ul>
-<li><a href="#castle-rules">Castle Rules for Polynominoes</a></li>
-</ul>
-</li>
-<li>[</li>
-<li>Problem 502 Solution Approaches</li>
-</ul>
-<p><a name="castles-problem"></a></p>
-<h1>Overview: The Problem</h1>
-<p>In an earlier post, I mentioned <a href="https://charlesreid1.com/wiki/Project_Euler">my efforts on Project Euler problems</a>
-and the wide variety of problems there that can offer some profound mathematical insights.</p>
-<p>Given that the first post covered Project Euler problem 1, I thought it would be nice
-if the next problem cranked up the difficulty factor by an order of magnitude.
-<a href="https://projecteuler.net/problem=502">Project Euler Problem 502</a> is a very hairy combinatorics problem that required me to learn about 
-a wide variety of combinatorial enumeration techniques.</p>
-<p>Let's start with the problem statement.</p>
-<h2>Building Castles</h2>
-<p>Problem 502 is about building castles. The problem gives an <span class="math">\(M \times N\)</span> rectangular grid,
-and asks us to count how many "castles" can be built on the rectangular grid, given its maximum
-height. </p>
-<p>Here is how the game works:</p>
-<p>First, start by defining a block as a rectangle of height 1, and an integer-valued length.
-A castle is a configuation of stacked blocks.</p>
-<p>For a game grid of size <span class="math">\(M \times N\)</span>, we can construct castles according to
-the following rules:</p>
-<ul>
-<li>Blocks can be placed on top of other blocks, but no sticking out past edge</li>
-<li>All blocks aligned to grid</li>
-<li>Two neighboring blocks must have 1 unit of space between them</li>
-<li>Maximum achieved height of castle is EXACTLY M</li>
-<li>Castle is made from even number of blocks</li>
-</ul>
-<p>Here is an example W = 8, H = 5 castle given in more compact notation:</p>
-<div class="highlight"><pre><span></span>  #   # 
-  #   ##
- ## # ##
-##### ##
-########
-</pre></div>
-
-
-<p>We can also build more complicated castles, like this 10 by 100 castle:</p>
-<div class="highlight"><pre><span></span>X       X      XX    X     XX   XX X X                          X XX          XX   XX  X     X   XXX
-X       X      XX    X     XX X XX X X     X     X             XX XX          XX   XX  X     X   XXX
-X      XX      XX    X     XX X XXXX X     X     X             XX XX          XX   XX  X     X   XXX
-X      XX      XX    X     XX X XXXX X     X     X XXX         XX XX          XX X XX  X     X   XXX
-X      XX     XXX    X     XX X XXXX X  X  X     X XXX X X     XX XX          XX X XX  X  X  X   XXX
-X      XX  X  XXX  X X     XXXX XXXX X  XX X    XX XXX X X   X XX XX          XX XXXX  X XX XX  XXXX
-X  XX  XX  X  XXX  X X     XXXX XXXX XX XX XX XXXX XXX X XXX X XX XX    X     XX XXXXX X XX XX XXXXX
-X  XX  XXX X  XXX  X X   X XXXX XXXX XX XX XX XXXX XXXXX XXX XXXX XX  X X     XX XXXXX X XX XXXXXXXX
-X XXXXXXXX X XXXXXXX X XXXXXXXX XXXXXXX XX XX XXXXXXXXXXXXXX XXXX XX XX X  XX XX XXXXXXXXXX XXXXXXXX
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-</pre></div>
-
-
-<p>Our objective in this problem is to enumerate all possible castles. Let <span class="math">\(F(x,y)\)</span> denote the number of 
-unique castles with a width of x and a height of exactly y. The problem gives use the trivial number
-<span class="math">\(F(4,2) = 10\)</span>. The problem also gives <span class="math">\(F(13,10)\)</span> and <span class="math">\(F(10,13)\)</span>, both of which are absolutely enormous numbers.</p>
-<p>This should be your first giant red flag that manual enumeration through a traversal of combinatoric space 
-is absolutely, positively out of the question. We'll explain why in more detail below, but suffice to say,
-there is a combinatoric explosion that occurs for castles larger than 10, so castles with a width of 
-1 trillion are going to get STUPID big.</p>
-<p>Then we're given <span class="math">\(F(100,100)\)</span>, which is so enormous it has to be reported mod 1,000,000,007.</p>
-<p>Finally, the problem asks us the following whopper of a question:</p>
-<p>What is <span class="math">\(F(10^{12},100) + F(10^4, 10^4) + F(100,10^{12}) mod 1,000,000,007\)</span>? </p>
-<p>Whew.</p>
-<h2>The Scale of the Problem</h2>
-<p>For solving this problem it is important to take a step back and think through
-the size of the combinatoric space being searched, and what methods we have for 
-carving out that space.</p>
-<p>As already mentioned, the size of this problem - the actual number of 
-castles - is surely larger than the <a href="https://charlesreid1.com/wiki/Eddington_Number">Eddington numer</a>,
-the number of protons in the known universe. The numbers of combinations are 
-STUPID big. There's no way for the mind to fully wrap itself around the concept.</p>
-<p>The huge numbers involved means, we must have a closed-form expression for <span class="math">\(F(x,y)\)</span> that we can
-evaluate once to get each of the <span class="math">\(F(10^{12},100), F(10^4,10^4), F(100,10^{12})\)</span> required by the answer.
-Doing so much as counting to 1 trillion takes minutes on modern computers, so if you're doing anything else
-1 trillion times, you'll end up waiting a loooong time.</p>
-<h2>Generating Functions</h2>
-<p>As it turns out, there is indeed a combinatorial enumeration method that does
-not require explicitly finding or generating each permutation in order to count
-all permutations.  I have covered <a href="https://charlesreid1.com/wiki/Generating_Functions">generating
-functions</a> on the
-charlesreid1.com wiki.  The principal idea behind generating functions is the
-observation that we can rearrange the infinite series:</p>
-<div class="math">$$
-G(z) = 1 + z + z^2 + z^3 + \dots
-$$</div>
-<p>into the equation </p>
-<div class="math">$$
-G(z) = \dfrac{1}{1-z}
-$$</div>
-<p>This single identity leads to a whole family of solution techniques for generating functions.
-The basic idea is to start by writing the rules of your system (see above), 
-then write a generating function that varies with characteristic variables of the problem 
-(width and height in this case, possibly others),
-and last, combine the generating functions of different rules or objects into a single generating function.</p>
-<p><a name="polyominoes"></a></p>
-<h1>Overview of Polyominoes</h1>
-<p>Let us begin by considering a two-dimensional grid <span class="math">\(\pi\)</span> of points at positive integer coordinates,
-<span class="math">\(\pi = \mathbb{N} \times \mathbb{N}\)</span>. </p>
-<p>Let a polyomino denote a two-dimensional shape formed by connecting contiguous unit square tiles
-together, all of which align to the 2D grid of integers <span class="math">\(\pi\)</span>. </p>
-<p>(Granted, this definition sounds a bit pedantic, as we're just describing stackable squares,
-but we need to keep the definition general because there are many kinds of polyomonioes,
-and many rules that we can set for how we arrange them.)</p>
-<p>If you have played <a href="https://en.wikipedia.org/wiki/Tetris">Tetris</a> before, or 
-John Conway's <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Game of Life</a>, you will recognize
-polyominoes from those contexts.</p>
-<p>Now, we set up our generating function in terms of characteristics of the problem.</p>
-<p>It is very important to note that, while most of the rules are fairly straightforward to translate into
-a polyomonio type of framework, Rule 6 is not. In fact, it is probably Rule 6 that makes Problem 502
-so challenging. Were it not for Rule 6, this would be a nearly-trivial problem.</p>
-<p>Let's review our castle construction rules and translate them into polyomino equivalents.</p>
-<p><a name="castle-rules"></a></p>
-<h2>Castle Rules for Polyominoes</h2>
-<h3>Generating Function Variables</h3>
-<p>We want to construct a multivariate ordinary generating function for our castles, since we have 
-several variables we want to change, and get back a total count of castles.</p>
-<p>The two most obvious variable choices for our generating function independent variables 
-are width <span class="math">\(x\)</span> and height <span class="math">\(y\)</span>. Surely, these must be in the final generating function.</p>
-<p>However, this still doesn't give us enough information about the construction process 
-from step to step. Imagine that we place the first block on row 1.</p>
-<p>Then we may place as many blocks as we would like along row 2, wherever we would like 
-(level 2 is the least restricted layer of the castle).</p>
-<p>Now, when we get to row 3, we are only allowed to keep building where there is already 
-an existing tower from the prior row. This means, we have to pass along information 
-from the prior row - where the bricks are located and how many - so that we know where
-the next level may build towers.</p>
-<p>This will remain an open question until we cover a few other representations of 
-Problem 502 and ways of modeling it. Then we will cover what additional
-variables our generating function might need.</p>
-<h3>Rule 1: No Overhangs</h3>
-<p>Rule 1 stipulates that blocks can be placed on top of
-other blocks as long as nothing sticks out past the end
-or hags out.</p>
-<p>This ensures that the resulting polyomino is column
-convex. Column convexity is the property that we can
-draw a vertical line through any column of the
-polyomino, and we only intersect the polyomino in two
-places. (No internal breaks.)</p>
-<p>This rule stipulates what kind of polyomino
-constructions are allowed.</p>
-<h3>Rule 2: Snap to Grid</h3>
-<p>This rule is just saying that the unit squares in the
-castle problem match the unit squares of polyominoes,
-ensuring the problems are interchangeable.</p>
-<h3>Rule 3: Neighbor Blocks Need Space</h3>
-<p>Rule 3 is crucial for being able to count blocks. If two
-side-by-side contiguous unit squares could be either one
-or two blocks, this would make the final count of
-solutions much, much, much, much, much bigger than it
-should be.</p>
-<h3>Rule 4: Bottom Row is One Block</h3>
-<p>This is more of an accounting-based rule, but we define
-our castle construction process such that it begins with
-a completed row. This means that the number of blocks
-that we add on top of that single block must be odd
-overall.</p>
-<h3>Rule 5: Maximum Height is Exactly H</h3>
-<p>As it turns out, the last two rules are the toughest -
-in a sense, because they are <strong>global</strong> conditions on
-the combinatoric solution that is being counted.  In
-other words, we will use generating functions to
-"construct" our combinatoric objects in a methodical
-way, and the challenge is on setting global conditions
-on the generating function's counted solutions.</p>
-<h3>Rule 6: Even Number of Blocks</h3>
-<p>Rule 6 is definitely what makes this problem difficult. </p>
-<p>Our approach is going to involve coming up with a 
-counting function - but this rule tells us that the
-counting function will need to have some way of
-accounting for the total number of blocks, and
-divide by or subtract a factor that accounts for
-castles with an odd number of blocks.</p>
-<p><a name="castles-problem"></a></p>
-<h2>Don't Generate - Enumerate!</h2>
-<p>We mentioned above that the number of possibilities
-here is huge, so this combinatorics problem falls 
-squarely in the realm of enumerating, not generating.</p>
-<p>That being said, and keeping in mind that the problem
-size blows up rapidly, it can still be useful to write
-an algorithm to generate castles for small values of
-width and height, to test formulas for these small
-values (and uncover corner cases!).</p>
-<p>See <a href="https://charlesreid1.com/wiki/Project_Euler/502">Project Euler/502</a>
-on the charlesreid1.com wiki for continued work on
-this problem. </p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/mathematics.html">mathematics</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/factors.html">factors</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/sequences.html">sequences</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/project-euler.html">project euler</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1332,6 +2108,12 @@ this problem. </p>
 
             <h2>February 2019</h2>
 
+            <p class="archive">
+            <a href="/a-few-of-my-favorite-peps.html">A Few of My Favorite PEPs</a>
+            </p>
+            <p class="archive">
+            <a href="/announcing-the-public-release-of-centillion-a-document-search-engine.html">Announcing the public release of centillion: a document search engine</a>
+            </p>
             <p class="archive">
             <a href="/context-managers-in-python.html">Context Managers in Python</a>
             </p>
