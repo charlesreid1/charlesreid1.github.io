@@ -2,7 +2,6 @@ Title: Any Color You Like, As Long As It's 00ADD8
 Date: 2019-02-23 10:00
 Category: Go
 Tags: go, golang, rosalind, bioinformatics, black, python, gofmt
-Status: draft
 
 A short post with some thoughts on how writing Go code has
 helped us learn to stop worrying and love autoformatting tools.
