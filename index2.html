@@ -102,6 +102,810 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Building Snakemake Command Line Wrappers for Kubernetes Workflows
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-01-28T20:00:00-08:00" pubdate>Monday 01/28/2019</time>
+                in 
+                <a href="/category/snakemake.html">Snakemake</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/building-snakemake-command-line-wrappers-for-kubernetes-workflows.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><strong>NOTE:</strong> These ideas are implemented in the repository
+<a href="https://github.com/charlesreid/2019-snakemake-byok8s">charlesreid1/2019-snakemake-byok8s</a>.</p>
+<p><br />
+<br /></p>
+<h2>Table of Contents:</h2>
+<ul>
+<li><a href="#exe">Recap: Workflows as Executables</a><ul>
+<li><a href="#2018">2018-snakemake-cli</a></li>
+<li><a href="#2019">2019-snakemake-cli</a></li>
+<li><a href="#byok8s">2019-snakemake-byok8s</a></li>
+</ul>
+</li>
+<li><a href="#byok8s2">Overview of 2019-snakemake-byok8s</a><ul>
+<li><a href="#k8s">Cloud + Scale = Kubernetes</a></li>
+<li><a href="#smkk8s">Snakemake k8s support</a></li>
+</ul>
+</li>
+<li><a href="#cli">Modifying the CLI</a><ul>
+<li><a href="#ns">Namespaces</a></li>
+<li><a href="#flags">Adding flags</a></li>
+</ul>
+</li>
+<li><a href="#minikube">Local Kubernetes Clusters with Minikube</a><ul>
+<li><a href="#minikube">What is minikube?</a></li>
+<li><a href="#aws">AWS</a></li>
+<li><a href="#dns-aws">Fixing DNS issues with AWS</a></li>
+<li><a href="#travis">Travis</a></li>
+<li><a href="#travis-yml"><code>.travis.yml</code></a></li>
+</ul>
+</li>
+<li><a href="#byok8s3">End Product: byok8s</a></li>
+<li><a href="#docs">Documentation</a></li>
+<li><a href="#next">Next Steps</a></li>
+</ul>
+<p><br />
+<br /></p>
+<p><a name="exe"></a></p>
+<h1>Recap: Workflows as Executables</h1>
+<p>In our previous blog post, <a href="https://charlesreid1.github.io/building-snakemake-command-line-wrappers.html">Building Snakemake Command Line Wrappers</a>,
+we covered some approaches to making Snakemake
+workflows into executables that can be run as
+command line utilities.</p>
+<p>In this post, we extend those ideas to Snakemake workflows
+that run on Kubernetes clusters.</p>
+<p><a name="2018"></a></p>
+<h2>2018-snakemake-cli</h2>
+<p>To recap, back in March 2018 Titus Brown wrote a blog post titled
+<a href="http://ivory.idyll.org/blog/2018-workflows-applications.html">Pydoit, snakemake, and workflows-as-applications</a>
+in which he implemented a proof-of-concept command
+line utility wrapping the Snakemake API to create
+an executable Snakemake workflow.</p>
+<p>The end result was a command line utility that could
+be run like so:</p>
+<div class="highlight"><pre><span></span>./run &lt;workflow-config&gt; &lt;workflow-params&gt;
+</pre></div>
+
+
+<p>Relevant code is in <a href="https://github.com/ctb/2018-snakemake-cli">ctb/2018-snakemake-cli</a>.</p>
+<p><a name="2019"></a></p>
+<h2>2019-snakemake-cli</h2>
+<p>In our previous blog post, <a href="https://charlesreid1.github.io/building-snakemake-command-line-wrappers.html">Building Snakemake Command Line Wrappers</a>,
+we extended this idea to create a bundled executable
+command line utility that could be installed with
+<code>setup.py</code> and run from a working directory. We also
+demonstrated a method of writing tests for the 
+Snakemake workflow and running those tests with
+Travis CI.</p>
+<p>We packaged the Snakefile with the command line utility,
+but the approach is flexible and can be modified to
+use a user-provided Snakemake workflow or Snakefile.</p>
+<p>The end result was a command line utility called
+<code>bananas</code> that could be installed and run like
+the <code>run</code> wrapper above:</p>
+<div class="highlight"><pre><span></span>bananas &lt;workflow-config&gt; &lt;workflow-params&gt;
+</pre></div>
+
+
+<p>Relevant code is in <a href="https://github.com/charlesreid1/2019-snakemake-cli">charlesreid1/2019-snakemake-cli</a>.</p>
+<p><a name="byok8s"></a></p>
+<h2>2019-snakemake-byok8s</h2>
+<p>The next logical step in bundling workflows was to take
+advantage of Snakemake's ability to run workflows across
+distributed systems.</p>
+<p>Specifically, we wanted to modify the command line utility
+above to run the workflow on a user-provided Kubernetes
+cluster, instead of running the workflow locally.</p>
+<p>The result is <a href="https://github.com/charlesreid1/2019-snakemake-byok8s">2019-snakemake-byok8s</a>,
+a command line utility that can be installed with
+a <code>setup.py</code> and that launches a Snakemake workflow 
+on a user-provided Kubernetes cluster. Furthermore,
+we demonstrate how to use minikube to run a local
+Kubernetes cluster to test Snakemake workflows on
+Kubernetes clusters.</p>
+<p>Here's what it looks like in practice:</p>
+<div class="highlight"><pre><span></span># Get byok8s
+git clone https://github.com/charlesreid1/2019-snakemake-byok8s.git
+cd ~/2019-snakemake-byok8s
+
+# Create a virtual environment
+virtualenv vp
+vp/bin/actiavte
+
+# Install byok8s
+pip install -r requirements.txt
+python setup.py build install
+
+# Create virtual k8s cluster
+minikube start
+
+# Run the workflow on the k8s cluster
+cd /path/to/workflow/
+byok8s my-workflowfile my-paramsfile --s3-bucket=my-bucket
+
+# Clean up the virtual k8s cluster
+minikube stop
+</pre></div>
+
+
+<p>We cover the details below.</p>
+<p><br />
+<br /></p>
+<p><a name="byok8s2"></a></p>
+<h1>Overview of 2019-snakemake-byok8s</h1>
+<p><a name="k8s"></a></p>
+<h2>Cloud + Scale = Kubernetes (k8s)</h2>
+<p>First, why kubernetes (k8s)?</p>
+<p>To scale Snakemake workflows to multiple compute nodes,
+it is not enough to just give Snakemake a pile of
+compute nodes and a way to remotely connect to each.
+Snakemake requires the compute nodes to have a 
+controller and a job submission system.</p>
+<p>When using cloud computing platforms like GCP (Google 
+Cloud Platform) or AWS (Amazon Web Services),
+k8s is a simple and popular way to orchestrate
+multiple compute nodes (support for Docker images
+is also baked directly into k8s).</p>
+<p><a name="smkk8s"></a></p>
+<h2>Snakemake k8s Support</h2>
+<p>Snakemake has built-in support for k8s, making
+the combination a logical choice for running 
+Snakemake workflows at scale in the cloud. </p>
+<p>The <code>minikube</code> tool, which we will cover later
+in this blog post, makes it easy to run a local
+virtual k8s cluster for testing purposes, and
+even makes it possible to run k8s tests using
+Travis CI.</p>
+<p>Snakemake only requires the <code>--kubernetes</code> flag,
+and an optional namespace, to connect to
+the k8s cluster. (Under the hood, Snakemake
+uses the Kubernetes Python API to connect
+to the cluster and launch jobs.)</p>
+<p>If you can run <code>kubectl</code> from a computer
+to control the Kubernetes cluster, you can
+run a Snakemake workflow on that cluster.</p>
+<p>Let's get into the changes required in the Python code.</p>
+<p><br />
+<br /></p>
+<p><a name="cli"></a></p>
+<h1>Modifying the CLI</h1>
+<p>In our <a href="https://charlesreid1.github.io/building-snakemake-command-line-wrappers.html">prior post</a>
+covering <a href="https://github.com/charlesreid1/2019-snakemake-cli">charlesreid1/2019-snakemake-cli</a>,
+we showed how to create a command line utility
+using the <code>cli/</code> directory for the command line
+interface package, and specifying it is a cli
+entrypoint in <code>setup.py</code>:</p>
+<div class="highlight"><pre><span></span>cli/
+├── Snakefile
+├── __init__.py
+└── command.py
+</pre></div>
+
+
+<p>and the relevant bit from <code>setup.py</code>:</p>
+<div class="highlight"><pre><span></span><span class="n">setup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;bananas&#39;</span><span class="p">,</span>
+        <span class="o">...</span>
+        <span class="n">entry_points</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">[console_scripts]</span>
+<span class="s2">{program} = cli.command:main</span>
+<span class="s2">      &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">program</span> <span class="o">=</span> <span class="n">_program</span><span class="p">),</span>
+</pre></div>
+
+
+<p>We want our new command line utility, <code>byok8s</code>, to work
+the same way, so we can do a <code>s/byok8s/bananas/g</code>
+across the package.</p>
+<p>The only change required happens in the file
+<code>command.py</code>, where the Snakemake API call 
+happens.</p>
+<p><a name="ns"></a></p>
+<h2>Namespaces</h2>
+<p>Checking the <a href="https://snakemake.readthedocs.io/en/stable/api_reference/snakemake.html">Snakemake API documentation</a>,
+we can see that the API has a <code>kubernetes</code> option:</p>
+<blockquote>
+<p><strong>kubernetes</strong> <em>(str)</em> – submit jobs to kubernetes,
+using the given namespace.</p>
+</blockquote>
+<p>so <code>command.py</code> should modify the Snakmake API call
+accordingly, adding a kubernetes namespace.
+This is a parameter the user usually won't need
+to provide (<code>default</code> is the typical namespace
+we want to use) but we added a <code>-k</code> argument
+to the ArgParser to allow the user to specify
+the Kubernetes namespace name. By default
+the Kubernetes namespace used is <code>default</code>.</p>
+<p><a name="flags"></a></p>
+<h2>Adding flags</h2>
+<p>We add and modify some flags to make the workflow
+more flexible:</p>
+<ul>
+<li>
+<p>The user now provides the Snakefile, which is
+  called <code>Snakefile</code> in the current working directory
+  by default but can be specified with the <code>--snakefile</code>
+  or <code>-s</code> flag</p>
+</li>
+<li>
+<p>The user provides the k8s namespace using the
+  <code>--k8s-namespace</code> or <code>-k</code> flag</p>
+</li>
+<li>
+<p>The user provides the name of an S3 bucket for
+  Snakemake worker nodes to use for I/O using the
+  <code>--s3-bucket</code> flag</p>
+</li>
+</ul>
+<p>Finally, the user is also required to provide their
+AWS credentials to access the S3 bucket, via two
+environment variables that Snakemake passes through
+to the Kubernetes worker nodes:</p>
+<div class="highlight"><pre><span></span>AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+</pre></div>
+
+
+<p>For Travis CI testing, these environment variables
+can be set in the repository settings on the Travis
+website once Travis CI has been enabled.</p>
+<p>See <a href="https://charlesreid1.github.io/2019-snakemake-byok8s/travis_tests/">https://charlesreid1.github.io/2019-snakemake-byok8s/travis_tests/</a>
+for details.</p>
+<p><br />
+<br /></p>
+<p><a name="minikube"></a></p>
+<h1>Local Kubernetes Clusters with Minikube</h1>
+<p><a name="minikube"></a></p>
+<h2>What is minikube?</h2>
+<p>Minikube is a Go program that allows users to simulate
+a single-node kubernetes cluster using a virtual machine.
+This is useful for local testing of Kubernetes workflows,
+as it does not require setting up or tearing down cloud
+infrastructure, or long waits for remote resources to
+become ready.</p>
+<p>We cover two ways to use it:</p>
+<ol>
+<li>
+<p>Installing and running a minikube virtual kubernetes cluster on
+   AWS (for development and testing of Snakemake + kubernetes
+   workflows)</p>
+</li>
+<li>
+<p>Running a minikube cluster on a Travis CI worker node
+   to enable us to <em>test</em> Snakemake + kubernetes workflows.</p>
+</li>
+</ol>
+<p><a name="aws"></a></p>
+<h2>AWS</h2>
+<p>Using Minikube from an AWS EC2 compute node comes 
+with two hangups.</p>
+<p>The first is that AWS nodes are virtual machines,
+and you can't run virtual machines within virtual
+machines, so it is not possible to use minikube's
+normal VirtualBox mode, which creates a kubernetes
+cluster using a virutal machine.</p>
+<p>Instead, we must use minikube's native driver, meaning
+minikube uses docker directly. This is tricky for several
+reasons:</p>
+<ul>
+<li>we can't bind-mount a local directory into the
+  kubernetes cluster</li>
+<li>the minikube cluster must be run with sudo
+  privileges, which means permissions can be
+  a problem</li>
+</ul>
+<p>The second hangup with minikube on AWS nodes is that the
+DNS settings of AWS nodes are copied into the Kubernetes
+containers, including the kubernetes system's DNS service
+container. Unfortunately, the AWS node's DNS settings are
+not valid in the kubernetes cluster, so the DNS container
+crashes, and no container in the kubernetes cluster can
+reach the outside world.  This must be fixed with a
+custom config file (provided with byok8s; details below).</p>
+<h3>Installing Python Prerequisites</h3>
+<p>To use byok8s from a fresh Ubuntu AWS node
+(tested with Ubuntu 16.04 (xenial) and 18.04
+(bionic)), you will want to install a version
+of conda; we recommend using pyenv and miniconda:</p>
+<div class="highlight"><pre><span></span>curl https://pyenv.run | bash
+</pre></div>
+
+
+<p>Restart your shell and install miniconda:</p>
+<div class="highlight"><pre><span></span>pyenv update
+pyenv install miniconda3-4.3.30
+pyenv global miniconda3-4.3.30
+</pre></div>
+
+
+<p>You will also need the virtualenv package to
+set up a virtual environment:</p>
+<div class="highlight"><pre><span></span>pip install virtualenv
+</pre></div>
+
+
+<h3>Installing byok8s</h3>
+<p>Start by cloning the repo and installing byok8s:</p>
+<div class="highlight"><pre><span></span>cd 
+git clone https://github.com/charlesreid1/2019-snakemake-byok8s.git
+cd ~/2019-snakemake-byok8s
+</pre></div>
+
+
+<p>Next, you'll create a virtual environment:</p>
+<div class="highlight"><pre><span></span>virtualenv vp
+source vp/bin/activate
+
+pip install -r requirements.txt
+python setup.py build install
+</pre></div>
+
+
+<p>Now you should be ready to rock:</p>
+<div class="highlight"><pre><span></span>which byok8s
+</pre></div>
+
+
+<h3>Starting a k8s cluster with minikube</h3>
+<p>Install minikube:</p>
+<div class="highlight"><pre><span></span>curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 \
+  &amp;&amp; sudo install minikube-linux-amd64 /usr/local/bin/minikube
+</pre></div>
+
+
+<p>Now you're ready to start a minikube k8s
+cluster on your AWS node! Start a k8s cluster
+as root with:</p>
+<div class="highlight"><pre><span></span>sudo minikube start
+</pre></div>
+
+
+<p><strong>NOTE:</strong> The <code>minikube start</code> command will print
+some commands for you to run to fix permissions -
+it is importat you run them!</p>
+<p>Tear down the cluster with:</p>
+<div class="highlight"><pre><span></span>sudo minikube stop
+</pre></div>
+
+
+<p>While the k8s cluster is running, you can control
+it and interact with it like a normal k8s cluster
+using <code>kubectl</code>.</p>
+<p>However, as-is, the cluster's DNS settings are broken!
+We need to fix them before running.</p>
+<p><a name="dns-aws"></a></p>
+<h2>Fixing DNS issues with AWS</h2>
+<p>We mentioned a second hangup with AWS was with the
+DNS settings. </p>
+<p>The problem is with <code>/etc/resolv.conf</code> on the
+AWS host node. It is set up for AWS's internal 
+cloud network routing, but this is copied
+into the CoreDNS container, which is the
+kube-system container that manages DNS requests
+from all k8s containers. The settings from the
+AWS host confuse the DNS container, and it cannot
+route any DNS requests.</p>
+<h3>The Problem</h3>
+<p>If you're having the problem, you will see
+something like this with <code>kubectl</code>, where the
+coredns containers are in a <code>CrashLoopBackOff</code>:</p>
+<div class="highlight"><pre><span></span>$ kubectl get pods --namespace<span class="o">=</span>kube-system
+
+NAME                               READY   STATUS             RESTARTS   AGE
+coredns-86c58d9df4-lvq8b           <span class="m">0</span>/1     CrashLoopBackOff   <span class="m">5</span>          5m17s
+coredns-86c58d9df4-pr52t           <span class="m">0</span>/1     CrashLoopBackOff   <span class="m">5</span>          5m17s
+etcd-minikube                      <span class="m">1</span>/1     Running            <span class="m">15</span>         4h43m
+kube-addon-manager-minikube        <span class="m">1</span>/1     Running            <span class="m">16</span>         4h43m
+kube-apiserver-minikube            <span class="m">1</span>/1     Running            <span class="m">15</span>         4h43m
+kube-controller-manager-minikube   <span class="m">1</span>/1     Running            <span class="m">15</span>         4h43m
+kube-proxy-sq77h                   <span class="m">1</span>/1     Running            <span class="m">3</span>          4h44m
+kube-scheduler-minikube            <span class="m">1</span>/1     Running            <span class="m">15</span>         4h43m
+storage-provisioner                <span class="m">1</span>/1     Running            <span class="m">6</span>          4h44m
+</pre></div>
+
+
+<p>This will cause all Snakemake jobs to fail with a name
+resolution failure when it tries to write its output
+files to the AWS S3 bucket:</p>
+<div class="highlight"><pre><span></span>$ kubectl logs snakejob-c71fba38-f64b-5803-915d-933ae273d7a4
+
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: <span class="m">4</span>
+Rules claiming more threads will be scaled down.
+Job counts:
+    count   <span class="nb">jobs</span>
+    <span class="m">1</span>   target1
+    <span class="m">1</span>
+
+<span class="o">[</span>Thu Jan <span class="m">24</span> <span class="m">00</span>:06:03 <span class="m">2019</span><span class="o">]</span>
+rule target1:
+    output: cmr-smk-0123/alpha.txt
+    jobid: <span class="m">0</span>
+
+<span class="nb">echo</span> alpha blue &gt; cmr-smk-0123/alpha.txt
+Traceback <span class="o">(</span>most recent call last<span class="o">)</span>:
+  File <span class="s2">&quot;/opt/conda/lib/python3.7/site-packages/urllib3/connection.py&quot;</span>, line <span class="m">171</span>, in _new_conn
+    <span class="o">(</span>self._dns_host, self.port<span class="o">)</span>, self.timeout, **extra_kw<span class="o">)</span>
+  File <span class="s2">&quot;/opt/conda/lib/python3.7/site-packages/urllib3/util/connection.py&quot;</span>, line <span class="m">56</span>, in create_connection
+    <span class="k">for</span> res in socket.getaddrinfo<span class="o">(</span>host, port, family, socket.SOCK_STREAM<span class="o">)</span>:
+  File <span class="s2">&quot;/opt/conda/lib/python3.7/socket.py&quot;</span>, line <span class="m">748</span>, in getaddrinfo
+    <span class="k">for</span> res in _socket.getaddrinfo<span class="o">(</span>host, port, family, type, proto, flags<span class="o">)</span>:
+socket.gaierror: <span class="o">[</span>Errno -3<span class="o">]</span> Temporary failure in name resolution
+</pre></div>
+
+
+<p>and the kubernetes log for the CoreDNS container</p>
+<div class="highlight"><pre><span></span>$ kubectl logs --namespace<span class="o">=</span>kube-system coredns-86c58d9df4-lvq8b
+
+.:53
+<span class="m">2019</span>/01/25 <span class="m">14</span>:54:48 <span class="o">[</span>INFO<span class="o">]</span> CoreDNS-1.2.2
+<span class="m">2019</span>/01/25 <span class="m">14</span>:54:48 <span class="o">[</span>INFO<span class="o">]</span> linux/amd64, go1.11, fc62f9c
+CoreDNS-1.2.2
+linux/amd64, go1.11, eb51e8b
+<span class="m">2019</span>/01/25 <span class="m">14</span>:54:48 <span class="o">[</span>INFO<span class="o">]</span> plugin/reload: Running configuration <span class="nv">MD5</span> <span class="o">=</span> 486384b491cef6cb69c1f57a02087373
+<span class="m">2019</span>/01/25 <span class="m">14</span>:54:48 <span class="o">[</span>FATAL<span class="o">]</span> plugin/loop: Seen <span class="s2">&quot;HINFO IN 9273194449250285441.798654804648663468.&quot;</span> more than twice, loop detected
+</pre></div>
+
+
+<p>Basically, the AWS node's DNS name server settings cause 
+an infinite DNS loop to be set up.</p>
+<h3>The Fix</h3>
+<p>Fixing this problem requires manually setting the DNS 
+name servers inside the CoreDNS container to Google's
+public DNS servers, <code>8.8.8.8</code> and <code>8.8.4.4</code>.</p>
+<p>To apply this fix, we use a YAML configuration file to patch the
+CoreDNS container image.</p>
+<p>Hat tip to <a href="https://github.com/kubernetes/minikube/issues/2027">this long Github issue</a>
+in the minikube Github repo, and specifically 
+<a href="https://github.com/kubernetes/minikube/issues/2027#issuecomment-381574807">this comment</a>
+by Github user <a href="https://github.com/jgoclawski">jgoclawski</a>.
+and also <a href="https://github.com/kubernetes/minikube/issues/2027#issuecomment-419733791">this comment</a>
+by Github user <a href="https://github.com/bw2">bw2</a>.
+(Note that neither of these quite solve the problem -
+jgoclawski's solution is for kube-dns, not CoreDNS,
+and bw2's YAML is not valid, but both got me most
+of the way to a solution.)</p>
+<p>Here is the YAML file (also in the 2019-snakemake-byok8s
+repo here: <a href="https://github.com/charlesreid1/2019-snakemake-byok8s/blob/master/test/fixcoredns.yml">https://github.com/charlesreid1/2019-snakemake-byok8s/blob/master/test/fixcoredns.yml</a>):</p>
+<p><strong><code>fixcoredns.yml</code>:</strong></p>
+<div class="highlight"><pre><span></span><span class="nt">kind</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ConfigMap</span>
+<span class="nt">apiVersion</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="nt">data</span><span class="p">:</span>
+  <span class="nt">Corefile</span><span class="p">:</span> <span class="p p-Indicator">|</span>
+    <span class="no">.:53 {</span>
+        <span class="no">errors</span>
+        <span class="no">health</span>
+        <span class="no">kubernetes cluster.local in-addr.arpa ip6.arpa {</span>
+           <span class="no">upstream 8.8.8.8 8.8.4.4</span>
+           <span class="no">pods insecure</span>
+           <span class="no">fallthrough in-addr.arpa ip6.arpa</span>
+        <span class="no">}</span>
+        <span class="no">proxy .  8.8.8.8 8.8.4.4</span>
+        <span class="no">cache 30</span>
+        <span class="no">reload</span>
+    <span class="no">}</span>
+<span class="nt">metadata</span><span class="p">:</span>
+  <span class="nt">creationTimestamp</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2019-01-25T22:55:15Z</span>
+  <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">coredns</span>
+  <span class="nt">namespace</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">kube-system</span>
+</pre></div>
+
+
+<p>(<strong>NOTE:</strong> There is also a <code>fixkubedns.yml</code> if you are using
+an older Kubernetes version that uses kube-dns instead of
+CoreDNS.)</p>
+<p>To tell the k8s cluster to use this image
+when it creates a CoreDNS container, run
+this kubectl command <em>while the cluster is
+running</em>:</p>
+<div class="highlight"><pre><span></span>kubectl apply -f fixcoredns.yml
+</pre></div>
+
+
+<p>Last but not least, delete all <code>kube-system</code> containers
+and let Kubernetes regenerate them:</p>
+<div class="highlight"><pre><span></span>kubectl delete --all pods --namespace kube-system
+</pre></div>
+
+
+<p>The pods will regenerate quickly, and you can
+check to confirm that the CoreDNS container
+is no longer in the <code>CrashLoopBackOff</code> state
+and is <code>Running</code> nicely:</p>
+<div class="highlight"><pre><span></span>kubectl get pods --namespace=kube-system
+</pre></div>
+
+
+<p>This is all documented in <a href="https://github.com/kubernetes/minikube/issues/2027#issuecomment-457808462">this comment</a>
+in the same Github issue in the minikube repo
+that was linked to above, <a href="https://github.com/kubernetes/minikube/issues/2027">kubernetes/minikube
+issue #2027: dnsmasq pod CrashLoopBackOff</a>.</p>
+<p><a name="aws-byok8s"></a></p>
+<h2>AWS + byok8s Workflow</h2>
+<p>Now that the k8s cluster is running successfully,
+run the example byok8s workflow in the <code>test/</code> 
+directory of the byok8s repository (assuming
+you cloned the repo to <code>~/byok8s</code>, and are in
+the same virtual environment as before):</p>
+<div class="highlight"><pre><span></span># Return to our virtual environment
+cd ~/2019-snakemake-byok8s/test/
+source vp/bin/activate
+
+# Verify k8s is running
+minikube status
+
+# Export AWS keys for Snakemake
+export AWS_ACCESS_KEY_ID=&quot;XXXXX&quot;
+export AWS_SECRET_ACCESS_KEY=&quot;XXXXX&quot;
+
+# Run byok8s
+byok8s workflow-alpha params-blue --s3-bucket=mah-bukkit 
+</pre></div>
+
+
+<p>The bucket you specify must be created in advance
+and be writable by the account whose credentials
+you are passing in via environment variables.</p>
+<p>When you do all of this, you should see the job
+running, then exiting successfully:</p>
+<div class="highlight"><pre><span></span>$ byok8s --s3-bucket<span class="o">=</span>cmr-0123 -f workflow-alpha params-blue
+--------
+details!
+    snakefile: /home/ubuntu/2019-snakemake-byok8s/test/Snakefile
+    config: /home/ubuntu/2019-snakemake-byok8s/test/workflow-alpha.json
+    params: /home/ubuntu/2019-snakemake-byok8s/test/params-blue.json
+    target: target1
+    k8s namespace: default
+--------
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: <span class="m">1</span>
+Rules claiming more threads will be scaled down.
+Job counts:
+    count   <span class="nb">jobs</span>
+    <span class="m">1</span>   target1
+    <span class="m">1</span>
+Resources before job selection: <span class="o">{</span><span class="s1">&#39;_cores&#39;</span>: <span class="m">1</span>, <span class="s1">&#39;_nodes&#39;</span>: <span class="m">9223372036854775807</span><span class="o">}</span>
+Ready <span class="nb">jobs</span> <span class="o">(</span><span class="m">1</span><span class="o">)</span>:
+    target1
+Selected <span class="nb">jobs</span> <span class="o">(</span><span class="m">1</span><span class="o">)</span>:
+    target1
+Resources after job selection: <span class="o">{</span><span class="s1">&#39;_cores&#39;</span>: <span class="m">0</span>, <span class="s1">&#39;_nodes&#39;</span>: <span class="m">9223372036854775806</span><span class="o">}</span>
+
+<span class="o">[</span>Mon Jan <span class="m">28</span> <span class="m">18</span>:06:08 <span class="m">2019</span><span class="o">]</span>
+rule target1:
+    output: cmr-0123/alpha.txt
+    jobid: <span class="m">0</span>
+
+<span class="nb">echo</span> alpha blue &gt; cmr-0123/alpha.txt
+Get status with:
+kubectl describe pod snakejob-e585b53f-f9d5-5142-ac50-af5a0d532e85
+kubectl logs snakejob-e585b53f-f9d5-5142-ac50-af5a0d532e85
+Checking status <span class="k">for</span> pod snakejob-e585b53f-f9d5-5142-ac50-af5a0d532e85
+<span class="o">[</span>Mon Jan <span class="m">28</span> <span class="m">18</span>:06:18 <span class="m">2019</span><span class="o">]</span>
+Finished job <span class="m">0</span>.
+<span class="m">1</span> of <span class="m">1</span> steps <span class="o">(</span><span class="m">100</span>%<span class="o">)</span> <span class="k">done</span>
+Complete log: /home/ubuntu/2019-snakemake-byok8s/test/.snakemake/log/2019-01-28T180607.988313.snakemake.log
+unlocking
+removing lock
+removing lock
+removed all locks
+</pre></div>
+
+
+<p>Woo hoo! You've successfully run a Snakemake workflow 
+on a virtual Kubernetes cluster!</p>
+<p><a name="travis"></a></p>
+<h2>Travis</h2>
+<p>Like running minikube on an AWS node, running minikube on Travis workers
+also suffers from DNS issues. Fortunately, Github user 
+<a href="https://github.com/LiliC">LiliC</a> worked out how to run
+minikube on Travis, and importantly, <em>did so for multiple versions</em>
+of minikube and kubernetes.</p>
+<p>The relevant <code>.travis.yml</code> file is available in the 
+<a href="https://github.com/LiliC/travis-minikube">LiliC/travis-minikube</a>
+repo on Github.</p>
+<p>We ended up using the <a href="https://github.com/LiliC/travis-minikube/tree/minikube-30-kube-1.12"><code>minikube-30-kube-1.12</code></a>
+branch of LiliC/travis-minikube, which used the most up-to-date
+version of minikube and kubernetes available in that repo. The <code>.travis.yml</code> file
+provided by LiliC on that branch is 
+<a href="https://github.com/LiliC/travis-minikube/blob/minikube-30-kube-1.12/.travis.yml">here</a>.</p>
+<p>The example script by LiliC provided 90% of the legwork (thanks!!!),
+and we only needed to modify a few lines of LiliC's Travis file
+(which launches a redis container using kubectl)
+to use Snakemake (launched via byok8s) instead.</p>
+<p><a name="travis-yml"></a></p>
+<h2><code>.travis.yml</code></h2>
+<p>Here is the final <code>.travis.yml</code> file, which has explanatory comments.</p>
+<p><strong><code>.travis.yml</code>:</strong></p>
+<div class="highlight"><pre><span></span><span class="c1"># Modified from original:</span>
+<span class="c1"># https://raw.githubusercontent.com/LiliC/travis-minikube/minikube-30-kube-1.12/.travis.yml</span>
+
+<span class="c1"># byok8s and Snakemake both require Python,</span>
+<span class="c1"># so we make this Travis CI test Python-based.</span>
+<span class="nt">language</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">python</span>
+<span class="nt">python</span><span class="p">:</span>
+<span class="p p-Indicator">-</span> <span class="s">&quot;3.6&quot;</span>
+
+<span class="c1"># Running minikube via travis requires sudo</span>
+<span class="nt">sudo</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">required</span>
+
+<span class="c1"># We need the systemd for the kubeadm and it&#39;s default from 16.04+</span>
+<span class="nt">dist</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">xenial</span>
+
+<span class="c1"># This moves Kubernetes specific config files.</span>
+<span class="nt">env</span><span class="p">:</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">CHANGE_MINIKUBE_NONE_USER=true</span>
+
+<span class="nt">install</span><span class="p">:</span>
+<span class="c1"># Install byok8s requirements (snakemake, python-kubernetes)</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">pip install -r requirements.txt</span>
+<span class="c1"># Install byok8s cli tool</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">python setup.py build install</span>
+
+<span class="nt">before_script</span><span class="p">:</span>
+<span class="c1"># Do everything from test/</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">cd test</span>
+<span class="c1"># Make root mounted as rshared to fix kube-dns issues.</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sudo mount --make-rshared /</span>
+<span class="c1"># Download kubectl, which is a requirement for using minikube.</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kubectl &amp;&amp; chmod +x kubectl &amp;&amp; sudo mv kubectl /usr/local/bin/</span>
+<span class="c1"># Download minikube.</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.30.0/minikube-linux-amd64 &amp;&amp; chmod +x minikube &amp;&amp; sudo mv minikube /usr/local/bin/</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">sudo minikube start --vm-driver=none --bootstrapper=kubeadm --kubernetes-version=v1.12.0</span>
+<span class="c1"># Fix the kubectl context, as it&#39;s often stale.</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">minikube update-context</span>
+<span class="c1"># Wait for Kubernetes to be up and ready.</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">JSONPATH=&#39;{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}&#39;; until kubectl get nodes -o jsonpath=&quot;$JSONPATH&quot; 2&gt;&amp;1 | grep -q &quot;Ready=True&quot;; do sleep 1; done</span>
+
+<span class="c1">################</span>
+<span class="c1">## easy test</span>
+<span class="nt">script</span><span class="p">:</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">kubectl cluster-info</span>
+<span class="c1"># Verify kube-addon-manager.</span>
+<span class="c1"># kube-addon-manager is responsible for managing other kubernetes components, such as kube-dns, dashboard, storage-provisioner..</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">JSONPATH=&#39;{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}&#39;; until kubectl -n kube-system get pods -lcomponent=kube-addon-manager -o jsonpath=&quot;$JSONPATH&quot; 2&gt;&amp;1 | grep -q &quot;Ready=True&quot;; do sleep 1;echo &quot;waiting for kube-addon-manager to be available&quot;; kubectl get pods --all-namespaces; done</span>
+<span class="c1"># Wait for kube-dns to be ready.</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">JSONPATH=&#39;{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}&#39;; until kubectl -n kube-system get pods -lk8s-app=kube-dns -o jsonpath=&quot;$JSONPATH&quot; 2&gt;&amp;1 | grep -q &quot;Ready=True&quot;; do sleep 1;echo &quot;waiting for kube-dns to be available&quot;; kubectl get pods --all-namespaces; done</span>
+
+<span class="c1">################ </span>
+<span class="c1">## hard test</span>
+<span class="c1"># run byok8s workflow on the k8s cluster</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">byok8s --s3-bucket=cmr-0123 -f workflow-alpha params-blue</span>
+</pre></div>
+
+
+<p><a name="byok8s3"></a></p>
+<h1>End Product: byok8s</h1>
+<p>The final byok8s package can be found in the
+<a href="https://github.com/charlesreid1/2019-snakemake-byok8s">charlesreid1/2019-snakemake-byok8s</a>
+repository on Github.</p>
+<p>You can find documentation for 2019-snakemake-byok8s 
+here: <a href="https://charlesreid1.github.io/2019-snakemake-byok8s/">https://charlesreid1.github.io/2019-snakemake-byok8s/</a></p>
+<p>To return to our quick start, here is what running
+byok8s end-to-end on a minikube kubernetes cluster 
+on an AWS node looks like (slightly modified from
+the intro of our post):</p>
+<div class="highlight"><pre><span></span># Install minikube
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 \
+  &amp;&amp; sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+# Get byok8s
+git clone https://github.com/charlesreid1/2019-snakemake-byok8s.git
+cd ~/2019-snakemake-byok8s
+
+# Create a virtual environment
+virtualenv vp
+vp/bin/actiavte
+
+# Install byok8s
+pip install -r requirements.txt
+python setup.py build install
+
+# Create virtual k8s cluster
+sudo minikube start
+
+# Fix CoreDNS
+kubectl apply -f fixcoredns.yml
+kubectl delete --all pods --namespace kube-system
+
+# Wait for kube-system to respawn
+kubectl get pods --namespace=kube-system
+
+# Run the workflow on the k8s cluster
+cd test/
+byok8s workflow-alpha params-blue --s3-bucket=mah-bukkit 
+
+# Clean up the virtual k8s cluster
+sudo minikube stop
+</pre></div>
+
+
+<p><br />
+<br /></p>
+<p><a name="docs"></a></p>
+<h1>Documentation</h1>
+<p>You can find documentation for 2019-snakemake-byok8s 
+here: <a href="https://charlesreid1.github.io/2019-snakemake-byok8s/">https://charlesreid1.github.io/2019-snakemake-byok8s/</a></p>
+<p>The documentation covers a quick start on AWS nodes, 
+similar to what is covered above, as well as more information
+about running byok8s on other types of Kubernetes clusters
+(e.g., AWS, Google Cloud, and Digital Ocean).</p>
+<p><br />
+<br /></p>
+<p><a name="next"></a></p>
+<h1>Next Steps</h1>
+<p>Last year we were working on implementing metagenomic pipelines for
+shotgun sequencing data as part of the <a href="https://github.com/dahak-metagenomics">dahak-metagenomics</a>
+project. We implemented several Snakemake workflows
+in the <a href="https://github.com/dahak-metagenomics/dahak">dahak</a>
+repo, and began (but never completed) work on a command line utility
+to run these workflows called <a href="https://github.com/dahak-metagenomics/dahak-taco">dahak-taco</a>.</p>
+<p>Our next major goal is to reboot dahak-taco and redesign it to run metagenomic
+workflows from dahak on Kubernetes clusters, similar to the way byok8s works.</p>
+<p>Stay tuned for more!</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/bioinformatics.html">bioinformatics</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/workflows.html">workflows</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/pipelines.html">pipelines</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/snakemake.html">snakemake</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/travis.html">travis</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/kubernetes.html">kubernetes</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/minikube.html">minikube</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Building Snakemake Command Line Wrappers for Workflows
             </b></h1>
         
@@ -1179,408 +1983,6 @@ The Go code we covered in this post is also on Github in the
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Recursive Backtracking in Go for Bioinformatics Applications: 2. Generating Variations
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2018-12-28T14:00:00-08:00" pubdate>Friday 12/28/2018</time>
-                in 
-                <a href="/category/rosalind.html">Rosalind</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p><em>This is the second in a series of three blog posts describing our
-solution to a bioinformatics problem from Rosalind.info,
-<a href="http://rosalind.info/problems/ba1i/">Problem BA1(i) (Find most frequent words with mismatches
-in a string)</a>.
-To solve this problem and generate variations of a DNA string
-as required, we implemented a recursive backtracking method
-in the Go programming language.</em></p>
-<ul>
-<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1: Counting Variations</a></em></li>
-<li><em>Part 2: Generating Variations (you are here)</em></li>
-<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Part 3: Go Implementation of Recursive Backtracking</a></em></li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="toc"></a></p>
-<h2>Table of Contents</h2>
-<ul>
-<li><a href="#problem-descr">Problem Description</a></li>
-<li><a href="#perms-combs-vars">Permutations vs Combinations vs Variations</a></li>
-<li><a href="#recursion">Recursion</a><ul>
-<li><a href="#backtracking">Recursive Backtracking Pseudocode</a></li>
-</ul>
-</li>
-<li><a href="#dna">Appying to DNA Variations</a><ul>
-<li><a href="#generating-visits">Generating Visits with Binary Numbers</a></li>
-<li><a href="#assembling">Assembling the Variation</a></li>
-</ul>
-</li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="problem-descr"></a></p>
-<h2>Problem Description</h2>
-<p>The task at hand is to take a given input strand of DNA,
-and generate variations from it that have up to <span class="math">\(d\)</span> differences
-(a Hamming distance of <span class="math">\(d\)</span>) in the codons (base pairs).</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">part 1 of this series</a>, we walk through the
-construction of an analytical formula to count the number
-of variations of a given DNA string that can be generated,
-given the constraints of the problem.</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">part 2 of this series</a>, we cover several techniques to
-generate variations on a DNA string, and present pseudocode
-for the recursive backtracking method that we use here.</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">part 3 of this series</a>, we will cover our implementation
-of the recursive backtracking method in the Go programming
-language.</p>
-<p><a name="perms-combs-vars"></a></p>
-<h2>Permutations vs Combinations vs Variations</h2>
-<p>Before covering generation of variations of a DNA string,
-we should cover some terminology for clarification.</p>
-<p>If we were to use the term <em>permutations</em>, as in, we are
-counting (or generating) <em>permutations</em> of the input DNA string, 
-that would imply that we were doing some kind of
-rearrangement of the elements of the input DNA string
-(for example, swapping two codons). This is not the
-problem that we are solving, and requires different
-formulas. (See <a href="http://mathworld.wolfram.com/Permutation.html">Permutations</a>
-entry on Wolfram MathWorld.)</p>
-<p>The variations that we are referring to are not
-exactly <em>combinations</em>, either, though. If we were
-to use the term <em>combinations</em>, it would imply that
-we were choosing a set of <span class="math">\(k\)</span> integers from a set
-of <span class="math">\(d\)</span> integers <span class="math">\({1, 2, \dots, d}\)</span>.</p>
-<p>The variations that we are counting are similar to
-combinations, but with the additional act of swapping
-out each codon at the position (integer) selected
-with three other possible codons, so there are
-more variations than combinations (and many
-more permutations than variations).</p>
-<p><a name="transform"></a></p>
-<h2>Transforming the Problem Space</h2>
-<p>A surprisingly large variety of problems in combinatorics 
-can be transformed into an equivalent problem involving 
-binary numbers, which are usually easier to think about.</p>
-<p>To generate variations, we can break up the process of
-producing a variation into two steps, or choices, and
-then convert these choices (and the process of making them)
-into an equivalent problem in terms of binary numbers.</p>
-<p>We can decompose the cration of a DNA string variation into
-the first step of choosing which codons (indices) to edit, 
-and the second step of cycling through every possible codon 
-(ATGC) at the selected indices.</p>
-<p>To translate this into an equivalent binary number problem,
-consider the input string of DNA "AAAAA" and let the Hamming
-distance that we are considering be <span class="math">\(d = 1\)</span>. Then we can code
-each index with a 0 (not chosen) or a 1 (chosen) and turn the
-problem into cycling throgh all binary numbers with 1 bit:</p>
-<div class="highlight"><pre><span></span>00001
-00010
-00100
-01000
-10000
-</pre></div>
-
-
-<p>The second step is to cycle through each alternate codon at
-the given position, so that <code>00001</code> would generate the 
-variations:</p>
-<div class="highlight"><pre><span></span>AAAAC
-AAAAG
-AAAAT
-</pre></div>
-
-
-<p>and so on.</p>
-<p>We saw this two-part technique already when counting the total number of
-variations that could be created in <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1: Counting Variations</a>.
-It resulted in a counting formula with two terms, a binomial term
-for step 1 and an exponential term for step 2.</p>
-<p>We can think of the problem as forming a tree with several
-decision nodes that need to be explored; this type of problem
-structure is ideal for a recursive backtracking algorithm.</p>
-<p>We will cover the use of recursive backtracking to actually
-explore the entire tree of possible outcomes (not just count
-it), starting with some review and background on recursive 
-backtracking and how it works.</p>
-<p><a name="recursion"></a></p>
-<h2>Recursion</h2>
-<p>Recursion is a common pattern to use for problems that require
-exploring a large problem space that requires us to make
-several selections.</p>
-<p>A recursive backtracking algorithm is analogous to exploring a
-maze but laying out a rope as you go, so tht you can revisit
-each possible route. In this case, we are using backtracking
-to make the choice of which indices of the input DNA string
-to modify. We want to explore all possible choices to generate
-all possible variations of the input DNA string, and backtracking
-gives us the framework to do that.</p>
-<p>For example, if we wanted to recursively generate codon choices
-for the case of an input DNA string like "AAAAA" and <span class="math">\(d = 2\)</span>,
-we would call a recursive method twice; the first time through,
-we would choose one of the five indices, and mark it as picked;
-then we would call the method again, and choose a second index
-(different from the first) and mark it as picked.</p>
-<p>When unrolled, this is equivalent to a nested for loop,</p>
-<div class="highlight"><pre><span></span>for i in range( 0 .. len(dna_string) ):
-    for j in range( 0 .. len(dna_string) ):
-        if (i != j):
-            Start with the binary number 00000
-            Set the digit at index i to 1
-            Set the digit at index j to 1
-</pre></div>
-
-
-<p><a name="backtracking"></a></p>
-<h3>Recursive Backtracking Pseudocode</h3>
-<p>Basic pseudocode for a backtracking method:</p>
-<div class="highlight"><pre><span></span>explore method:
-    base case:
-        visit this solution
-    recursive case:
-        for each available choice:
-            make a choice
-            explore outcomes
-            unmake the choice
-            move on to the next choice
-</pre></div>
-
-
-<p><a name="dna"></a></p>
-<h2>Applying to DNA Variations</h2>
-<p>There are actually two places where we need to apply
-backtracking to our problem.</p>
-<p><a name="generating-visits"></a></p>
-<h3>Generating Visits with Binary Numbers</h3>
-<p>The first application of recursive backtracking is to
-carry out step 1, choosing indices in the original
-DNA string to modify or cycle through altnerate 
-codons. We showed above how generating variations
-on a kmer of length <span class="math">\(k\)</span> at a distance <span class="math">\(d\)</span> from the
-original kmer was equivalent to generating binary 
-numbers with <span class="math">\(d\)</span> bits set to 1.</p>
-<p>We can use recursive backtracking to generate these
-numbers. By creating a method that recursively selects
-an index to switch to 1, and passing that (and all prior
-choices) on to further recursive calls, the function
-can recurse to a given depth <span class="math">\(d\)</span> and visit all possible
-binary numbers with <span class="math">\(d\)</span> bits set to 1.</p>
-<p>The base case of this recursive method would be reached
-when all <span class="math">\(d\)</span> choices had been made and <span class="math">\(d\)</span> bits were 
-set to 1. Then the choice of indices to swap out with
-alternate codons would be passed on to a recursive method
-that would carry out Step 2 (see below).</p>
-<p>For example, to generate variations of the 5-mer <code>AAAAA</code>,
-we would start by selecting a Hamming distance <span class="math">\(d\)</span>, then
-generate a binary number with <span class="math">\(d\)</span> bits set to 1 to select
-indices to modify. Suppose <span class="math">\(d = 2\)</span>; then the first few
-binary numbers are:</p>
-<div class="highlight"><pre><span></span>AAAAA
-11000
-10100
-10010
-10001
-...
-</pre></div>
-
-
-<p>To expand on the pseudocode a bit more, to generate a
-binary number with <span class="math">\(d\)</span> bits flipped to 1 we will want
-to call a recursive method with a depth of <span class="math">\(d\)</span>, making
-a choice at each recursive call of which index to set
-to 1 next.</p>
-<p>The <span class="math">\(n^{th}\)</span> recursive call picks the <span class="math">\(n^{th}\)</span> index for
-1. Each index can only be chosen once in the stack of 
-recursive calls, and the indices that have been chosen
-by prior recursive function calls are passed along.</p>
-<p>Thus we need a minimum of two parameters: an integer
-indicating the depth level of this recursive function
-call, and an integer array of index choices.</p>
-<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">generate_binary_numbers</span><span class="p">(</span> <span class="nx">depth</span><span class="p">,</span> <span class="nx">choices</span><span class="p">[],</span> <span class="p">...</span> <span class="p">)</span><span class="o">:</span>
-
-    <span class="k">if</span> <span class="nx">depth</span> <span class="nx">is</span> <span class="mi">0</span><span class="p">,</span>
-        <span class="nx">base</span> <span class="k">case</span>
-        <span class="nx">no</span> <span class="nx">more</span> <span class="nx">choices</span> <span class="nx">left</span> <span class="nx">to</span> <span class="nx">make</span>
-        <span class="nx">choices</span><span class="p">[]</span> <span class="nx">is</span> <span class="nx">full</span>
-        <span class="nx">pass</span> <span class="nx">along</span> <span class="nx">choices</span><span class="p">[]</span> <span class="nx">to</span> <span class="nx">assemble</span> <span class="nx">the</span> <span class="nx">variations</span>
-
-    <span class="k">else</span><span class="p">,</span>
-        <span class="nx">recursive</span> <span class="k">case</span>
-        <span class="k">for</span> <span class="nx">each</span> <span class="nx">possible</span> <span class="nx">index</span><span class="p">,</span>
-            <span class="k">if</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">is</span> <span class="nx">not</span> <span class="nx">already</span> <span class="k">in</span> <span class="nx">choices</span><span class="p">,</span>
-                <span class="nx">add</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">to</span> <span class="nx">choices</span>
-                <span class="nx">generate_binary_numbers</span><span class="p">(</span> <span class="nx">depth</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="nx">choices</span><span class="p">[]</span> <span class="p">)</span>
-                <span class="nx">remove</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">from</span> <span class="nx">choices</span>
-</pre></div>
-
-
-<p><a name="assembling"></a></p>
-<h3>Assembling the Variation</h3>
-<p>Each binary number is then turned into variations by substituting
-every combination of 3 codons in every position with a 1
-possible, so the first binary number for <span class="math">\(d=2\)</span> would generate
-the variations:</p>
-<div class="highlight"><pre><span></span>AAAAA
-11000
------
-CCAAA
-GCAAA
-TCAAA
-CGAAA
-GGAAA
-TGAAA
-CTAAA
-GTAAA
-TTAAA
-</pre></div>
-
-
-<p>This would be repeated for all Hamming distances up to the
-maximum specified Hamming distance.</p>
-<p>Like the generation of binary numbers, the substitution of all
-possible combinations of codons at these positions is a
-task conducive to a recursive backtracking algorithm.</p>
-<p>Like the prior task's recursive method, this task's recursive 
-method will have one parameter for depth (number of choices
-left to make) and a range of choices to try (codons).</p>
-<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">assemble_variations</span><span class="p">(</span> <span class="nx">depth</span><span class="p">,</span> <span class="nx">choices</span><span class="p">[],</span> <span class="p">...</span> <span class="p">)</span><span class="o">:</span>
-
-    <span class="k">if</span> <span class="nx">depth</span> <span class="nx">is</span> <span class="mi">0</span><span class="p">,</span>
-        <span class="nx">base</span> <span class="k">case</span>
-        <span class="nx">no</span> <span class="nx">more</span> <span class="nx">choices</span> <span class="nx">left</span> <span class="nx">to</span> <span class="nx">make</span>
-        <span class="nx">choices</span><span class="p">[]</span> <span class="nx">is</span> <span class="nx">full</span>
-        <span class="nx">pass</span> <span class="nx">along</span> <span class="nx">choices</span><span class="p">[]</span> <span class="nx">to</span> <span class="nx">assemble</span> <span class="nx">the</span> <span class="nx">variations</span>
-
-    <span class="k">else</span><span class="p">,</span>
-        <span class="nx">recursive</span> <span class="k">case</span>
-        <span class="k">for</span> <span class="nx">each</span> <span class="nx">possible</span> <span class="nx">index</span><span class="p">,</span>
-            <span class="k">if</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">is</span> <span class="nx">not</span> <span class="nx">already</span> <span class="k">in</span> <span class="nx">choices</span><span class="p">,</span>
-                <span class="nx">add</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">to</span> <span class="nx">choices</span>
-                <span class="nx">generate_binary_numbers</span><span class="p">(</span> <span class="nx">depth</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="nx">choices</span><span class="p">[]</span> <span class="p">)</span>
-                <span class="nx">remove</span> <span class="k">this</span> <span class="nx">index</span> <span class="nx">from</span> <span class="nx">choices</span>
-</pre></div>
-
-
-<p>In the final part, Part 3, of this blog post, we will cover the actual 
-Go implementation of these functions.</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/go.html">go</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/golang.html">golang</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/rosalind.html">rosalind</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/recursion.html">recursion</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/backtracking.html">backtracking</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/strings.html">strings</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/combinatorics.html">combinatorics</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1616,6 +2018,9 @@ Go implementation of these functions.</p>
 
             <h2>February 2019</h2>
 
+            <p class="archive">
+            <a href="/any-color-you-like-as-long-as-its-00add8.html">Any Color You Like, As Long As It's 00ADD8</a>
+            </p>
             <p class="archive">
             <a href="/a-few-of-my-favorite-peps.html">A Few of My Favorite PEPs</a>
             </p>
