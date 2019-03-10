@@ -102,6 +102,716 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                4x4 Rubik's Cube: Part 3: Factoring Permutations
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2018-01-20T12:00:00-08:00" pubdate>Saturday 01/20/2018</time>
+                in 
+                <a href="/category/rubiks-cube.html">Rubiks Cube</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/4x4-rubiks-cube-part-3-factoring-permutations.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><em>This is Part 3 of a 4-part blog post 
+on the mathematics of the 4x4 Rubik's Cube, 
+its relation to algorithms, and some 
+curious properties of Rubik's Cubes.</em></p>
+<p>See Part 1 of this blog post here: <a href="https://charlesreid1.github.io/4x4-rubiks-cube-part-1-representations.html">Part 1: Representations</a></p>
+<p>See Part 2 of this blog post here: <a href="https://charlesreid1.github.io/4x4-rubiks-cube-part-2-permutations.html">Part 2: Permutations</a></p>
+<p>You are currently reading Part 3 of this blog post: <strong>Part 3: Factoring Permutations</strong></p>
+<p>See Part 4 of this blog post here: <a href="#">Part 4: Sequence Order</a></p>
+<h1>Table of Contents</h1>
+<ul>
+<li>
+<p><a href="#rubiks3-rubiks3-intro">Introduction: Cycles, Sequences, and Order</a></p>
+<ul>
+<li><a href="#rubiks3-rubiks3-intro-cycles">Cycles</a></li>
+<li><a href="#rubiks3-rubiks3-intro-sequences">Sequences</a></li>
+<li><a href="#rubiks3-rubiks3-intro-order">Order</a></li>
+</ul>
+</li>
+<li>
+<p><a href="#rubiks3-rubiks3-intercalation">Intercalation Product</a></p>
+<ul>
+<li><a href="#rubiks3-intercalation-definition">Definition</a></li>
+<li><a href="#rubiks3-intercalation-properties">Properties</a></li>
+</ul>
+</li>
+<li>
+<p><a href="#rubiks3-factoring">Factoring Permutations Using Knuth's Theorem A</a></p>
+<ul>
+<li><a href="#rubiks3-factoring-significance">Significance of Factors</a></li>
+<li><a href="#rubuiks3-factoring-how">How to Factor Permutations</a></li>
+<li><a href="#rubuiks3-factoring-how-contd">How to Factor Permutations (Cont'd)</a></li>
+<li><a href="#rubiks3-factoring-algorithmA">Algorithm A</a></li>
+<li><a href="#rubiks3-factoring-pseudocode">Pseudocode</a></li>
+<li><a href="#rubiks3-factoring-python">Python Code</a></li>
+</ul>
+</li>
+<li>
+<p><a href="#rubiks3-preview">Preview of Part 4</a></p>
+</li>
+<li>
+<p><a href="#rubiks3-references">References</a></p>
+</li>
+</ul>
+<p><br />
+<br />
+<br /></p>
+<p><a name="rubiks3-intro"></a></p>
+<h1>Introduction</h1>
+<p>So far we have been discussing representations of the Rubik's Cube,
+with the ultimate intention of investigating some of its properties.</p>
+<p>In this post, we define and explore the properties we are interested
+in studying.</p>
+<p><a name="rubiks3-intro-cycles"></a></p>
+<h2>Cycles</h2>
+<p>(Definition of cycle)</p>
+<p>We use the two-line notation introduced in the last blog post,
+so a permutation of a 5-tuple might look like this:</p>
+<div class="math">$$
+a = \bigl(\begin{smallmatrix}
+  a &amp; b &amp; c &amp; d &amp; e \\
+  b &amp; a &amp; e &amp; c &amp; d 
+\end{smallmatrix}\bigr)
+$$</div>
+<p>In this permutation, we see that <span class="math">\(a\)</span> and <span class="math">\(b\)</span> swap places,
+and <span class="math">\(c\)</span>, <span class="math">\(d\)</span>, and <span class="math">\(e\)</span> exchange places as well. These two
+groups form two cycles. </p>
+<p>Think of the cycles as the particular way that pieces 
+of the permutation are exchanged with one another.</p>
+<p><a name="rubiks3-intro-sequences"></a></p>
+<h2>Sequences</h2>
+<p>We are interested in studying the properties of the cube,
+but in particular we are interested in the properties of 
+move sequences applied to the cube.</p>
+<p>There are 36 possible moves on a cube, and a series of 
+moves applied in a particular order defines a sequence.
+The 36 possible rotations were given in the prior blog post
+and cover clockwise and counterclockwise rotations of 
+each of the six faces - either the first layer, the second layer,
+or both of the first two layers.</p>
+<p>These moves are denoted with six letters (UDLRFB) for the upper,
+downward, left, right, front, and back face of the cube, respectively.</p>
+<p>Moves indicated should be clockwise unless they contain an apostrophe
+character <code>'</code>, which indicates counterclockwise rotation.</p>
+<p>A capital letter indicates a rotation of the first layer only 
+(e.g., <code>U</code> indicates a clockwise rotation of the first layer of 
+the upper face).</p>
+<p>A lowercase letter indicates a roration of the first and second layers
+(e.g., <code>r</code> indicates a clockwise rotation of the top two layers of
+the right face).</p>
+<p>A 2 before the letter indicates that the second layer should be rotated
+(e.g., <code>2F</code> indicates a clockwise rotation of the second layer of the 
+front face).</p>
+<p>Each move sequence can be translated into a tuple representation
+(see Part 1 blog post). Once we have the tuple representation of a 
+permutation, we can do several things, beginning with finding
+the cycles that compose the moves of the sequence.</p>
+<p><a name="rubiks3-intro-order"></a></p>
+<h2>Order</h2>
+<p>The quantity we are truly interested in is the order of a given cycle.</p>
+<p>The order of a sequence of moves is the number of times that sequence
+must be applied to the cube to get the cube to return back to its 
+original state. A more convenient way to think about it is, if you 
+applied a move sequence to a solved cube, how many times would you 
+have to apply it until you reached a solved cube again?</p>
+<p>We begin with the move sequence, which applies a particular permutation
+to the cube, exchanging particular pieces in a particular order.
+We want to obtain a tuple representation of the permutation
+that results from a particular sequence of moves.</p>
+<p>Once we have the tuple representation of a sequence's permutation, we can 
+factor it into independent cycles using the techniques covered in 
+this blog post. </p>
+<p>The factoring a permutation into cycles will yield the order; 
+the order is the least common multiple of the lengths of eacch
+cycle that is a factor.</p>
+<p>Using this, we can investigate the properties of the order 
+of different move sequences.</p>
+<p><a name="rubiks3-intercalation"></a></p>
+<h1>Intercalation Product</h1>
+<p>In Part 2 of this blog post, we discussed the tuple representation
+of a permutation; for example, one permutation <span class="math">\(\pi\)</span> of an
+<span class="math">\(n\)</span>-tuple might be written:</p>
+<div class="math">$$
+\pi = \bigl(\begin{smallmatrix}
+  1 &amp; 2 &amp; 3 &amp; \cdots &amp; n-1 &amp; n \\
+  2 &amp; 3 &amp; 4 &amp; \cdots &amp;  n  &amp; 1
+\end{smallmatrix}\bigr)
+$$</div>
+<p>The top row consists of the elements in the tuple in 
+sorted order; the second row consists of elements of the 
+tuple corresponding to that permutation.</p>
+<p>In the discussion that follows we'll keep it general,
+and talk about multisets - the case in which the top row
+has multiple occurrences of different items.</p>
+<p>For the following discussion, we will suppose two permutations
+<span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span> composed of four objects <span class="math">\(\{a, b, c, d,\}\)</span>, 
+each occurring multiple times:</p>
+<div class="math">$$
+\alpha = \bigl(\begin{smallmatrix}
+  a &amp; a &amp; b &amp; c &amp; d \\
+  c &amp; a &amp; d &amp; a &amp; b
+\end{smallmatrix}\bigr)
+$$</div>
+<div class="math">$$
+\beta = \bigl(\begin{smallmatrix}
+  a &amp; b &amp; d &amp; d &amp; d \\
+  b &amp; d &amp; d &amp; a &amp; d
+\end{smallmatrix}\bigr)
+$$</div>
+<p><a name="rubiks3-intercalation-definition"></a></p>
+<h2>Definition</h2>
+<p>Now we define the intercalation product <span class="math">\(\alpha \top \beta\)</span> 
+of these permutations as the elements of each permutation
+organized in an interleaved way - 
+each element of <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span> are grouped
+by the letter that appears on the top row,
+and within those groups they are ordered 
+as they appear in <span class="math">\(\alpha\)</span>, then as they appear
+in <span class="math">\(\beta\)</span>.</p>
+<p>For our example, the intercalation product is the following
+combination of <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span>:</p>
+<div class="math">$$
+\alpha \top \beta = \bigl(\begin{smallmatrix}
+  a &amp; a &amp; b &amp; c &amp; d \\
+  c &amp; a &amp; d &amp; a &amp; b 
+\end{smallmatrix}\bigr) \top \bigl(\begin{smallmatrix}
+  a &amp; b &amp; d &amp; d &amp; d \\
+  b &amp; d &amp; d &amp; a &amp; d 
+\end{smallmatrix}\bigr) = 
+\bigl(\begin{smallmatrix}
+  a &amp; a &amp; a &amp; b &amp; b &amp; c &amp; d &amp; d &amp; d &amp; d \\
+  c &amp; a &amp; b &amp; d &amp; d &amp; a &amp; b &amp; d &amp; a &amp; d
+\end{smallmatrix}\bigr)
+$$</div>
+<p>This is basically an interleaving operation. 
+All top-bottom pairs with <span class="math">\(a\)</span> at the top are 
+grouped together - and within the group,
+everyone from <span class="math">\(\alpha\)</span> comes first, everyone
+from <span class="math">\(\beta\)</span> comes second.</p>
+<p>The first two <span class="math">\(a\)</span> items in <span class="math">\(\alpha \top \beta\)</span> 
+come from <span class="math">\(\alpha\)</span>, the third <span class="math">\(a\)</span> item comes from <span class="math">\(\beta\)</span>.</p>
+<h3>Side Note: Why Define an Intercalation Product?</h3>
+<p>You may be wondering what the intercalation product has to do 
+with Rubik's Cubes or finding the order of a sequence. It turns
+out that the intercalation product will allow us to establish
+a system of permutation algebra, define certain operations
+and properties of permutations, and use these to factor
+permutations into independent groups of faces being 
+exchanged.</p>
+<p><a name="rubiks3-intercalation-properties"></a></p>
+<h2>Properties</h2>
+<p>We can state some properties of the intercalation algebra already:</p>
+<p>If <span class="math">\(\alpha \top \pi = \beta \top \pi\)</span> 
+or <span class="math">\(\pi \top \alpha = \pi \top \beta\)</span>, 
+this implies <span class="math">\(\alpha = \beta\)</span>.</p>
+<p>An identity element exists such that 
+<span class="math">\(\epsilon \top \alpha = \alpha \top \epsilon = \alpha\)</span>.</p>
+<p>The commutative property for the intercalation product 
+(whether <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span> can be exchanged in expressions)
+only holds if <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span> are independent of each 
+other (if they permute different elements).
+If this condition holds, then 
+<span class="math">\(\alpha \top \beta = \beta \top \alpha\)</span>.</p>
+<p>This property does <em>not</em> hold in general.</p>
+<p>(An example of permutations that would be independent 
+on the Rubik's Cube would be the moves U and D.
+These each rotate a different group of faces.)</p>
+<p><a name="rubiks3-factoring"></a></p>
+<h1>Factoring Permutations Using Knuth's Theorem A</h1>
+<p>Volume 3 of Donald Knuth's <u>The Art of Computer Programming</u>
+gives the following theorem on page 26, which gives a very useful
+property of intercalation products:</p>
+<p><strong>Theorem A.</strong> Let the elements of the multiset <span class="math">\(M\)</span> be linearly
+ordered by the relation "&lt;". Every permutation <span class="math">\(\pi\)</span> of <span class="math">\(M\)</span> 
+has a unique representation as the intercalation </p>
+<div class="math">$$
+\pi = 
+( x_{1,1} \dots x_{1,n_1} y_1 ) \top 
+( x_{2,1} \dots x_{2,n_2} y_2 ) \top 
+\dots \top
+( x_{t,1} \dots x_{t,n_t} y_t ) 
+$$</div>
+<p>where </p>
+<div class="math">$$
+y_1 \leq y_2 \leq \dots \leq y_t
+$$</div>
+<p>and </p>
+<div class="math">$$
+y_i &lt; x_{ij} \qquad \mbox{ for } 1 \leq j \leq n_i, 1 \leq i \leq t
+$$</div>
+<p><a name="rubiks3-factoring-significance"></a></p>
+<h2>Significance of Factors</h2>
+<p>Theorem A is central to our goal of studying move sequences 
+(and computing their order). To understand why, consider the 
+factors that result from Theorem A, and what they mean in the 
+specific example of a Rubik's Cube.</p>
+<p>In a regular n-tuple, the factors represent groups of items 
+in the tuple that are being exchanged. A tuple that factors
+into the intercalation of many very small tuples means the 
+permutation mostly consists of swapping pairs or triplets 
+of things. A tuple that factors into the intercalation
+of two large tuples means, all of the things are divided 
+into two groups, and within that group, everybody is mixed
+in with everybody else. </p>
+<p>On a Rubik's Cube, the tuple consists of faces being moved,
+so a permutation's factors indicate how many faces are being 
+swapped. The size of each group of faces gives some indication
+as to how long it takes for the cube to "sync up" with its 
+original state if the permutation is repeatedly applied; 
+a permutation with fewer large factors will take longer than a 
+permutation with many small factors.</p>
+<p>For example, suppose a move sequence permutes three corner pieces
+on a cube each time it is applied. Then if we write the two-line 
+tuple corresponding to that permutation, and we factor it into the 
+intercalation product of several tuples, several factors of the
+permutation will have a length of three, and will contain the 
+set of three faces being exchanged.</p>
+<p>On the other hand, if a move sequence permutes six corner pieces
+on a cube each time it is applied, some of the factors will be
+groups of six faces being exchanged when the sequence is applied.</p>
+<p>Thus, <em>the (sizes of the) factors of a permutation determine 
+the order of the permutation.</em></p>
+<p><a name="rubiks3-factoring-how"></a></p>
+<h2>How to Factor Permutations</h2>
+<p>To factor a permutation, we perform the opposite of the intercalation
+product. Now supppose we wish to factor the permutation:</p>
+<div class="math">$$
+\pi = \bigl(\begin{smallmatrix}
+    a &amp; a &amp; b &amp; b &amp; b &amp; b &amp; b &amp; c &amp; c &amp; c &amp; d &amp; d &amp; d &amp; d &amp; d \\
+    d &amp; b &amp; c &amp; b &amp; c &amp; a &amp; c &amp; d &amp; a &amp; d &amp; d &amp; b &amp; b &amp; b &amp; d
+\end{smallmatrix}\bigr)
+$$</div>
+<p>into the intercalation of multiple independent, disjoint cycles,</p>
+<div class="math">$$
+\pi = \alpha \top \beta \top \dots \top \gamma
+$$</div>
+<p>We can extract each factor one at a time using the following algorithm.</p>
+<p>Start by assuming the first factor <span class="math">\(\alpha\)</span> contains the first symbol <span class="math">\(a\)</span>
+in its top row.</p>
+<p>(It turns out this assumption <em>can't</em> be false - if there is an <span class="math">\(a\)</span> 
+in the top row of <span class="math">\(\pi\)</span> then there is an <span class="math">\(a\)</span> in the top row of at least 
+one factor. We're simply going to pull out those factors with this assumption.)</p>
+<p>Given this assumption, we know <span class="math">\(\alpha\)</span> must map <span class="math">\(a\)</span> to the same letter
+as the final permutation maps <span class="math">\(a\)</span> to, in the very first column of <span class="math">\(\pi\)</span>.
+The first column of <span class="math">\(\pi\)</span> is <span class="math">\(( a d )\)</span> (a on top, d on bottom). 
+That means that if our assumption holds, if <span class="math">\(\alpha\)</span> contains <span class="math">\(a\)</span>, then 
+it must permute all <span class="math">\(a\)</span>'s into <span class="math">\(d\)</span>'s and thus <span class="math">\(\alpha\)</span> should contain the 
+same column <span class="math">\((a d )\)</span>.</p>
+<p>Now suppose that <span class="math">\(\alpha\)</span> contains <span class="math">\(d\)</span>, which it must if our prior step
+is true. (<span class="math">\(\alpha\)</span> cannot turn <span class="math">\(a\)</span> into <span class="math">\(d\)</span> if it does not have a <span class="math">\(d\)</span>!).
+We find the leftmost <span class="math">\(d\)</span> on the top line, and see that it maps to the 
+symbol <span class="math">\(d\)</span>, due to the column <span class="math">\(( d d )\)</span> (d on top, d on bottom). 
+Thus, <span class="math">\(\alpha\)</span> should also contain the column  <span class="math">\(( d d )\)</span>.</p>
+<p>We keep going. Suppose that <span class="math">\(\alpha\)</span> contains another <span class="math">\(d\)</span>, as a consequence
+of the prior step. Since we already used the first d column in <span class="math">\(\pi\)</span>, we use
+the next column, <span class="math">\(( d b )\)</span> Thus, <span class="math">\(\alpha\)</span> should also contain the column <span class="math">\(( d b )\)</span>,
+and we use the outcome <span class="math">\(b\)</span> as the starting point for the next step.</p>
+<p>The process stops as soon as the starting point for the next step
+is the letter we began with, <span class="math">\(a\)</span>. That's because, at that point,
+we've formed a "closed loop" of pieces that permute with one 
+another. That closed loop forms the first intercalation factor 
+of the permutation <span class="math">\(\pi\)</span>.</p>
+<p>If we keep repeating the process described, we eventually wind up 
+with <span class="math">\(\alpha\)</span>:</p>
+<div class="math">$$
+\alpha = \bigl(\begin{smallmatrix}
+    a &amp; d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c \\
+    d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c &amp; a
+\end{smallmatrix}\bigr)
+$$</div>
+<h3>Side Note: Why Does This Work?</h3>
+<p>Let's pause for a moment and see what's happening. 
+What we're doing is following a thread between the 
+top and bottom rows of the permutation; this thread 
+tells us how elements are being moved around to
+create permutations.</p>
+<p>(A simpler but easier way to see this is by comparing 
+two permutations of <span class="math">\((1 2 3 4 5 6)\)</span>: consider the permutation 
+<span class="math">\((2 1 3 4 6 5)\)</span>, versus the permutation <span class="math">\((2 4 5 6 1 3)\)</span>. 
+The first permutation swaps positions 0 and 1, and 
+positions 4 and 5, independently; the second permutation 
+mixes <em>all</em> positions together.)</p>
+<p>We are assembling <span class="math">\(\alpha\)</span> piece by piece, by pulling out 
+pairs from the top and bottom row of <span class="math">\(\pi\)</span> and putting them 
+into <span class="math">\(\alpha\)</span>. At some point we will come back to the starting
+point, the symbol <span class="math">\(a\)</span>, and we will be finished finding the 
+first factor <span class="math">\(\alpha\)</span>, which is a disjoint cycle. </p>
+<p>By starting from the top row and following where it leads 
+in the bottom row, and continuing until we return to the 
+original starting element in the top row, we can carve up 
+the permutation into groups of pieces exchanged with one 
+another and not with any other pieces, or groups of pieces 
+that don't move.</p>
+<p><a name="rubiks3-factoring-how-contd"></a></p>
+<h2>How to Factor Permutations (Cont'd)</h2>
+<p>Recall that our goal was to factor the permutation <span class="math">\(\pi\)</span> into the 
+intercalation of multiple independent and disjoint cycles,
+<span class="math">\(\pi = \alpha \top \beta \top \dots \top \gamma\)</span>.
+We gave a procedure to extract factors and used it to
+extract the first factor, <span class="math">\(\alpha\)</span>. </p>
+<p>However, this is not the end of the factoring process: there are 
+still several elements of <span class="math">\(\pi\)</span> that have not been used to form 
+<span class="math">\(\alpha\)</span>, and those remaining elements themselves form a permutation 
+that can be factored.</p>
+<p>We begin with the original permutation <span class="math">\(\pi\)</span>:</p>
+<div class="math">$$
+\pi = \bigl( \begin{smallmatrix}
+    a &amp; a &amp; b &amp; b &amp; b &amp; b &amp; b &amp; c &amp; c &amp; c &amp; d &amp; d &amp; d &amp; d &amp; d \\
+    d &amp; b &amp; c &amp; b &amp; c &amp; a &amp; c &amp; d &amp; a &amp; d &amp; d &amp; b &amp; b &amp; b &amp; d
+\end{smallmatrix}\bigr)
+$$</div>
+<p>When we pull out the first factor <span class="math">\(\alpha\)</span>, we get:</p>
+<div class="math">$$
+\pi = \bigl( \begin{smallmatrix}
+    a &amp; d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c \\
+    d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c &amp; a
+\end{smallmatrix} \bigr)
+\top
+\bigl( \begin{smallmatrix}
+    a &amp; b &amp; b &amp; c &amp; d &amp; d \\
+    b &amp; a &amp; c &amp; d &amp; b &amp; d
+\end{smallmatrix} \bigr)
+$$</div>
+<p>When we pull out the second factor <span class="math">\(\beta\)</span>, we get: </p>
+<div class="math">$$
+\pi = \bigl( \begin{smallmatrix}
+    a &amp; d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c \\
+    d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c &amp; a
+\end{smallmatrix} \bigr)
+\top
+\bigl( \begin{smallmatrix}
+    a &amp; b \\
+    b &amp; a 
+\end{smallmatrix} \bigr)
+\top 
+\bigl( \begin{smallmatrix}
+    b &amp; c &amp; d &amp; d \\
+    c &amp; d &amp; b &amp; d
+\end{smallmatrix} \bigr)
+$$</div>
+<p>The third factor can be pulled out as well, which leaves the last factor, 
+a single column <span class="math">\(( d d )\)</span> by itself, indicating an element that is 
+not moved by the permutation.</p>
+<div class="math">$$
+\pi = \bigl( \begin{smallmatrix}
+    a &amp; d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c \\
+    d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c &amp; a
+\end{smallmatrix} \bigr)
+\top
+\bigl( \begin{smallmatrix}
+    a &amp; b \\
+    b &amp; a 
+\end{smallmatrix} \bigr)
+\top 
+\bigl( \begin{smallmatrix}
+    b &amp; c &amp; d  \\
+    c &amp; d &amp; b
+\end{smallmatrix} \bigr)
+\top 
+\bigl( \begin{smallmatrix}
+    d \\
+    d
+\end{smallmatrix} \bigr)
+$$</div>
+<p>Thus the permutation <span class="math">\(\pi\)</span> can be expressed as the intercalation 
+of four independent cycles.</p>
+<p>This procedure illustrates Knuth's Theorem A.</p>
+<p>(Note: had we initially assumed <span class="math">\(\alpha\)</span> contained <span class="math">\(b\)</span> instead of <span class="math">\(a\)</span>, 
+we would end up starting by pulling out a different factor, but we 
+would ultimately end up with the same set of four factors.)</p>
+<p>To relate this back to the Rubik's Cube, we can start with a sequence 
+of interest, like <code>U R D D B</code>, and write the tuple representing the 
+outcome of this sequence when it is applied to the cube. In this way 
+we represent a move sequence as a tuple or as a permutation.</p>
+<p>Next, we factor this permutation the way we factored <span class="math">\(\pi\)</span>, 
+into the intercalation product of independent cycles. 
+These are groups of pieces being swapped each time the 
+cycle is applied.</p>
+<p>Now if one factor is of length 4 (group of 4 faces being permuted),
+one factor is of length 3, and one factor is of length 20,
+then the number of times the sequence must be applied 
+before the cube will come back to its original, solved state
+is <span class="math">\(LCM(3,4,20) = 60\)</span>.</p>
+<p><a name="rubiks3-factoring-algorithmA"></a></p>
+<h2>Algorithm A</h2>
+<p>Algorithm A is an algorithm written to perform the factoring process
+described above.</p>
+<p>We started with the two-row representation above,
+so our function will start with the top and bottom rows
+of the two-row representation.</p>
+<p>The procedure started with the first entry of the 
+top row, and got the corresponding entry of the bottom
+row. It then moved to the index of that item on the top row,
+and got the coresponding entry of the bottom row, 
+and so on, assembling the components of the permutation
+by stepping through each.</p>
+<p>In code, this will require us to switch between
+items in a list, and the indices of occurrencs of 
+items in the list. Fortunately, this is an easy 
+and common operation.</p>
+<p>Following is the pseudocode, then the Python code,
+to implement Algorithm A on the two-row representation
+of a tuple.</p>
+<p><a name="rubiks3-factoring-pseudocode"></a></p>
+<h2>Pseudocode</h2>
+<p>Our function takes two arguments: the top and bottom rows
+of the two-row representation of this permutation.</p>
+<div class="highlight"><pre><span></span>define function factor_permutations( top row, bottom row )
+
+    create bit vector to mark columns as factored or not
+
+    initialize list of factors
+
+    initialize pointer to active location
+
+    initialize starting index
+
+    while there are still zeros in the bit vector:
+
+        initialize this factor
+
+        run until break reached:
+
+            set bit vector at active location to 1
+
+            get active location entries on top row (leader) and bottom row (follower)
+
+            get next active location (index of follower in top row)
+
+            break if next active location out of bounds
+
+            break if next active location is starting element
+
+            append follower to this factor
+
+        add starting element to end of factor
+
+        add factor to list of factors
+
+        set next start index to index of first 0 in bit vector
+
+    return factors
+</pre></div>
+
+
+<p><a name="rubiks3-factoring-python"></a></p>
+<h2>Python Code</h2>
+<p>(Code for Algorithm A)</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">factor_permutation</span><span class="p">(</span><span class="n">perm_top</span><span class="p">,</span><span class="n">perm_bot</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Factor a permutation into its lowest terms</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">MAX</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="c1"># Need a way to also mark them as used... bit vector</span>
+    <span class="n">used_vector</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">perm_top</span><span class="p">)</span>
+
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">perm_top</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">used_vector</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="n">factors</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># If we still have values to pick out:</span>
+    <span class="k">while</span><span class="p">(</span><span class="mi">0</span> <span class="ow">in</span> <span class="n">used_vector</span><span class="p">):</span>
+
+        <span class="n">factor</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">while</span><span class="p">(</span><span class="bp">True</span><span class="p">):</span>
+            <span class="n">used_vector</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">leader</span> <span class="o">=</span> <span class="n">perm_top</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">follower</span> <span class="o">=</span> <span class="n">perm_bot</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+            <span class="n">i</span> <span class="o">=</span> <span class="n">perm_top</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">follower</span><span class="p">)</span>
+            <span class="k">while</span><span class="p">(</span><span class="n">used_vector</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span><span class="p">(</span><span class="n">i</span><span class="o">&gt;=</span><span class="n">MAX</span><span class="p">):</span>
+                    <span class="k">break</span>
+
+            <span class="k">if</span><span class="p">(</span><span class="n">i</span><span class="o">&gt;=</span><span class="n">MAX</span><span class="p">):</span>
+                <span class="k">break</span>
+            <span class="k">elif</span><span class="p">(</span><span class="n">follower</span><span class="o">==</span><span class="n">start</span><span class="p">):</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">follower</span><span class="p">)</span>
+
+        <span class="c1"># add start to end</span>
+        <span class="n">factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
+
+        <span class="n">factors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">used_vector</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">perm_top</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">break</span>
+
+    <span class="n">factorsize</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">check</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">factor</span> <span class="ow">in</span> <span class="n">factors</span><span class="p">:</span>
+        <span class="n">factorsize</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">factor</span><span class="p">))</span>
+        <span class="n">check</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">factors</span>
+</pre></div>
+
+
+<p><a name="rubiks3-preview"></a></p>
+<h1>Preview of Part 4</h1>
+<p>We concluded with an algorithm that will be central to our task
+of computing the order of a Rubik's Cube move sequence.</p>
+<p>In the next post, we'll apply our method of representing Rubik's Cubes
+using the two-line tuple notation, and use the factoring algorithm above,
+which will allow us to factor Rubik's Cube permutations into their 
+corresponding intercalation products. </p>
+<p>From there, we can count the size of each intercalation product,
+and the least common multiple of the sizes gives the order of the 
+permutation.</p>
+<p><a name="rubiks3-references"></a></p>
+<h1>References</h1>
+<ol>
+<li>
+<p>"Rubik's Cube". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
+&lt;<a href="https://charlesreid1.com/wiki/Rubiks_Cube">https://charlesreid1.com/wiki/Rubiks_Cube</a>&gt;</p>
+</li>
+<li>
+<p>"Rubik's Revenge". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
+&lt;<a href="https://charlesreid1.com/wiki/Rubiks_Revenge">https://charlesreid1.com/wiki/Rubiks_Revenge</a>&gt;</p>
+</li>
+<li>
+<p>"Rubik's Cube/Tuple". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
+&lt;<a href="https://charlesreid1.com/wiki/Rubiks_Cube/Tuple">https://charlesreid1.com/wiki/Rubiks_Cube/Tuple</a>&gt;</p>
+</li>
+<li>
+<p>"Rubik's Cube/Permutations". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
+&lt;<a href="https://charlesreid1.com/wiki/Rubiks_Cube/Permutations">https://charlesreid1.com/wiki/Rubiks_Cube/Permutations</a>&gt;</p>
+</li>
+<li>
+<p>"Github - dwalton76/rubiks-cube-NxNxN-solver". dwalton76, Github Repository, Github Inc. Accessed 11 January 2017.
+&lt;<a href="https://github.com/dwalton76/rubiks-cube-NxNxN-solver">https://github.com/dwalton76/rubiks-cube-NxNxN-solver</a>&gt;</p>
+</li>
+<li>
+<p>"Rubik's Cube NxNxN Solver". Git repository, git.charlesreid1.com. Charles Reid. Updated 20 January 2017.
+&lt;<a href="https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver">https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver</a>&gt;</p>
+</li>
+<li>
+<p>"Rubiks Cube Cycles". Git repository, git.charlesreid1.com. Charles Reid. Updated 20 January 2017.
+&lt;<a href="https://git.charlesreid1.com/charlesreid1/rubiks-cube-cycles">https://git.charlesreid1.com/charlesreid1/rubiks-cube-cycles</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/rubiks-cube.html">rubiks cube</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/combinatorics.html">combinatorics</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/permutations.html">permutations</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/puzzles.html">puzzles</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/art-of-computer-programming.html">art of computer programming</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/knuth.html">knuth</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 4x4 Rubik's Cube: Part 2: Permutations
             </b></h1>
         
@@ -1470,327 +2180,6 @@ rotations applied to the 4x4 Rubik's Cube.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Let's Generate Permutations!
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2018-01-02T18:00:00-08:00" pubdate>Tuesday 01/02/2018</time>
-                in 
-                <a href="/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/lets-generate-permutations.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h1>Generating Permutations</h1>
-<p>In today's post we're going to discuss the generation of permutations.</p>
-<p>Often, in combinatorics problems, we are interested in <em>how many</em> different
-instances or configurations of a particular thing we can have (what we'll call
-"enumeration" or "counting"). However, that is different from wanting to 
-actually see all of those configurations. Indeed, if we are counting 
-something with an astronomical number of configurations, we don't want 
-to try to list all of them.</p>
-<p>However, as usual, Donald Knuth, who covers the topic of permutation 
-generation in Volume 4A of his classic work, 
-<u>The Art of Computer Programming</u>,
-uncovers a problem that is much more complicated and subtle
-than it initially appears.</p>
-<h2>Background: Radix Method for Generating Permutations</h2>
-<p>In Volume 4A of his classic work, <u>The Art of Computer Programming</u>, 
-Donald Knuth turns to the question of generating permutations for a given
-combinatoric system. The book opens with Knuth jumping immediately into 
-the problem of generating permutations.</p>
-<p>Algorith M is the first algorithm Knuth presents to generate all unique tuples.
-To pose the problem a little more clearly, consider a combinatoric system that
-has <span class="math">\(n\)</span> independent parts, each part having a number of possible states.
-We can completely specify the state of the combinatoric system by specifying
-an <span class="math">\(n\)</span>-tuple:</p>
-<div class="math">$$
-(a_1, a_2, \dots, a_n)
-$$</div>
-<p>where each independent variable takes on one of its possible values <span class="math">\(0 \leq a_i \leq m_i\)</span>.</p>
-<p>Knuth's Algorithm M starts by setting all a's to 0, and incrementing 
-the right-most entry of the tuple (carrying if necessary). </p>
-<p>This is equivalent to counting in binary from 0 to <span class="math">\(N-1\)</span>,
-or to labeling every possible outcome with a number between 0 and <span class="math">\(N-1\)</span>.</p>
-<p>This becomes more clear if we consider the <span class="math">\(n\)</span>-tuple to be 
-a number in a variable-radix system:</p>
-<p>The number is <span class="math">\(\left[ a_1, a_2, \dots, a_n \right]\)</span></p>
-<p>The radix is <span class="math">\(\left[ m_1, m_2, \dots, m_n \right]\)</span></p>
-<p>By repeatedly adding 1 to the number <span class="math">\(\left[ a_1, a_2, \dots, a_n \right]\)</span>, 
-we iterate through every possible tuple <span class="math">\((a_1, a_2, \dots, a_n)\)</span> and 
-therefore through every possible combination of the independent variables.</p>
-<h2>Knuth's Algorithm M</h2>
-<p><strong>Algorithm M</strong> <em>(Mixed-radix generation)</em>. This algorithm visits all <span class="math">\(n\)</span>-tuples that satisfy the number/radix expressions above, by repeatedly adding 1 to the mixed-radix number until overflow occurs. (Aux. variables <span class="math">\(a_0\)</span> and <span class="math">\(m_0\)</span> introduced for convenience only.)</p>
-<p><strong>M1.</strong> [Initialize.] Set <span class="math">\(a_j \rightarrow 0\)</span> for <span class="math">\(0 \leq j \leq n\)</span>, set <span class="math">\(m_0 \rightarrow 2\)</span>.</p>
-<p><strong>M2.</strong> [Visit.] Visit the <span class="math">\(n\)</span>-tuple <span class="math">\((a_1, \dots, a_n)\)</span>. (The program that wants to examine all <span class="math">\(n\)</span>-tulpes now does its thing.)</p>
-<p><strong>M3.</strong> [Prepare to add one.] Set <span class="math">\(j \rightarrow n\)</span>.</p>
-<p><strong>M4.</strong> [Carry if necessary.] If <span class="math">\(a_j = m_j - 1\)</span>, set <span class="math">\(a_j \rightarrow 0, j \rightarrow j-1\)</span> and repeat this step.</p>
-<p><strong>M5.</strong> [Increase, unless done.] If <span class="math">\(j=0\)</span>, terminate algorithm. Otherwise set <span class="math">\(a_j = a_j + 1\)</span> and go back to step <span class="math">\(M2\)</span>.</p>
-<h2>Implementing Algorithm M</h2>
-<p>Unfortunately, this pseudocode takes some work to translate. Fortunately, that's already done in the method below.</p>
-<p>The method below implements Algorithm M in Python to generate random sequences on a 4x4 Rubik's Cube (called the Rubik's Revenge, or RR for short). The RR cube has six faces that can each be rotated clockwise or counterclockwise by a single layer, denoted by the uppercase letters U, D, B, F, L, R (up, down, back, front, left, right, respectively) for clockwise rotations and U', D', B', F', L', R' for counterclockwise rotations, for 12 total moves.</p>
-<p>However, on a 4x4 cube, we can also rotate <em>two</em> layers at a time. (That's the limit; moving three layers at a time is equivalent to a reversed rotation of the remaining single layer.) This type of rotation is denoted with a "w".</p>
-<p>Thus, rotating the top two layers of each of the six faces clockwise is denoted Uw, Dw, Bw, Fw, Lw, Rw, and counterclockwise rotations are denoted Uw', Dw', Bw', Fw', Lw', Rw', for 12 additional moves.</p>
-<p>We have one more type of move, which is where the second layer only is removed. This type of move is denoted with 2, and the face whose second layer is being rotated, for six moves: 2U, 2D, 2B, 2F, 2L, 2R. The prime notation denotes again a counterclockwise rotation, for an additional six moves: 2U', 2D', 2B', 2F', 2L', 2R'. This yields another 12 moves.</p>
-<p>There are 36 total moves that can be executed on the 4x4 Rubik's Revenge cube.</p>
-<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">algorithm_m</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Knuth&#39;s Algorithm M for permutation generation,</span>
-<span class="sd">    via AOCP Volume 4 Fascile 2.</span>
-<span class="sd">    This is a generator that returns permtuations </span>
-<span class="sd">    generated using the variable-radix method. </span>
-
-<span class="sd">    This generates ALL permutations.</span>
-<span class="sd">    Many of these are rotations of one another,</span>
-<span class="sd">    so use the get_rotations() function</span>
-<span class="sd">    (defined later) to eliminate redundant sequences.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">moves</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">,</span><span class="s1">&#39;B&#39;</span><span class="p">,</span><span class="s1">&#39;C&#39;</span><span class="p">,</span><span class="s1">&#39;D&#39;</span><span class="p">]</span>
-
-    <span class="c1"># M1 - Initialize</span>
-    <span class="n">a</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,]</span><span class="o">*</span><span class="n">n</span>
-    <span class="n">m</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">moves</span><span class="p">),]</span><span class="o">*</span><span class="n">n</span>
-
-    <span class="n">j</span> <span class="o">=</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span>
-
-    <span class="n">nvisits</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
-
-        <span class="c1"># M2 - visit</span>
-        <span class="n">move_sequence</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span> <span class="n">moves</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">aj</span><span class="p">)]</span> <span class="k">for</span> <span class="n">aj</span> <span class="ow">in</span> <span class="n">a</span><span class="p">])</span>
-        <span class="k">yield</span> <span class="n">move_sequence</span> 
-
-        <span class="n">nvisits</span> <span class="o">+=</span> <span class="mi">1</span>
-
-        <span class="c1"># M3 - prepare to +1</span>
-        <span class="n">j</span> <span class="o">=</span> <span class="n">n</span><span class="o">-</span><span class="mi">1</span>
-
-        <span class="c1"># M4 - carry</span>
-        <span class="k">while</span><span class="p">(</span> <span class="n">a</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="n">m</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
-            <span class="n">a</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">j</span> <span class="o">=</span> <span class="n">j</span><span class="o">-</span><span class="mi">1</span>
-
-        <span class="c1"># M5 - increase unless done</span>
-        <span class="k">if</span><span class="p">(</span><span class="n">j</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">):</span>
-            <span class="k">break</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">a</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
-</pre></div>
-
-
-<h2>Test Drive</h2>
-<p>Let's take a look at how Algorithm M looks when it is applied. 
-No surprises here: Algorithm M generates each of the possible 
-permutations in sequence.</p>
-<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
-
-<span class="c1"># (Algorithm M goes here) </span>
-
-<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="n">pprint</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">algorithm_m</span><span class="p">(</span><span class="mi">3</span><span class="p">)))</span>
-</pre></div>
-
-
-<p>and the result:</p>
-<div class="highlight"><pre><span></span>    [&#39;A A A&#39;,
-     &#39;A A B&#39;,
-     &#39;A A C&#39;,
-     &#39;A A D&#39;,
-     &#39;A B A&#39;,
-     &#39;A B B&#39;,
-     &#39;A B C&#39;,
-     &#39;A B D&#39;,
-     &#39;A C A&#39;,
-     &#39;A C B&#39;,
-     &#39;A C C&#39;,
-     &#39;A C D&#39;,
-     &#39;A D A&#39;,
-     &#39;A D B&#39;,
-     &#39;A D C&#39;,
-     &#39;A D D&#39;,
-     &#39;B A A&#39;,
-     &#39;B A B&#39;,
-     &#39;B A C&#39;,
-     &#39;B A D&#39;,
-     &#39;B B A&#39;,
-     &#39;B B B&#39;,
-     &#39;B B C&#39;,
-     &#39;B B D&#39;,
-     &#39;B C A&#39;,
-     &#39;B C B&#39;,
-     &#39;B C C&#39;,
-     &#39;B C D&#39;,
-     &#39;B D A&#39;,
-     &#39;B D B&#39;,
-     &#39;B D C&#39;,
-     &#39;B D D&#39;,
-     &#39;C A A&#39;,
-     &#39;C A B&#39;,
-     &#39;C A C&#39;,
-     &#39;C A D&#39;,
-     &#39;C B A&#39;,
-     &#39;C B B&#39;,
-     &#39;C B C&#39;,
-     &#39;C B D&#39;,
-     &#39;C C A&#39;,
-     &#39;C C B&#39;,
-     &#39;C C C&#39;,
-     &#39;C C D&#39;,
-     &#39;C D A&#39;,
-     &#39;C D B&#39;,
-     &#39;C D C&#39;,
-     &#39;C D D&#39;,
-     &#39;D A A&#39;,
-     &#39;D A B&#39;,
-     &#39;D A C&#39;,
-     &#39;D A D&#39;,
-     &#39;D B A&#39;,
-     &#39;D B B&#39;,
-     &#39;D B C&#39;,
-     &#39;D B D&#39;,
-     &#39;D C A&#39;,
-     &#39;D C B&#39;,
-     &#39;D C C&#39;,
-     &#39;D C D&#39;,
-     &#39;D D A&#39;,
-     &#39;D D B&#39;,
-     &#39;D D C&#39;,
-     &#39;D D D&#39;]
-</pre></div>
-
-
-<h2>What Other Ways Are There?</h2>
-<p>All of this may seem obvious or uninteresting,
-if you don't realize there are other ways of 
-generating all possible <span class="math">\(n\)</span>-tuples.</p>
-<p>It's a bit easier to think about for binary 
-numbers. Imagine you're trying to generate 
-every possible 10-digit binary number.
-This means generating all binary numbers
-between <span class="math">\(0\)</span> and <span class="math">\(2^{10}-1\)</span>. </p>
-<p>Algorithm M, as we saw above, just counts 
-from 0 to <span class="math">\(2^{10}-1\)</span>. But this can involve
-changing a large number of bits (for example,
-adding 1 to 001111111 results in 010000000,
-changing 8 digits. Knuth presents an
-alternative algorithm that only requires
-changing <em>one</em> bit to generate the next
-permutation, making the algorithm much 
-faster.</p>
-<p>More on that algorithm in a future blog post...</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/combinatorics.html">combinatorics</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/permutations.html">permutations</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/art-of-computer-programming.html">art of computer programming</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/knuth.html">knuth</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1820,6 +2209,19 @@ faster.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>March 2019</h2>
+
+            <p class="archive">
+            <a href="/centillion-a-document-search-engine.html">centillion: a document search engine</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

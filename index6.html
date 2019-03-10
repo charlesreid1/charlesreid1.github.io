@@ -102,6 +102,625 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                D3 Calendar Visualizations
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2018-02-16T23:00:00-08:00" pubdate>Friday 02/16/2018</time>
+                in 
+                <a href="/category/javascript.html">Javascript</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/d3-calendar-visualizations.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h1>Table of Contents</h1>
+<ul>
+<li><a href="#cal-starting">Starting example</a></li>
+<li><a href="#cal-changed">What needs to be changed</a></li>
+<li><a href="#cal-data">Formatting the data</a><ul>
+<li><a href="#cal-data-mediawiki">MediaWiki edits</a></li>
+<li><a href="#cal-data-git">Git commits</a></li>
+</ul>
+</li>
+<li><a href="#cal-colormap">Creating the color map</a></li>
+<li><a href="#cal-code">How the calendar code works</a></li>
+<li><a href="#cal-final">Final result</a></li>
+</ul>
+<p><br />
+<br /></p>
+<p><a name="cal-starting"></a></p>
+<h1>Starting example</h1>
+<p>Let's begin with a D3 example. Mike Bostock provided a <a href="https://bl.ocks.org/mbostock/4063318">Calendar View</a>
+block illustrating how to draw a very interesting visualization of
+large amounts of data over time:</p>
+<p><a href="https://bl.ocks.org/mbostock/4063318">
+<img src="images/calendar_example.png" />
+</a></p>
+<p>You might recognize this type of graph from Github, whose activity graph
+shows the same visualization.</p>
+<p>The data shown in this example consists of several years of stock market data.
+It is a simple but very large data set, with each data poit consisting of one date 
+and one number (the percentage gain or loss).</p>
+<p>The example also shows how to perform a simple calculation from multiple fields
+of the data to plot a derived quantity. In this case, the data consists of a 
+high, low, and close, and the quantity being plotted is the percent change:</p>
+<div class="math">$$
+\mbox{% Change} = \dfrac{\mbox{Close} - \mbox{Open} }{\mbox{Open}}
+$$</div>
+<p><a name="cal-changed"></a></p>
+<h1>What needs to be changed</h1>
+<p>To change this calendar visualization to visualize our own data, we need to change two things:</p>
+<ul>
+<li>The data set being visualized</li>
+<li>The color map being used</li>
+</ul>
+<p>We can leave the rest alone, or make small modifications as needed. Fortunately, these changes
+are straightforward to make for the calendar visualization.</p>
+<p><a name="cal-data"></a></p>
+<h1>Formatting the data</h1>
+<p>To modify the calendar graph for our own data, we'll output data as a time series: 
+one column of date/time stamps, and another column of data to plot.</p>
+<p>Let's take a look at the <a href="https://bl.ocks.org/mbostock/raw/4063318/dji.csv">original data</a>:</p>
+<div class="highlight"><pre><span></span>Date,Open,High,Low,Close,Volume,Adj Close
+2010-10-01,10789.72,10907.41,10759.14,10829.68,4298910000,10829.68
+2010-09-30,10835.96,10960.99,10732.27,10788.05,4284160000,10788.05
+2010-09-29,10857.98,10901.96,10759.75,10835.28,3990280000,10835.28
+2010-09-28,10809.85,10905.44,10714.03,10858.14,4025840000,10858.14
+2010-09-27,10860.03,10902.52,10776.44,10812.04,3587860000,10812.04
+</pre></div>
+
+
+<p>In the code, we can see where this data is actually being parsed:</p>
+<div class="highlight"><pre><span></span>  <span class="kd">var</span> <span class="nx">data</span> <span class="o">=</span> <span class="nx">d3</span><span class="p">.</span><span class="nx">nest</span><span class="p">()</span>
+      <span class="p">.</span><span class="nx">key</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">d</span><span class="p">.</span><span class="nb">Date</span><span class="p">;</span> <span class="p">})</span>
+      <span class="p">.</span><span class="nx">rollup</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="p">(</span><span class="nx">d</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Close</span> <span class="o">-</span> <span class="nx">d</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Open</span><span class="p">)</span> <span class="o">/</span> <span class="nx">d</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">Open</span><span class="p">;</span> <span class="p">})</span>
+      <span class="p">.</span><span class="nx">object</span><span class="p">(</span><span class="nx">csv</span><span class="p">);</span>
+</pre></div>
+
+
+<p>So, to modify this to suit our own custom data set, we can output our data as:</p>
+<div class="highlight"><pre><span></span>date,series1series2
+2010-10-01,1,150
+2010-10-02,2,250
+2010-10-03,3,350
+</pre></div>
+
+
+<p>and change the data parsing code to:</p>
+<div class="highlight"><pre><span></span>  <span class="kd">var</span> <span class="nx">data</span> <span class="o">=</span> <span class="nx">d3</span><span class="p">.</span><span class="nx">nest</span><span class="p">()</span>
+      <span class="p">.</span><span class="nx">key</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">d</span><span class="p">.</span><span class="nx">date</span><span class="p">;</span> <span class="p">})</span>
+      <span class="p">.</span><span class="nx">rollup</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span> <span class="p">{</span> 
+            <span class="c1">// Change this depending on what you want to plot</span>
+            <span class="k">return</span> <span class="nx">d</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">series1</span><span class="p">;</span> 
+      <span class="p">})</span>
+      <span class="p">.</span><span class="nx">object</span><span class="p">(</span><span class="nx">csv</span><span class="p">);</span>
+</pre></div>
+
+
+<p>Next, we discuss a few interesting applications of this visualization technique
+and how to generate the data sets.</p>
+<p><a name="cal-data-mediawiki"></a></p>
+<h2>MediaWiki Edits</h2>
+<p>One of the applications of interest was scraping a MediaWiki wiki
+(<a href="https://charlesreid1.com/wiki">charlesreid1.com/wiki</a> to be precise)
+to determine the number of edits made to the wiki on a given date.</p>
+<p>Fortunately, MediaWiki provides a rich API for interacting with 
+wikis programmatically, and one of the best packages for doing it 
+is <a href="https://github.com/wikimedia/pywikibot">pywikibot</a>.</p>
+<p>The way we compiled the data set for visualization was to scrape
+page histories for every page on the wiki, creating one observation
+for each edit on each page, and agglomerate the edits for each day
+into a final count.</p>
+<p>The schema used was:</p>
+<ul>
+<li><code>_id</code> - sha1 of text</li>
+<li><code>title</code> - title of article</li>
+<li><code>timestamp</code> - timestamp of edit</li>
+<li><code>count</code> - number of characters in edit</li>
+</ul>
+<p>The pseudocode used to extract the page edits was:</p>
+<div class="highlight"><pre><span></span>    get pages generator
+    for page in pages:
+        get page revisions generator
+        for revision in page revisions:
+            drop old doc from database
+            insert new doc into database
+            update record 
+</pre></div>
+
+
+<p>Finally, a bit of pywikibot code:</p>
+<div class="highlight"><pre><span></span>    <span class="c1"># Get the site</span>
+    <span class="n">site</span> <span class="o">=</span> <span class="n">get_site</span><span class="p">()</span>
+
+    <span class="c1"># Get the iterator returning pages to process</span>
+    <span class="n">page_generator</span> <span class="o">=</span> <span class="n">get_page_generator</span><span class="p">(</span><span class="n">site</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
+
+    <span class="c1"># Run the algorithm:</span>
+    <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">page_generator</span><span class="p">:</span>
+
+        <span class="n">page_title</span> <span class="o">=</span> <span class="n">page</span><span class="o">.</span><span class="n">title</span><span class="p">()</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Now parsing page: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">page_title</span><span class="p">))</span>
+
+        <span class="n">rev_generator</span> <span class="o">=</span> <span class="n">page</span><span class="o">.</span><span class="n">revisions</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">count_chars</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">rev</span> <span class="ow">in</span> <span class="n">rev_generator</span><span class="p">:</span>
+
+            <span class="c1"># Assemble the NoSQL document</span>
+            <span class="n">doc</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">doc</span><span class="p">[</span><span class="s1">&#39;_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rev</span><span class="o">.</span><span class="n">sha1</span>
+            <span class="n">doc</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">page_title</span>
+            <span class="n">doc</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rev</span><span class="o">.</span><span class="n">timestamp</span>
+            <span class="n">doc</span><span class="p">[</span><span class="s1">&#39;count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rev</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+            <span class="c1"># Insert the new NoSQL document</span>
+            <span class="n">page_history_collection</span><span class="o">.</span><span class="n">insert_one</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+</pre></div>
+
+
+<p>The mechanisms to obtain the page generator</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_site</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Get the Site object representing charlesreid1.com</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">pywikibot</span><span class="o">.</span><span class="n">Site</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">get_page_generator</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">max_items</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get the generator that returns the Page objects </span>
+<span class="sd">    that we&#39;re interested in, from Site s.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">page_generator</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">allpages</span><span class="p">()</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">max_items</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">):</span>
+        <span class="n">page_generator</span><span class="o">.</span><span class="n">set_maximum_items</span><span class="p">(</span><span class="n">max_items</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">page_generator</span>
+</pre></div>
+
+
+<p>Note that pywikibot will already have the site configured
+once you run the login script. For more information about
+how to log in to a wiki with Pybot, and general information
+about Pywikibot tasks, see the <a href="https://charlesreid1.com/wiki/Pywikibot">Pywikibot page</a>
+on the charlesreid1.com wiki.</p>
+<p><a name="cal-data-git"></a></p>
+<h2>Git Commits</h2>
+<p>Another application of these types of calendars comes directly
+from Github's visualization of the number of commits made by a 
+user on each day.</p>
+<p>To extract this information, you will need a folder full of git repositories,
+which will allow you to use git status to extract commit information from the 
+log of each repository and assemble it all into a time series for a calendar.</p>
+<p>While there is a Python package for interfacing with the git API, git itself
+is extremely powerful and is capable of doing this just fine. We use 
+Python's subprocess library to make a call to git status, and parse the 
+results into a data structure for exporting to CSV.</p>
+<p>Here is the code that was used to walk through each directory
+and extract information from a git status command:</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+
+<span class="p">[</span><span class="n">clipped</span><span class="p">]</span>
+
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    <span class="n">orgs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">root_dir</span><span class="o">+</span><span class="s2">&quot;/repositories/*&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">org</span> <span class="ow">in</span> <span class="n">orgs</span><span class="p">:</span>
+        <span class="n">base_org</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">org</span><span class="p">)</span>
+        <span class="n">repos</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">org</span><span class="o">+</span><span class="s2">&quot;/*&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">repo</span> <span class="ow">in</span> <span class="n">repos</span><span class="p">:</span>
+
+            <span class="c1"># Print out the org and repo name</span>
+            <span class="n">base_repo</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;.git&#39;</span><span class="p">,</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">repo</span><span class="p">))</span>
+            <span class="n">log_file</span> <span class="o">=</span> <span class="n">base_org</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">base_repo</span> <span class="o">+</span> <span class="s2">&quot;.log&quot;</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> : </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">base_org</span><span class="p">,</span><span class="n">base_repo</span><span class="p">))</span>
+
+            <span class="c1"># Get each commit</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">status_dir</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">log_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;ISO-8859-1&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">lines</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+                <span class="n">tokens</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+                <span class="n">commit_id</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">date</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">time</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>
+
+                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> 
+                                <span class="nb">dict</span><span class="p">(</span>   
+                                        <span class="n">commit_id</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                        <span class="n">date</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                        <span class="n">time</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                                        <span class="n">commits</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                                     <span class="p">),</span>
+                                <span class="n">ignore_index</span><span class="o">=</span><span class="bp">True</span>
+                                <span class="p">)</span>
+
+    <span class="n">ag</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">&#39;date&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">agg</span><span class="p">({</span><span class="s1">&#39;commits&#39;</span><span class="p">:</span><span class="nb">sum</span><span class="p">})</span>
+    <span class="n">ag</span><span class="p">[</span><span class="s1">&#39;commits&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ag</span><span class="p">[</span><span class="s1">&#39;commits&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">ag</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;commit_counts.csv&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>The last bit of code groups each commit by date, applying the
+sum function to the number of commits (1 for each commit), 
+to yield the total number of commits for each date:</p>
+<div class="highlight"><pre><span></span>date,commits
+2014-01-17,2
+2014-03-26,11
+2014-03-28,3
+2014-04-01,4
+2014-04-02,10
+2014-04-03,4
+2014-04-04,3
+</pre></div>
+
+
+<p><a name="cal-colormap"></a></p>
+<h1>Creating the color map</h1>
+<p>The best part of the process is picking a color map for the calendar.
+The <a href="http://colorbrewer2.org/#type=sequential&amp;scheme=OrRd&amp;n=7">ColorBrewer</a>
+site has some good color palettes inspired by cartographic color needs.
+Python also provides some useful libraries and functionality for 
+generating colormaps.</p>
+<p>There are a number of options:</p>
+<ul>
+<li><a href="https://matplotlib.org/users/colormaps.html">Matplotlib colormaps</a></li>
+<li><a href="https://bokeh.github.io/colorcet/">Bokeh colorcet</a></li>
+<li><a href="https://matplotlib.org/cmocean/">Ocean colormaps: cmocean</a></li>
+</ul>
+<p>Here, we'll cover an alternative approach:
+defining a colormap that linearly interpolates
+between colors at particular locations on the 
+interval 0 to 1.</p>
+<p>We will also use the <a href="https://github.com/ubernostrum/webcolors">webcolors</a> 
+module in Python to convert between colors in 
+various formats, and a function <code>make_cmap()</code>
+available from <a href="http://schubert.atmos.colostate.edu/~cslocum/code/custom_cmap.py">Chris Slocum</a>:</p>
+<p><a href="https://git.charlesreid1.com/d3/charlesreid1-calendar/src/master/make_cmaps.py">Link to <code>make_cmap.py</code></a></p>
+<p><strong>make_cmap.py:</strong></p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">make_cmap</span><span class="p">(</span><span class="n">colors</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">bit</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    make_cmap takes a list of tuples which contain RGB values. The RGB</span>
+<span class="sd">    values may either be in 8-bit [0 to 255] (in which bit must be set to</span>
+<span class="sd">    True when called) or arithmetic [0 to 1] (default). make_cmap returns</span>
+<span class="sd">    a cmap with equally spaced colors.</span>
+<span class="sd">    Arrange your tuples so that the first color is the lowest value for the</span>
+<span class="sd">    colorbar and the last is the highest.</span>
+<span class="sd">    position contains values from 0 to 1 to dictate the location of each color.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="kn">import</span> <span class="nn">matplotlib</span> <span class="kn">as</span> <span class="nn">mpl</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+    <span class="n">bit_rgb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">256</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">position</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">position</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">):</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;position length must be the same as colors&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">position</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;position must start with 0 and end with 1&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">bit</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)):</span>
+            <span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">bit_rgb</span><span class="p">[</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]],</span>
+                         <span class="n">bit_rgb</span><span class="p">[</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]],</span>
+                         <span class="n">bit_rgb</span><span class="p">[</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">]])</span>
+    <span class="n">cdict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;red&#39;</span><span class="p">:[],</span> <span class="s1">&#39;green&#39;</span><span class="p">:[],</span> <span class="s1">&#39;blue&#39;</span><span class="p">:[]}</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">colors</span><span class="p">):</span>
+        <span class="n">cdict</span><span class="p">[</span><span class="s1">&#39;red&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">pos</span><span class="p">,</span> <span class="n">color</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">color</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">cdict</span><span class="p">[</span><span class="s1">&#39;green&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">pos</span><span class="p">,</span> <span class="n">color</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">color</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">cdict</span><span class="p">[</span><span class="s1">&#39;blue&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">pos</span><span class="p">,</span> <span class="n">color</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">color</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="n">cmap</span> <span class="o">=</span> <span class="n">mpl</span><span class="o">.</span><span class="n">colors</span><span class="o">.</span><span class="n">LinearSegmentedColormap</span><span class="p">(</span><span class="s1">&#39;my_colormap&#39;</span><span class="p">,</span><span class="n">cdict</span><span class="p">,</span><span class="mi">256</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cmap</span>
+</pre></div>
+
+
+<p>Now, an example of how we can call this function: 
+this code creates a colormap ranging from purple to orange.</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">purple_to_orange</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Dark purple to bright orange.&quot;&quot;&quot;</span>
+
+    <span class="n">start_hex</span> <span class="o">=</span> <span class="s2">&quot;#4d2b4b&quot;</span>
+    <span class="n">mid1_hex</span>  <span class="o">=</span> <span class="s2">&quot;#8c6bb1&quot;</span>
+    <span class="n">mid2_hex</span>  <span class="o">=</span> <span class="s2">&quot;#fdae6b&quot;</span>
+    <span class="n">end_hex</span>   <span class="o">=</span> <span class="s2">&quot;#f16913&quot;</span>
+
+    <span class="n">start_color</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span><span class="o">/</span><span class="mi">255</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">webcolors</span><span class="o">.</span><span class="n">hex_to_rgb</span><span class="p">(</span><span class="n">start_hex</span><span class="p">)]</span>
+    <span class="n">mid1_color</span>   <span class="o">=</span> <span class="p">[</span><span class="n">j</span><span class="o">/</span><span class="mi">255</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">webcolors</span><span class="o">.</span><span class="n">hex_to_rgb</span><span class="p">(</span><span class="n">mid1_hex</span><span class="p">)]</span>
+    <span class="n">mid2_color</span>   <span class="o">=</span> <span class="p">[</span><span class="n">j</span><span class="o">/</span><span class="mi">255</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">webcolors</span><span class="o">.</span><span class="n">hex_to_rgb</span><span class="p">(</span><span class="n">mid2_hex</span><span class="p">)]</span>
+    <span class="n">end_color</span>   <span class="o">=</span> <span class="p">[</span><span class="n">j</span><span class="o">/</span><span class="mi">255</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">webcolors</span><span class="o">.</span><span class="n">hex_to_rgb</span><span class="p">(</span><span class="n">end_hex</span><span class="p">)]</span>
+
+    <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="n">start_color</span><span class="p">,</span> <span class="n">mid1_color</span><span class="p">,</span> <span class="n">mid2_color</span><span class="p">,</span> <span class="n">end_color</span><span class="p">]</span>
+    <span class="n">position</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">cm</span> <span class="o">=</span> <span class="n">make_cmap</span><span class="p">(</span><span class="n">colors</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="n">position</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Now, the following code will evaluate the colormap to create
+9 separate hex colors:</p>
+<div class="highlight"><pre><span></span>    <span class="c1"># Now just call cm(0.0) thru cm(1.0)</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="mi">9</span>
+    <span class="n">hex_colorz</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">i</span><span class="o">/</span><span class="n">N</span>
+        <span class="n">rgbd_color</span> <span class="o">=</span> <span class="n">cm</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+        <span class="n">rgb_color</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="o">*</span><span class="mi">255</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">rgbd_color</span><span class="p">]</span>
+        <span class="n">hex_color</span> <span class="o">=</span> <span class="n">webcolors</span><span class="o">.</span><span class="n">rgb_to_hex</span><span class="p">(</span><span class="n">rgb_color</span><span class="p">)</span>
+        <span class="n">hex_colorz</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hex_color</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="n">hex_colorz</span><span class="p">)</span>
+</pre></div>
+
+
+<p><a name="cal-code"></a></p>
+<h1>How the calendar code works</h1>
+<p>Start with the HTML document: </p>
+<div class="highlight"><pre><span></span><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="p">&lt;</span><span class="nt">body</span> <span class="na">style</span><span class="o">=</span><span class="s">&quot;background: #272b30;&quot;</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">div</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;calendar&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">script</span> <span class="na">src</span><span class="o">=</span><span class="s">&quot;https://d3js.org/d3.v4.min.js&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">script</span><span class="p">&gt;</span>
+<span class="cm">/* D3 code goes here */</span>
+<span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">body</span><span class="p">&gt;</span>
+</pre></div>
+
+
+<p>Next, the Javascript code that creates the calendar
+visualization. We'll walk through each part.</p>
+<div class="highlight"><pre><span></span><span class="kd">var</span> <span class="nx">width</span> <span class="o">=</span> <span class="mi">700</span><span class="p">,</span>
+    <span class="nx">height</span> <span class="o">=</span> <span class="mi">90</span><span class="p">,</span>
+    <span class="nx">cellSize</span> <span class="o">=</span> <span class="mi">12</span><span class="p">;</span>
+
+<span class="c1">// big integers</span>
+<span class="kd">var</span> <span class="nx">formatStuff</span> <span class="o">=</span> <span class="nx">d3</span><span class="p">.</span><span class="nx">format</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">);</span>
+
+<span class="cm">/*</span>
+<span class="cm">TEH COLORRRZZZZ</span>
+<span class="cm">*/</span>
+<span class="kd">var</span> <span class="nx">realBackgroundColor</span> <span class="o">=</span> <span class="s2">&quot;#272b30&quot;</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">tileBackgroundColor</span> <span class="o">=</span> <span class="nx">realBackgroundColor</span><span class="p">;</span><span class="c1">//&quot;#3a3a3a&quot;;</span>
+<span class="kd">var</span> <span class="nx">tileStrokeColor</span>     <span class="o">=</span> <span class="s2">&quot;#3a3a3a&quot;</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">monthStrokeColor</span>    <span class="o">=</span> <span class="s2">&quot;#4a4a4a&quot;</span><span class="p">;</span>
+
+<span class="kd">var</span> <span class="nx">color</span> <span class="o">=</span> <span class="nx">d3</span><span class="p">.</span><span class="nx">scaleQuantize</span><span class="p">()</span>
+    <span class="p">.</span><span class="nx">domain</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">60</span><span class="p">])</span>
+    <span class="p">.</span><span class="nx">range</span><span class="p">([</span><span class="s2">&quot;#4d2b4b&quot;</span><span class="p">,</span><span class="s2">&quot;#5a3961&quot;</span><span class="p">,</span><span class="s2">&quot;#684777&quot;</span><span class="p">,</span><span class="s2">&quot;#77558f&quot;</span><span class="p">,</span><span class="s2">&quot;#8463a5&quot;</span><span class="p">,</span><span class="s2">&quot;#cc9189&quot;</span><span class="p">,</span><span class="s2">&quot;#fba25c&quot;</span><span class="p">,</span><span class="s2">&quot;#f78e43&quot;</span><span class="p">,</span><span class="s2">&quot;#f47b2b&quot;</span><span class="p">,</span><span class="s2">&quot;#f16913&quot;</span><span class="p">]);</span>
+<span class="c1">// purple orange</span>
+</pre></div>
+
+
+<p>The canvas goes on the div tag with id <code>calendar</code>:</p>
+<div class="highlight"><pre><span></span><span class="cm">/*</span>
+<span class="cm">Make the canvas</span>
+<span class="cm">*/</span>
+<span class="kd">var</span> <span class="nx">svg</span> <span class="o">=</span> <span class="nx">d3</span><span class="p">.</span><span class="nx">select</span><span class="p">(</span><span class="s2">&quot;div#calendar&quot;</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">selectAll</span><span class="p">(</span><span class="s2">&quot;svg&quot;</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">data</span><span class="p">(</span><span class="nx">d3</span><span class="p">.</span><span class="nx">range</span><span class="p">(</span><span class="mi">2010</span><span class="p">,</span> <span class="mi">2019</span><span class="p">).</span><span class="nx">reverse</span><span class="p">())</span>
+  <span class="p">.</span><span class="nx">enter</span><span class="p">().</span><span class="nx">append</span><span class="p">(</span><span class="s2">&quot;svg&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;width&quot;</span><span class="p">,</span> <span class="nx">width</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;height&quot;</span><span class="p">,</span> <span class="nx">height</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="s2">&quot;g&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;transform&quot;</span><span class="p">,</span> <span class="s2">&quot;translate(&quot;</span> <span class="o">+</span> <span class="p">((</span><span class="nx">width</span> <span class="o">-</span> <span class="nx">cellSize</span> <span class="o">*</span> <span class="mi">53</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;,&quot;</span> <span class="o">+</span> <span class="p">(</span><span class="nx">height</span> <span class="o">-</span> <span class="nx">cellSize</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;)&quot;</span><span class="p">);</span>
+
+
+
+<span class="cm">/*</span>
+<span class="cm">Write the years</span>
+<span class="cm">*/</span>
+<span class="nx">svg</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;transform&quot;</span><span class="p">,</span> <span class="s2">&quot;translate(-6,&quot;</span> <span class="o">+</span> <span class="nx">cellSize</span> <span class="o">*</span> <span class="mf">3.5</span> <span class="o">+</span> <span class="s2">&quot;)rotate(-90)&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;font-family&quot;</span><span class="p">,</span> <span class="s2">&quot;sans-serif&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;font-size&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;fill&quot;</span><span class="p">,</span> <span class="s2">&quot;#bbb&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;text-anchor&quot;</span><span class="p">,</span> <span class="s2">&quot;middle&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">text</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">d</span><span class="p">;</span> <span class="p">});</span>
+</pre></div>
+
+
+<p>The next two portions are the meat of the calendar visualization,
+drawing the tiles and outlines:</p>
+<div class="highlight"><pre><span></span><span class="cm">/*</span>
+<span class="cm">Draw the tiles representing days of the year</span>
+<span class="cm">(also draw tile outlines)</span>
+<span class="cm">*/</span>
+<span class="kd">var</span> <span class="nx">rect</span> <span class="o">=</span> <span class="nx">svg</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="s2">&quot;g&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;fill&quot;</span><span class="p">,</span>   <span class="nx">tileBackgroundColor</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;stroke&quot;</span><span class="p">,</span> <span class="nx">tileStrokeColor</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">selectAll</span><span class="p">(</span><span class="s2">&quot;rect&quot;</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">data</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">d3</span><span class="p">.</span><span class="nx">timeDays</span><span class="p">(</span><span class="k">new</span> <span class="nb">Date</span><span class="p">(</span><span class="nx">d</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">(</span><span class="nx">d</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span> <span class="p">})</span>
+  <span class="p">.</span><span class="nx">enter</span><span class="p">().</span><span class="nx">append</span><span class="p">(</span><span class="s2">&quot;rect&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;width&quot;</span><span class="p">,</span> <span class="nx">cellSize</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;height&quot;</span><span class="p">,</span> <span class="nx">cellSize</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">d3</span><span class="p">.</span><span class="nx">timeWeek</span><span class="p">.</span><span class="nx">count</span><span class="p">(</span><span class="nx">d3</span><span class="p">.</span><span class="nx">timeYear</span><span class="p">(</span><span class="nx">d</span><span class="p">),</span> <span class="nx">d</span><span class="p">)</span> <span class="o">*</span> <span class="nx">cellSize</span><span class="p">;</span> <span class="p">})</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">d</span><span class="p">.</span><span class="nx">getDay</span><span class="p">()</span> <span class="o">*</span> <span class="nx">cellSize</span><span class="p">;</span> <span class="p">})</span>
+    <span class="p">.</span><span class="nx">datum</span><span class="p">(</span><span class="nx">d3</span><span class="p">.</span><span class="nx">timeFormat</span><span class="p">(</span><span class="s2">&quot;%Y-%m-%d&quot;</span><span class="p">));</span>
+
+
+<span class="cm">/*</span>
+<span class="cm">Draw outlines of groups representing months</span>
+<span class="cm">*/</span>
+<span class="nx">svg</span><span class="p">.</span><span class="nx">append</span><span class="p">(</span><span class="s2">&quot;g&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;fill&quot;</span><span class="p">,</span> <span class="s2">&quot;none&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;stroke&quot;</span><span class="p">,</span> <span class="nx">monthStrokeColor</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">selectAll</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span>
+  <span class="p">.</span><span class="nx">data</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">d</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <span class="nx">d3</span><span class="p">.</span><span class="nx">timeMonths</span><span class="p">(</span><span class="k">new</span> <span class="nb">Date</span><span class="p">(</span><span class="nx">d</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">(</span><span class="nx">d</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span> <span class="p">})</span>
+  <span class="p">.</span><span class="nx">enter</span><span class="p">().</span><span class="nx">append</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="nx">attr</span><span class="p">(</span><span class="s2">&quot;d&quot;</span><span class="p">,</span> <span class="nx">pathMonth</span><span class="p">);</span>
+</pre></div>
+
+
+<p>Now, the code that loads the data, filters it, performs any calculations,
+and draws colored rectangles on top of the baseline square grid:</p>
+<div class="highlight"><pre><span></span><span class="cm">/*</span>
+<span class="cm">Load up the csv file</span>
+<span class="cm">*/</span><span class="w"></span>
+d3<span class="o">.</span>csv<span class="o">(</span><span class="s">&quot;page_edits.csv&quot;</span><span class="o">,</span><span class="w"> </span>function<span class="o">(</span>error<span class="o">,</span><span class="w"> </span>csv<span class="o">)</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
+<span class="w">  </span><span class="kr">if</span><span class="w"> </span><span class="o">(</span>error<span class="o">)</span><span class="w"> </span>throw<span class="w"> </span>error<span class="err">;</span><span class="w"></span>
+
+<span class="w">  </span><span class="cm">/*</span>
+<span class="cm">  This is where you decide what values to plot</span>
+<span class="cm">  */</span><span class="w"></span>
+<span class="w">  </span>var<span class="w"> </span>data<span class="w"> </span><span class="o">=</span><span class="w"> </span>d3<span class="o">.</span>nest<span class="o">()</span><span class="w"></span>
+<span class="w">        </span><span class="o">.</span>key<span class="o">(</span>function<span class="o">(</span>d<span class="o">)</span><span class="w"> </span><span class="err">{</span><span class="w"> </span><span class="kr">return</span><span class="w"> </span>d<span class="o">.</span>timestamp<span class="w"> </span><span class="err">;</span><span class="w"> </span><span class="err">}</span><span class="o">)</span><span class="w"></span>
+<span class="w">        </span><span class="o">.</span>rollup<span class="o">(</span>function<span class="o">(</span>d<span class="o">)</span><span class="w"> </span><span class="err">{</span><span class="w"> </span>
+<span class="w">            </span><span class="kr">return</span><span class="w"> </span>d<span class="err">[</span><span class="m">0</span><span class="err">]</span><span class="o">.</span>edits<span class="err">;</span><span class="w"> </span>
+<span class="w">        </span><span class="err">}</span><span class="o">)</span><span class="w"></span>
+<span class="w">        </span><span class="o">.</span>object<span class="o">(</span>csv<span class="o">)</span><span class="err">;</span><span class="w"></span>
+
+<span class="w">  </span>rect<span class="o">.</span>filter<span class="o">(</span>function<span class="o">(</span>d<span class="o">)</span><span class="w"> </span><span class="err">{</span><span class="w"> </span><span class="kr">return</span><span class="w"> </span>d<span class="w"> </span>in<span class="w"> </span>data<span class="err">;</span><span class="w"> </span><span class="err">}</span><span class="o">)</span><span class="w"></span>
+<span class="w">        </span><span class="o">.</span>attr<span class="o">(</span><span class="s">&quot;fill&quot;</span><span class="o">,</span><span class="w"> </span>function<span class="o">(</span>d<span class="o">)</span><span class="w"> </span><span class="err">{</span><span class="w"> </span><span class="kr">return</span><span class="w"> </span>color<span class="o">(</span>data<span class="err">[</span>d<span class="err">]</span><span class="o">)</span><span class="err">;</span><span class="w"> </span><span class="err">}</span><span class="o">)</span><span class="w"></span>
+<span class="w">        </span><span class="o">.</span>append<span class="o">(</span><span class="s">&quot;title&quot;</span><span class="o">)</span><span class="w"></span>
+<span class="w">        </span><span class="o">.</span>text<span class="o">(</span>function<span class="o">(</span>d<span class="o">)</span><span class="w"> </span><span class="err">{</span><span class="w"> </span><span class="kr">return</span><span class="w"> </span>d<span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span>formatStuff<span class="o">(</span>data<span class="err">[</span>d<span class="err">]</span><span class="o">)</span><span class="err">;</span><span class="w"> </span><span class="err">}</span><span class="o">)</span><span class="err">;</span><span class="w"></span>
+<span class="err">}</span><span class="o">)</span><span class="err">;</span><span class="w"></span>
+</pre></div>
+
+
+<p>Finally, the most mysterious bit of magic in this code is 
+the code that draws the squares around the months.
+This has to use the coordinates of the beginning and end 
+of the months to draw a complicated square path. </p>
+<p>It's magic, it works, we're happy.</p>
+<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">pathMonth</span><span class="p">(</span><span class="nx">t0</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">t1</span> <span class="o">=</span> <span class="k">new</span> <span class="nb">Date</span><span class="p">(</span><span class="nx">t0</span><span class="p">.</span><span class="nx">getFullYear</span><span class="p">(),</span> <span class="nx">t0</span><span class="p">.</span><span class="nx">getMonth</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+      <span class="nx">d0</span> <span class="o">=</span> <span class="nx">t0</span><span class="p">.</span><span class="nx">getDay</span><span class="p">(),</span> <span class="nx">w0</span> <span class="o">=</span> <span class="nx">d3</span><span class="p">.</span><span class="nx">timeWeek</span><span class="p">.</span><span class="nx">count</span><span class="p">(</span><span class="nx">d3</span><span class="p">.</span><span class="nx">timeYear</span><span class="p">(</span><span class="nx">t0</span><span class="p">),</span> <span class="nx">t0</span><span class="p">),</span>
+      <span class="nx">d1</span> <span class="o">=</span> <span class="nx">t1</span><span class="p">.</span><span class="nx">getDay</span><span class="p">(),</span> <span class="nx">w1</span> <span class="o">=</span> <span class="nx">d3</span><span class="p">.</span><span class="nx">timeWeek</span><span class="p">.</span><span class="nx">count</span><span class="p">(</span><span class="nx">d3</span><span class="p">.</span><span class="nx">timeYear</span><span class="p">(</span><span class="nx">t1</span><span class="p">),</span> <span class="nx">t1</span><span class="p">);</span>
+  <span class="k">return</span> <span class="s2">&quot;M&quot;</span> <span class="o">+</span> <span class="p">(</span><span class="nx">w0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="nx">cellSize</span> <span class="o">+</span> <span class="s2">&quot;,&quot;</span> <span class="o">+</span> <span class="nx">d0</span> <span class="o">*</span> <span class="nx">cellSize</span>
+      <span class="o">+</span> <span class="s2">&quot;H&quot;</span> <span class="o">+</span> <span class="nx">w0</span> <span class="o">*</span> <span class="nx">cellSize</span> <span class="o">+</span> <span class="s2">&quot;V&quot;</span> <span class="o">+</span> <span class="mi">7</span> <span class="o">*</span> <span class="nx">cellSize</span>
+      <span class="o">+</span> <span class="s2">&quot;H&quot;</span> <span class="o">+</span> <span class="nx">w1</span> <span class="o">*</span> <span class="nx">cellSize</span> <span class="o">+</span> <span class="s2">&quot;V&quot;</span> <span class="o">+</span> <span class="p">(</span><span class="nx">d1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="nx">cellSize</span>
+      <span class="o">+</span> <span class="s2">&quot;H&quot;</span> <span class="o">+</span> <span class="p">(</span><span class="nx">w1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="nx">cellSize</span> <span class="o">+</span> <span class="s2">&quot;V&quot;</span> <span class="o">+</span> <span class="mi">0</span>
+      <span class="o">+</span> <span class="s2">&quot;H&quot;</span> <span class="o">+</span> <span class="p">(</span><span class="nx">w0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="nx">cellSize</span> <span class="o">+</span> <span class="s2">&quot;Z&quot;</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p><a name="cal-final"></a></p>
+<h1>Final result</h1>
+<p>The finished product, visualizing edits to <a href="https://charlesreid1.com/wiki/">charlesreid1.com/wiki/</a>
+and commits to <a href="http://git.charlesreid1.com">git.charlesreid1.com</a>,
+can be seen at the following links:</p>
+<ul>
+<li>Wiki edits calendar: <a href="https://charlesreid1.com/wiki_calendar">https://charlesreid1.com/wiki_calendar</a></li>
+<li>Git commits calendar: <a href="https://git.charlesreid1.com/git_calendar">https://git.charlesreid1.com/git_calendar</a></li>
+</ul>
+<p><a href="https://charlesreid1.com/wiki_calendar">
+<img src="images/wiki_calendar.png" />
+</a></p>
+<p><a href="http://charlesreid1.com/git_calendar">
+<img src="images/git_calendar.png" />
+</a></p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/javascript.html">javascript</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/d3.html">d3</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/colors.html">colors</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Project Euler Problem 172
             </b></h1>
         
@@ -1265,716 +1884,6 @@ orders - so check back soon...</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                4x4 Rubik's Cube: Part 3: Factoring Permutations
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2018-01-20T12:00:00-08:00" pubdate>Saturday 01/20/2018</time>
-                in 
-                <a href="/category/rubiks-cube.html">Rubiks Cube</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/4x4-rubiks-cube-part-3-factoring-permutations.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p><em>This is Part 3 of a 4-part blog post 
-on the mathematics of the 4x4 Rubik's Cube, 
-its relation to algorithms, and some 
-curious properties of Rubik's Cubes.</em></p>
-<p>See Part 1 of this blog post here: <a href="https://charlesreid1.github.io/4x4-rubiks-cube-part-1-representations.html">Part 1: Representations</a></p>
-<p>See Part 2 of this blog post here: <a href="https://charlesreid1.github.io/4x4-rubiks-cube-part-2-permutations.html">Part 2: Permutations</a></p>
-<p>You are currently reading Part 3 of this blog post: <strong>Part 3: Factoring Permutations</strong></p>
-<p>See Part 4 of this blog post here: <a href="#">Part 4: Sequence Order</a></p>
-<h1>Table of Contents</h1>
-<ul>
-<li>
-<p><a href="#rubiks3-rubiks3-intro">Introduction: Cycles, Sequences, and Order</a></p>
-<ul>
-<li><a href="#rubiks3-rubiks3-intro-cycles">Cycles</a></li>
-<li><a href="#rubiks3-rubiks3-intro-sequences">Sequences</a></li>
-<li><a href="#rubiks3-rubiks3-intro-order">Order</a></li>
-</ul>
-</li>
-<li>
-<p><a href="#rubiks3-rubiks3-intercalation">Intercalation Product</a></p>
-<ul>
-<li><a href="#rubiks3-intercalation-definition">Definition</a></li>
-<li><a href="#rubiks3-intercalation-properties">Properties</a></li>
-</ul>
-</li>
-<li>
-<p><a href="#rubiks3-factoring">Factoring Permutations Using Knuth's Theorem A</a></p>
-<ul>
-<li><a href="#rubiks3-factoring-significance">Significance of Factors</a></li>
-<li><a href="#rubuiks3-factoring-how">How to Factor Permutations</a></li>
-<li><a href="#rubuiks3-factoring-how-contd">How to Factor Permutations (Cont'd)</a></li>
-<li><a href="#rubiks3-factoring-algorithmA">Algorithm A</a></li>
-<li><a href="#rubiks3-factoring-pseudocode">Pseudocode</a></li>
-<li><a href="#rubiks3-factoring-python">Python Code</a></li>
-</ul>
-</li>
-<li>
-<p><a href="#rubiks3-preview">Preview of Part 4</a></p>
-</li>
-<li>
-<p><a href="#rubiks3-references">References</a></p>
-</li>
-</ul>
-<p><br />
-<br />
-<br /></p>
-<p><a name="rubiks3-intro"></a></p>
-<h1>Introduction</h1>
-<p>So far we have been discussing representations of the Rubik's Cube,
-with the ultimate intention of investigating some of its properties.</p>
-<p>In this post, we define and explore the properties we are interested
-in studying.</p>
-<p><a name="rubiks3-intro-cycles"></a></p>
-<h2>Cycles</h2>
-<p>(Definition of cycle)</p>
-<p>We use the two-line notation introduced in the last blog post,
-so a permutation of a 5-tuple might look like this:</p>
-<div class="math">$$
-a = \bigl(\begin{smallmatrix}
-  a &amp; b &amp; c &amp; d &amp; e \\
-  b &amp; a &amp; e &amp; c &amp; d 
-\end{smallmatrix}\bigr)
-$$</div>
-<p>In this permutation, we see that <span class="math">\(a\)</span> and <span class="math">\(b\)</span> swap places,
-and <span class="math">\(c\)</span>, <span class="math">\(d\)</span>, and <span class="math">\(e\)</span> exchange places as well. These two
-groups form two cycles. </p>
-<p>Think of the cycles as the particular way that pieces 
-of the permutation are exchanged with one another.</p>
-<p><a name="rubiks3-intro-sequences"></a></p>
-<h2>Sequences</h2>
-<p>We are interested in studying the properties of the cube,
-but in particular we are interested in the properties of 
-move sequences applied to the cube.</p>
-<p>There are 36 possible moves on a cube, and a series of 
-moves applied in a particular order defines a sequence.
-The 36 possible rotations were given in the prior blog post
-and cover clockwise and counterclockwise rotations of 
-each of the six faces - either the first layer, the second layer,
-or both of the first two layers.</p>
-<p>These moves are denoted with six letters (UDLRFB) for the upper,
-downward, left, right, front, and back face of the cube, respectively.</p>
-<p>Moves indicated should be clockwise unless they contain an apostrophe
-character <code>'</code>, which indicates counterclockwise rotation.</p>
-<p>A capital letter indicates a rotation of the first layer only 
-(e.g., <code>U</code> indicates a clockwise rotation of the first layer of 
-the upper face).</p>
-<p>A lowercase letter indicates a roration of the first and second layers
-(e.g., <code>r</code> indicates a clockwise rotation of the top two layers of
-the right face).</p>
-<p>A 2 before the letter indicates that the second layer should be rotated
-(e.g., <code>2F</code> indicates a clockwise rotation of the second layer of the 
-front face).</p>
-<p>Each move sequence can be translated into a tuple representation
-(see Part 1 blog post). Once we have the tuple representation of a 
-permutation, we can do several things, beginning with finding
-the cycles that compose the moves of the sequence.</p>
-<p><a name="rubiks3-intro-order"></a></p>
-<h2>Order</h2>
-<p>The quantity we are truly interested in is the order of a given cycle.</p>
-<p>The order of a sequence of moves is the number of times that sequence
-must be applied to the cube to get the cube to return back to its 
-original state. A more convenient way to think about it is, if you 
-applied a move sequence to a solved cube, how many times would you 
-have to apply it until you reached a solved cube again?</p>
-<p>We begin with the move sequence, which applies a particular permutation
-to the cube, exchanging particular pieces in a particular order.
-We want to obtain a tuple representation of the permutation
-that results from a particular sequence of moves.</p>
-<p>Once we have the tuple representation of a sequence's permutation, we can 
-factor it into independent cycles using the techniques covered in 
-this blog post. </p>
-<p>The factoring a permutation into cycles will yield the order; 
-the order is the least common multiple of the lengths of eacch
-cycle that is a factor.</p>
-<p>Using this, we can investigate the properties of the order 
-of different move sequences.</p>
-<p><a name="rubiks3-intercalation"></a></p>
-<h1>Intercalation Product</h1>
-<p>In Part 2 of this blog post, we discussed the tuple representation
-of a permutation; for example, one permutation <span class="math">\(\pi\)</span> of an
-<span class="math">\(n\)</span>-tuple might be written:</p>
-<div class="math">$$
-\pi = \bigl(\begin{smallmatrix}
-  1 &amp; 2 &amp; 3 &amp; \cdots &amp; n-1 &amp; n \\
-  2 &amp; 3 &amp; 4 &amp; \cdots &amp;  n  &amp; 1
-\end{smallmatrix}\bigr)
-$$</div>
-<p>The top row consists of the elements in the tuple in 
-sorted order; the second row consists of elements of the 
-tuple corresponding to that permutation.</p>
-<p>In the discussion that follows we'll keep it general,
-and talk about multisets - the case in which the top row
-has multiple occurrences of different items.</p>
-<p>For the following discussion, we will suppose two permutations
-<span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span> composed of four objects <span class="math">\(\{a, b, c, d,\}\)</span>, 
-each occurring multiple times:</p>
-<div class="math">$$
-\alpha = \bigl(\begin{smallmatrix}
-  a &amp; a &amp; b &amp; c &amp; d \\
-  c &amp; a &amp; d &amp; a &amp; b
-\end{smallmatrix}\bigr)
-$$</div>
-<div class="math">$$
-\beta = \bigl(\begin{smallmatrix}
-  a &amp; b &amp; d &amp; d &amp; d \\
-  b &amp; d &amp; d &amp; a &amp; d
-\end{smallmatrix}\bigr)
-$$</div>
-<p><a name="rubiks3-intercalation-definition"></a></p>
-<h2>Definition</h2>
-<p>Now we define the intercalation product <span class="math">\(\alpha \top \beta\)</span> 
-of these permutations as the elements of each permutation
-organized in an interleaved way - 
-each element of <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span> are grouped
-by the letter that appears on the top row,
-and within those groups they are ordered 
-as they appear in <span class="math">\(\alpha\)</span>, then as they appear
-in <span class="math">\(\beta\)</span>.</p>
-<p>For our example, the intercalation product is the following
-combination of <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span>:</p>
-<div class="math">$$
-\alpha \top \beta = \bigl(\begin{smallmatrix}
-  a &amp; a &amp; b &amp; c &amp; d \\
-  c &amp; a &amp; d &amp; a &amp; b 
-\end{smallmatrix}\bigr) \top \bigl(\begin{smallmatrix}
-  a &amp; b &amp; d &amp; d &amp; d \\
-  b &amp; d &amp; d &amp; a &amp; d 
-\end{smallmatrix}\bigr) = 
-\bigl(\begin{smallmatrix}
-  a &amp; a &amp; a &amp; b &amp; b &amp; c &amp; d &amp; d &amp; d &amp; d \\
-  c &amp; a &amp; b &amp; d &amp; d &amp; a &amp; b &amp; d &amp; a &amp; d
-\end{smallmatrix}\bigr)
-$$</div>
-<p>This is basically an interleaving operation. 
-All top-bottom pairs with <span class="math">\(a\)</span> at the top are 
-grouped together - and within the group,
-everyone from <span class="math">\(\alpha\)</span> comes first, everyone
-from <span class="math">\(\beta\)</span> comes second.</p>
-<p>The first two <span class="math">\(a\)</span> items in <span class="math">\(\alpha \top \beta\)</span> 
-come from <span class="math">\(\alpha\)</span>, the third <span class="math">\(a\)</span> item comes from <span class="math">\(\beta\)</span>.</p>
-<h3>Side Note: Why Define an Intercalation Product?</h3>
-<p>You may be wondering what the intercalation product has to do 
-with Rubik's Cubes or finding the order of a sequence. It turns
-out that the intercalation product will allow us to establish
-a system of permutation algebra, define certain operations
-and properties of permutations, and use these to factor
-permutations into independent groups of faces being 
-exchanged.</p>
-<p><a name="rubiks3-intercalation-properties"></a></p>
-<h2>Properties</h2>
-<p>We can state some properties of the intercalation algebra already:</p>
-<p>If <span class="math">\(\alpha \top \pi = \beta \top \pi\)</span> 
-or <span class="math">\(\pi \top \alpha = \pi \top \beta\)</span>, 
-this implies <span class="math">\(\alpha = \beta\)</span>.</p>
-<p>An identity element exists such that 
-<span class="math">\(\epsilon \top \alpha = \alpha \top \epsilon = \alpha\)</span>.</p>
-<p>The commutative property for the intercalation product 
-(whether <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span> can be exchanged in expressions)
-only holds if <span class="math">\(\alpha\)</span> and <span class="math">\(\beta\)</span> are independent of each 
-other (if they permute different elements).
-If this condition holds, then 
-<span class="math">\(\alpha \top \beta = \beta \top \alpha\)</span>.</p>
-<p>This property does <em>not</em> hold in general.</p>
-<p>(An example of permutations that would be independent 
-on the Rubik's Cube would be the moves U and D.
-These each rotate a different group of faces.)</p>
-<p><a name="rubiks3-factoring"></a></p>
-<h1>Factoring Permutations Using Knuth's Theorem A</h1>
-<p>Volume 3 of Donald Knuth's <u>The Art of Computer Programming</u>
-gives the following theorem on page 26, which gives a very useful
-property of intercalation products:</p>
-<p><strong>Theorem A.</strong> Let the elements of the multiset <span class="math">\(M\)</span> be linearly
-ordered by the relation "&lt;". Every permutation <span class="math">\(\pi\)</span> of <span class="math">\(M\)</span> 
-has a unique representation as the intercalation </p>
-<div class="math">$$
-\pi = 
-( x_{1,1} \dots x_{1,n_1} y_1 ) \top 
-( x_{2,1} \dots x_{2,n_2} y_2 ) \top 
-\dots \top
-( x_{t,1} \dots x_{t,n_t} y_t ) 
-$$</div>
-<p>where </p>
-<div class="math">$$
-y_1 \leq y_2 \leq \dots \leq y_t
-$$</div>
-<p>and </p>
-<div class="math">$$
-y_i &lt; x_{ij} \qquad \mbox{ for } 1 \leq j \leq n_i, 1 \leq i \leq t
-$$</div>
-<p><a name="rubiks3-factoring-significance"></a></p>
-<h2>Significance of Factors</h2>
-<p>Theorem A is central to our goal of studying move sequences 
-(and computing their order). To understand why, consider the 
-factors that result from Theorem A, and what they mean in the 
-specific example of a Rubik's Cube.</p>
-<p>In a regular n-tuple, the factors represent groups of items 
-in the tuple that are being exchanged. A tuple that factors
-into the intercalation of many very small tuples means the 
-permutation mostly consists of swapping pairs or triplets 
-of things. A tuple that factors into the intercalation
-of two large tuples means, all of the things are divided 
-into two groups, and within that group, everybody is mixed
-in with everybody else. </p>
-<p>On a Rubik's Cube, the tuple consists of faces being moved,
-so a permutation's factors indicate how many faces are being 
-swapped. The size of each group of faces gives some indication
-as to how long it takes for the cube to "sync up" with its 
-original state if the permutation is repeatedly applied; 
-a permutation with fewer large factors will take longer than a 
-permutation with many small factors.</p>
-<p>For example, suppose a move sequence permutes three corner pieces
-on a cube each time it is applied. Then if we write the two-line 
-tuple corresponding to that permutation, and we factor it into the 
-intercalation product of several tuples, several factors of the
-permutation will have a length of three, and will contain the 
-set of three faces being exchanged.</p>
-<p>On the other hand, if a move sequence permutes six corner pieces
-on a cube each time it is applied, some of the factors will be
-groups of six faces being exchanged when the sequence is applied.</p>
-<p>Thus, <em>the (sizes of the) factors of a permutation determine 
-the order of the permutation.</em></p>
-<p><a name="rubiks3-factoring-how"></a></p>
-<h2>How to Factor Permutations</h2>
-<p>To factor a permutation, we perform the opposite of the intercalation
-product. Now supppose we wish to factor the permutation:</p>
-<div class="math">$$
-\pi = \bigl(\begin{smallmatrix}
-    a &amp; a &amp; b &amp; b &amp; b &amp; b &amp; b &amp; c &amp; c &amp; c &amp; d &amp; d &amp; d &amp; d &amp; d \\
-    d &amp; b &amp; c &amp; b &amp; c &amp; a &amp; c &amp; d &amp; a &amp; d &amp; d &amp; b &amp; b &amp; b &amp; d
-\end{smallmatrix}\bigr)
-$$</div>
-<p>into the intercalation of multiple independent, disjoint cycles,</p>
-<div class="math">$$
-\pi = \alpha \top \beta \top \dots \top \gamma
-$$</div>
-<p>We can extract each factor one at a time using the following algorithm.</p>
-<p>Start by assuming the first factor <span class="math">\(\alpha\)</span> contains the first symbol <span class="math">\(a\)</span>
-in its top row.</p>
-<p>(It turns out this assumption <em>can't</em> be false - if there is an <span class="math">\(a\)</span> 
-in the top row of <span class="math">\(\pi\)</span> then there is an <span class="math">\(a\)</span> in the top row of at least 
-one factor. We're simply going to pull out those factors with this assumption.)</p>
-<p>Given this assumption, we know <span class="math">\(\alpha\)</span> must map <span class="math">\(a\)</span> to the same letter
-as the final permutation maps <span class="math">\(a\)</span> to, in the very first column of <span class="math">\(\pi\)</span>.
-The first column of <span class="math">\(\pi\)</span> is <span class="math">\(( a d )\)</span> (a on top, d on bottom). 
-That means that if our assumption holds, if <span class="math">\(\alpha\)</span> contains <span class="math">\(a\)</span>, then 
-it must permute all <span class="math">\(a\)</span>'s into <span class="math">\(d\)</span>'s and thus <span class="math">\(\alpha\)</span> should contain the 
-same column <span class="math">\((a d )\)</span>.</p>
-<p>Now suppose that <span class="math">\(\alpha\)</span> contains <span class="math">\(d\)</span>, which it must if our prior step
-is true. (<span class="math">\(\alpha\)</span> cannot turn <span class="math">\(a\)</span> into <span class="math">\(d\)</span> if it does not have a <span class="math">\(d\)</span>!).
-We find the leftmost <span class="math">\(d\)</span> on the top line, and see that it maps to the 
-symbol <span class="math">\(d\)</span>, due to the column <span class="math">\(( d d )\)</span> (d on top, d on bottom). 
-Thus, <span class="math">\(\alpha\)</span> should also contain the column  <span class="math">\(( d d )\)</span>.</p>
-<p>We keep going. Suppose that <span class="math">\(\alpha\)</span> contains another <span class="math">\(d\)</span>, as a consequence
-of the prior step. Since we already used the first d column in <span class="math">\(\pi\)</span>, we use
-the next column, <span class="math">\(( d b )\)</span> Thus, <span class="math">\(\alpha\)</span> should also contain the column <span class="math">\(( d b )\)</span>,
-and we use the outcome <span class="math">\(b\)</span> as the starting point for the next step.</p>
-<p>The process stops as soon as the starting point for the next step
-is the letter we began with, <span class="math">\(a\)</span>. That's because, at that point,
-we've formed a "closed loop" of pieces that permute with one 
-another. That closed loop forms the first intercalation factor 
-of the permutation <span class="math">\(\pi\)</span>.</p>
-<p>If we keep repeating the process described, we eventually wind up 
-with <span class="math">\(\alpha\)</span>:</p>
-<div class="math">$$
-\alpha = \bigl(\begin{smallmatrix}
-    a &amp; d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c \\
-    d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c &amp; a
-\end{smallmatrix}\bigr)
-$$</div>
-<h3>Side Note: Why Does This Work?</h3>
-<p>Let's pause for a moment and see what's happening. 
-What we're doing is following a thread between the 
-top and bottom rows of the permutation; this thread 
-tells us how elements are being moved around to
-create permutations.</p>
-<p>(A simpler but easier way to see this is by comparing 
-two permutations of <span class="math">\((1 2 3 4 5 6)\)</span>: consider the permutation 
-<span class="math">\((2 1 3 4 6 5)\)</span>, versus the permutation <span class="math">\((2 4 5 6 1 3)\)</span>. 
-The first permutation swaps positions 0 and 1, and 
-positions 4 and 5, independently; the second permutation 
-mixes <em>all</em> positions together.)</p>
-<p>We are assembling <span class="math">\(\alpha\)</span> piece by piece, by pulling out 
-pairs from the top and bottom row of <span class="math">\(\pi\)</span> and putting them 
-into <span class="math">\(\alpha\)</span>. At some point we will come back to the starting
-point, the symbol <span class="math">\(a\)</span>, and we will be finished finding the 
-first factor <span class="math">\(\alpha\)</span>, which is a disjoint cycle. </p>
-<p>By starting from the top row and following where it leads 
-in the bottom row, and continuing until we return to the 
-original starting element in the top row, we can carve up 
-the permutation into groups of pieces exchanged with one 
-another and not with any other pieces, or groups of pieces 
-that don't move.</p>
-<p><a name="rubiks3-factoring-how-contd"></a></p>
-<h2>How to Factor Permutations (Cont'd)</h2>
-<p>Recall that our goal was to factor the permutation <span class="math">\(\pi\)</span> into the 
-intercalation of multiple independent and disjoint cycles,
-<span class="math">\(\pi = \alpha \top \beta \top \dots \top \gamma\)</span>.
-We gave a procedure to extract factors and used it to
-extract the first factor, <span class="math">\(\alpha\)</span>. </p>
-<p>However, this is not the end of the factoring process: there are 
-still several elements of <span class="math">\(\pi\)</span> that have not been used to form 
-<span class="math">\(\alpha\)</span>, and those remaining elements themselves form a permutation 
-that can be factored.</p>
-<p>We begin with the original permutation <span class="math">\(\pi\)</span>:</p>
-<div class="math">$$
-\pi = \bigl( \begin{smallmatrix}
-    a &amp; a &amp; b &amp; b &amp; b &amp; b &amp; b &amp; c &amp; c &amp; c &amp; d &amp; d &amp; d &amp; d &amp; d \\
-    d &amp; b &amp; c &amp; b &amp; c &amp; a &amp; c &amp; d &amp; a &amp; d &amp; d &amp; b &amp; b &amp; b &amp; d
-\end{smallmatrix}\bigr)
-$$</div>
-<p>When we pull out the first factor <span class="math">\(\alpha\)</span>, we get:</p>
-<div class="math">$$
-\pi = \bigl( \begin{smallmatrix}
-    a &amp; d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c \\
-    d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c &amp; a
-\end{smallmatrix} \bigr)
-\top
-\bigl( \begin{smallmatrix}
-    a &amp; b &amp; b &amp; c &amp; d &amp; d \\
-    b &amp; a &amp; c &amp; d &amp; b &amp; d
-\end{smallmatrix} \bigr)
-$$</div>
-<p>When we pull out the second factor <span class="math">\(\beta\)</span>, we get: </p>
-<div class="math">$$
-\pi = \bigl( \begin{smallmatrix}
-    a &amp; d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c \\
-    d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c &amp; a
-\end{smallmatrix} \bigr)
-\top
-\bigl( \begin{smallmatrix}
-    a &amp; b \\
-    b &amp; a 
-\end{smallmatrix} \bigr)
-\top 
-\bigl( \begin{smallmatrix}
-    b &amp; c &amp; d &amp; d \\
-    c &amp; d &amp; b &amp; d
-\end{smallmatrix} \bigr)
-$$</div>
-<p>The third factor can be pulled out as well, which leaves the last factor, 
-a single column <span class="math">\(( d d )\)</span> by itself, indicating an element that is 
-not moved by the permutation.</p>
-<div class="math">$$
-\pi = \bigl( \begin{smallmatrix}
-    a &amp; d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c \\
-    d &amp; d &amp; b &amp; c &amp; d &amp; b &amp; b &amp; c &amp; a
-\end{smallmatrix} \bigr)
-\top
-\bigl( \begin{smallmatrix}
-    a &amp; b \\
-    b &amp; a 
-\end{smallmatrix} \bigr)
-\top 
-\bigl( \begin{smallmatrix}
-    b &amp; c &amp; d  \\
-    c &amp; d &amp; b
-\end{smallmatrix} \bigr)
-\top 
-\bigl( \begin{smallmatrix}
-    d \\
-    d
-\end{smallmatrix} \bigr)
-$$</div>
-<p>Thus the permutation <span class="math">\(\pi\)</span> can be expressed as the intercalation 
-of four independent cycles.</p>
-<p>This procedure illustrates Knuth's Theorem A.</p>
-<p>(Note: had we initially assumed <span class="math">\(\alpha\)</span> contained <span class="math">\(b\)</span> instead of <span class="math">\(a\)</span>, 
-we would end up starting by pulling out a different factor, but we 
-would ultimately end up with the same set of four factors.)</p>
-<p>To relate this back to the Rubik's Cube, we can start with a sequence 
-of interest, like <code>U R D D B</code>, and write the tuple representing the 
-outcome of this sequence when it is applied to the cube. In this way 
-we represent a move sequence as a tuple or as a permutation.</p>
-<p>Next, we factor this permutation the way we factored <span class="math">\(\pi\)</span>, 
-into the intercalation product of independent cycles. 
-These are groups of pieces being swapped each time the 
-cycle is applied.</p>
-<p>Now if one factor is of length 4 (group of 4 faces being permuted),
-one factor is of length 3, and one factor is of length 20,
-then the number of times the sequence must be applied 
-before the cube will come back to its original, solved state
-is <span class="math">\(LCM(3,4,20) = 60\)</span>.</p>
-<p><a name="rubiks3-factoring-algorithmA"></a></p>
-<h2>Algorithm A</h2>
-<p>Algorithm A is an algorithm written to perform the factoring process
-described above.</p>
-<p>We started with the two-row representation above,
-so our function will start with the top and bottom rows
-of the two-row representation.</p>
-<p>The procedure started with the first entry of the 
-top row, and got the corresponding entry of the bottom
-row. It then moved to the index of that item on the top row,
-and got the coresponding entry of the bottom row, 
-and so on, assembling the components of the permutation
-by stepping through each.</p>
-<p>In code, this will require us to switch between
-items in a list, and the indices of occurrencs of 
-items in the list. Fortunately, this is an easy 
-and common operation.</p>
-<p>Following is the pseudocode, then the Python code,
-to implement Algorithm A on the two-row representation
-of a tuple.</p>
-<p><a name="rubiks3-factoring-pseudocode"></a></p>
-<h2>Pseudocode</h2>
-<p>Our function takes two arguments: the top and bottom rows
-of the two-row representation of this permutation.</p>
-<div class="highlight"><pre><span></span>define function factor_permutations( top row, bottom row )
-
-    create bit vector to mark columns as factored or not
-
-    initialize list of factors
-
-    initialize pointer to active location
-
-    initialize starting index
-
-    while there are still zeros in the bit vector:
-
-        initialize this factor
-
-        run until break reached:
-
-            set bit vector at active location to 1
-
-            get active location entries on top row (leader) and bottom row (follower)
-
-            get next active location (index of follower in top row)
-
-            break if next active location out of bounds
-
-            break if next active location is starting element
-
-            append follower to this factor
-
-        add starting element to end of factor
-
-        add factor to list of factors
-
-        set next start index to index of first 0 in bit vector
-
-    return factors
-</pre></div>
-
-
-<p><a name="rubiks3-factoring-python"></a></p>
-<h2>Python Code</h2>
-<p>(Code for Algorithm A)</p>
-<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">factor_permutation</span><span class="p">(</span><span class="n">perm_top</span><span class="p">,</span><span class="n">perm_bot</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Factor a permutation into its lowest terms</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">MAX</span> <span class="o">=</span> <span class="mi">96</span>
-    <span class="c1"># Need a way to also mark them as used... bit vector</span>
-    <span class="n">used_vector</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">perm_top</span><span class="p">)</span>
-
-    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">start</span> <span class="o">=</span> <span class="n">perm_top</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">used_vector</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-
-    <span class="n">factors</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="c1"># If we still have values to pick out:</span>
-    <span class="k">while</span><span class="p">(</span><span class="mi">0</span> <span class="ow">in</span> <span class="n">used_vector</span><span class="p">):</span>
-
-        <span class="n">factor</span> <span class="o">=</span> <span class="p">[]</span>
-
-        <span class="k">while</span><span class="p">(</span><span class="bp">True</span><span class="p">):</span>
-            <span class="n">used_vector</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-            <span class="n">leader</span> <span class="o">=</span> <span class="n">perm_top</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="n">follower</span> <span class="o">=</span> <span class="n">perm_bot</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-
-            <span class="n">i</span> <span class="o">=</span> <span class="n">perm_top</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">follower</span><span class="p">)</span>
-            <span class="k">while</span><span class="p">(</span><span class="n">used_vector</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
-                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">if</span><span class="p">(</span><span class="n">i</span><span class="o">&gt;=</span><span class="n">MAX</span><span class="p">):</span>
-                    <span class="k">break</span>
-
-            <span class="k">if</span><span class="p">(</span><span class="n">i</span><span class="o">&gt;=</span><span class="n">MAX</span><span class="p">):</span>
-                <span class="k">break</span>
-            <span class="k">elif</span><span class="p">(</span><span class="n">follower</span><span class="o">==</span><span class="n">start</span><span class="p">):</span>
-                <span class="k">break</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">follower</span><span class="p">)</span>
-
-        <span class="c1"># add start to end</span>
-        <span class="n">factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
-
-        <span class="n">factors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">i</span> <span class="o">=</span> <span class="n">used_vector</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="n">perm_top</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-            <span class="k">break</span>
-
-    <span class="n">factorsize</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-    <span class="n">check</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">for</span> <span class="n">factor</span> <span class="ow">in</span> <span class="n">factors</span><span class="p">:</span>
-        <span class="n">factorsize</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">factor</span><span class="p">))</span>
-        <span class="n">check</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">factors</span>
-</pre></div>
-
-
-<p><a name="rubiks3-preview"></a></p>
-<h1>Preview of Part 4</h1>
-<p>We concluded with an algorithm that will be central to our task
-of computing the order of a Rubik's Cube move sequence.</p>
-<p>In the next post, we'll apply our method of representing Rubik's Cubes
-using the two-line tuple notation, and use the factoring algorithm above,
-which will allow us to factor Rubik's Cube permutations into their 
-corresponding intercalation products. </p>
-<p>From there, we can count the size of each intercalation product,
-and the least common multiple of the sizes gives the order of the 
-permutation.</p>
-<p><a name="rubiks3-references"></a></p>
-<h1>References</h1>
-<ol>
-<li>
-<p>"Rubik's Cube". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
-&lt;<a href="https://charlesreid1.com/wiki/Rubiks_Cube">https://charlesreid1.com/wiki/Rubiks_Cube</a>&gt;</p>
-</li>
-<li>
-<p>"Rubik's Revenge". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
-&lt;<a href="https://charlesreid1.com/wiki/Rubiks_Revenge">https://charlesreid1.com/wiki/Rubiks_Revenge</a>&gt;</p>
-</li>
-<li>
-<p>"Rubik's Cube/Tuple". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
-&lt;<a href="https://charlesreid1.com/wiki/Rubiks_Cube/Tuple">https://charlesreid1.com/wiki/Rubiks_Cube/Tuple</a>&gt;</p>
-</li>
-<li>
-<p>"Rubik's Cube/Permutations". Charlesreid1.com wiki, Charles Reid. Edited 20 January 2017. Accessed 20 January 2017.
-&lt;<a href="https://charlesreid1.com/wiki/Rubiks_Cube/Permutations">https://charlesreid1.com/wiki/Rubiks_Cube/Permutations</a>&gt;</p>
-</li>
-<li>
-<p>"Github - dwalton76/rubiks-cube-NxNxN-solver". dwalton76, Github Repository, Github Inc. Accessed 11 January 2017.
-&lt;<a href="https://github.com/dwalton76/rubiks-cube-NxNxN-solver">https://github.com/dwalton76/rubiks-cube-NxNxN-solver</a>&gt;</p>
-</li>
-<li>
-<p>"Rubik's Cube NxNxN Solver". Git repository, git.charlesreid1.com. Charles Reid. Updated 20 January 2017.
-&lt;<a href="https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver">https://git.charlesreid1.com/charlesreid1/rubiks-cube-nnn-solver</a>&gt;</p>
-</li>
-<li>
-<p>"Rubiks Cube Cycles". Git repository, git.charlesreid1.com. Charles Reid. Updated 20 January 2017.
-&lt;<a href="https://git.charlesreid1.com/charlesreid1/rubiks-cube-cycles">https://git.charlesreid1.com/charlesreid1/rubiks-cube-cycles</a>&gt;</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/rubiks-cube.html">rubiks cube</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/combinatorics.html">combinatorics</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/permutations.html">permutations</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/puzzles.html">puzzles</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/art-of-computer-programming.html">art of computer programming</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/knuth.html">knuth</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -2004,6 +1913,19 @@ permutation.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>March 2019</h2>
+
+            <p class="archive">
+            <a href="/centillion-a-document-search-engine.html">centillion: a document search engine</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

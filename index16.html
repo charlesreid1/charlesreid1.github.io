@@ -102,6 +102,731 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Better Timing of Guava Traveling Salesperson Problem Code: Timing Scripts
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-04-01T09:00:00-07:00" pubdate>Saturday 04/01/2017</time>
+                in 
+                <a href="/category/java.html">Java</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><ul>
+<li><a href="#better-timing-thecode">Before We Begin: The Code</a></li>
+<li><a href="#better-timing-timing">Timing Scripts</a></li>
+<li><a href="#better-timing-before-u-time">Before You Time: Developing Your Algorithm</a></li>
+<li><a href="#better-timing-timing-journey">Beginning Your Timing Journey</a></li>
+<li><a href="#better-timing-mouse-cookie">Statistical Timing, a.k.a., If You Give A Mouse A Cookie</a></li>
+<li><a href="#better-timing-hierarchical">Hierarchical Timing Strategy</a></li>
+<li><a href="#better-timing-single">Single Problem/Program/Binary</a></li>
+<li><a href="#better-timing-multiple">Multiple Problem/Program/Binary</a></li>
+<li><a href="#better-timing-statistical">Statistical Averaging</a></li>
+<li><a href="#better-timing-results">Results</a></li>
+<li><a href="#better-timing-summary">Summary</a></li>
+</ul>
+<p><a name="better-timing-thecode"></a></p>
+<h2>Before We Begin: The Code</h2>
+<p>Note that all of the code discussed/shown in this post is available from the 
+traveling salesperson problem repository on <a href="https://git.charlesreid1.com/charlesreid1/tsp">git.charlesreid1.com</a>.
+The <code>guava/</code> directory contains the guava solution to the traveling salesperson problem,
+along with the timing scripts discussed below, and several example output files.</p>
+<p><a name="better-timing-intro"></a></p>
+<h2>Introduction</h2>
+<p>Timing a piece of code can be tricky. </p>
+<p>Choosing a random problem of a given size can be problematic,
+if you happen to randomly chose a particularly easy or difficult case.
+This can lead to an inaccurate picture of scale-up behavior.
+Timing results should be statistically averaged - the figure below
+shows scale-up behavior for the traveling salesperson problem
+when solving a single random problem, versus a hundred random problems.</p>
+<p><img alt="Average versus one-time solutions, walltime versus problem size." src="/images/avg-vs-onetime-walltime.png"></p>
+<p>This post will cover some conceptual and code tools 
+for measuring the timing and performance of code.</p>
+<p><a name="better-timing-timing"></a></p>
+<h2>Timing Scripts</h2>
+<p>Timing a piece of code is a task that sounds simple, on its face.
+However, the task of profiling code quickly balloons 
+from a single timing of a single bit of code 
+to running hundreds of cases, juggling output from each run,
+and stitching together script upon script.
+Soon you find yourself swimming in a pool of output files,
+looking for your scripts...</p>
+<p>In this post we'll cover a workflow for timing a piece of Java code
+that will help give you a method for thinking about timing.
+This also balances the need for practicality
+(i.e., just get it done in as simple a manner as possible)
+with good design 
+(i.e., flexible inputs and the use of scripts).</p>
+<h2>Before You Time: Developing Your Algorithm</h2>
+<p>As you develop your algorithm, you may have variable values hard-coded 
+and random number generators seeding from the same value each time.
+The intention, as you are developing, is to work out the bugs
+without the additional difficulty of solving a different problem
+each time you run the program.</p>
+<h2>Beginning Your Timing Journey</h2>
+<p>Once you've implemented your algorithm and verified that it works,
+the timing portion begins. You can time the code using mechanisms
+built into the language, which is the most accurate way of 
+timing code. This is called <em>instrumenting</em> your code.
+To begin with, you might try timing a single problem size, 
+but this information is hard to interpret without more data,
+so you start to time the code on problems of other sizes.</p>
+<p>Here there be dragons.</p>
+<h2>Statistical Timing, a.k.a., If You Give A Mouse A Cookie</h2>
+<p>See <a href="https://en.wikipedia.org/wiki/If_You_Give_a_Mouse_a_Cookie"><em>If You Give A Mouse A Cookie</em></a>.</p>
+<p>Once you time the code solving a single problem,
+you will want to time the code solving multiple problems.</p>
+<p>Once you time the code solving multiple problems,
+you will want to time the code solving each problem multiple times 
+to get an accurate statistical picture of the solution time on a variety of problems.</p>
+<p>Once you get statistics about multiple problem times,
+you will want to gather statics about variations in problem types and algorithm variations.</p>
+<p>It simply does not end. A strategy for managing this deluge of new timing needs 
+prevents spaghetti code.</p>
+<h2>Hierarchical Timing Strategy</h2>
+<p>The strategy here is to design code and scripts that are <em>hierarchical</em>.
+The levels of the hierarchy consist of the different scopes involved in timing:
+<em> Single problem/program/binary
+</em> Multiple problem/program/binary
+<em> Statistical averages using case matrix
+</em> Design of Computer Experiments: Testing Variations 
+* Strong and weak scaling (if we decide to continue with parallelization of algorithm)</p>
+<p>At each stage, we utilize scripts to bundle the task into a single command or script.</p>
+<h2>Single Problem/Program/Binary: Makefile</h2>
+<p>At the scale of solving a single problem, we need a tool that will 
+compile and run Java code - even if it only happens once.
+Makefiles are an excellent tool for stringing together commands with flags 
+(in the case of the traveling salesperson problem,
+we need to link to the Guava Jars when we compile and run).</p>
+<p>By defining some variables at the top of the Makefile, 
+and a few rules, we have a functional and easy way to build code 
+with scalable complexity:</p>
+<div class="highlight"><pre><span></span><span class="c"># Set path to guava</span>
+<span class="nv">HOME</span><span class="o">=</span>/Users/charles
+<span class="nv">GUAVA</span><span class="o">=</span><span class="k">$(</span>HOME<span class="k">)</span>/codes/guava/jars/guava-21.0.jar
+
+<span class="c"># Set compile target</span>
+<span class="nv">BIN</span><span class="o">=</span>TSP
+<span class="nv">TARGET</span><span class="o">=</span><span class="k">$(</span>BIN<span class="k">)</span>.java
+
+<span class="c"># Set java class path</span>
+<span class="c"># Hard to believe this actually works, but ok:</span>
+<span class="nv">CP</span><span class="o">=</span>-cp <span class="s1">&#39;.:$(GUAVA)&#39;</span>
+
+
+<span class="nf">build</span><span class="o">:</span>
+    javac <span class="k">$(</span>CP<span class="k">)</span> <span class="k">$(</span>TARGET<span class="k">)</span> 
+
+<span class="nf">run</span><span class="o">:</span>
+<span class="c">    # If no size, use default</span>
+    java <span class="k">$(</span>CP<span class="k">)</span> <span class="k">$(</span>BIN<span class="k">)</span> 
+
+<span class="nf">time</span><span class="o">:</span>
+<span class="c">    # Java times itself, we just have to pass it the size</span>
+    java <span class="k">$(</span>CP<span class="k">)</span> <span class="k">$(</span>BIN<span class="k">)</span> <span class="k">$(</span>SIZE<span class="k">)</span> 
+
+<span class="nf">clean</span><span class="o">:</span>
+    rm -rf *.class
+</pre></div>
+
+
+<p><a href="https://git.charlesreid1.com/charlesreid1/tsp/src/master/guava/Makefile">Link to code on git.charlesreid1.com</a></p>
+<p>This enables us to run </p>
+<div class="highlight"><pre><span></span>$ make build 
+/Users/charles/codes/guava/jars/guava-21.0.jar
+</pre></div>
+
+
+<p>and have a new version of the code compile. 
+We can also run a problem with a default size of 5 nodes with a simple make run command:</p>
+<div class="highlight"><pre><span></span>$ make run
+java -cp <span class="s1">&#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39;</span> TSP
+------------------- TSP Version <span class="m">2</span>: The Pessimistic Algorithm ----------------------
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">2</span>, <span class="m">3</span>, <span class="m">4</span>, <span class="m">1</span><span class="o">]</span>  Distance: <span class="m">258</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">2</span>, <span class="m">3</span>, <span class="m">1</span>, <span class="m">4</span><span class="o">]</span>  Distance: <span class="m">257</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">2</span>, <span class="m">4</span>, <span class="m">1</span>, <span class="m">3</span><span class="o">]</span>  Distance: <span class="m">189</span>
+Found solution...?
+Elapsed <span class="nb">time</span> <span class="m">0</span>.005529 s
+</pre></div>
+
+
+<p>and have the compiled code run. We can also feed arguments to make commands,
+and have them passed to the command that is executed:</p>
+<div class="highlight"><pre><span></span>$ make <span class="nb">time</span> <span class="nv">SIZE</span><span class="o">=</span><span class="m">10</span>
+<span class="c1"># Java times itself, we just have to pass it the size</span>
+java -cp <span class="s1">&#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39;</span> TSP <span class="m">10</span>
+------------------- TSP Version <span class="m">2</span>: The Pessimistic Algorithm ----------------------
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">9</span>, <span class="m">7</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">1</span>, <span class="m">4</span><span class="o">]</span>   Distance: <span class="m">446</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">9</span>, <span class="m">7</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">4</span>, <span class="m">1</span><span class="o">]</span>   Distance: <span class="m">395</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">9</span>, <span class="m">7</span>, <span class="m">4</span>, <span class="m">1</span>, <span class="m">8</span>, <span class="m">2</span><span class="o">]</span>   Distance: <span class="m">382</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">9</span>, <span class="m">1</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">2</span>, <span class="m">8</span><span class="o">]</span>   Distance: <span class="m">365</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">9</span>, <span class="m">1</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">8</span>, <span class="m">2</span><span class="o">]</span>   Distance: <span class="m">326</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">7</span>, <span class="m">4</span>, <span class="m">1</span>, <span class="m">9</span><span class="o">]</span>   Distance: <span class="m">303</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">3</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">9</span>, <span class="m">1</span><span class="o">]</span>   Distance: <span class="m">298</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">3</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">9</span>, <span class="m">1</span><span class="o">]</span>   Distance: <span class="m">286</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">8</span>, <span class="m">2</span>, <span class="m">3</span>, <span class="m">7</span>, <span class="m">4</span>, <span class="m">1</span>, <span class="m">9</span><span class="o">]</span>   Distance: <span class="m">283</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">9</span>, <span class="m">1</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">3</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">8</span>, <span class="m">2</span><span class="o">]</span>   Distance: <span class="m">275</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">3</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">5</span>, <span class="m">6</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">9</span>, <span class="m">1</span><span class="o">]</span>   Distance: <span class="m">274</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">7</span>, <span class="m">4</span>, <span class="m">1</span>, <span class="m">9</span>, <span class="m">5</span>, <span class="m">6</span>, <span class="m">3</span><span class="o">]</span>   Distance: <span class="m">262</span>
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: <span class="o">[</span><span class="m">0</span>, <span class="m">2</span>, <span class="m">8</span>, <span class="m">4</span>, <span class="m">7</span>, <span class="m">3</span>, <span class="m">6</span>, <span class="m">5</span>, <span class="m">9</span>, <span class="m">1</span><span class="o">]</span>   Distance: <span class="m">256</span>
+Found solution...?
+Elapsed <span class="nb">time</span> <span class="m">0</span>.050795 s
+</pre></div>
+
+
+<p>For running single cases and gathering small amounts of (initial) timing data,
+Makefiles greatly simplify the workflow.</p>
+<h2>Multiple Program/Problem/Binary: Bash</h2>
+<p>Bash is a faithful scripting language that makes it easy to do 
+simple mechanical tasks like run commands in for loops,
+necessary for the next level of complexity in our timing hierarchy.</p>
+<p>While the task at hand is simple enough, and we could easily use Makefiles, 
+we'll use a separate Bash script for separate functionality 
+and keep things from getting overly complicated in the Makefile.</p>
+<p>The essence of the timing script is combining the <code>make time</code> command,
+which takes a size parameter, with bash for loops.</p>
+<p>Here is a stripped down version of the timing script:</p>
+<div class="highlight"><pre><span></span>make build 
+
+for N in 4 5 6 7 8
+do
+    make time SIZE=<span class="cp">${</span><span class="n">N</span><span class="cp">}</span> 
+done
+</pre></div>
+
+
+<p>That's it... The rest is just printing!</p>
+<p>The <code>make time</code> command passes the size argument on the command line.
+The Java Traveling Salesperson Problem code checks if there is an input argument on the command line,
+and if there is it uses that as the problem size.</p>
+<p>Here's a more embellished script:</p>
+<div class="highlight"><pre><span></span>export RIGHTNOW=&quot;`date +&quot;%Y%m%d_%H%M%S&quot;`&quot;
+export OUT=&quot;timeout_tsp_java_<span class="cp">${</span><span class="n">RIGHTNOW</span><span class="cp">}</span>.out&quot;
+touch <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+cat /dev/null &gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+
+# Compile
+make build 
+
+for N in {4..8..1}
+do
+    echo &quot;**************************************&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+    echo &quot;Running TSP with <span class="nv">$N</span> nodes with Java...&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+
+    make time SIZE=<span class="cp">${</span><span class="n">N</span><span class="cp">}</span> &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span> 2&gt;<span class="err">&amp;</span>1
+
+    make dot
+    mv graphviz.png graphviz_tsp_<span class="cp">${</span><span class="n">N</span><span class="cp">}</span>.png
+
+    echo &quot;Done.&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+
+    echo &quot;&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+
+done
+
+echo &quot;&quot;
+echo <span class="cp">${</span><span class="n">OUTFILE</span><span class="cp">}</span>
+echo &quot;&quot;
+</pre></div>
+
+
+<p><a href="https://git.charlesreid1.com/charlesreid1/tsp/src/master/guava/time_java.sh">Link to code on git.charlesreid1.com</a></p>
+<p>This creates a time-and-date-stamped output file in which 
+all of the output of this script goes - and which can be 
+parsed for plotting the results of timing studies.</p>
+<p>Before it times the solution to the TSP, it dumps out a graphviz dot file 
+containing a schematic of the graph that can be diagrammed:</p>
+<p><img alt="Example graphviz dot output showing a 14-node TSP." src="/images/graphviz_tsp_14.png"></p>
+<div class="highlight"><pre><span></span>**************************************
+Running TSP with 4 nodes with Java...
+Found solution.
+Elapsed time 0.004679 s
+ Done.
+
+**************************************
+Running TSP with 5 nodes with Java...
+Found solution.
+Elapsed time 0.004543 s
+ Done.
+
+**************************************
+Running TSP with 6 nodes with Java...
+Found solution.
+Elapsed time 0.006911 s
+ Done.
+
+**************************************
+Running TSP with 7 nodes with Java...
+Found solution.
+Elapsed time 0.008286 s
+ Done.
+
+**************************************
+Running TSP with 8 nodes with Java...
+Found solution.
+Elapsed time 0.014499 s
+ Done.
+</pre></div>
+
+
+<p>In this way we can run a quick test matrix of different problem sizes,
+and see how the code scales.</p>
+<h2>Statistical Averaging</h2>
+<p>Of course, any good computational physicist will tell you that scaling behavior
+extrapolated from running a single case of a single problem size is folly - 
+your random choice of graph could have been an unusually easy or difficult graph,
+throwing off the results of the timing. </p>
+<p>A proper scaling study really needs to take into account the statistical trends 
+in solution time on a random assortment of problems, 
+so we need a way of scripting solutions to dozens or hundreds of random problems 
+and computing statistically representative measures of code performance.</p>
+<p>Our code implements a function to generate random graphs, 
+but for testing and debugging purposes the random number generator 
+was seeded with the same value each time. By making the random number generators
+truly random, each problem we solve will be a different random graph
+with the specified number ofn odes.</p>
+<p>We can accomplish all of this using bash again: within the for loop over different problem sizes,
+we will add a for loop for repetitions.
+Here is the basic framework:</p>
+<div class="highlight"><pre><span></span>make build 
+
+for N in {4..10..1}
+do
+    for repetition in {0..100..1}
+    do
+        make time SIZE=<span class="cp">${</span><span class="n">N</span><span class="cp">}</span> 
+    done
+done
+</pre></div>
+
+
+<p>And the embellished version that prints the resulting timing information to a file:</p>
+<div class="highlight"><pre><span></span># Compile
+make build 
+
+export RIGHTNOW=&quot;`date +&quot;%Y%m%d_%H%M%S&quot;`&quot;
+
+for N in {4..10..1}
+do
+
+    export OUT=&quot;avgtimeout_tsp_<span class="cp">${</span><span class="n">RIGHTNOW</span><span class="cp">}</span>_<span class="cp">${</span><span class="n">N</span><span class="cp">}</span>.out&quot;
+    touch <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+
+    echo &quot;**************************************&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+    echo &quot;Running TSP with <span class="nv">$N</span> nodes with Java...&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+
+    for repetition in {0..100..1}
+    do
+        make time SIZE=<span class="cp">${</span><span class="n">N</span><span class="cp">}</span> &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span> 2&gt;<span class="err">&amp;</span>1
+    done
+    echo &quot;Done.&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+    echo &quot;&quot; &gt;&gt; <span class="cp">${</span><span class="n">OUT</span><span class="cp">}</span>
+
+done
+
+echo &quot;&quot;
+echo <span class="cp">${</span><span class="n">OUTFILE</span><span class="cp">}</span>
+echo &quot;&quot;
+</pre></div>
+
+
+<p><a href="https://git.charlesreid1.com/charlesreid1/tsp/src/master/guava/avg_time_java.sh">Link to code on git.charlesreid1.com</a></p>
+<p>This results in a file with a large amount of information, but it can be trimmed down 
+to the quantities of interest using a little command line fu.
+Here are filtered results from an 11-node traveling salesperson problem
+run approximately 102 times:</p>
+<div class="highlight"><pre><span></span>$ cat avgtimeout_tsp_20170330_235134_11.out <span class="p">|</span> grep Elapsed <span class="p">|</span> wc -l
+     <span class="m">102</span>
+
+$ cat avgtimeout_tsp_20170330_235134_11.out <span class="p">|</span> grep Elapsed
+Elapsed <span class="nb">time</span> <span class="m">0</span>.082839 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.130378 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.173737 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.100067 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.166046 s
+
+&lt;clipped&gt;
+
+Elapsed <span class="nb">time</span> <span class="m">0</span>.147801 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.285777 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.078655 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.081246 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.174288 s
+</pre></div>
+
+
+<p>Now we have a Makefile that allows us to build and run with a single command,
+and a bash script that loops over each problem size and runs a set of computations
+for each problem size. But how to compute an average?</p>
+<p>We have an assortment of choices - Python being the most obvious - but in the spirit of
+old-school Unix tools like make, cat, grep, and wc, let's use <code>awk</code> to compute the average 
+walltime for each case size.</p>
+<h2>Awk to Compute Average Walltime</h2>
+<p>Given the following output of elapsed walltime for different problem sizes,</p>
+<div class="highlight"><pre><span></span>$ cat avgtimeout_tsp_20170330_235134_11.out <span class="p">|</span> grep Elapsed
+Elapsed <span class="nb">time</span> <span class="m">0</span>.082839 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.130378 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.173737 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.100067 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.166046 s
+
+&lt;clipped&gt;
+
+Elapsed <span class="nb">time</span> <span class="m">0</span>.147801 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.285777 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.078655 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.081246 s
+Elapsed <span class="nb">time</span> <span class="m">0</span>.174288 s
+</pre></div>
+
+
+<p>we want to extract two things: 
+the first is the problem size (contained in the filename),
+and the second is the column of numbers.</p>
+<p>We can extract the problem size from the filename using sed,
+by searching for the pattern <code>_8.out</code> or <code>_10.out</code>. 
+Here is a Bash one-liner that does this for a variable <code>$f</code> 
+containing the filename:</p>
+<div class="highlight"><pre><span></span>    N=$(echo $f | sed &#39;s/^.*_\([0-9]\{1,\}\).out/\1/&#39;)
+</pre></div>
+
+
+<p>The next thing we wnat to do is extract the column of timing data.
+This is a good task for the <code>cut</code> utility. We can pass it two flags,
+<code>-d</code> to tell it what to use as a field delimiter, and <code>-f</code> to tell it which field
+(column) to return. To extract the third column,</p>
+<div class="highlight"><pre><span></span>    cat $f | grep &quot;Elapsed&quot; | cut -d&quot; &quot; -f3 
+</pre></div>
+
+
+<p>This command results in a series of floating point numbers. If we can pipe it to a program
+that can do simple math, like <code>awk</code>, we can compute an average (which is pretty simple math).</p>
+<p>Since <code>awk</code> is a text-proecssing program that happens to be able to interpret numbers as numbers,
+we have to think like a text processing program. To compute an average, we accumulate the sum
+of each line in the file, using an accumulator variable. When we have gone through each line in the file,
+we divide this cumulative sum by the number of lines in the file.</p>
+<div class="highlight"><pre><span></span>    cat $f | grep &quot;Elapsed&quot; | cut -d&quot; &quot; -f3 | awk &#39;{a+=$1} END{print a/NR}&#39;
+</pre></div>
+
+
+<p>This one-liner uses two important concepts in <code>awk</code>, the first is the bracketed blocks <code>{}</code> 
+some denoted with <code>BEGIN</code> and <code>END</code>, and the second is the set of built-in variables available in <code>awk</code>.</p>
+<p>By surrounding statements by brackets, we denote a block of statements to be run together as the main body of the program.
+If the bracket is prefixed by <code>BEFORE</code>, this block of statements is run once at the beginning of the program.
+If the bracket is prefixed by <code>END</code>, this block of statements is run once at the end of the program.
+To compute an average, the main body of the program is to accumulate a cumulative sum variable. 
+The <code>END</code> block, run once at the end, is to divide this cumulative sum by the total number of lines.</p>
+<p>Finally, these values can be assigned to Bash variables using <code>$(cmd)</code> syntax:</p>
+<div class="highlight"><pre><span></span>    export N=$(echo <span class="nv">$f</span> | sed &#39;s/^.*_\([0-9]\{1,\}\).out/\1/&#39;)
+    export AVG=$(cat <span class="nv">$f</span> | grep &quot;Elapsed&quot; | cut -d&quot; &quot; -f3 | awk &#39;{a+=$1} END{print a/NR}&#39;) 
+    echo &quot;Average time : <span class="cp">${</span><span class="n">N</span><span class="cp">}</span>-node TSP problem : <span class="cp">${</span><span class="n">AVG</span><span class="cp">}</span> s&quot;
+</pre></div>
+
+
+<p>Here is the final script, which loops over all of the output files
+generated by the statistical average timing script,
+which runs 10-100 cases per problem size:</p>
+<div class="highlight"><pre><span></span><span class="ch">#!/bin/sh</span>
+
+<span class="k">for</span> f in <span class="sb">`</span>/bin/ls -1 avgtimeout_tsp*<span class="sb">`</span>
+<span class="k">do</span>
+    touch tmpfile 
+    cat /dev/null &gt; tmpfile
+
+    <span class="nb">export</span> <span class="nv">N</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$f</span> <span class="p">|</span> sed <span class="s1">&#39;s/^.*_\([0-9]\{1,\}\).out/\1/&#39;</span><span class="k">)</span>
+    <span class="nb">export</span> <span class="nv">AVG</span><span class="o">=</span><span class="k">$(</span>cat <span class="nv">$f</span> <span class="p">|</span> grep <span class="s2">&quot;Elapsed&quot;</span> <span class="p">|</span> cut -d<span class="s2">&quot; &quot;</span> -f3 <span class="p">|</span> awk <span class="s1">&#39;{a+=$1} END{print a/NR}&#39;</span><span class="k">)</span> 
+    <span class="nb">echo</span> <span class="s2">&quot;Average time : </span><span class="si">${</span><span class="nv">N</span><span class="si">}</span><span class="s2">-node TSP problem : </span><span class="si">${</span><span class="nv">AVG</span><span class="si">}</span><span class="s2"> s&quot;</span>
+
+    rm tmpfile
+<span class="k">done</span>
+</pre></div>
+
+
+<p><a href="https://git.charlesreid1.com/charlesreid1/tsp/src/master/guava/avg_calcs.sh">Link to code on git.charlesreid1.com</a></p>
+<p>Example output:</p>
+<div class="highlight"><pre><span></span>$ ./avg_calcs.sh  <span class="p">|</span> sort
+Average <span class="nb">time</span> : <span class="m">10</span>-node TSP problem : <span class="m">0</span>.0492826 s
+Average <span class="nb">time</span> : <span class="m">11</span>-node TSP problem : <span class="m">0</span>.125827 s
+Average <span class="nb">time</span> : <span class="m">12</span>-node TSP problem : <span class="m">0</span>.272998 s
+Average <span class="nb">time</span> : <span class="m">13</span>-node TSP problem : <span class="m">0</span>.56743 s
+Average <span class="nb">time</span> : <span class="m">14</span>-node TSP problem : <span class="m">1</span>.24297 s
+Average <span class="nb">time</span> : <span class="m">14</span>-node TSP problem : <span class="m">1</span>.66563 s
+Average <span class="nb">time</span> : <span class="m">15</span>-node TSP problem : <span class="m">8</span>.08373 s
+Average <span class="nb">time</span> : <span class="m">16</span>-node TSP problem : <span class="m">16</span>.4353 s
+Average <span class="nb">time</span> : <span class="m">17</span>-node TSP problem : <span class="m">94</span>.7363 s
+Average <span class="nb">time</span> : <span class="m">18</span>-node TSP problem : <span class="m">749</span>.798 s
+Average <span class="nb">time</span> : <span class="m">4</span>-node TSP problem : <span class="m">0</span>.00473154 s
+Average <span class="nb">time</span> : <span class="m">4</span>-node TSP problem : <span class="m">0</span>.00475648 s
+Average <span class="nb">time</span> : <span class="m">5</span>-node TSP problem : <span class="m">0</span>.005247 s
+Average <span class="nb">time</span> : <span class="m">5</span>-node TSP problem : <span class="m">0</span>.005765 s
+Average <span class="nb">time</span> : <span class="m">6</span>-node TSP problem : <span class="m">0</span>.00694926 s
+Average <span class="nb">time</span> : <span class="m">7</span>-node TSP problem : <span class="m">0</span>.0100795 s
+Average <span class="nb">time</span> : <span class="m">8</span>-node TSP problem : <span class="m">0</span>.0167346 s
+Average <span class="nb">time</span> : <span class="m">9</span>-node TSP problem : <span class="m">0</span>.028239 s
+</pre></div>
+
+
+<p>Inspecting the output from particular solutions of particular random graphs 
+shows a wide variation in the number of shortest paths found. For example, 
+for random graphs consisting of 11 nodes, here are some sample solutions.
+Note the difference in solution times:</p>
+<div class="highlight"><pre><span></span>------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 7, 6, 10, 3]   Distance: 597
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 7, 6, 3, 10]   Distance: 582
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 7, 10, 3, 6]   Distance: 560
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 7, 3, 6, 10]   Distance: 553
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 10, 3, 7, 6]   Distance: 540
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 10, 7, 6, 3]   Distance: 532
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 10, 7, 3, 6]   Distance: 503
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 5, 6, 3, 7, 10]   Distance: 498
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 10, 3, 7, 5, 6]   Distance: 450
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 10, 5, 7, 3, 6]   Distance: 440
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 10, 5, 6, 7, 3]   Distance: 422
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 6, 5, 10, 3, 7]   Distance: 421
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 4, 6, 5, 10, 7, 3]   Distance: 380
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 7, 10, 5, 6, 4, 3]   Distance: 364
+NEW SOLUTION    Route: [0, 9, 2, 1, 8, 7, 3, 4, 6, 5, 10]   Distance: 357
+NEW SOLUTION    Route: [0, 9, 2, 1, 5, 10, 7, 3, 8, 4, 6]   Distance: 352
+NEW SOLUTION    Route: [0, 9, 2, 1, 5, 10, 7, 8, 3, 4, 6]   Distance: 336
+NEW SOLUTION    Route: [0, 9, 2, 1, 5, 6, 4, 10, 7, 8, 3]   Distance: 330
+NEW SOLUTION    Route: [0, 9, 2, 1, 4, 8, 7, 3, 6, 5, 10]   Distance: 326
+NEW SOLUTION    Route: [0, 9, 2, 1, 4, 8, 3, 7, 6, 5, 10]   Distance: 320
+NEW SOLUTION    Route: [0, 9, 2, 1, 4, 8, 3, 7, 10, 5, 6]   Distance: 298
+NEW SOLUTION    Route: [0, 9, 2, 1, 4, 6, 5, 10, 7, 8, 3]   Distance: 261
+NEW SOLUTION    Route: [0, 9, 2, 7, 8, 3, 1, 4, 6, 5, 10]   Distance: 250
+NEW SOLUTION    Route: [0, 9, 8, 7, 2, 3, 1, 4, 6, 5, 10]   Distance: 245
+Found solution.
+Elapsed time 0.057047 s
+
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 5, 2, 7, 3]   Distance: 650
+NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 5, 2, 3, 7]   Distance: 641
+NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 5, 7, 2, 3]   Distance: 638
+NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 5, 7, 3, 2]   Distance: 630
+NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 7, 5, 2, 3]   Distance: 589
+NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 2, 3, 7, 5]   Distance: 580
+NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 10, 2, 5, 7, 3]   Distance: 548
+NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 2, 5, 7, 3, 10]   Distance: 533
+NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 7, 5, 2, 3, 10]   Distance: 522
+NEW SOLUTION    Route: [0, 8, 1, 6, 4, 9, 7, 5, 2, 10, 3]   Distance: 495
+NEW SOLUTION    Route: [0, 8, 1, 6, 7, 9, 4, 5, 2, 10, 3]   Distance: 494
+NEW SOLUTION    Route: [0, 8, 1, 6, 7, 5, 4, 9, 2, 10, 3]   Distance: 493
+NEW SOLUTION    Route: [0, 8, 1, 6, 3, 10, 2, 5, 7, 9, 4]   Distance: 490
+NEW SOLUTION    Route: [0, 8, 1, 6, 3, 10, 2, 5, 7, 4, 9]   Distance: 486
+NEW SOLUTION    Route: [0, 8, 1, 6, 9, 4, 7, 5, 2, 10, 3]   Distance: 467
+NEW SOLUTION    Route: [0, 8, 1, 10, 2, 5, 7, 4, 9, 6, 3]   Distance: 453
+NEW SOLUTION    Route: [0, 8, 1, 2, 5, 7, 4, 9, 6, 3, 10]   Distance: 442
+NEW SOLUTION    Route: [0, 8, 1, 2, 5, 7, 4, 9, 6, 10, 3]   Distance: 437
+NEW SOLUTION    Route: [0, 8, 1, 5, 7, 4, 9, 2, 10, 6, 3]   Distance: 433
+NEW SOLUTION    Route: [0, 8, 10, 2, 1, 5, 4, 9, 7, 6, 3]   Distance: 427
+NEW SOLUTION    Route: [0, 8, 10, 2, 1, 5, 7, 4, 9, 6, 3]   Distance: 400
+NEW SOLUTION    Route: [0, 8, 2, 1, 5, 7, 4, 9, 6, 10, 3]   Distance: 399
+NEW SOLUTION    Route: [0, 3, 7, 4, 9, 6, 10, 2, 1, 5, 8]   Distance: 394
+NEW SOLUTION    Route: [0, 3, 7, 4, 9, 6, 10, 2, 8, 5, 1]   Distance: 389
+NEW SOLUTION    Route: [0, 3, 6, 9, 4, 7, 5, 8, 1, 2, 10]   Distance: 384
+NEW SOLUTION    Route: [0, 3, 6, 9, 4, 7, 5, 8, 10, 2, 1]   Distance: 382
+NEW SOLUTION    Route: [0, 3, 6, 9, 4, 7, 5, 1, 2, 8, 10]   Distance: 374
+NEW SOLUTION    Route: [0, 9, 4, 5, 1, 2, 8, 10, 3, 6, 7]   Distance: 373
+NEW SOLUTION    Route: [0, 9, 4, 7, 3, 6, 10, 8, 5, 1, 2]   Distance: 365
+NEW SOLUTION    Route: [0, 9, 4, 7, 3, 6, 10, 2, 1, 5, 8]   Distance: 360
+NEW SOLUTION    Route: [0, 9, 4, 7, 3, 6, 10, 2, 8, 5, 1]   Distance: 355
+NEW SOLUTION    Route: [0, 9, 4, 7, 5, 8, 1, 2, 10, 6, 3]   Distance: 345
+NEW SOLUTION    Route: [0, 9, 4, 7, 5, 1, 2, 8, 10, 6, 3]   Distance: 335
+Found solution.
+Elapsed time 0.159882 s
+
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 1, 9, 6]   Distance: 500
+NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 1, 6, 9]   Distance: 498
+NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 6, 1, 9]   Distance: 493
+NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 6, 9, 1]   Distance: 481
+NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 9, 1, 6]   Distance: 443
+NEW SOLUTION    Route: [0, 3, 10, 2, 5, 4, 7, 8, 9, 6, 1]   Distance: 429
+NEW SOLUTION    Route: [0, 3, 10, 2, 5, 6, 1, 9, 8, 7, 4]   Distance: 417
+NEW SOLUTION    Route: [0, 3, 10, 2, 6, 5, 4, 7, 8, 9, 1]   Distance: 360
+NEW SOLUTION    Route: [0, 3, 10, 2, 1, 9, 6, 5, 4, 7, 8]   Distance: 359
+NEW SOLUTION    Route: [0, 3, 10, 4, 5, 6, 2, 1, 9, 7, 8]   Distance: 358
+NEW SOLUTION    Route: [0, 3, 10, 4, 5, 6, 2, 1, 9, 8, 7]   Distance: 342
+NEW SOLUTION    Route: [0, 3, 10, 4, 5, 6, 9, 8, 7, 2, 1]   Distance: 340
+NEW SOLUTION    Route: [0, 3, 10, 4, 7, 8, 9, 1, 2, 6, 5]   Distance: 310
+NEW SOLUTION    Route: [0, 3, 7, 8, 9, 10, 4, 5, 6, 2, 1]   Distance: 305
+NEW SOLUTION    Route: [0, 3, 9, 8, 7, 4, 10, 1, 2, 6, 5]   Distance: 303
+NEW SOLUTION    Route: [0, 5, 4, 7, 3, 10, 8, 9, 6, 2, 1]   Distance: 301
+NEW SOLUTION    Route: [0, 5, 4, 7, 3, 10, 1, 2, 6, 9, 8]   Distance: 293
+NEW SOLUTION    Route: [0, 5, 4, 7, 3, 1, 6, 2, 10, 9, 8]   Distance: 286
+NEW SOLUTION    Route: [0, 5, 4, 7, 3, 1, 2, 6, 9, 10, 8]   Distance: 281
+NEW SOLUTION    Route: [0, 5, 4, 7, 3, 1, 2, 6, 10, 9, 8]   Distance: 275
+NEW SOLUTION    Route: [0, 5, 4, 7, 8, 9, 6, 2, 1, 3, 10]   Distance: 270
+NEW SOLUTION    Route: [0, 5, 4, 7, 8, 9, 10, 3, 1, 2, 6]   Distance: 269
+NEW SOLUTION    Route: [0, 5, 4, 10, 3, 7, 8, 9, 6, 2, 1]   Distance: 268
+NEW SOLUTION    Route: [0, 5, 4, 10, 9, 8, 7, 3, 1, 2, 6]   Distance: 252
+NEW SOLUTION    Route: [0, 5, 4, 10, 9, 6, 2, 1, 3, 7, 8]   Distance: 248
+NEW SOLUTION    Route: [0, 5, 6, 2, 10, 4, 7, 8, 9, 3, 1]   Distance: 235
+NEW SOLUTION    Route: [0, 5, 6, 2, 1, 3, 10, 4, 7, 8, 9]   Distance: 231
+NEW SOLUTION    Route: [0, 5, 6, 2, 1, 3, 7, 4, 10, 9, 8]   Distance: 212
+NEW SOLUTION    Route: [0, 5, 6, 2, 1, 3, 9, 10, 4, 7, 8]   Distance: 207
+Found solution.
+Elapsed time 0.175282 s
+
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 9, 3, 8, 1]   Distance: 515
+NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 9, 3, 1, 8]   Distance: 495
+NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 9, 8, 1, 3]   Distance: 423
+NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 8, 9, 1, 3]   Distance: 368
+NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 3, 8, 9, 1]   Distance: 361
+NEW SOLUTION    Route: [0, 6, 7, 2, 5, 10, 4, 3, 1, 9, 8]   Distance: 341
+NEW SOLUTION    Route: [0, 6, 7, 2, 5, 1, 9, 8, 3, 4, 10]   Distance: 330
+NEW SOLUTION    Route: [0, 6, 7, 2, 10, 5, 1, 9, 8, 4, 3]   Distance: 309
+NEW SOLUTION    Route: [0, 6, 7, 10, 2, 5, 1, 9, 8, 4, 3]   Distance: 284
+NEW SOLUTION    Route: [0, 6, 7, 8, 9, 1, 5, 2, 10, 4, 3]   Distance: 266
+NEW SOLUTION    Route: [0, 6, 7, 8, 9, 1, 5, 10, 2, 4, 3]   Distance: 258
+NEW SOLUTION    Route: [0, 6, 5, 2, 10, 4, 3, 1, 9, 8, 7]   Distance: 250
+NEW SOLUTION    Route: [0, 6, 5, 2, 10, 7, 8, 9, 1, 3, 4]   Distance: 243
+NEW SOLUTION    Route: [0, 6, 5, 2, 4, 3, 1, 9, 8, 7, 10]   Distance: 225
+NEW SOLUTION    Route: [0, 6, 5, 1, 9, 8, 7, 10, 2, 4, 3]   Distance: 197
+Found solution.
+Elapsed time 0.051783 s
+
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+NEW SOLUTION    Route: [0, 8, 9, 6, 1, 7, 3, 4, 5, 2, 10]   Distance: 607
+NEW SOLUTION    Route: [0, 8, 9, 6, 1, 7, 3, 4, 2, 5, 10]   Distance: 573
+NEW SOLUTION    Route: [0, 8, 9, 6, 1, 7, 3, 4, 10, 5, 2]   Distance: 562
+NEW SOLUTION    Route: [0, 8, 9, 6, 1, 7, 3, 5, 2, 4, 10]   Distance: 513
+NEW SOLUTION    Route: [0, 8, 9, 6, 1, 3, 5, 2, 7, 4, 10]   Distance: 496
+NEW SOLUTION    Route: [0, 8, 9, 6, 7, 3, 1, 5, 2, 4, 10]   Distance: 493
+NEW SOLUTION    Route: [0, 8, 9, 6, 7, 3, 1, 10, 4, 2, 5]   Distance: 489
+NEW SOLUTION    Route: [0, 8, 9, 6, 7, 2, 4, 10, 1, 3, 5]   Distance: 487
+NEW SOLUTION    Route: [0, 8, 9, 6, 7, 2, 5, 3, 1, 10, 4]   Distance: 480
+NEW SOLUTION    Route: [0, 8, 9, 6, 4, 3, 5, 2, 7, 1, 10]   Distance: 454
+NEW SOLUTION    Route: [0, 8, 9, 6, 4, 5, 2, 7, 3, 1, 10]   Distance: 453
+NEW SOLUTION    Route: [0, 8, 9, 6, 4, 10, 5, 2, 7, 3, 1]   Distance: 452
+NEW SOLUTION    Route: [0, 8, 9, 6, 4, 10, 1, 7, 3, 5, 2]   Distance: 443
+NEW SOLUTION    Route: [0, 8, 9, 6, 4, 10, 1, 3, 5, 2, 7]   Distance: 411
+NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 1, 3, 5, 2, 7]   Distance: 407
+NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 7, 2, 5, 3, 1]   Distance: 402
+NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 5, 2, 7, 3, 1]   Distance: 390
+NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 2, 7, 3, 1, 5]   Distance: 388
+NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 2, 7, 1, 3, 5]   Distance: 387
+NEW SOLUTION    Route: [0, 8, 9, 10, 4, 6, 2, 5, 3, 1, 7]   Distance: 384
+NEW SOLUTION    Route: [0, 8, 9, 10, 1, 3, 5, 2, 7, 4, 6]   Distance: 376
+NEW SOLUTION    Route: [0, 8, 9, 10, 6, 4, 3, 1, 7, 2, 5]   Distance: 371
+NEW SOLUTION    Route: [0, 8, 9, 10, 6, 4, 3, 1, 5, 2, 7]   Distance: 367
+NEW SOLUTION    Route: [0, 8, 9, 10, 6, 4, 2, 5, 3, 1, 7]   Distance: 366
+NEW SOLUTION    Route: [0, 8, 9, 10, 6, 4, 7, 2, 5, 3, 1]   Distance: 365
+NEW SOLUTION    Route: [0, 8, 9, 5, 3, 1, 10, 6, 4, 2, 7]   Distance: 358
+NEW SOLUTION    Route: [0, 8, 9, 5, 2, 7, 3, 1, 10, 4, 6]   Distance: 352
+NEW SOLUTION    Route: [0, 8, 2, 4, 6, 10, 9, 5, 3, 7, 1]   Distance: 344
+NEW SOLUTION    Route: [0, 8, 2, 4, 6, 10, 9, 5, 3, 1, 7]   Distance: 328
+NEW SOLUTION    Route: [0, 8, 2, 7, 3, 1, 5, 9, 10, 4, 6]   Distance: 321
+NEW SOLUTION    Route: [0, 8, 2, 7, 1, 3, 5, 9, 10, 4, 6]   Distance: 320
+NEW SOLUTION    Route: [0, 8, 5, 3, 1, 9, 10, 6, 4, 2, 7]   Distance: 319
+NEW SOLUTION    Route: [0, 8, 5, 9, 10, 6, 4, 2, 7, 3, 1]   Distance: 314
+NEW SOLUTION    Route: [0, 8, 5, 2, 7, 3, 1, 9, 10, 4, 6]   Distance: 313
+NEW SOLUTION    Route: [0, 8, 4, 3, 5, 2, 7, 1, 9, 10, 6]   Distance: 299
+NEW SOLUTION    Route: [0, 8, 4, 3, 7, 2, 5, 9, 1, 10, 6]   Distance: 293
+NEW SOLUTION    Route: [0, 8, 4, 3, 1, 7, 2, 5, 9, 10, 6]   Distance: 278
+NEW SOLUTION    Route: [0, 8, 4, 2, 7, 3, 1, 5, 9, 10, 6]   Distance: 277
+NEW SOLUTION    Route: [0, 8, 4, 2, 7, 1, 3, 5, 9, 10, 6]   Distance: 276
+NEW SOLUTION    Route: [0, 8, 4, 6, 10, 9, 5, 3, 1, 7, 2]   Distance: 263
+NEW SOLUTION    Route: [0, 8, 4, 6, 10, 9, 5, 3, 1, 2, 7]   Distance: 262
+NEW SOLUTION    Route: [0, 8, 4, 6, 10, 9, 5, 2, 7, 3, 1]   Distance: 249
+NEW SOLUTION    Route: [0, 3, 5, 9, 10, 6, 4, 8, 1, 7, 2]   Distance: 245
+NEW SOLUTION    Route: [0, 3, 5, 9, 10, 6, 4, 8, 1, 2, 7]   Distance: 244
+NEW SOLUTION    Route: [0, 3, 7, 2, 5, 9, 10, 1, 8, 4, 6]   Distance: 242
+NEW SOLUTION    Route: [0, 3, 7, 2, 5, 9, 10, 6, 4, 8, 1]   Distance: 231
+NEW SOLUTION    Route: [0, 3, 1, 8, 4, 6, 10, 9, 5, 2, 7]   Distance: 215
+Found solution.
+Elapsed time 0.087109 s
+</pre></div>
+
+
+<h2>Results</h2>
+<p>The figure below shows the results of the timing study when using the average of 100 different random problems, 
+compared to the timing study performed using a single problem size.</p>
+<p><img alt="Average versus one-time solutions, walltime versus problem size." src="/images/avg-vs-onetime-walltime.png"></p>
+<p>The results show dramatically different behavior, highlighting the importance
+of computing the statistical average of solution walltime for many different problems.
+This was not an issue that arose in discussing timing or profiling of codes to solve the 
+8 queens problem, because in that case the problem (and resulting decision tree)
+were determined by the choice of algorithm.</p>
+<p>This information is also important ot keep in mind when comparing the timing performance 
+of two algorithms - using many cases to compare two algorithms is preferrable,
+since it reduces the likelihood of randomly selecting a problem that highights 
+a weakness of one algorithm or a strength of the other.</p>
+<h2>Summary</h2>
+<p>In this post we covered some scripting tools that make timing a lot easier to do,
+and some ways of thinking about and building up scripts 
+to allow for more complex timing studies without an increase 
+in the associated post-processing work involved.</p>
+<p>We showed how to use <code>make</code> and a Makefile to create compact, expressive commands to build and run Java programs.
+We showed how to use Bash scripting to implement loops and run a case matrix of problems of various sizes,
+measuring timing data for hundreds of problems in total.
+All of these scripts made heavy use of Unix command line tools, 
+demonstrating how to chain commands and functionality together on the command line to accomplish complex tasks.
+Finally, we showed how to use the <code>awk</code> programming language to compute the average of a set of numbers,
+exploring yet another application of this unusually handy language.</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/command-line.html">command line</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/guava.html">guava</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/graph.html">graph</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/tsp.html">TSP</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/make.html">make</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/awk.html">awk</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/performance.html">performance</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Fixing Bottlenecks in the Guava Traveling Salesperson Problem Code
             </b></h1>
         
@@ -940,780 +1665,6 @@ could easily turn the tables. </p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Solving the Traveling Salesperson Problem with Java and Guava
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-03-23T11:00:00-07:00" pubdate>Thursday 03/23/2017</time>
-                in 
-                <a href="/category/java.html">Java</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/solving-the-traveling-salesperson-problem-with-java-and-guava.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2>Table of Contents</h2>
-<ul>
-<li><a href="#tsp1-bkg">Background: Traveling Salesperson Problem (TSP)</a></li>
-<li><a href="#tsp1-graphs">Graphs</a><ul>
-<li><a href="#tsp1-nedges">Number of Edges</a></li>
-</ul>
-</li>
-<li><a href="#tsp1-bktk">Solution: Recursive Backtracking</a> </li>
-<li><a href="#tsp1-guava">Solving the TSP with Java and Guava</a> <ul>
-<li><a href="#tsp1-basic-guava">Basics of Guava</a></li>
-<li><a href="#tsp1-guava-graphs">Guava Graphs</a></li>
-<li><a href="#tsp1-guava-mutable-immutable">Guava Mutable vs Immutable</a></li>
-<li><a href="#tsp1-importing-guava">Importing Guava</a></li>
-<li><a href="#tsp1-tsp-class">TSP Class</a></li>
-<li><a href="#tsp1-node-class">Node Class</a></li>
-<li><a href="#tsp1-edge-class">Edge Class</a></li>
-</ul>
-</li>
-<li><a href="#tsp1-building-graph">TSP Constructor and Building the Graph</a><ul>
-<li><a href="#tsp1-constructor">Constructor</a></li>
-<li><a href="#tsp1-build-graph-method">Build Graph Method</a></li>
-</ul>
-</li>
-<li><a href="#tsp1-solving-exploring">Solving and Exploring with Recursive Backtracking</a><ul>
-<li><a href="#tsp1-solve">Solve Method</a></li>
-<li><a href="#tsp1-explore">Explore (Backtrack) Method</a></li>
-</ul>
-</li>
-<li><a href="#tsp1-nextsteps">Next Steps: Timing and Profiling</a></li>
-<li><a href="#tsp1-sources">Sources</a></li>
-</ul>
-<p><a name="tsp1-bkg"></a></p>
-<h2>Background: Traveling Salesperson Problem (TSP)</h2>
-<p>The traveling salesperson problem, or TSP, is a classic programming problem and an important one in computer science,
-and applications in operations research and optimization.</p>
-<p>The idea is that you have a set of <span class="math">\(N\)</span> cities, connected by various roads, each with their own distances.
-That is, we have a set of <span class="math">\(E\)</span> roads, each with their own distance <span class="math">\(d_j, j=1 \dots E\)</span>. </p>
-<p>The question is, what is the shortest path that a salesperson can take to visit all <span class="math">\(N\)</span> cities, traveling the shortest possible total distance
-and visiting each city once and only once?</p>
-<p>Like the N queens problem, the traveling salesperson problem is a good candidate for recursive backtracking.
-Also like the N queens problem, there are certain shortcuts we can take to trim down the possibilities we explore.</p>
-<p>Computer science pages on Wikipedia are generally pretty high in quality, and the <a href="https://en.wikipedia.org/wiki/Traveling_salesman_problem">traveling salesman problem</a>
-page is no exception. It give a very thorough overview of the important aspects of the problem.</p>
-<p><a name="tsp1-graphs"></a></p>
-<h2>Graphs</h2>
-<p>Graphs are mathematical objects first utilized by Leonhard Euler to solve the
-<a href="https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg">Seven Bridges of Köningsberg</a> problem.
-The concept is simple: you have a bunch of dots connected with lines.</p>
-<p>The dots are called nodes, and the lines are called edges.</p>
-<p>Graphs can be directed, meaning the edges are like arrows with particular directions, or undirected, 
-meaning the edges simply represent a connection between the two nodes.</p>
-<p>Here is an example of a graph with five nodes, with each edge labeled with its distance:</p>
-<p><img style="background:#fff;" alt="A basic graph with five nodes" src="/images/basic-graph.png" /></p>
-<p>We will skip over a vast amount of detail about graph theory that is both fascinating and useful,
-but M. E. J. Newman's paper <a href="http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf">"The structure and function of complex networks"</a> 
-(self-published and written as a course review) is an extremely detailed
-and academically rigorous overview of just about every important detail of the field.</p>
-<p><a name="tsp1-nedges"></a></p>
-<h3>Number of Edges</h3>
-<p>The maximum number of roads or edges <span class="math">\(E\)</span> depends on the number of nodes as <span class="math">\(E = \dfrac{N(N-1)}{2}\)</span>, which is derived from
-the formula for 2 choose N (because edges connect 2 nodes). For k choose N, the formula is given by:</p>
-<div class="math">$$
-C_{N,k} = \dfrac{N!}{k! (N-k)!}
-$$</div>
-<p>and for 2 choose N, it is given by:</p>
-<div class="math">$$
-C_{N,2} = \dfrac{N(N-1)}{2}
-$$</div>
-<p>This is the maximum number of undirected edges in a graph. 
-If the graph is directed, then order matters (the edgge <code>A-&gt;B</code> is no longer the same as <code>B-&gt;A</code>),
-so we have to use the formula for k pick N, </p>
-<div class="math">$$
-P_{N,k} = \dfrac{N!}{(N-k)!}
-$$</div>
-<p>which results in</p>
-<div class="math">$$
-P_{N,2} = N (N-1)
-$$</div>
-<p>possible edges.</p>
-<p><a name="tsp1-nsolutions"></a></p>
-<h3>Number of Solutions</h3>
-<p>Naturally, the question of the total solution space arises.
-Assuming the graph of cities is perfectly connected (representing an upper limit on problem complexity),
-how does the number of solutions change as the number of nodes increases?</p>
-<p>We can start with a trivial graph, and count the number of possible paths
-through the entire graph, starting with a specific node.
-This is equivalent to counting permutations of a string that start with a specific character.</p>
-<div class="highlight"><pre><span></span>ABCDE
-ABCED
-ABDCE
-ABDEC
-ABECD
-ABEDC
-</pre></div>
-
-
-<p>For a string of length <span class="math">\(N\)</span>, the string has <span class="math">\((N-1)!\)</span> possible permutations that start with a specific character.
-Therefore, as the number of nodes <span class="math">\(N\)</span> increases, the number of possible solutions increases as <span class="math">\((N-1)!\)</span>, 
-making the complexity class of the problem <span class="math">\(O(N!)\)</span>.</p>
-<p><a name="tsp1-bktk"></a></p>
-<h2>Solution: Recursive Backtracking</h2>
-<p>Here is pseudocode for a recursive backtracking method:</p>
-<div class="highlight"><pre><span></span>explore(neighbors):
-
-    if(no more unvisited neighbors):
-        # This is the base case.
-        if total distance is less than current minimum:
-            save path and new minimum
-
-    else:
-        # This is the recursive case.
-        for neighbor in unvisited neighbors:
-            visit neighbor
-            explore(new_neighbors)
-            unvisit neighbor
-</pre></div>
-
-
-<p>Care is needed to prevent infinite loops in which the traveling salesperson goes back and forth between two cities.
-As we traverse the graph, we can mark each node as visited, to ensure we don't revisit nodes and go in circles.</p>
-<p>Nodes can be implemented as a <code>Node</code> object in Java, with each Node having a few characteristics:</p>
-<ul>
-<li>String label</li>
-<li>Container of Node pointers pointing to neighbors</li>
-<li>Boolean flag: have we visited this node already?</li>
-</ul>
-<p>Likewise, the graph edges can be represented using integers or doubles.</p>
-<p><a name="tsp1-guava"></a></p>
-<h2>Solving the TSP with Java and Guava</h2>
-<p><a href="https://github.com/google/guava">Google Guava</a> is a library of high-performance data containers in Java.
-The library provides some useful graph objects that we can use to easily solve the TSP on a graph.</p>
-<p><a name="tsp1-basic-guava"></a></p>
-<h3>Basics of Guava</h3>
-<p>Install and use Guava by visiting the <a href="https://github.com/google/guava">Guava project on Github</a>, 
-find the page for their latest release (<a href="https://github.com/google/guava/wiki/Release21">here is version 21.0</a>), 
-and getting the latest <code>.jar</code> file.</p>
-<p>To compile with the jar file, you can either utilize an IDE like <a href="http://www.eclipse.org/">Eclipse</a> or <a href="https://www.jetbrains.com/idea/">IntelliJ</a>,
-or you can compile from the command line, specifying the class path using the <code>-cp</code> flag:</p>
-<div class="highlight"><pre><span></span>$ javac -cp <span class="s1">&#39;.:/path/to/guava/jars/guava-21.0.jar&#39;</span> TSP.java
-$ java -cp <span class="s1">&#39;.:/path/to/guava/jars/guava-21.0.jar&#39;</span> TSP
-</pre></div>
-
-
-<p>More information can be found on the charlesreid1.com wiki: <a href="https://charlesreid1.com/wiki/Guava">Guava</a></p>
-<p><a name="tsp1-guava-graphs"></a></p>
-<h3>Guava Graphs</h3>
-<p>Graph objects in Guava are implemented using a set of objects: Graphs, ValueGraphs, and Networks.</p>
-<p>Graph objects treat edges as very simple and assumes they contain no information and simply link nodes. </p>
-<p>ValueGraphs associate a single non-unique value with each edge on the graph. This can also be used to solve the TSP.</p>
-<p>Network objects treat nodes and edges both as objects, and has the ability to deal with more complex edges: model multi-edges, repeated edges, directed edges, etc.</p>
-<p>We will use a Network object and design our own graph Node and Edge objects.</p>
-<p><a href="https://github.com/google/guava/wiki/GraphsExplained#building-graph-instances">Link to Guava wiki on how to build graph instances</a></p>
-<p><a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html">Guava API Documentation: Network</a></p>
-<p><a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html">Guava API Documentation: Graph</a></p>
-<p><a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html">Guava API Documentation: ValueGraph</a></p>
-<p><a name="tsp1-guava-mutable-immutable"></a></p>
-<h3>Guava Mutable vs Immutable</h3>
-<p>Guava makes a distinction between mutable graphs, which can be modified, and immutable graphs, which cannot.
-Immutability provides some safety and assurances to programmers, and can make things faster.</p>
-<p>When we construct the network, we need a mutable graph to modify (add nodes and edges). 
-But once the network is constructed, it is finished: we don't need to modify the network while we're solving the problem.</p>
-<p>Therefore, we construct a mutable network, assemble the graph for the given problem, and copy it into an immutable graph.
-We then use the immutable graph to access the graph while solving.</p>
-<p><a name="tsp1-importing-guava"></a></p>
-<h3>Importing Guava</h3>
-<p>Starting with import statements, we'll use a couple of objects from the Java API, and from Google's Guava library:</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.util.Set</span><span class="o">;</span>
-<span class="kn">import</span> <span class="nn">java.util.Map</span><span class="o">;</span>
-<span class="kn">import</span> <span class="nn">java.util.TreeMap</span><span class="o">;</span>
-<span class="kn">import</span> <span class="nn">java.util.Arrays</span><span class="o">;</span>
-
-<span class="kn">import</span> <span class="nn">com.google.common.graph.Network</span><span class="o">;</span>
-<span class="kn">import</span> <span class="nn">com.google.common.graph.NetworkBuilder</span><span class="o">;</span>
-<span class="kn">import</span> <span class="nn">com.google.common.graph.ImmutableNetwork</span><span class="o">;</span>
-<span class="kn">import</span> <span class="nn">com.google.common.graph.MutableNetwork</span><span class="o">;</span>
-</pre></div>
-
-
-<p>For more info on why we don't just do the lazier</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.util.*</span><span class="o">;</span>
-<span class="kn">import</span> <span class="nn">com.google.common.graph.*</span><span class="o">;</span>
-</pre></div>
-
-
-<p>see <a href="https://google.github.io/styleguide/javaguide.html">Google's Java style guide</a>.</p>
-<p><a name="tsp1-tsp-class"></a></p>
-<h3>TSP Class</h3>
-<p>Let's lay out the TSP class definition. This class is simple, and wraps a few pieces of data:
-the current route, the current distance, and the minimum distance.
-Note that we could also save the solution in a container, instead of printing it,
-by defining a static class to hold solutions, but we'll keep it simple.</p>
-<div class="highlight"><pre><span></span><span class="cm">/** This class solves the traveling salesman problem on a graph. */</span>
-<span class="kd">class</span> <span class="nc">TSP</span> <span class="o">{</span>
-    <span class="c1">// The actual graph of cities</span>
-    <span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="n">graph</span><span class="o">;</span>
-    <span class="kt">int</span> <span class="n">graphSize</span><span class="o">;</span>
-
-    <span class="c1">// Storage variables used when searching for a solution </span>
-    <span class="n">String</span><span class="o">[]</span> <span class="n">route</span><span class="o">;</span>         <span class="c1">// store the route</span>
-    <span class="kt">double</span> <span class="n">this_distance</span><span class="o">;</span>   <span class="c1">// store the total distance</span>
-    <span class="kt">double</span> <span class="n">min_distance</span><span class="o">;</span>    <span class="c1">// store the shortest path found so far</span>
-
-    <span class="cm">/** Defaut constructor generates the graph and initializes storage variables */</span>
-    <span class="kd">public</span> <span class="nf">TSP</span><span class="o">()</span> <span class="o">{</span>
-        <span class="c1">// TODO</span>
-    <span class="o">}</span>
-
-    <span class="cm">/** This method actually constructs the graph. */</span>
-    <span class="kd">public</span> <span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="nf">buildGraph</span><span class="o">()</span> <span class="o">{</span>
-        <span class="c1">// TODO</span>
-    <span class="o">}</span>
-
-    <span class="cm">/** Public solve method will call the recursive backtracking method to search for solutions on the graph */</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">solve</span><span class="o">()</span> <span class="o">{</span>
-        <span class="c1">// TODO</span>
-    <span class="o">}</span>
-
-    <span class="cm">/** Recursive backtracking method: explore possible solutions starting at this node, having made nchoices */</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">explore</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">,</span> <span class="kt">int</span> <span class="n">nchoices</span><span class="o">)</span> <span class="o">{</span>
-        <span class="c1">// TODO</span>
-    <span class="o">}</span>
-
-    <span class="cm">/** Print out solution */</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">printSolution</span><span class="o">()</span> <span class="o">{</span>
-        <span class="c1">// TODO</span>
-    <span class="o">}</span>
-
-    <span class="cm">/** Print out failed path */</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">printFailure</span><span class="o">()</span> <span class="o">{</span>
-        <span class="c1">// TODO</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<p><a name="tsp1-node-class"></a></p>
-<h3>Node Class (Cities)</h3>
-<p>Now we can define the Node class to represent cities on the graph.</p>
-<div class="highlight"><pre><span></span><span class="kd">class</span> <span class="nc">Node</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="n">String</span> <span class="n">label</span><span class="o">;</span>
-    <span class="kd">public</span> <span class="kt">boolean</span> <span class="n">visited</span><span class="o">;</span> <span class="c1">// Helps us to keep track of where we&#39;ve been on the graph</span>
-    <span class="kd">public</span> <span class="nf">Node</span><span class="o">(</span><span class="n">String</span> <span class="n">name</span><span class="o">){</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">label</span> <span class="o">=</span> <span class="n">name</span><span class="o">;</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">visited</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-    <span class="o">}</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">visit</span><span class="o">(){</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">visited</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
-    <span class="o">}</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">unvisit</span><span class="o">()</span> <span class="o">{</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">visited</span> <span class="o">=</span> <span class="kc">false</span><span class="o">;</span>
-    <span class="o">}</span>
-<span class="o">}</span>
-</pre></div>
-
-
-<p>Like a lined list node, we want to keep graph nodes simple. 
-Note that Nodes don't need to store information about their neighbors.
-That's what we'll use Google Guava for!</p>
-<p><a name="tsp1-edge-class"></a></p>
-<h3>Edge Class (Roads)</h3>
-<p>Edge classes are even simpler, wrapping a single integer:</p>
-<div class="highlight"><pre><span></span><span class="kd">class</span> <span class="nc">Edge</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kt">int</span> <span class="n">value</span><span class="o">;</span>
-    <span class="kd">public</span> <span class="n">String</span> <span class="n">left</span><span class="o">,</span> <span class="n">right</span><span class="o">;</span> <span class="c1">// For convenience in construction process. Not necessary.</span>
-    <span class="kd">public</span> <span class="nf">Edge</span><span class="o">(</span><span class="n">String</span> <span class="n">left</span><span class="o">,</span> <span class="n">String</span> <span class="n">right</span><span class="o">,</span> <span class="kt">int</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">left</span> <span class="o">=</span> <span class="n">left</span><span class="o">;</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">right</span> <span class="o">=</span> <span class="n">right</span><span class="o">;</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">;</span>
-    <span class="o">}</span>
-<span class="o">}</span>
-</pre></div>
-
-
-<p>Note that left and right are used for convenience only during the graph construction process.
-Like the nodes, the edges don't need to know who their neighbors are, 
-since that's what the Google Guava graph object will take care of.</p>
-<p><a name="tsp1-building-graph"></a></p>
-<h2>TSP Constructor and Building the Graph</h2>
-<p><a name="tsp1-constructor"></a></p>
-<h3>Constructor</h3>
-<p>The TSP class constructor should do a few things:</p>
-<ul>
-<li>Construct a graph, with a given set of cities and distances.</li>
-<li>Initialize arrays and cumulative variables that will be used by the backtracking method.</li>
-</ul>
-<p>The actual graph construction process is put into another function called <code>buildGraph()</code>,
-so really the constructor just calls a function and then does #2.</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** Defaut constructor generates the graph and initializes storage variables */</span>
-    <span class="kd">public</span> <span class="nf">TSP</span><span class="o">()</span> <span class="o">{</span>
-        <span class="c1">// Build the graph</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">graph</span> <span class="o">=</span> <span class="n">buildGraph</span><span class="o">();</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">graphSize</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">graph</span><span class="o">.</span><span class="na">nodes</span><span class="o">().</span><span class="na">size</span><span class="o">();</span>
-
-        <span class="c1">// Initialize route variable, shared across recursive method instances</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">route</span> <span class="o">=</span> <span class="k">new</span> <span class="n">String</span><span class="o">[</span><span class="k">this</span><span class="o">.</span><span class="na">graphSize</span><span class="o">];</span>
-
-        <span class="c1">// Initialize distance variable, shared across recursive method instances</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">=</span> <span class="mf">0.0</span><span class="o">;</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="o">;</span> <span class="c1">// negative min means uninitialized</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<p><a name="tsp1-build-graph-method"></a></p>
-<h3>Build Graph Method</h3>
-<p>Now we actually use Guava's Immutable Network object,
-which takes two templated types, T1 and T2, 
-which correspond to the node types and the edge types.</p>
-<p>We use a NetworkBuilder object to build the Network 
-(an example of the factory template).
-This returns a MutableNetwork of Node and Edge objects,
-which we can then connect up using some built-in methods.</p>
-<p>Here are some built-in methods available for a MutableNetwork:</p>
-<div class="highlight"><pre><span></span>    addEdge(node1, node2, edge)
-    addNode(node1)
-    removeEdge(edge)
-    removeNode(node)
-</pre></div>
-
-
-<p>Now here is the construction of the graph, using the Google Guava library.
-There are two loops here: one for cities, and one for edges.
-In the loop over each city,we create a new node and add it to the graph.
-To be able to easily retrieve the Nodes we have created, 
-we also store references to the nodes in a map called <code>all_nodes</code>.</p>
-<p>When we construct edges, we use the map of all nodes <code>all_nodes</code> to get references to the Node objects
-that correspond to a label. That way, if an edge connects "A" with "B" at a distance of 24, 
-we can turn "A" and "B" into references to the Node objects A and B.</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** This method actually constructs the graph. */</span>
-    <span class="kd">public</span> <span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="nf">buildGraph</span><span class="o">()</span> <span class="o">{</span>
-
-        <span class="c1">// MutableNetwork is an interface requiring a type for nodes and a type for edges</span>
-        <span class="n">MutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="n">roads</span> <span class="o">=</span> <span class="n">NetworkBuilder</span><span class="o">.</span><span class="na">undirected</span><span class="o">().</span><span class="na">build</span><span class="o">();</span>
-
-        <span class="c1">// Construct Nodes for cities,</span>
-        <span class="c1">// and add them to a map</span>
-        <span class="n">String</span><span class="o">[]</span> <span class="n">cities</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;A&quot;</span><span class="o">,</span><span class="s">&quot;B&quot;</span><span class="o">,</span><span class="s">&quot;C&quot;</span><span class="o">,</span><span class="s">&quot;D&quot;</span><span class="o">,</span><span class="s">&quot;E&quot;</span><span class="o">};</span>
-        <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">all_nodes</span> <span class="o">=</span> <span class="k">new</span> <span class="n">TreeMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Node</span><span class="o">&gt;();</span>
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">cities</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-            <span class="c1">// Add nodes to map</span>
-            <span class="n">Node</span> <span class="n">node</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Node</span><span class="o">(</span><span class="n">cities</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
-            <span class="n">all_nodes</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">cities</span><span class="o">[</span><span class="n">i</span><span class="o">],</span> <span class="n">node</span><span class="o">);</span>
-
-            <span class="c1">// Add nodes to network</span>
-            <span class="n">roads</span><span class="o">.</span><span class="na">addNode</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
-        <span class="o">}</span>
-
-        <span class="c1">// Construct Edges for roads,</span>
-        <span class="c1">// and add them to a map</span>
-        <span class="n">String</span><span class="o">[]</span> <span class="n">distances</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;A:B:24&quot;</span><span class="o">,</span><span class="s">&quot;A:C:5&quot;</span><span class="o">,</span><span class="s">&quot;A:D:20&quot;</span><span class="o">,</span><span class="s">&quot;A:E:18&quot;</span><span class="o">,</span><span class="s">&quot;B:C:10&quot;</span><span class="o">,</span><span class="s">&quot;B:D:20&quot;</span><span class="o">,</span><span class="s">&quot;C:D:4&quot;</span><span class="o">,</span><span class="s">&quot;C:E:28&quot;</span><span class="o">,</span><span class="s">&quot;D:E:3&quot;</span><span class="o">};</span>
-        <span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="n">all_edges</span> <span class="o">=</span> <span class="k">new</span> <span class="n">TreeMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;();</span>
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">j</span><span class="o">&lt;</span><span class="n">distances</span><span class="o">.</span><span class="na">length</span><span class="o">;</span> <span class="n">j</span><span class="o">++)</span> <span class="o">{</span>
-            <span class="c1">// Parse out (city1):(city2):(distance)</span>
-            <span class="n">String</span><span class="o">[]</span> <span class="n">splitresult</span> <span class="o">=</span> <span class="n">distances</span><span class="o">[</span><span class="n">j</span><span class="o">].</span><span class="na">split</span><span class="o">(</span><span class="s">&quot;:&quot;</span><span class="o">);</span>
-            <span class="n">String</span> <span class="n">left</span> <span class="o">=</span> <span class="n">splitresult</span><span class="o">[</span><span class="mi">0</span><span class="o">];</span>
-            <span class="n">String</span> <span class="n">right</span> <span class="o">=</span> <span class="n">splitresult</span><span class="o">[</span><span class="mi">1</span><span class="o">];</span>
-            <span class="n">String</span> <span class="n">label</span> <span class="o">=</span> <span class="n">left</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span> <span class="o">+</span> <span class="n">right</span><span class="o">;</span>
-            <span class="kt">int</span> <span class="n">value</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">parseInt</span><span class="o">(</span><span class="n">splitresult</span><span class="o">[</span><span class="mi">2</span><span class="o">]);</span>
-
-            <span class="c1">// Add edges to map</span>
-            <span class="n">Edge</span> <span class="n">edge</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Edge</span><span class="o">(</span><span class="n">left</span><span class="o">,</span> <span class="n">right</span><span class="o">,</span> <span class="n">value</span><span class="o">);</span>
-            <span class="n">all_edges</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">label</span><span class="o">,</span> <span class="n">edge</span><span class="o">);</span>
-
-            <span class="c1">// Add edges to network</span>
-            <span class="n">roads</span><span class="o">.</span><span class="na">addEdge</span><span class="o">(</span><span class="n">all_nodes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">edge</span><span class="o">.</span><span class="na">left</span><span class="o">),</span> <span class="n">all_nodes</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">edge</span><span class="o">.</span><span class="na">right</span><span class="o">),</span> <span class="n">edge</span><span class="o">);</span>
-        <span class="o">}</span>
-
-        <span class="c1">// Freeze the network</span>
-        <span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">,</span><span class="n">Edge</span><span class="o">&gt;</span> <span class="n">frozen_roads</span> <span class="o">=</span> <span class="n">ImmutableNetwork</span><span class="o">.</span><span class="na">copyOf</span><span class="o">(</span><span class="n">roads</span><span class="o">);</span>
-
-        <span class="k">return</span> <span class="n">frozen_roads</span><span class="o">;</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<p><a name="tsp1-recursive-backtracking"></a></p>
-<h2>Solving and Exploring with Recursive Backtracking</h2>
-<h3>Solve Method</h3>
-<p>The structure of some recursive backtracking problems is to create a public and a private interface,
-with the public interface taking no parameters or a single parameter that the user will know, 
-and the private method taking a parameter specific to the implementation. That's the pattern we use here.</p>
-<p>The solve method sets up the problem by picking a starting node (in this case, an arbitrary starting node).
-It then gets a reference to that node on the graph, and calls the recursive <code>explore()</code> method,
-which begins the recursive backtracking method.</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** Public solve method will call the recursive backtracking method to search for solutions on the graph */</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">solve</span><span class="o">()</span> <span class="o">{</span>
-        <span class="cm">/** To solve the traveling salesman problem:</span>
-<span class="cm">         * Set up the graph, choose a starting node, then call the recursive backtracking method and pass it the starting node.</span>
-<span class="cm">         */</span>
-
-        <span class="c1">// We need to pass a starting node to recursive backtracking method</span>
-        <span class="n">Node</span> <span class="n">startNode</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-
-        <span class="c1">// Grab a node, any node...</span>
-        <span class="k">for</span><span class="o">(</span> <span class="n">Node</span> <span class="n">n</span> <span class="o">:</span> <span class="n">graph</span><span class="o">.</span><span class="na">nodes</span><span class="o">()</span> <span class="o">)</span> <span class="o">{</span>
-            <span class="n">startNode</span> <span class="o">=</span> <span class="n">n</span><span class="o">;</span>
-            <span class="k">break</span><span class="o">;</span>
-        <span class="o">}</span>
-
-        <span class="c1">// Visit the first node</span>
-        <span class="n">startNode</span><span class="o">.</span><span class="na">visit</span><span class="o">();</span>
-
-        <span class="c1">// Add first node to the route</span>
-        <span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">=</span> <span class="n">startNode</span><span class="o">.</span><span class="na">label</span><span class="o">;</span>
-
-        <span class="c1">// Pass the number of choices made</span>
-        <span class="kt">int</span> <span class="n">nchoices</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span>
-
-        <span class="c1">// Recursive backtracking</span>
-        <span class="n">explore</span><span class="o">(</span><span class="n">startNode</span><span class="o">,</span> <span class="n">nchoices</span><span class="o">);</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<h3>Explore (Backtrack) Method</h3>
-<p>And now, on to the recursive backtracking method.</p>
-<p>The method takes as a parameter which node we are currently on and the number of cities we have visited.
-As multiple explore methods choose different paths, they pass references to different node objects in the graph,
-and they pass different values of <code>nchoices</code>. </p>
-<p>The methods, when they do not encounter a solution, will choose a next node and call the explore method on it.
-Each instance of the explore method marks nodes as visited or unvisited on the same shared graph object.
-This allows instances of the function to share information about their choices with other instances of the function.</p>
-<p>All recursive methods must consist of a base case and a recursive case:</p>
-<p>Base case:
-- We've visited as many cities as are on the graph.
-- Check if this is a new solution (distance less than the current minimum).</p>
-<p>Recursive case:
-- Make a choice (mark node as visited, add city to route).
-- Explore the consequences (recursive call).
-- Unmake the choice (mark node as unvisited, remove city from route).
-- Move on to next choice.</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** Recursive backtracking method: explore possible solutions starting at this node, having made nchoices */</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">explore</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">,</span> <span class="kt">int</span> <span class="n">nchoices</span><span class="o">)</span> <span class="o">{</span>
-        <span class="cm">/**</span>
-<span class="cm">         * Solution strategy: recursive backtracking.</span>
-<span class="cm">         */</span>
-
-        <span class="k">if</span><span class="o">(</span><span class="n">nchoices</span> <span class="o">==</span> <span class="n">graphSize</span><span class="o">)</span> <span class="o">{</span>
-            <span class="c1">// </span>
-            <span class="c1">// BASE CASE</span>
-            <span class="c1">//</span>
-            <span class="k">if</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">&lt;</span> <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">||</span> <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
-                <span class="c1">// if this_distance &lt; min_distance, this is our new minimum distance</span>
-                <span class="c1">// if min_distance &lt; 0, this is our first minimium distance</span>
-                <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span><span class="o">;</span>
-                <span class="n">printSolution</span><span class="o">();</span>
-            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-                <span class="n">printFailure</span><span class="o">();</span>
-            <span class="o">}</span>
-
-        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-            <span class="c1">//</span>
-            <span class="c1">// RECURSIVE CASE</span>
-            <span class="c1">//  </span>
-            <span class="n">Set</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="na">adjacentNodes</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
-            <span class="k">for</span><span class="o">(</span><span class="n">Node</span> <span class="n">neighbor</span> <span class="o">:</span> <span class="n">neighbors</span><span class="o">)</span> <span class="o">{</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">neighbor</span><span class="o">.</span><span class="na">visited</span> <span class="o">==</span> <span class="kc">false</span><span class="o">)</span> <span class="o">{</span>
-
-                    <span class="kt">int</span> <span class="n">distance_btwn</span><span class="o">;</span>
-
-                    <span class="k">for</span><span class="o">(</span> <span class="n">Edge</span> <span class="n">edge</span> <span class="o">:</span> <span class="n">graph</span><span class="o">.</span><span class="na">edgesConnecting</span><span class="o">(</span><span class="n">node</span><span class="o">,</span> <span class="n">neighbor</span><span class="o">)</span> <span class="o">)</span> <span class="o">{</span>
-                        <span class="n">distance_btwn</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="na">value</span><span class="o">;</span>
-                    <span class="o">}</span>
-
-                    <span class="c1">// Make a choice</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="n">neighbor</span><span class="o">.</span><span class="na">label</span><span class="o">;</span>
-                    <span class="n">neighbor</span><span class="o">.</span><span class="na">visit</span><span class="o">();</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">+=</span> <span class="n">distance_btwn</span><span class="o">;</span>
-
-                    <span class="c1">// Explore the consequences</span>
-                    <span class="n">explore</span><span class="o">(</span><span class="n">neighbor</span><span class="o">,</span><span class="n">nchoices</span><span class="o">+</span><span class="mi">1</span><span class="o">);</span>
-
-                    <span class="c1">// Unmake the choice</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
-                    <span class="n">neighbor</span><span class="o">.</span><span class="na">unvisit</span><span class="o">();</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">-=</span> <span class="n">distance_btwn</span><span class="o">;</span>
-                <span class="o">}</span>
-                <span class="c1">// Move on to the next choice (continue loop)</span>
-            <span class="o">}</span>               
-        <span class="o">}</span> <span class="c1">// End base/recursive case</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<h2>Main and Utility Methods</h2>
-<p>Last but not least, add the method that actually calls the TSP object's solve method,
-and define what to do when we encounter a new solution.
-This program just prints out new solutions as they are found, 
-but you could also add them to a map (map routes to distances),
-or quietly keep track of the shortest path and not print it until the end.</p>
-<div class="highlight"><pre><span></span><span class="kd">class</span> <span class="nc">TSP</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span> 
-        <span class="n">TSP</span> <span class="n">t</span> <span class="o">=</span> <span class="k">new</span> <span class="n">TSP</span><span class="o">();</span>
-        <span class="n">t</span><span class="o">.</span><span class="na">solve</span><span class="o">();</span>
-    <span class="o">}</span>
-
-    <span class="o">...</span>
-</pre></div>
-
-
-<p>Additionally, we may want to perform a certain action when we find a new minimum distance.
-Note that this method may be called multiple times during the solution procedure.</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** Print out solution */</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">printSolution</span><span class="o">()</span> <span class="o">{</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">print</span><span class="o">(</span><span class="s">&quot;@@@@@@@@@@\tNEW SOLUTION\t&quot;</span><span class="o">);</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Route: &quot;</span><span class="o">+</span><span class="n">Arrays</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">)</span>
-                          <span class="o">+</span><span class="s">&quot;\tDistance: &quot;</span><span class="o">+</span><span class="k">this</span><span class="o">.</span><span class="na">min_distance</span><span class="o">);</span>
-    <span class="o">}</span>
-
-    <span class="cm">/** Do nothing with failed path */</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">printFailure</span><span class="o">()</span> <span class="o">{</span>
-        <span class="c1">// Nope</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<h2>Program Output</h2>
-<h3>Initial Graph Structure and Solution</h3>
-<p>In the construction of the graph, we defined our graph as:</p>
-<div class="highlight"><pre><span></span><span class="n">String</span><span class="o">[]</span> <span class="n">distances</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;A:B:24&quot;</span><span class="o">,</span><span class="s">&quot;A:C:5&quot;</span><span class="o">,</span><span class="s">&quot;A:D:20&quot;</span><span class="o">,</span><span class="s">&quot;A:E:18&quot;</span><span class="o">,</span><span class="s">&quot;B:C:10&quot;</span><span class="o">,</span><span class="s">&quot;B:D:20&quot;</span><span class="o">,</span><span class="s">&quot;C:D:4&quot;</span><span class="o">,</span><span class="s">&quot;C:E:28&quot;</span><span class="o">,</span><span class="s">&quot;D:E:3&quot;</span><span class="o">};</span>
-</pre></div>
-
-
-<p>This is the graph that we're solving the TSP problem on.
-Here are the results when the program is compiled and run:</p>
-<div class="highlight"><pre><span></span>$ javac -cp <span class="s1">&#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39;</span> TSP.java
-
-$ java -cp <span class="s1">&#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39;</span> TSP
-
-@@@@@@@@@@  NEW SOLUTION    Route: <span class="o">[</span>A, B, C, D, E<span class="o">]</span>  Distance: <span class="m">41</span>.0
-@@@@@@@@@@  NEW SOLUTION    Route: <span class="o">[</span>A, C, B, D, E<span class="o">]</span>  Distance: <span class="m">38</span>.0
-@@@@@@@@@@  NEW SOLUTION    Route: <span class="o">[</span>A, E, D, C, B<span class="o">]</span>  Distance: <span class="m">35</span>.0
-</pre></div>
-
-
-<p>The answers given were satisfactory and correct, so we moved on to 
-a more advanced graph construction process that utilized a static class
-to generate random, fully-connected graphs. This also implemented 
-additional functionality to export to Dot format. This static RandomGraph
-class will be covered in later post.</p>
-<p>Here is the resulting output of the random graph generator for a 6-node TSP problem,
-with the sequence of shortest routes found by the algorithm:</p>
-<p><img alt="Six-node traveling salesperson problem" src="graphviz_tsp_6.png"></p>
-<div class="highlight"><pre><span></span>java -cp &#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39; TSP 6 
-------------------- TSP ----------------------
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 3, 2, 4, 5]   Distance: 291.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 3, 5, 4, 2]   Distance: 249.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 2, 4, 3, 5]   Distance: 246.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 5, 3, 4, 2]   Distance: 203.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 3, 5, 1, 4, 2]   Distance: 178.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 2, 4, 1, 5, 3]   Distance: 163.0
- Done.
-</pre></div>
-
-
-<p>And for 12 nodes, a problem twice that size, here is the graph and corresponding output:</p>
-<p><img alt="Twelve-node traveling salesperson problem" src="graphviz_tsp_12.png"></p>
-<p>and the output:</p>
-<div class="highlight"><pre><span></span>java -cp &#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39; TSP 12 
-------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 6, 8, 11]   Distance: 585.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 8, 11, 6]   Distance: 558.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 8, 6, 11]   Distance: 522.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 6, 5, 3, 8, 11]   Distance: 499.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 11, 8, 6, 5, 3]   Distance: 460.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 11, 6, 8, 3, 5]   Distance: 459.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 11, 8, 10, 6, 5, 3]   Distance: 449.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 11, 10, 6, 8, 3, 5]   Distance: 419.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 11, 10, 8, 6, 5, 3]   Distance: 408.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 3, 5, 6, 8, 10, 11]   Distance: 402.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 3, 9, 11, 10, 8, 6, 5]   Distance: 385.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 11, 10, 8, 6, 2, 9, 3, 5]   Distance: 377.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 5, 3, 9, 11, 10, 8, 6, 2]   Distance: 374.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 5, 6, 8, 10, 11, 9, 3, 2]   Distance: 371.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 9, 3, 5, 4, 11, 10, 8, 6, 2]   Distance: 363.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 9, 3, 2, 6, 8, 10, 11, 4, 5]   Distance: 352.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 5, 4, 11, 9, 2, 6, 8, 10]   Distance: 350.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 2, 9, 11, 4, 5, 6, 8, 10]   Distance: 347.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 9, 2, 4, 11, 10, 8, 6, 5]   Distance: 345.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 9, 2, 6, 8, 10, 11, 4, 5]   Distance: 323.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 3, 9, 2, 6, 8, 10, 11, 4]   Distance: 322.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 2, 3, 9, 11, 10, 8, 6]   Distance: 316.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 2, 6, 8, 10, 11, 9, 3]   Distance: 313.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 11, 9, 3, 2, 6, 8, 10]   Distance: 306.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 11, 10, 8, 6, 2, 9, 3]   Distance: 302.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 10, 11, 4, 5, 7, 3, 9, 2, 6, 8]   Distance: 289.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 10, 8, 6, 2, 9, 3, 7, 5, 4, 11]   Distance: 286.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 10, 8, 6, 2, 3, 9, 11, 4, 5, 7]   Distance: 283.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 8, 6, 10, 11, 4, 2, 9, 3, 7, 5]   Distance: 274.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 8, 6, 10, 11, 4, 5, 7, 3, 9, 2]   Distance: 260.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 2, 6, 8, 10, 11, 9, 3, 7, 5]   Distance: 259.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 11, 10, 8, 6, 5, 7, 3, 9, 2]   Distance: 256.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 11, 10, 8, 6, 2, 9, 3, 7, 5]   Distance: 248.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 5, 7, 3, 9, 11, 10, 8, 6, 2]   Distance: 245.0
-!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 7, 5, 4, 1, 8, 6, 10, 11, 9, 3, 2]   Distance: 236.0
- Done.
-</pre></div>
-
-
-<p>Note that these random graphs are fully connected - every node connects to every other node.
-Among the many interesting aspects of the problem, one of them is the impact of connectivity
-on the solution time. </p>
-<p>Another aspect of the problem is the topology of the network, and exploring how 
-a larger number of unconnected nodes, or groups of nodes clustered together but isolated from one another,
-affect the final solution time and the final route.</p>
-<p>But before get to that, we have some other things to work out.</p>
-<h2>Next Steps: Timing and Profiling</h2>
-<p>This post described a working implementation of a recursive backtracking solution 
-to the traveling salesperson problem on a graph. This is a naive solution, however,
-and in the next few posts about the traveling salesperson problem we'll focus on using
-timing and profiling tools for Java to profile this Guava program, identify bottlenecks, 
-and speed it up. In fact, there is one small tweak we can make to the algorithm covered above
-that will improve the performance by orders of magnitude. But more on that in a future post.</p>
-<p><a name="tsp1-sources"></a></p>
-<h2>Sources</h2>
-<ol>
-<li>
-<p>"Traveling Salesman Problem". Wikipedia, the Free Encyclopedia. The Wikimedia Foundation. Edited 12 March 2017. Accessed 23 March 2017. 
-&lt;<a href="https://en.wikipedia.org/wiki/Travelling_salesman_problem">https://en.wikipedia.org/wiki/Travelling_salesman_problem</a>&gt;</p>
-</li>
-<li>
-<p>"Seven Bridges of Königsberg". Wikipedia, the Free Encyclopedia. The Wikimedia Foundation. Edited 11 March 2017. Accessed 23 March 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg">https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg</a>&gt;</p>
-</li>
-<li>
-<p>"The structure and function of complex networks". M. E. J. Newman. 
-&lt;<a href="http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf">http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf</a>&gt;</p>
-</li>
-<li>
-<p>"Google Guava - Github". Alphabet, Inc. Released under the Apache 2.0 License. Accessed 20 March 2017.
-&lt;<a href="https://github.com/google/guava">https://github.com/google/guava</a>&gt;</p>
-</li>
-<li>
-<p>"Guava". Charles Reid. Edited 23 March 2017. Accessed 23 March 2017.
-&lt;<a href="https://www.charlesreid1.com/wiki/Guava">https://www.charlesreid1.com/wiki/Guava</a>&gt;</p>
-</li>
-<li>
-<p>"Graphs Explained". Google Guava Wiki. Accessed 23 March 2017.
-&lt;<a href="https://github.com/google/guava/wiki/GraphsExplained">https://github.com/google/guava/wiki/GraphsExplained</a>&gt;</p>
-</li>
-<li>
-<p>"Network". Google Guava API Documentation. Accessed 23 March 2017.
-&lt;<a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html">http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html</a>&gt;</p>
-</li>
-<li>
-<p>"Graph". Google Guava API Documentation. Accessed 23 March 2017.
-&lt;<a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html">http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html</a>&gt;</p>
-</li>
-<li>
-<p>"Value Graph". Google Guava API Documentation. Accessed 23 March 2017.
-&lt;<a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html">http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html</a>&gt;</p>
-</li>
-<li>
-<p>"Google Java Style Guide". Alphabet Inc. Accessed 21 March 2017.
-&lt;<a href="https://google.github.io/styleguide/javaguide.html">https://google.github.io/styleguide/javaguide.html</a>&gt;</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/guava.html">guava</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/graph.html">graph</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/tsp.html">TSP</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1743,6 +1694,19 @@ that will improve the performance by orders of magnitude. But more on that in a 
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>March 2019</h2>
+
+            <p class="archive">
+            <a href="/centillion-a-document-search-engine.html">centillion: a document search engine</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
