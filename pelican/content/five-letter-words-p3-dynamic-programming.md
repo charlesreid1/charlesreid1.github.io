@@ -1,7 +1,7 @@
 Title: Five Letter Words: Part 3: Letter Coverage and Dynamic Programming
 Date: 2017-09-19 12:00
 Category: Computer Science
-Tags: dynamic programming, python, computer science, graphs, algorithms, art of computer programming
+Tags: dynamic programming, python, computer science, graphs, algorithms, art of computer programming, knuth, five letter words
 
 _NOTE: The code covered in this post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
 but the author would encourage any user of Python 2 to "put on your big kid pants" and 
