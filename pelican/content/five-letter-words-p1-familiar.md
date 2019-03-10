@@ -353,7 +353,7 @@ This algorithm takes $O(N^2)$ time due to the nested for loops.
 Likewise, here is code to generate pairs that differ by some amount $n$.
 This code will only print 10 pairs for each $n$, to cut down on running time.
 
-[diff_by_n.py](https://github.com/charlesreid1/five-letter-words/blob/master/diff_by_n.py)
+diff_by_n.py
 
 ```
 """
