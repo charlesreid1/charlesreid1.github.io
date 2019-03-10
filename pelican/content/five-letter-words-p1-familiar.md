@@ -290,10 +290,24 @@ place, piece
 <a name="five1-euclidean-n"></a>
 ### Different-by-N Code
 
+_**IMPORTANT NOTE:** On 2019-03-09 we revisited the problem set and solution,
+and discovered that we had misinterpreted the (much more interesting) original
+problem posed by Knuth. Ths will be rectified in a follow-up blog post!_
+
+_Briefly, the mistake we made here was to interpret this problem as asking for
+pairs of words "different by +/-1" to mean, find pairs with a total Hamming
+distance (or Euclidean distance) of exactly +/-1 total. This would produce
+pairs like "might" and "night"._
+
+_In fact, the problem Knuth posed asks for pairs of words
+in the SGB that are "different by +/-1 **at each position,**"
+meaning each letter must be different by one and exactly one.
+An example of such a pair would be "rover" and "spuds"._
+
 The code that performs the above calculations includes 
 `diff_by_one.py` and `diff_by_n.py`. Here is the former:
 
-[diff_by_one.py](https://github.com/charlesreid1/five-letter-words/blob/master/diff_by_one.py)
+diff_by_one.py
 
 ```
 """
@@ -303,6 +317,8 @@ Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0
 Exercise #28
 
 Find pairs of SGB word vectors that differ by +/-1.
+
+(See IMPORTANT NOTE here: https://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html)
 """
 from get_words import get_words
 from euclidean_distance import euclidean_distance
@@ -347,6 +363,8 @@ Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0
 Variation on Exercise #28
 
 Find pairs of SGB word vectors that differ by +/-n.
+
+(See IMPORTANT NOTE here: https://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html)
 """
 from get_words import get_words
 from euclidean_distance import euclidean_distance
