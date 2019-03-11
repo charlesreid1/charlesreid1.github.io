@@ -1,4 +1,4 @@
-Title: Five Letter Words: Part 1: Getting Familiar With The List
+Title: Five Letter Words: Part 4: Revisiting Diff by One
 Date: 2019-03-10 10:00
 Category: Computer Science
 Tags: python, computer science, graphs, algorithms, art of computer programming, knuth, five letter words
@@ -6,8 +6,8 @@ Tags: python, computer science, graphs, algorithms, art of computer programming,
 ## Table of Contents
 
 * [Five Letter Words, Revisited](#five4-about)
-* [Different By One, Revisited](#five4-different-by-one)
-* [Different By N, Revisited](#five4-different-by-one)
+* [Different By One, Revisited](#five4-diff-by-one)
+* [Different By N, Revisited](#five4-diff-by-n)
 
 <a name="five4-about"></a>
 ## About the Five-Letter Words
@@ -112,6 +112,9 @@ The approach we used was as follows:
       (O(1) cost if using a hash table/set)
     - If so, add ordered pair (word1,word2)
       to a set of solutions (to avoid dupes)
+
+<a name="five4-diff-by-n"></a>
+## Different by N, Revisited
 
 We went back and modified the code to take a
 distance parameter d, but storage and compute
