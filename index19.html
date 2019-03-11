@@ -102,18 +102,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Five Letter Words: Part 4: Revisiting Diff by One
+                Enigma Cipher Implementation: Part 1: How It Works
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-03-10T10:00:00-07:00" pubdate>Sunday 03/10/2019</time>
+                <time datetime="2017-03-21T20:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
                 in 
-                <a href="/category/computer-science.html">Computer Science</a>
+                <a href="/category/enigma.html">Enigma</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="/five-letter-words-part-4-revisiting-diff-by-one.html">permalink</a>
+                <a href="/enigma-cipher-implementation-part-1-how-it-works.html">permalink</a>
             </span>
             </p>
         </div>
@@ -130,192 +130,174 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><h2>Table of Contents</h2>
-<ul>
-<li><a href="#five4-about">Five Letter Words, Revisited</a></li>
-<li><a href="#five4-diff-by-one">Different By One, Revisited</a></li>
-<li><a href="#five4-diff-by-n">Different By N, Revisited</a></li>
-</ul>
-<p><a name="five4-about"></a></p>
-<h2>About the Five-Letter Words</h2>
-<p>In Volume 4, Facsimile 0 of Donald Knuth's <u>Art of Computer Programming</u>, 
-in which Knuth covers graph theory, he introduces a list of five-letter words
-as part of a data set useful in exploring graph theory and graph algorithms.</p>
-<p>The <a href="https://github.com/charlesreid1/five-letter-words/blob/master/sgb-words.txt">list of words</a> 
-is part of the <a href="http://www3.cs.stonybrook.edu/~algorith/implement/graphbase/implement.shtml">Stanford Graph Base</a>, 
-a set of data sets that are useful for studying graph theory and networks.</p>
-<p>See <a href="https://charlesreid1.com/wiki/Five_Letter_Words">Five Letter Words</a>
-on the charlesreid1.com wiki for details.</p>
-<p><a name="five4-diff-by-one"></a></p>
-<h2>Different by 1, Revisited</h2>
-<p>This post is revisiting an exercise from the above volume,
-Exercise 28:</p>
-<blockquote>
-<p>Find pairs of SGB word vectors that differ by
-+/- 1 in each component.</p>
-</blockquote>
-<p>In a prior blog post (<a href="#">Part 1</a>),
-we had inerpreted the question as finding
-word vectors whose Euclidean distance differed
-by 1 total, which is the same as a Hamming
-distance of 1.</p>
-<p>However, on revisiting the (more interesting)
-question actually being posed by the author,
-we find a different and more difficult problem.</p>
-<p>As an example of what Knuth is asking for:</p>
-<div class="highlight"><pre><span></span>rover -&gt; spuds
-</pre></div>
-
-
-<p>Each letter of the words are within an edit
-distance of 1, at each position.</p>
-<p>There are 38 such pairs:</p>
-<div class="highlight"><pre><span></span>$ python diff_by_one_fixed.py
-abaft babes
-absit baths
-adder beefs
-ambit blahs
-anger boffs
-anode boned
-bider chefs
-bidet chefs
-biffs cheer
-ghost hints
-hobos inapt
-holds inker
-honed inode
-hoods inner
-hoofs inner
-hoots input
-hoped inode
-ingot johns
-needs odder
-needs offer
-rider sheds
-rifer sheds
-rinds shoer
-robed spade
-robot snaps
-robot spans
-rover spuds
-ruffs steer
-runts stout
-rusts strut
-sheer tiffs
-sheet tiffs
-shout tints
-sides theft
-sneer toffs
-splat tombs
-spuds toter
-stuns tutor
-Found <span class="m">38</span> pairs of words that differ by +/-1 in each component.
-</pre></div>
-
-
-<p>The approach we used was as follows:</p>
-<ul>
-<li>Iterate over each word in the wordlist
-  (use the first 1,000 words to keep it
-  shorter for testing)</li>
-<li>For each word:</li>
-<li>Generate all variations that are within +/-1 
-    using recursive backtracking (could also use
-    algorithm to generate all 32 binary codes of 
-    length 5, where 0 = -1, 1 = +1)</li>
-<li>For each of the 32 variations,<ul>
-<li>Check if the word is in the wordset
-  (O(1) cost if using a hash table/set)</li>
-<li>If so, add ordered pair (word1,word2)
-  to a set of solutions (to avoid dupes)</li>
-</ul>
+        <div class="entry-content"><p>This is the first of several posts that will walk through an implementation of the Enigma cipher in code.</p>
+<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
+detailed, accurate information entirely free of graduate level mathematics, 
+and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
+<p>There is also a Wikipedia article offering detailed information about the mathematical cryptanalysis of the Enigma,
+and covering some of the strengths and weaknesses of the machine: <a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">Cryptanalysis of the Enigma</a>.</p>
+<h2>Background</h2>
+<p>The Enigma machine was a device used by the German military to encrypt communications during World War II.
+The machine was essentially a large electronic circuit implementing a black-box encrypt/decrypt function.
+By design, the circuitry of the machine could be used for both encryption and decryption. </p>
+<p>The Enigma played an important role in the development of the first electronic computer. 
+Alan Turing led a team at Bletchley Park, in England, that constructed machines that could crack the Enigma code.
+This led to the development of the conceptual Turing machine and the creation of the first electronic computers.
+By narrowing the space of possible keys using Enigma's weaknesses, 
+these electronic computers could be used to explore the remaining key space.</p>
+<p>There were several variations of the Enigma. Each operated on the same basic principle:
+the operator entered a letter, which was transformed into a signal. 
+That signal was passed through several components of the Enigma machine,
+and underwent a series of linear transformations until its ciphertext was output.
+The encrypted output character would light up on a second keyboard, and the operator could transcribe the message.</p>
+<h2>Black Box Representation</h2>
+<p>The following diagram lays out the Enigma circuitry using black boxes. 
+The signal starts at the keyboard, where the operator types a letter.
+That letter is transformed into an electrical signal, which is sent through a series of components.
+First is the switchboard in the front, which swaps a few letter pairs.
+Next, the signal passes through three rotor wheels, each of which scrambles the alphabet.
+The signal is then passed into a reflector, which swaps every character with some other character.
+The reflector made the Enigma a symmetric machine. The signal was sent out of the reflector and passed through each rotor in reverse order.
+Finally, the signal passed through the switchboard at the front, and the resulting letter lit up, allowing the operator to transcribe the message.</p>
+<p><img alt="Image: Enigma Black Box Representation" src="/images/enigma_blackbox.jpg"></p>
+<h2>Components</h2>
+<p>There were three principal components of the machine: a <strong>switchboard</strong>, a set of <strong>rotor wheels</strong>, and a <strong>reflector</strong>.</p>
+<h3>Switchboard</h3>
+<p>When the operator entered a key on the input keyboard, the key pressed was transformed into a signal.
+On the front of the Enigma machine was a set of plugs, one for each letter. Operators would connect
+pairs of letters using plugs, which would swap letters. If an operator connected the A and K ports, 
+and typed "A" on the keyboard, the signal representing "A" would travel to the switchboard, 
+where it would be transformed into the signal representing "K". </p>
+<p>Typically the Enigma operators would only connect 7-10 pairs of letters, with the remaining 6-12 letters untransformed by the switchboard. 
+The switchboard led to a huge number of possible encryption schemes, and was the single component that made the Enigma diffficult to crack.
+Commercial versions of the Enigma, without the plugboard, were sold to banks and other entities in Germany, but without the plugboard,
+the key space was reduced dramatically, making these codes "easy" to crack.</p>
+<p><img alt="Enigma switchboard illustration" src="/images/enigma_switchboard.jpg"></p>
+<p>The image above illustrates how a switchboard would work for a simple 8-symbol alphabet "ABCDEFGH". 
+Only 3 of 4 pairings are made in this example. </p>
+<h3>Rotor Wheels</h3>
+<p>The rotor wheels were a set of interchangeable wheels that would perform a substitution cipher. 
+Each wheel corresponded to a particular alphabet in scrambled order (these rotors were not performing simple shift Caesar ciphers).
+Based on the order of the wheels, the signal, representing the letter the operator typed on the keyboard, 
+that came out of the switchboard would undergo three alphabet scrambles (also called affine ciphers).</p>
+<p>Because the wheels rotated with each keypress, the actual Affine cipher used by each wheel changed at each step.</p>
+<p>To complicate the way the rotors turned, the designer of the Enigma added clasps and notches to each rotor at different letters.
+When the notch of one rotor and the clasp of the rotor to the left matched, they would turn together. 
+The right-most wheel rotated once each key press, the center wheel rotated once every 26 key presses, and the left wheel rotated once every 676 key presses.
+Although these rates remained the same due to the number of notches, the exact locations of the notches dictated the timing of the rotations.
+The ordering of the wheels and their initial settings were therefore important to how the message was encrypted or decrypted.</p>
+<p>The German military distributed code books that contained daily settings for the Enigma machines, so that all Enigma operators had the same settings.
+These code books specified which wheels to load into the Enigma (three out of five possible rotors I II III IV and V), as well as the initial rotation to apply to each.</p>
+<p><img alt="Enigma rotor wheels illustration" src="/images/enigma_rotor.jpg"></p>
+<p>The image above shows how the rotor would work for the 8-character alphabet "ABCDEFGH".
+The wheel has a set arrangement of scrambled letters, but the scramble shifts each time the rotor is advanced.
+This allows 1 wheel to provide as many different scrambles as there are symbols in the alphabet.</p>
+<h3>Reflector</h3>
+<p>Having passed through the three rotor wheels, each scrambling the original character signal input by the operator into the keyboard, the signal then entered the reflector. 
+It did precisely what the name suggests - it reflected a signal back through the machine. 
+Its design was very similar to the switchboard in the front of the machine, except it created 13 pairs of letters, so that every letter was paired with some other letter.
+The reflector, like the rotor wheels, was removable and could be selected from a set. </p>
+<p>The reflector is a curious part of the Enigma design, because it represents an attempt at convenience, which led to a gaping security flaw that Bletchley Park was able to exploit. 
+The nature of the reflector is that it is symmetric: it pairs each letter with some other letter, and the pairings are mutual. 
+If the reflector turns every "P" into "H", it also turns every "H" into "P". 
+This symmetry gives the Enigma the property that you no longer need an "encrypt" or "decrypt" mode: if you take a plaintext message and run it through the Enigma machine once, you'll get the cipher text back. 
+If you run it through the Enigma machine twice, you'll get the same plaintext back. 
+This obviated the need for a switch on the Enigma, to go between "encrypt" and "decrypt" modes.</p>
+<p>However, this property also means that no letter can ever be encoded as itself - a property called derangement. 
+While the switch board at the front and the rotor wheel scrambles would sometimes encode a letter as itself 
+(for example, Rotor I encodes "S" as "S", Rotor II encodes "A" as "A" and "Q" as "Q", and Rotor III encodes "N" as "N"),
+the reflector would never do so. 
+Thus, despite an astronomical number of possible settings, and complicated machinery and circuitry, 
+no matter what the Enigma's settings, no letter would ever be encoded as itself.
+This property can be exploited to rule out the location of certain words or phrases at certain locations in the message,
+which is precisely how Bletchley Park attacked the Enigma cipher.</p>
+<p><img alt="Enigma reflector illustration" src="/images/enigma_reflector.jpg"></p>
+<p>The image above illustrates a reflector for the 8-symbol alphabet "ABCDEFGH".
+Each of the 4 possible pairings are made, so no letter will be encoded to itself by the reflector.</p>
+<p>Had the middle rotor wheels remained stationary, multiple wheels would have been redundant - 
+any arbitrary sequence of alphabet scrambles can be collapsed into a single scramble.
+However, the wheels were designed to rotate at various rates. Each time the wheels rotated,
+it changed the scramble provided by the wheel that had rotated. </p>
+<p>This means the Enigma worked by using a totally different scramble for each character in a message,
+with the scrambles constantly changing, each character, over and over. 
+Because the number of possible scrambles with a 26 character alphabet is <span class="math">\(26! = 403,291,461,126,605,635,584,000,000\)</span>,
+which is a trillion trillions.</p>
+<h2>The Enigma and Random Number Generators</h2>
+<p>By using a mechanical device with the same construction and the same common initial settings, 
+operators were able to generate random keys from an astronomical range of permutations, 
+but in a mechanically reproducible way. </p>
+<p>This makes Enigmas much like a random number generator, with the initial settings being the seed.
+If there are 32 or 64 bits used to store a number, that's 32 or 64 bits of randomness. 
+Large numbers of combinations indeed.</p>
+<h2>Sources</h2>
+<ol>
+<li>
+<p>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</p>
 </li>
-</ul>
-<p><a name="five4-diff-by-n"></a></p>
-<h2>Different by N, Revisited</h2>
-<p>We went back and modified the code to take a
-distance parameter d, but storage and compute
-cost, as well as the sparsity of the graph of
-shared bigrams and trigrams among these 5,000
-words, means the number of pairs increases 
-exponentially.</p>
-<table>
-<thead>
-<tr>
-<th>Distance</th>
-<th>Number of pairs</th>
-<th>Walltime</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>38</td>
-<td>0.26 s</td>
-</tr>
-<tr>
-<td>2</td>
-<td>525</td>
-<td>5.26 s</td>
-</tr>
-<tr>
-<td>3</td>
-<td>4982</td>
-<td>38.87 s</td>
-</tr>
-<tr>
-<td>4</td>
-<td>???</td>
-<td>10 min (est)</td>
-</tr>
-</tbody>
-</table>
-<p>You can find the <code>diff_by_n.py</code> script here:
-<a href="https://git.charlesreid1.com/cs/five-letter-words/">https://git.charlesreid1.com/cs/five-letter-words/</a></p>
-<p>The output:</p>
-<div class="highlight"><pre><span></span>$ python diff_by_n.py
-abaft babes
-absit baths
-adder beefs
-ambit blahs
-anger boffs
-anode boned
-bider chefs
-bidet chefs
-biffs cheer
-ghost hints
-..
-Found <span class="m">38</span> pairs of words that differ by +/-1 in each component.
-Time: <span class="m">0</span>.2673 s
+<li>
+<p>Copeland, B.J. "Alan Turing". Encyclopedia Britannica, Inc. Published 23 February 2016. Accessed 18 March 2017.</p>
+</li>
+<li>
+<p>"Cryptanalysis of the Enigma". Wikipedia: The Free Encyclopedia. Wikimedia Foundation, Inc. Edited 11 January 2017. Accessed 18 March 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
 
-aback babel
-aback cabal
-abaft babes
-abash cacti
-abide baked
-abide caged
-abide caked
-abler bands
-abler bangs
-abode caned
-...
-Found <span class="m">525</span> pairs of words that differ by +/-2 in each component.
-Time: <span class="m">5</span>.2617 s
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
 
-abaca ceded
-abaci babel
-abaci cabal
-abaci decaf
-abaci decal
-aback babel
-aback cabal
-aback decal
-abaft babes
-abaft bedew
-...
-Found <span class="m">4982</span> pairs of words that differ by +/-3 in each component.
-Time: <span class="m">38</span>.8743 s
-</pre></div></div>
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
 
     </div>
 </div>
@@ -327,239 +309,11 @@ Time: <span class="m">38</span>.8743 s
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/python.html">python</a>
+                    <a href="/tag/ciphers.html">ciphers</a>
                     &nbsp;&nbsp;
-                    <a href="/tag/computer-science.html">computer science</a>
+                    <a href="/tag/enigma.html">enigma</a>
                     &nbsp;&nbsp;
-                    <a href="/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/art-of-computer-programming.html">art of computer programming</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/knuth.html">knuth</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/five-letter-words.html">five letter words</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                centillion: a document search engine
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-03-10T09:00:00-07:00" pubdate>Sunday 03/10/2019</time>
-                in 
-                <a href="/category/python.html">Python</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/centillion-a-document-search-engine.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>We're excited to announce the public release of <a href="https://github.com/dcppc/centillion">centillion</a>,
-a document search engine. </p>
-<p>centillion is a search tool that can be used by any individual or organization
-to index Github repositories (including the content of markdown files),
-Google Drive folders (including the content of .docx files), and Disqus
-comment threads.</p>
-<p>centillion is <a href="travis-ci.org/dcppc/centillion">tested using Travis CI</a>.</p>
-<p>centillion was originally written for the <a href="https://public.nihdatacommons.us">NIH Data Commons</a>
-effort (which recently concluded).  centillion was built to facilitate information-finding
-in a project with hundreds of people at dozens of institutions generating a sea of email threads,
-Google Drive folders, markdown files, websites, and Github repositories.</p>
-<p>centillion provided a single comprehensive way of searching across All The Things 
-and earned the author many thanks from members across the Data Commons. It is the
-author's hope that centillion can prove equally useful for other organizations.</p>
-<p>Under the hood centillion uses <a href="http://flask.pocoo.org/">Flask</a> (a web server
-microframework) and <a href="https://whoosh.readthedocs.io/en/latest/">Whoosh</a> (a Python-based
-search engine tool).</p>
-<p>You can get a copy of the latest centillion release here: <a href="https://github.com/dcppc/centillion">https://github.com/dcppc/centillion</a></p>
-<p>You can find the latest centillion documentation here: <a href="http://nih-data-commons.us/centillion/">http://nih-data-commons.us/centillion/</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/centillion.html">centillion</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/search.html">search</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/search-engine.html">search engine</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/google-drive.html">google drive</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/github.html">github</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/flask.html">flask</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Any Color You Like, As Long As It's 00ADD8
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-02-23T10:00:00-08:00" pubdate>Saturday 02/23/2019</time>
-                in 
-                <a href="/category/go.html">Go</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/any-color-you-like-as-long-as-its-00add8.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>A short post with some thoughts on how writing Go code has
-helped me learn to stop worrying and love auto-formatting tools.</p>
-<p>Go code is terse. Not Python-terse, but terse. And unlike Java, 
-you don't find yourself constantly resorting to the security
-blanket of objects - something that Python (mercifully) can 
-go either way on.</p>
-<p>I used Java when I taught computer science at South Seattle College,
-and remember telling students once that one day, students taking
-CSC 142/143 would be using Go instead of Java. These days, I'm not
-as certain of that, but given that Go's strengths are asynchronous
-programming (critical for taking advantage of multicore hardware) 
-and tasks suited for the web, it isn't hard to imagine a "Go 2.0"
-that becomes a de-facto standard in school curricula.</p>
-<p>Something else I like about Go is the way there is a toolchain that
-adheres to the Unix tooling philosophy: do one thing and do it well.
-Take <code>gofmt</code> as an example - this is a tool that autoformats
-Go code to conform to the Go standard spec. <code>gofmt</code> is a simple tool
-that does just one thing. This tool can be connected to various text
-editors with hooks, a la <a href="https://github.com/fatih/vim-go">vimgo</a>.</p>
-<p><code>gofmt</code> has taught me the value, and convenience, of embracing 
-the norms and standards set by a language's community. Go
-recommends using tabs, for example, which early on I found
-a bit repulsive. Before I had vimgo set up, I was stubbornly 
-using spaces instead of tabs in my Go code.</p>
-<p>But then I set up vimgo so that, every time I saved a buffer containing
-Go code, it would run <code>gofmt</code> on the code, replacing all of the nitpicky
-details (like how many spaces between parentheses and variables, or wether
-<code>==</code> should be surrounded be spaces) and it just makes an executive decision.</p>
-<p>Sure, it uses tabs instead of spaces, but once you start to work on
-code and save it and you see all of these details just <em>handled</em>, 
-you quickly learn not to worry about it.</p>
-<p>And the surprising thing, to me, was just how much overhead I was spending
-on those things. It adds up.</p>
-<p>The <code>gofmt</code> executive decision strategy is similar to <a href="https://github.com/ambv/black">black</a>,
-"The uncompromising Python code formatter," whose slogan
-is "Any color you like, as long as it's black."</p>
-<p>While I really like black and would love to let it handle all of my Python
-code the way <code>gofmt</code> handles all of my Go code, the unfortunate reality is
-that Python, unlike Go, does not have an official standard, and if you
-automatically apply black formatting to all Python code, you can quickly
-wreak havoc on version-controlled code. You have to tread more lightly
-with black. I apply black more selectively by only applying it to <code>.py</code> 
-files that are in specific project subdirectories.)</p>
-<p>A slogan for <code>gofmt</code> could be, "Any color you like, as long as it's <code>#00ADD8</code>."</p>
-<p>Wait, what? Where did <code>#00ADD8</code> come from?</p>
-<p>It's in the <a href="https://storage.googleapis.com/golang-assets/Go-brand-book-v1.9.5.pdf">Go Brand Book</a>.
-Prior to discovering this (the link was dropped in an unrelated
-discussion on the <a href="https://golang.org/help/">gonuts mailing list</a>),
-I had no idea waht a brand book was. Turns out, this is very much
-<em>a thing</em> in marketing. Companies, projects, and organizations all
-have brand books that lay out the details of their marketing designs,
-branding, looks, everything down to the fonts and colors.</p>
-<p>The Go brand book is short, but it does specify an official color
-for Golang: <code>#00ADD8</code>. It also covers critical details about how to
-depict the Go gopher, including the physics of gopher belly folds:</p>
-<p><img alt="Extremely important details" src="images/bellyfold.png"></p>
-<p>There are some other branding books - the 
-<a href="https://www.flipsnack.com/cardesigns/brandbook-cocacola.html">Coca Cola brand book</a>.
-is simultaneously fascinating and terrible,
-in a late stage capitalism kind of way.</p>
-<p>At any rate, at least the Go brand book is about something useful,
-and contains silly things like gophers.</p>
-<p><img alt="Gopher specs" src="images/gopherpage.png"></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/go.html">go</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/golang.html">golang</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/rosalind.html">rosalind</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/black.html">black</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/gofmt.html">gofmt</a>
+                    <a href="/tag/encryption.html">encryption</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -575,9 +329,9 @@ and contains silly things like gophers.</p>
 
         <div class="pagination">
 
+            <a class="next" href="/index18.html">&larr; Newer</a>
 
 
-            <a class="prev" href="/index2.html">Older &rarr;</a>
         
           <br />
         </div>
