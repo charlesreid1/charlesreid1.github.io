@@ -11,7 +11,7 @@ to index Github repositories (including the content of markdown files),
 Google Drive folders (including the content of .docx files), and Disqus
 comment threads.
 
-centillion is [tested using Travis CI](travis-ci.org/dcppc/centillion).
+centillion is [tested using Travis CI](https://travis-ci.org/dcppc/centillion).
 
 centillion was originally written for the [NIH Data Commons](https://public.nihdatacommons.us)
 effort (which recently concluded).  centillion was built to facilitate information-finding
