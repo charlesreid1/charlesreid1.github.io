@@ -28,7 +28,7 @@ to Python 3 a thing of the past, shall we?_
 As mentioned in [Five Letter Words: Part 1](http://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html),
 we covered Donald Knuth's list of five letter words, one of the data sets in the 
 [Stanford Graph Base](http://www3.cs.stonybrook.edu/~algorith/implement/graphbase/implement.shtml)
-that is covered in greater detail in Knuth's coverage of graph theory in Volume 4, Facsimile 0
+that is covered in greater detail in Knuth's coverage of graph theory in Volume 4, Fascicle 0
 of his magnum opus, <u>The Art of Computer Programming</u>.
 
 In the section where Knuth introduces the set of words, he also gives readers 
@@ -74,7 +74,7 @@ for that script.
 """
 distinct.py
 
-Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0
+Donald Knuth, Art of Computer Programming, Volume 4 Fascicle 0
 Exercise #27
 
 How many SGB words contain exactly k distinct letters, for 1 <= k <= 5?
@@ -186,7 +186,7 @@ straightforward, there are still many ways to do it better or worse.
 
 Knuth points out that the word "first" contains letters that occur
 in lexicograhpic order. Exercise #30 of [AOCP](https://charlesreid1.com/wiki/AOCP)
-Volume 4 Facsimile 0 asks us to find the first and last such word that occurs 
+Volume 4 Fascicle 0 asks us to find the first and last such word that occurs 
 in Knuth's set of five letter words.
 
 To do this, we'll take each word and turn it into a list of characters.
@@ -270,7 +270,7 @@ The code to find these words is given below:
 """
 lexico.py
 
-Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0
+Donald Knuth, Art of Computer Programming, Volume 4 Fascicle 0
 Exercise #30
 
 Each letter of the word "first" appears in correct lexicographic order.
@@ -418,7 +418,7 @@ Meanwhile, the rest of the script can stay virtually the same.
 """
 reverse_lexico.py
 
-Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0
+Donald Knuth, Art of Computer Programming, Volume 4 Fascicle 0
 Variation on Exercise #30
 
 Each letter of the word "spied" appears in reversed lexicographic order.
@@ -786,7 +786,7 @@ Here is the code for finding near-palindromes:
 """
 near_palindromes.py
 
-Donald Knuth, Art of Computer Programming, Volume 4 Facsimile 0
+Donald Knuth, Art of Computer Programming, Volume 4 Fascicle 0
 Variation on Exercise #29
 
 Find SGB words that are near-palindromes

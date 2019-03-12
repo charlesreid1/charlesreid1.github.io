@@ -20,7 +20,7 @@ to Python 3 a thing of the past, shall we?_
 <a name="five3-intro"></a>
 ## Introduction
 
-The letter/word coverage problem, as presented by Donald Knuth in Volume 4, Facsimile 0 
+The letter/word coverage problem, as presented by Donald Knuth in Volume 4, Facicle 0 
 of his masterpiece <u>Art of Computer Programming</u>, is the problem of finding
 the _minimum_ number of words from the collection of five letter words that 
 "cover" (are drawn from) the first N letters of the alphabet.
