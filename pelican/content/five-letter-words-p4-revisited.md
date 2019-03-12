@@ -123,19 +123,21 @@ shared bigrams and trigrams among these 5,000
 words, means the number of pairs increases 
 exponentially.
 
-| Distance  | Number of pairs   | Walltime      |
-|-----------|-------------------|---------------|
-| 1         | 38                |     0.26 s    |
-| 2         | 525               |     5.26 s    |
-| 3         | 4982              |    38.87 s    |
-| 4         | ???               |  10 min (est) |
+```plain
+| Distance  | Number of pairs   | Walltime       |
+|-----------|-------------------|----------------|
+| 1         | 38                |     0.26 s     |
+| 2         | 525               |     5.26 s     |
+| 3         | 4982              |    38.87 s     |
+| 4         | ?? (10^5 est.)    |  10 min (est.) |
+```
 
 You can find the `diff_by_n.py` script here:
 <https://git.charlesreid1.com/cs/five-letter-words/>
 
 The output:
 
-```
+```plain
 $ python diff_by_n.py
 abaft babes
 absit baths
