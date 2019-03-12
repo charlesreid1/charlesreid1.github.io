@@ -8,16 +8,26 @@ Tags: python, computer science, graphs, algorithms, art of computer programming,
 ## About the Five-Letter Words
 
 In Volume 4 Fascicle 0 of Donald Knuth's <u>Art of Computer Programming</u>, 
+Knuth introduces a tool for exploring concepts in graph theory: the five-letter
+words. This is a collection of 5,757 five-letter words compiled by Knuth
+and useful in exploring ways of constructing efficient algorithms.
+
+The word list is large enough that an $O(N^2)$ algorithm will take a solid
+chunk of CPU time, so there's a definite incentive to think carefully about
+implementation.
+
 Knuth introduces a list of five-letter words, as well as associated exercises
 utilizing techniques from dynamic programming and graph theory, among other 
 topics.
 
 We have covered this topic before in prior blog posts:
+
 - [Five Letter Words: Part 1: Getting Familiar With The List](https://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html)
 - [Five Letter Words: Part 2: More Five-Word Algorithms](https://charlesreid1.github.io/five-letter-words-part-2-more-five-word-algorithms.html)
 - [Five Letter Words: Part 3: Letter Coverage and Dynamic Programming](https://charlesreid1.github.io/five-letter-words-part-3-letter-coverage-and-dynamic-programming.html)
 
 and a recent addendum to Part 1:
+
 - [Five Letter Words: Part 4: Revisiting Diff by One](https://charlesreid1.github.io/five-letter-words-part-4-revisiting-diff-by-one.html)
 
 We continue our coverage in this blog post with a newer problem,
