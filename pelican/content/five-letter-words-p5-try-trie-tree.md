@@ -141,27 +141,48 @@ an answer to the exercise.
 ## Constructing the Try Trie Tree
 
 The construction procedure for the try trie tree
-is top-down.
+proceeds in two steps:
 
-We construct the trie starting at the root (the 
-starting letter) and go level by level.
+Step 1 is to assemble a tree, from the top down,
+by searching the entire space of $456,977$ nodes
+and marking particular nodes and paths on this tree
+as candidates for the final perfect binary trie.
+
+Step 2 is to revisit the candidate branches,
+proceeding from the bottom up, and determine
+if the candidate branches do, in fact, have
+enough sibling nodes and word matches to form
+a complete branch in a perfect binary trie.
+
+We start Step 1 at the root node (the starting
+letter) and proceed from the root down, going
+level by level.
+
 
 ### Checking for Minimum Number of Matching Words
 
-At each level of the trie, we count
-the number of words in `WORDS(n)` whose prefix 
-matches the prefix at that trie location.
-If enough words match, that branch of the trie
-is possibly (but not definitely) complete.
+Step 1 proceeds from the top down and marks
+branches that are candidates to end up in the
+final perfect binary trie.
 
-**Example:** If we are attempting to assemble
-a complete trie for the letter `z` using `WORDS(1000)`,
-we can stop at the very first level, because 
-we already know there are not enough words 
-starting with the letter z to make a complete
-binary trie. (If a complete binary trie requires
-16 words, and only 10 start with z, we don't need
-to go any further.)
+At each level of the trie, we count
+the number of words in the overall word set 
+that have a prefix matching the prefix
+corresponding to that node.
+
+For example, the trie node `b` on the path
+`s-a-b` would yield four words:
+
+```
+saber
+sable
+sabre
+sabra
+```
+
+If enough words match, that branch of the trie
+is a possible candidate to end up in the perfect
+binary trie (but may be trimmed in Step 2).
 
 **Example:** If we are assembling the complete
 trie for `s` given by the author in the exercise,
@@ -175,7 +196,9 @@ that there are at least 4 words that begin with
 `sab`, which there are. We would proceed in this
 fashion until we had assembled a candidate trie
 branch, `s-a-b-r` (which contains two words,
-`sabra` and `sabre`). So far, so good.
+`sabra` and `sabre`). For Step 1, we keep `s-a-b-r`
+as a candidate branch. (We will see in Step 2
+that this branch will get trimmed.)
 
 At each level of the trie, we apply the procedure:
 - At level 1, we require a minimum of $2^{5-1} = 16$ words.
@@ -193,55 +216,61 @@ for the code for the public and private assembly methods.
 
 To peform the assembly of all possible branches of the
 try trie, we use the `assemble()` method. This is a 
-public method that initializes a call to a private
-recursive assembly method.
+public method that starts a recursive call to a private
+method `_assemble()`.
 
-We explore every possible prefix starting with the
-root letter, so "sa", "sb", "sc", "sd", and so on.
-Within each of those, we try each letter another 
-level further, "saa", "sab", and so on, and then
-we try each letter in a final step, for a total
-of $26^4 = 456,976$ iterations (checks for existence
+We are given a starting letter (in the example given
+by the author, the starting letter is "s").
+We explore every possible prefix that starts with the
+root letter, "sa", "sb", "sc", "sd", and so on.
+
+For each of those possible prefixes, we explore every possible
+third letter, "saa", "sab", and so on, and then once more
+in a fourth step, "saaa", "saab", ..., for a total of 
+$26^4 = 456,976$ iterations (checks for existence
 of words starting with a given substring).
 
-**NOTE:** If we want to speed up our program,
-we would be wise to start by speeding up
-the way we check the number of words that
-start with a given substring.
+A substantial number of these checks will do nothing - 
+from the fact that
 
-The recursive assembly method therefore takes
-a prefix string (location in the tree), and
-explores each possible child in the trie,
-counting how many words occur at that possible
-child. If enough of them exist, the branch
-is added to the TryTrieTree.
+$\frac{5757}{456976} \sim 5e3/5e5 \sim 0.01$ 
+
+we know that the maximum number of loops that would actually
+lead to a branch being added will be 1% of that $26^4$ total.
+
+We also know that any efforts to speed up this program
+should focus on the way we are checking the number of
+words that start with a given substring - since that's
+where we'll spend most of our time.
+
+The recursive assembly method takes a prefix string input
+(which maps to a location in the tree), and it explores
+all 26 possible children of that prefix (location in the trie).
+
+When a leaf node is reached, at the fourth level, it represents
+the longest prefix in our trie. This is the base case of the
+recursive assembly function; the recursive function terminates
+at a fixed depth of 4.
+
 
 ### Verifying Branches and Bubbling Up Counts
 
-However, the above counts are just the _minimum_ required,
-and do not guarantee that a trie branch can be used in
-a complete binary trie. That requires checking the entire
-trie. We will end up pruning some of the branches of the
-try trie we assembled above.
+However, as we noted, the counts we are using above in Step 1
+are just approximations (checking there are a _minimum_ number of
+words with a given prefix). There is no way to guarantee that a 
+trie branch can be used in the final complete perfect binary trie
+until all child leaf nodes have been visited.
 
-Continuing with the example above for `s`, we
-assembled the branch `s-a-b-r`, which contains
-the minimum two words required. However, `s-a-b`
-is not a common enough prefix! The only child
-of `s-a-b` with two or more words matching
-is `s-a-b-r`, which means we can't form a complete
-binary trie using this `s-a-b` branch.
+This is where Step 2 comes in. In Step 2 we perform a pre-order
+depth-first traversal of the tree, visiting the leaf nodes first
+and proceeding from the bottom up. The number of words matching
+the prefix of each leaf node must be 2, to keep the leaf node.
 
-Importantly, this procedure is _bottom-up_.
-
-We perform a pre-traversal depth-first search
-of the entire tree, ensuring that we visit
-each of the leaves of the tree _first_, and
-to ensure that we have always visited every child
-of a node before we visit the node itself.
-
-This is important because we will "bubble up"
-the count of valid branches. 
+We then proceed up the tree, level by level, and at each level
+we require that each node have at least 2 "large" children.
+This is a recursive definition - for a child to be "large", it
+must itself have 2 "large" children, or (if it is a leaf node)
+it must have at least 2 words that match the 4-letter prefix.
 
 In our TryTrieTree, a complete binary trie is 
 only possible if each node at each level has
@@ -252,6 +281,19 @@ nodes have _two or more_ children that are
 (representing 4 characters), and there are
 _two or more_ words that begin with the 4 characters
 corresponding to this trie node.
+
+Let's go through an example.
+
+Continuing with the example above for `s`, we
+assembled the branch `s-a-b-r`, which contains
+the minimum two words required. However, `s-a-b`
+is not a common enough prefix! The only child
+of `s-a-b` with two or more words matching
+is `s-a-b-r`, which means we can't form a complete
+binary trie using this `s-a-b` branch.
+
+We call this procedure a "bubble up" procedure,
+since it is _bottom-up_.
 
 ### Bubble Up Method
 
@@ -266,10 +308,14 @@ from bottom-up.
 
 ## Try Trie Tree Code
 
+Below we go through some of the code
+for the Try Trie Tree problem.
+
 ### Try Trie Trie Class
 
-Before we define the TryTrieTree class,
-we start with a utility tree node class:
+When dealing with trees, it's always a safe bet
+that we'll need a Node class, so we start with
+a utility class for tree nodes:
 
 ```python
 class Node(object):
@@ -281,7 +327,7 @@ class Node(object):
 ```
 
 The TryTrieTree class has a constructor that 
-initializes the root node to None. The tree
+starts with an empty root. The tree
 should also contain a pointer to the original
 word set, so that we can reference it in later
 methods where needed.
@@ -308,7 +354,10 @@ a given Node:
 
 Additionally, we have two utility methods that 
 help us navigate between locations in the tree 
-and the corresponding string prefixes:
+and the corresponding string prefixes. These two
+methods convert between string prefixes (like
+`s-a-b-r`) and locations in the trie (like the
+`r` trie node at the end of the path `s-a-b-r`):
 
 - `get_prefix_from_node()` (utility method): given a
   Node in the trie, return the string prefix that would
@@ -319,7 +368,13 @@ and the corresponding string prefixes:
   corresponds to the given string prefix.
   Return None if no such Node exists.
 
-These methods are given below:
+These methods are given below.
+
+First, to convert a particular node location to a string
+prefix, we use the parent pointer of each node to traverse
+up the tree and assemble the corresponding prefix string
+from the path (so that traversing from `b` to `a` to the 
+root `s` would yield `sab`):
 
 ```python
     def get_prefix_from_node(self,node):
@@ -339,7 +394,8 @@ These methods are given below:
             return prefix
 ```
 
-and the reverse:
+and the reverse, to convert a string prefix
+into a location in the trie:
 
 ```python
     def get_node_from_prefix(self,prefix):
@@ -396,7 +452,17 @@ class):
 
 In the private recursive method, we assemble the branches
 of the tree, only checking to make sure each branch has
-the minimum number of words required. In a later method
+the minimum number of words required.
+
+At the start of each assemble method, we whittle the set
+of words down to only the words that start with the prefix
+for the given node. This trick uses a little extra space
+but the payoff is avoiding searching the entire word set
+for each node to count the number of words matching a given
+prefix. If a node's parent is `s-a-b` and we have already done
+the work of filtering all words starting with `sab`, 
+there is no need to repeat that work when finding 
+and filtering all words that start with `sabr`.
 
 ```python
     def _assemble(self,prefix,candidate,words):
@@ -407,7 +473,20 @@ the minimum number of words required. In a later method
 
         ppc = prefix+candidate
         words_with_candidate = [w for w in words if w[:candidate_depth]==ppc]
+```
 
+Next lines are the checks to ensure we have the minimum
+number of words required to form a candidate branch in
+the trie.
+
+If we do, we will create a new child node for that 
+branch and recurse by calling assemble on it.
+
+Of course, we have to check for the base case, which in
+this scenario checks when we have reached the fixed
+trie depth of 4.
+
+```python
         min_branches_req = int(math.pow(2,5-candidate_depth))
         max_number_branches = len(words_with_candidate)
 
