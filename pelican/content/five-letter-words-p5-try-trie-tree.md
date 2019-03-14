@@ -735,7 +735,7 @@ Imperfect count: 25
 
 In fact, 978 is the smallest number of words to find any perfect tries:
 
-```
+```plain
 $ python tries.py 978
 The letter a has no perfect binary trie in WORDS(978).
 The letter b has no perfect binary trie in WORDS(978).
@@ -807,7 +807,7 @@ If we assemble a table of number of five letter words n
 versus number of perfect tries formed, nearly half show up
 only after we include 4,500 words.
 
-```
+```plain
        n	perfect tries
     1000	       1
     1500	       1
