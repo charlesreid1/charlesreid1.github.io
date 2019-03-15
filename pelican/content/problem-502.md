@@ -8,8 +8,7 @@ Tags: computer science, mathematics, factors, sequences, project euler
 * [Overview: The Problem](#castles-problem)
 * [Polyominoes](#polyominoes)
     * [Castle Rules for Polynominoes](#castle-rules)
-* [
-* Problem 502 Solution Approaches
+* [Don't Generate - Enumerate!](#castles-enumerate)
 
 
 <a name="castles-problem"></a>
@@ -237,7 +236,7 @@ accounting for the total number of blocks, and
 divide by or subtract a factor that accounts for
 castles with an odd number of blocks.
 
-<a name="castles-problem"></a>
+<a name="castles-enumerate"></a>
 ## Don't Generate - Enumerate!
 
 We mentioned above that the number of possibilities
