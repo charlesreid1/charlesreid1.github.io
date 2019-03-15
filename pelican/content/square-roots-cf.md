@@ -1,7 +1,7 @@
 Title: Computing Square Roots: Part 2: Using Continued Fractions
 Date: 2017-07-14 20:00
 Category: Mathematics
-Tags: computer science, java, mathematics, square roots, numerical methods, continued fractions
+Tags: computer science, java, mathematics, number theory, square roots, numerical methods, continued fractions, irrational numbers
 
 ## Table of Contents
 
@@ -27,7 +27,8 @@ $$
 $$
 
 Later on in our mathematical lives, we learn that we can use other integers
-as our base, or **radix**, by decomposing 125 into powers of that integer. For example, 125
+as our base, or **radix**, by expressing every integer as the sum of various 
+powers of that integer. For example, 125
 can be decomposed into powers of 2. In a base 2 system, we have only two symbols,
 0 and 1, so 125 can be represented as 1111101, which is equivalent to saying:
 
@@ -100,7 +101,7 @@ $$
 [a_0; a_1, a_2, a_3, \dots]
 $$
 
-These variables $a_i$ are called the terms of the continued fraction.
+These variables $a_i$ are called the _terms_ of the continued fraction.
 Continued fractions can be used to represent rational numbers, in which case the continued fraction
 representation terminates after a finite number of terms. For example, $\dfrac{125}{3} = [41; 1, 2]$, 
 
@@ -148,6 +149,9 @@ _ \sqrt{19} &=& [4; \overline{2, 1, 3, 1, 2, 8}] \\
 \sqrt{988} &=& [31; \overline{2, 3, 4, 1, 20, 6, 1, 14, 1, 6, 20, 1, 4, 3, 2, 62}]
 \end{array}
 $$ 
+
+Next, we'll cover how to turn these terms $[a_0; a_1, a_2, \dots]$ into rational
+numbers $\frac{P}{Q}$. These fractions are called _convergents_.
 
 ## Convergents 
 
