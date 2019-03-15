@@ -48,17 +48,23 @@ rational and irrational, in terms of recursive fractions, which
 look something like this:
 
 $$
-a_0+\cfrac{1}{a_1 +\cfrac{1}{a_2 +\cfrac{1}{
-      \begin{array}{@{}c@{}c@{}c@{}}
-        a_3 + {}\\ &\ddots\\ &&{}+ \cfrac{1}{a_n}
-      \end{array}
-}}}
+x = b_0 + \cfrac{1}{
+        b_1 + \cfrac{1}{
+            b_2 + \cfrac{1}{
+                b_3 + \cfrac{1}{
+                    b_4 + \cfrac{1}{
+                        b_5 + \dots
+                    }
+                }
+            }
+        }
+    }
 $$
 
 denoted
 
 $$
-[a_0; a_1, a_2, a_3, \dots]
+[b_0; b_1, b_2, b_3, \dots]
 $$
 
 and called the convergents of the continued fraction.
@@ -111,15 +117,41 @@ $$
 
 ## General Continued Fractions to Approximate Pi
 
-We mentioned above that each irrational number has a unique
-representation as a simple continued fraction, equivalently a
-series of convergents of that continued fraction.
+Every number has exactly one representation as a
+simple continued fraction, if we restrict the
+values of $b_i$ to be positive.
 
-However, a single number can be expressed in many different
-ways as a general continued fraction. We use two variants
-to generate many $\pi$ approximations:
+However, if we generalize the simple continued
+fraction to allow any integer in the numerator
+of the continued fractions, we get a general
+continued fraction:
+
+$$
+x = b_0 + \cfrac{1}{
+        b_1 + \cfrac{1}{
+            b_2 + \cfrac{1}{
+                b_3 + \cfrac{1}{
+                    b_4 + \cfrac{1}{
+                        b_5 + \dots
+                    }
+                }
+            }
+        }
+    }
+$$
+
+Unlike simple continued fractions, one number can
+be expressed in many ways with many different
+general continued fractions.
+
+We use two general continued fractions as well
+as the simple continued fraction representation
+of $\pi$ to generate some $\pi$ approximations 
+below.
 
 ## Odd Squares and Twos
+
+The following general continued fraction
 
 $$
 \dfrac{4}{\pi} = 1 + \cfrac{1^2}{
@@ -135,10 +167,10 @@ $$
                     }
 $$
 
-which can be turned into $\pi$ by finding the 
-convergents of the above continued fraction,
-then reversing the numerator and denominator
-and multilpying the new numerator by 4.
+can be turned into approximations for $\pi$ by finding
+the convergents of the above continued fraction, then
+reversing the numerator and denominator and multilpying
+the new numerator by 4.
 
 Implementing a recurrence to turn the above
 into convergents and printing the first 24
