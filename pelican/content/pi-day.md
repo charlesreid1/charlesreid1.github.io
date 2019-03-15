@@ -127,11 +127,11 @@ of the continued fractions, we get a general
 continued fraction:
 
 $$
-x = b_0 + \cfrac{1}{
-        b_1 + \cfrac{1}{
-            b_2 + \cfrac{1}{
-                b_3 + \cfrac{1}{
-                    b_4 + \cfrac{1}{
+x = b_0 + \cfrac{a_1}{
+        b_1 + \cfrac{a_2}{
+            b_2 + \cfrac{a_3}{
+                b_3 + \cfrac{a_4}{
+                    b_4 + \cfrac{a_5}{
                         b_5 + \dots
                     }
                 }
