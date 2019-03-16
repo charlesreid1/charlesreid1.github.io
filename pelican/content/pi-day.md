@@ -67,7 +67,9 @@ $$
 [b_0; b_1, b_2, b_3, \dots]
 $$
 
-and called the convergents of the continued fraction.
+and, when evaluated, results in a series of fractions
+(rational approximations) called the convergents of 
+the continued fraction.
 
 In the denominator of the above representation, we have
 a 1 in each position, which makes the continued fraction
