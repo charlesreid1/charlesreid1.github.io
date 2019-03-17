@@ -4,6 +4,19 @@ Category: Computer Science
 Tags: graphs, puzzles, algorithms, josephus, latex
 Status: draft
 
+## Table of Contents
+
+* [The Josephus Problem and Variations](#the-josephus-problem-and-variations)
+  * [The Sushi Boat Variation](#the-sushi-boat-variation)
+  * [More Backstory](#more-backstory)
+* [The Tools](#the-tools)
+  * [Permutations](#permutations)
+  * [Cycles](#cycles)
+  * [Circular Linked Lists](#circular-linked-lists)
+* [TeX for Diagrams](#tex-for-diagrams)
+* [Examples, Solutions, and Next Steps](#examples-solutions-and-next-steps)
+
+
 ## The Josephus Problem and Variations
 
 The following problem, Cat and Mice, is Puzzle 88 
@@ -262,7 +275,47 @@ page, and are implemented in Java in the
 [cs/java](https://git.charlesreid1.com/cs/java)
 repo: <https://git.charlesreid1.com/cs/java/src/branch/master/lists/linked-lists>
 
+## TeX for Diagrams
 
+In addition to writing The Art of Computer Programming,
+which has remained a gold standard algorithm textbook
+for over 40 years, Knuth also invented the TeX 
+typesetting system, which is also the gold standard
+for typesetting mathematical equations.
 
+We use the [PGF/TikZ](https://sourceforge.net/projects/pgf/)
+package to draw polygons that are useful in
+illustrating the circles of the Josephus problem
+and in visualizing various permutations.
 
+A few examples - each image links to a Github Gist
+containing the TeX code used to produce the figures:
+
+[![labeled polygon](https://charlesreid1.github.io/images/poly.png)](https://gist.github.com/charlesreid1/a5f1cf398fb9c56e7ed5c2f55d01e10f)
+
+[![polygon with inscribed directed paths](https://charlesreid1.github.io/images/poly2.png)](https://gist.github.com/charlesreid1/c279eeb798776ae92b8d1cb4666d2ef4)
+
+[![polygon with inscribed lines](https://charlesreid1.github.io/images/poly3.png)](https://gist.github.com/charlesreid1/c279eeb798776ae92b8d1cb4666d2ef4)
+
+## Examples, Solutions, and Next Steps
+
+In **Part 2** we'll cover some examples 
+of different $n, m$ values ($n$ is circle size,
+$m$ is skip length) and show how the
+process plays out.
+
+In **Part 3** we will show the solution of the
+special case of $m = 2$ (the double-step case).
+
+In **Part 4** we will show how to solve the 
+general case, and walk through some examples
+to demonstrate how to apply the solution.
+
+Related code is located in the cs/josephus
+repository on git.charlesreid1.com: 
+<https://git.charlesreid1.com/cs/josephus>
+
+We will also cover our implementation of a
+circular linked list to solve the Josephus
+problem using simulation.
 
