@@ -318,7 +318,8 @@ removal order).
 
 [Link to gist with TeX code](https://gist.github.com/charlesreid1/a5f1cf398fb9c56e7ed5c2f55d01e10f)
 
-![Josephus circle diagram](images/poly.png)
+<img alt="empty josephus circle diagram" 
+src="images/poly.png" width="350px" />
 
 Here is the TeX code to generate this diagram:
 
@@ -368,9 +369,11 @@ versions are more aesthetically pleasing.
 
 [Link to gist with TeX code](https://gist.github.com/charlesreid1/c279eeb798776ae92b8d1cb4666d2ef4)
 
-![Josephus circle undirected paths diagram](images/poly3.png)
+<img alt="josephus circle diagram with undirected edges" 
+src="images/poly_undirected.png" width="350px" />
 
-![Josephus circle directed paths diagram](images/poly2.png)
+<img alt="josephus circle diagram with directed edges" 
+src="images/poly_directed.png" width="350px" />
 
 The code to generate these diagrams is below.
 
