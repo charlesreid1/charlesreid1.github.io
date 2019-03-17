@@ -6,12 +6,12 @@ Tags: graphs, puzzles, algorithms, josephus, latex
 ## Table of Contents
 
 * [The Josephus Problem and Variations](#the-josephus-problem-and-variations)
-  * [The Sushi Boat Variation](#the-sushi-boat-variation)
-  * [More Backstory](#more-backstory)
+    * [The Sushi Boat Variation](#the-sushi-boat-variation)
+    * [More Backstory](#more-backstory)
 * [The Tools](#the-tools)
-  * [Permutations](#permutations)
-  * [Cycles](#cycles)
-  * [Circular Linked Lists](#circular-linked-lists)
+    * [Permutations](#permutations)
+    * [Cycles](#cycles)
+    * [Circular Linked Lists](#circular-linked-lists)
 * [TeX for Diagrams](#tex-for-diagrams)
 * [Examples, Solutions, and Next Steps](#examples-solutions-and-next-steps)
 
