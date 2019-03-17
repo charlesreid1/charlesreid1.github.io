@@ -2,7 +2,6 @@ Title: The Josephus Problem: Part 1: The Problem
 Date: 2019-03-16 14:00
 Category: Computer Science
 Tags: graphs, puzzles, algorithms, josephus, latex
-Status: draft
 
 ## Table of Contents
 
