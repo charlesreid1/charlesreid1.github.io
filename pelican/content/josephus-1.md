@@ -13,7 +13,9 @@ Tags: graphs, puzzles, algorithms, josephus, latex
     * [Cycles](#cycles)
     * [Circular Linked Lists](#circular-linked-lists)
 * [TeX for Diagrams](#tex-for-diagrams)
-* [Examples, Solutions, and Next Steps](#examples-solutions-and-next-steps)
+    * [Empty Josephus Circle Diagram](#empty-josephus-circle-diagram)
+    * [Josephus Circle Diagram With Permutation Paths](#josephus-circle-diagram-with-permutation-paths)
+* [Next Steps: Examples and Solutions](#next-steps-examples-and-solutions)
 
 
 ## The Josephus Problem and Variations
@@ -68,31 +70,31 @@ Which plate of sushi will be eaten last?
 
 ### More Backstory
 
-More background for the problem is given in a (rather condescending)
-letter to the editor from the Fibonacci Quarterly, Issue 1 of 1976
-([Part 1](https://fq.math.ca/Scanned/14-1/letter2-a.pdf) and
-[Part 2](https://fq.math.ca/Scanned/14-1/letter2-b.pdf)). These
-were written in response to an article that gave a solution to
-the problem of "Idiot's Roulette" (identical to the Josephus
-problem as presented above). Here is [that](https://fq.math.ca/Scanned/13-2/booth.pdf)
-article for additional background.
+More background on the Josephus problem and its various solutions is given in a
+letter to the editor from the Fibonacci Quarterly, Issue 1 of 1976 ([Part
+1](https://fq.math.ca/Scanned/14-1/letter2-a.pdf) and [Part
+2](https://fq.math.ca/Scanned/14-1/letter2-b.pdf)) written in response to an
+article that gave a solution to the problem of "Idiot's Roulette" (identical to
+the Josephus problem as presented above) without referencing the Josephus
+problem.  Here is [the original article](https://fq.math.ca/Scanned/13-2/booth.pdf).
 
 
 ## The Tools
 
 To solve the Josephus problem, we need to use several 
-conceptual and computational tools. We briefly cover
-what's needed and give links to recources on the
+conceptual and computational tools. Below we cover
+some notation we will use and give links to pages on the
 [charlesreid1.com wiki](https://charlesreid1.com/wiki/)
-and elsewhere.
+that are useful.
+
 
 ### Permutations
 
 We can think of the outcome of the Josephus problem as a
 "Josephus permutation" - a permutation that reorders the
-items in the circle (numbered in the order they appear in
-the circle) into the order in which they are removed from
-the circle.
+sushi plates in the circle (numbered by their positoin in the 
+circle) into the order in which they are removed from the
+circle.
 
 For example, in Knuth's problem statement, he gives
 an example of $n = 8, m = 4$ (eating every 4th plate
@@ -100,14 +102,14 @@ of sushi, in a train of 8 sushi boats), which results
 in the plates being removed in the following order:
 
 $$
-54613872
+5, 4, 6, 1, 3, 8, 7, 2
 $$
 
-which, if we revert to typical permutation notation,
-becomes something like this, which links the
-original order of the sushi plates (the number
-on the plate) with the order in which they are
-eaten:
+To write this permutation using matheamtical notation,
+we write two rows. The top row is the ordering 
+of plates in the circle, the "natural" ordering, 
+and the second row is the order of removal of plates,
+which is the Josephus permutation:
 
 $$
 \bigl(\begin{smallmatrix}
@@ -116,16 +118,13 @@ $$
 \end{smallmatrix}\bigr)
 $$
 
-And, as Knuth would point out, that same permutation
-can be written in 40,319 other ways (8! - 1).
+As Knuth would point out, this Josephus permutation
+can be written in 40,319 other equivalent ways (that's
+8! total, minus the 1 way shown above) by reordering the
+columns (as long as we reorder the columns in the top and
+bottom rows in the same way).
 
-The notation above indicates the original ordering
-of the sushi plates on the top row - the "natural"
-order of the $n$ items - and the bottom row
-is the Josephus permutation.
-
-We can read this permutation from left to right
-as follows:
+We can read this permutation from left to right as follows:
 
 - The first sushi plate (labeled 1) will be eaten fifth;
 - The second sushi plate (labeled 2) will be eaten fourth;
@@ -134,8 +133,10 @@ as follows:
 Ordering the permutation as above (circle index on top,
 removal index on bottom) makes it easy to answer the 
 second question, "Which sushi plate will be eaten last?"
-We find 8 in the bottom row, which contains the removal
-index, and find that sushi plate 6 will occupy that slot.
+
+We find 8 in the bottom row (the removal index), and read
+the corresponding number in the top row (the plate 
+number/circle position), plate 6.
 
 If we wish to answer the first question, "in what order will
 the plates be removed," we have a bit more work to do.
@@ -219,7 +220,9 @@ cycle notation is important.
 
 We cover cycle notation in the context of Rubiks Cubes
 on the [Rubiks Cube/Permutations](https://charlesreid1.com/wiki/Rubiks_Cube/Permutations)
-page of the charlesreid1.com wiki.
+page of the charlesreid1.com wiki (in particular,
+the sections on [Permutation Algebra](https://charlesreid1.com/wiki/Rubiks_Cube/Permutations#Permutation_Algebra)
+that cover intercalation products).
 
 
 ### Circular Linked Lists
@@ -241,11 +244,23 @@ If we're dealing with smaller values of n and m,
 though, we can simulate a solution to the Josephus 
 problem using a circular linked list.
 
+**Linked Lists**
+
 Briefly, a linked list is a type of list whose
 elements consist of _nodes_, small bundles containing
 a piece of data (the list item's value) and 
 pointers to other nodes (the next and/or previous
 elements in the list).
+
+See [Linked Lists](https://charlesreid1.com/wiki/Linked_Lists)
+for notes on linked lists and some answers to
+textbook exercises.
+
+See [Lists Study Guide](https://charlesreid1.com/wiki/Lists_Study_Guide)
+for a summary of important information about
+and properties of lists.
+
+**Circular Linked Lists:**
 
 A circular linked list is just what it sounds like:
 each of the elements points to the next element,
@@ -274,6 +289,10 @@ page, and are implemented in Java in the
 [cs/java](https://git.charlesreid1.com/cs/java)
 repo: <https://git.charlesreid1.com/cs/java/src/branch/master/lists/linked-lists>
 
+A Python implementation used to solve the Josephus
+problem is available in the cs/josephus repo:
+repo: <https://git.charlesreid1.com/cs/josephus>
+
 ## TeX for Diagrams
 
 In addition to writing The Art of Computer Programming,
@@ -287,16 +306,190 @@ package to draw polygons that are useful in
 illustrating the circles of the Josephus problem
 and in visualizing various permutations.
 
-A few examples - each image links to a Github Gist
-containing the TeX code used to produce the figures:
+A few examples and links to Github Gists with TeX 
+code follow.
 
-[![labeled polygon](https://charlesreid1.github.io/images/poly.png)](https://gist.github.com/charlesreid1/a5f1cf398fb9c56e7ed5c2f55d01e10f)
+### Empty Josephus Circle Diagram
 
-[![polygon with inscribed directed paths](https://charlesreid1.github.io/images/poly2.png)](https://gist.github.com/charlesreid1/c279eeb798776ae92b8d1cb4666d2ef4)
+This empty Josephus circle diagram is useful
+for illustrating and labeling a Josephus
+diagram (either the circle order or the
+removal order).
 
-[![polygon with inscribed lines](https://charlesreid1.github.io/images/poly3.png)](https://gist.github.com/charlesreid1/c279eeb798776ae92b8d1cb4666d2ef4)
+[Link to gist with TeX code](https://gist.github.com/charlesreid1/a5f1cf398fb9c56e7ed5c2f55d01e10f)
 
-## Examples, Solutions, and Next Steps
+![Josephus circle diagram](images/poly.png)
+
+Here is the TeX code to generate this diagram:
+
+```tex
+\documentclass[border=2mm]{standalone}
+\usepackage{tikz}
+\usepackage{xintexpr}
+\usetikzlibrary{shapes.geometric}
+
+\begin{document}
+\begin{tikzpicture}[scale=3]
+
+% make a node with variable name pol (with the list of features given) at the location (0,0), and don't label it
+\node (pol) [draw, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) {};
+
+% anchor is "corner 1"
+% label is 1/2/3/4/etc
+% placement is placement w.r.t. coordinate location
+\foreach \anchor/\label/\placement in
+    {corner 1/$1$/above,
+     corner 2/$2$/above,
+     corner 3/$3$/left,
+     corner 4/$4$/left,
+     corner 5/$5$/below left,
+     corner 6/$6$/below,
+     corner 7/$7$/below,
+     corner 8/$8$/below,
+     corner 9/$9$/right,
+     corner 10/${10}$/right,
+     corner 11/${11}$/above right}
+\draw[shift=(pol.\anchor)] plot coordinates{(0,0)} node[font=\scriptsize,\placement] {\label};
+
+
+\end{tikzpicture}
+\end{document}
+```
+
+### Josephus Circle Diagram With Permutation Paths
+
+Next, we can illustrate cycles in the permutation
+by drawing paths between connected nodes.
+
+The edges are directed (`1 -> 4` is not the
+same as `4 -> 1`) but we draw both directed
+and undirected versions, since the undirected
+versions are more aesthetically pleasing.
+
+[Link to gist with TeX code](https://gist.github.com/charlesreid1/c279eeb798776ae92b8d1cb4666d2ef4)
+
+![Josephus circle undirected paths diagram](images/poly3.png)
+
+![Josephus circle directed paths diagram](images/poly2.png)
+
+The code to generate these diagrams is below.
+
+First, the undirected paths diagram:
+
+```tex
+%%%%%%%%%%%%%%%%% UNDIRECTED PATHS DIAGRAM %%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[border=2mm]{standalone}
+\usepackage{tikz}
+\usepackage{xintexpr}
+\usetikzlibrary{shapes.geometric}
+
+\begin{document}
+\begin{tikzpicture}[scale=3]
+
+% make a node with variable name pol (with the list of features given) at the location (0,0), and don't label it
+\node (pol) [draw, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) {}; 
+
+% anchor is "corner 1"
+% label is 1/2/3/4/etc
+% placement is placement w.r.t. coordinate location
+\foreach \anchor/\label/\placement in
+    {corner 1/$1$/above, 
+     corner 2/$2$/left, 
+     corner 3/$3$/left, 
+     corner 4/$4$/left,
+     corner 5/$5$/below left,   
+     corner 6/$6$/below,
+     corner 7/$7$/below,
+     corner 8/$8$/below,
+     corner 9/$9$/right,
+     corner 10/${10}$/right,
+     corner 11/${11}$/above right}
+\draw[shift=(pol.\anchor)] plot coordinates{(0,0)} node[font=\scriptsize,\placement] {\label};
+
+% solution for n = 11, m = 4
+%
+% ( 1 3 7 6 4 ) ( 2 8 ) ( 5 9 11 ) ( 10 )
+
+% cycle (1 3 7 6 4)
+\path [-] (pol.corner 1) edge (pol.corner 3);
+\path [-] (pol.corner 3) edge (pol.corner 7);
+\path [-] (pol.corner 7) edge (pol.corner 6);
+\path [-] (pol.corner 6) edge (pol.corner 4);
+\path [-] (pol.corner 4) edge (pol.corner 1);
+
+% cycle 2 (2 8)
+\path [-] (pol.corner 2) edge (pol.corner 8);
+\path [-] (pol.corner 8) edge (pol.corner 2);
+
+% cycle 3 (5 9 11 )
+\path [-] (pol.corner 5) edge (pol.corner 9);
+\path [-] (pol.corner 9) edge (pol.corner 11);
+\path [-] (pol.corner 11) edge (pol.corner 5);
+
+\end{tikzpicture}
+\end{document}
+```
+
+And the directed paths diagram:
+
+```tex
+%%%%%%%%%%%%%%%%%% DIRECTED PATHS DIAGRAM %%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[border=2mm]{standalone}
+\usepackage{tikz}
+\usepackage{xintexpr}
+\usetikzlibrary{shapes.geometric}
+
+\begin{document}
+\begin{tikzpicture}[scale=3]
+
+% make a node with variable name pol (with the list of features given) at the location (0,0), and don't label it
+\node (pol) [draw, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) {};
+
+% anchor is "corner 1"
+% label is 1/2/3/4/etc
+% placement is placement w.r.t. coordinate location
+\foreach \anchor/\label/\placement in
+    {corner 1/$1$/above,
+     corner 2/$2$/left,
+     corner 3/$3$/left,
+     corner 4/$4$/left,
+     corner 5/$5$/below left,
+     corner 6/$6$/below,
+     corner 7/$7$/below,
+     corner 8/$8$/below,
+     corner 9/$9$/right,
+     corner 10/${10}$/right,
+     corner 11/${11}$/above right}
+\draw[shift=(pol.\anchor)] plot coordinates{(0,0)} node[font=\scriptsize,\placement] {\label};
+
+% solution for n = 11, m = 4
+%
+% ( 1 3 7 6 4 ) ( 2 8 ) ( 5 9 11 ) ( 10 )
+
+% cycle (1 3 7 6 4)
+\path [->, shorten > = 3 pt, blue, shorten < = 4 pt, > = stealth] (pol.corner 1) edge (pol.corner 3);
+\path [->, shorten > = 3 pt, blue, shorten < = 4 pt, > = stealth] (pol.corner 3) edge (pol.corner 7);
+\path [->, shorten > = 3 pt, blue, shorten < = 4 pt, > = stealth] (pol.corner 7) edge (pol.corner 6);
+\path [->, shorten > = 3 pt, blue, shorten < = 4 pt, > = stealth] (pol.corner 6) edge (pol.corner 4);
+\path [->, shorten > = 3 pt, blue, shorten < = 4 pt, > = stealth] (pol.corner 4) edge (pol.corner 1);
+
+% cycle 2 (2 8)
+\path [->, shorten > = 3 pt, green, shorten < = 4 pt, > = stealth] (pol.corner 2) edge (pol.corner 8);
+\path [->, shorten > = 3 pt, green, shorten < = 4 pt, > = stealth] (pol.corner 8) edge (pol.corner 2);
+
+% cycle 3 (5 9 11 )
+\path [->, shorten > = 3 pt, red, shorten < = 4 pt, > = stealth] (pol.corner 5) edge (pol.corner 9);
+\path [->, shorten > = 3 pt, red, shorten < = 4 pt, > = stealth] (pol.corner 9) edge (pol.corner 11);
+\path [->, shorten > = 3 pt, red, shorten < = 4 pt, > = stealth] (pol.corner 11) edge (pol.corner 5);
+
+\end{tikzpicture}
+\end{document}
+
+```
+
+## Next Steps: Examples and Solutions
 
 In **Part 2** we'll cover some examples 
 of different $n, m$ values ($n$ is circle size,
@@ -306,15 +499,7 @@ process plays out.
 In **Part 3** we will show the solution of the
 special case of $m = 2$ (the double-step case).
 
-In **Part 4** we will show how to solve the 
-general case, and walk through some examples
-to demonstrate how to apply the solution.
-
-Related code is located in the cs/josephus
-repository on git.charlesreid1.com: 
-<https://git.charlesreid1.com/cs/josephus>
-
-We will also cover our implementation of a
-circular linked list to solve the Josephus
-problem using simulation.
+In **Part 4** we will show several ways to solve
+the general case, and walk through some examples
+where we apply the solution procedure.
 
