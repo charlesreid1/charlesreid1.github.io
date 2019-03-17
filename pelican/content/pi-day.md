@@ -10,7 +10,7 @@ What's your favorite $\pi$ approximation?
 Some of my favorite approximations of $\pi$ come from
 [Ramanujan-Sato series](https://en.wikipedia.org/wiki/Ramanujan%E2%80%93Sato_series).
 These are mathematical series that generalize from 
-a remarkable formula for $\pi$ given by [Srinivasa Ramanujana](https://en.wikipedia.org/wiki/Srinivasa_Ramanujan),
+a remarkable formula for $\pi$ given by [Srinivasa Ramanujan](https://en.wikipedia.org/wiki/Srinivasa_Ramanujan),
 an Indian mathematician:
 
 $$
@@ -239,7 +239,7 @@ $$
 
 Implementing a computer program to evaluate
 the convergents from the above patterns yields
-even more Pi approximations:
+even more $\pi$ approximations:
 
 ```
                                 Even More Pi
