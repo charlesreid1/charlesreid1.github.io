@@ -311,15 +311,10 @@ code follow.
 
 ### Empty Josephus Circle Diagram
 
-This empty Josephus circle diagram is useful
-for illustrating and labeling a Josephus
-diagram (either the circle order or the
-removal order).
-
 [Link to gist with TeX code](https://gist.github.com/charlesreid1/a5f1cf398fb9c56e7ed5c2f55d01e10f)
 
 <img alt="empty josephus circle diagram" 
-src="images/poly.png" width="350px" />
+src="images/poly_circ_empty.png" width="350px" />
 
 Here is the TeX code to generate this diagram:
 
@@ -333,25 +328,45 @@ Here is the TeX code to generate this diagram:
 \begin{tikzpicture}[scale=3]
 
 % make a node with variable name pol (with the list of features given) at the location (0,0), and don't label it
-\node (pol) [draw, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) {};
+\node (pol) [draw=none, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) {};
+
 
 % anchor is "corner 1"
 % label is 1/2/3/4/etc
 % placement is placement w.r.t. coordinate location
 \foreach \anchor/\label/\placement in
     {corner 1/$1$/above,
-     corner 2/$2$/above,
+     corner 2/$2$/above left,
      corner 3/$3$/left,
      corner 4/$4$/left,
      corner 5/$5$/below left,
      corner 6/$6$/below,
      corner 7/$7$/below,
-     corner 8/$8$/below,
+     corner 8/$8$/below right,
      corner 9/$9$/right,
      corner 10/${10}$/right,
      corner 11/${11}$/above right}
 \draw[shift=(pol.\anchor)] plot coordinates{(0,0)} node[font=\scriptsize,\placement] {\label};
 
+
+% draw a circle connecting all points
+\draw circle[radius=1.01cm];
+
+
+% Draw a red dot at the starting point
+\filldraw[red] (pol.corner 1) circle[radius=0.8pt];
+
+% optional: black dots at each circle location
+\filldraw[black] (pol.corner 2) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 3) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 4) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 5) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 6) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 7) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 8) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 9) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 10) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 11) circle[radius=0.4pt];
 
 \end{tikzpicture}
 \end{document}
@@ -363,25 +378,22 @@ Next, we can illustrate cycles in the permutation
 by drawing paths between connected nodes.
 
 The edges are directed (`1 -> 4` is not the
-same as `4 -> 1`) but we draw both directed
-and undirected versions, since the undirected
-versions are more aesthetically pleasing.
+same as `4 -> 1`). We draw both directed and
+undirected versions.
 
 [Link to gist with TeX code](https://gist.github.com/charlesreid1/c279eeb798776ae92b8d1cb4666d2ef4)
 
 <img alt="josephus circle diagram with undirected edges" 
-src="images/poly_undirected.png" width="350px" />
+src="images/poly_undirected_circ.png" width="350px" />
 
 <img alt="josephus circle diagram with directed edges" 
-src="images/poly_directed.png" width="350px" />
+src="images/poly_directed_circ.png" width="350px" />
 
 The code to generate these diagrams is below.
 
-First, the undirected paths diagram:
+**Undirected Paths:**
 
 ```tex
-%%%%%%%%%%%%%%%%% UNDIRECTED PATHS DIAGRAM %%%%%%%%%%%%%%%%%%%%%
-
 \documentclass[border=2mm]{standalone}
 \usepackage{tikz}
 \usepackage{xintexpr}
@@ -391,28 +403,30 @@ First, the undirected paths diagram:
 \begin{tikzpicture}[scale=3]
 
 % make a node with variable name pol (with the list of features given) at the location (0,0), and don't label it
-\node (pol) [draw, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) {}; 
+\node (pol) [draw=none, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) {}; 
+
 
 % anchor is "corner 1"
 % label is 1/2/3/4/etc
 % placement is placement w.r.t. coordinate location
 \foreach \anchor/\label/\placement in
     {corner 1/$1$/above, 
-     corner 2/$2$/left, 
+     corner 2/$2$/above left, 
      corner 3/$3$/left, 
      corner 4/$4$/left,
      corner 5/$5$/below left,   
      corner 6/$6$/below,
      corner 7/$7$/below,
-     corner 8/$8$/below,
+     corner 8/$8$/below right,
      corner 9/$9$/right,
      corner 10/${10}$/right,
      corner 11/${11}$/above right}
 \draw[shift=(pol.\anchor)] plot coordinates{(0,0)} node[font=\scriptsize,\placement] {\label};
 
-% solution for n = 11, m = 4
-%
+% solution for n = 11, m = 4:
 % ( 1 3 7 6 4 ) ( 2 8 ) ( 5 9 11 ) ( 10 )
+
+% internal paths
 
 % cycle (1 3 7 6 4)
 \path [-] (pol.corner 1) edge (pol.corner 3);
@@ -430,15 +444,33 @@ First, the undirected paths diagram:
 \path [-] (pol.corner 9) edge (pol.corner 11);
 \path [-] (pol.corner 11) edge (pol.corner 5);
 
+
+% draw a circle connecting all points
+\draw circle[radius=1.01cm];
+
+
+% Draw a red dot at the starting point 
+\filldraw[red] (pol.corner 1) circle[radius=0.8pt];
+
+% optional: black dots at each circle location
+\filldraw[black] (pol.corner 2) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 3) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 4) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 5) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 6) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 7) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 8) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 9) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 10) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 11) circle[radius=0.4pt];
+
 \end{tikzpicture}
 \end{document}
 ```
 
-And the directed paths diagram:
+**Directed Paths:**
 
 ```tex
-%%%%%%%%%%%%%%%%%% DIRECTED PATHS DIAGRAM %%%%%%%%%%%%%%%%%%%%%%
-
 \documentclass[border=2mm]{standalone}
 \usepackage{tikz}
 \usepackage{xintexpr}
@@ -448,28 +480,30 @@ And the directed paths diagram:
 \begin{tikzpicture}[scale=3]
 
 % make a node with variable name pol (with the list of features given) at the location (0,0), and don't label it
-\node (pol) [draw, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) {};
+\node (pol) [draw=none, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) {}; 
+
 
 % anchor is "corner 1"
 % label is 1/2/3/4/etc
 % placement is placement w.r.t. coordinate location
 \foreach \anchor/\label/\placement in
-    {corner 1/$1$/above,
-     corner 2/$2$/left,
-     corner 3/$3$/left,
+    {corner 1/$1$/above, 
+     corner 2/$2$/above left, 
+     corner 3/$3$/left, 
      corner 4/$4$/left,
-     corner 5/$5$/below left,
+     corner 5/$5$/below left,   
      corner 6/$6$/below,
      corner 7/$7$/below,
-     corner 8/$8$/below,
+     corner 8/$8$/below right,
      corner 9/$9$/right,
      corner 10/${10}$/right,
      corner 11/${11}$/above right}
 \draw[shift=(pol.\anchor)] plot coordinates{(0,0)} node[font=\scriptsize,\placement] {\label};
 
-% solution for n = 11, m = 4
-%
+% solution for n = 11, m = 4:
 % ( 1 3 7 6 4 ) ( 2 8 ) ( 5 9 11 ) ( 10 )
+
+% internal paths
 
 % cycle (1 3 7 6 4)
 \path [->, shorten > = 3 pt, blue, shorten < = 4 pt, > = stealth] (pol.corner 1) edge (pol.corner 3);
@@ -487,9 +521,28 @@ And the directed paths diagram:
 \path [->, shorten > = 3 pt, red, shorten < = 4 pt, > = stealth] (pol.corner 9) edge (pol.corner 11);
 \path [->, shorten > = 3 pt, red, shorten < = 4 pt, > = stealth] (pol.corner 11) edge (pol.corner 5);
 
+
+% draw a circle connecting all points
+\draw circle[radius=1.01cm];
+
+
+% draw a red dot at the starting point 
+\filldraw[red] (pol.corner 1) circle[radius=0.8pt];
+
+% optional: black dots at each circle location
+\filldraw[black] (pol.corner 2) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 3) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 4) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 5) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 6) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 7) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 8) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 9) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 10) circle[radius=0.4pt];
+\filldraw[black] (pol.corner 11) circle[radius=0.4pt];
+
 \end{tikzpicture}
 \end{document}
-
 ```
 
 ## Next Steps: Examples and Solutions
