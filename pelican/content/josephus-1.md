@@ -105,7 +105,7 @@ $$
 5, 4, 6, 1, 3, 8, 7, 2
 $$
 
-To write this permutation using matheamtical notation,
+To write this permutation using mathematical notation,
 we write two rows. The top row is the ordering 
 of plates in the circle, the "natural" ordering, 
 and the second row is the order of removal of plates,
@@ -203,7 +203,7 @@ and sometimes there are multiple cycles.
 In this case we have two cycles:
 
 $$
-\left( 1 5 3 6 8 2 4 \right) \left( 7 \right)
+\left( 1 \, 5 \, 3 \, 6 \, 8 \, 2 \, 4 \right) \left( 7 \right)
 $$
 
 This indicates that 7 does not change
