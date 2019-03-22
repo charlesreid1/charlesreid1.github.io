@@ -3,12 +3,11 @@ Date: 2019-03-20 14:00
 Category: Computer Science
 Tags: graphs, puzzles, algorithms, josephus, latex
 
-This is Part 2 of a four-part series.
+This is Part 2 of an N-part series.
 
 * [The Josephus Problem: Part 1: The Problem](https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html)
 * [The Josephus Problem: Part 2: Two Examples](https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html)
 * [The Josephus Problem: Part 3: Solving the Double Step Case](https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html)
-* [The Josephus Problem: Part 4: Solving the General Case](#)
 
 <br />
 <br />

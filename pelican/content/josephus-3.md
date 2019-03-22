@@ -3,7 +3,7 @@ Date: 2019-03-22 14:00
 Category: Computer Science
 Tags: graphs, puzzles, algorithms, josephus, latex
 
-This is Part 3 of a four-part series.
+This is Part 3 of an N-part series.
 
 * [The Josephus Problem: Part 1: The Problem](https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html)
 * [The Josephus Problem: Part 2: Two Examples](https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html)
