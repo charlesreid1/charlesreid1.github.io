@@ -1,11 +1,15 @@
-Title: The Josephus Problem: Part 4: Solving the General Case
-Date: 2019-03-19 14:00
+Title: The Josephus Problem: Part 4: Solving the Double Step Case with Algorithm S
+Date: 2019-03-23 14:00
 Category: Computer Science
 Tags: graphs, puzzles, algorithms, josephus, latex
 Status: draft
 
+## Algorithm S: Label Skipped Nodes
 
-* Solving the General Case
-    * Notation for cycles
-    * Knuth's general solution
-    * Walk thru example by hand (2 or 3)
+Step through circle
+
+Each person that is skipped, label $n+1$
+
+Repeat until all even
+
+Removal index is k/2
