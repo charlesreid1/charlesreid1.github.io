@@ -1,17 +1,25 @@
 Title: The Josephus Problem: Part 2: Two Examples
-Date: 2019-03-18 14:00
+Date: 2019-03-20 14:00
 Category: Computer Science
 Tags: graphs, puzzles, algorithms, josephus, latex
-Status: draft
 
 ## Table of Contents
 
 * [Two Examples](#two-examples)
 * [n = 8, m = 4](#n--8-m--4)
-    * [Step by Step Removal](#step-by-step-removal)
+    * [Step by Step Removal for n = 8](#step-by-step-removal-for-n--8)
     * [Writing the Solution Permutation: Two Row Notation](#writing-the-solution-permutation-two-row-notation)
     * [Writing the Solution Permutation: Cycle Notation](#writing-the-solution-permutation-cycle-notation)
+    * [Visual Representation of Solution Permutation](#visual-representation-of-solution-permutation)
+* [n = 11, m = 2](#n--11-m--2)
+    * [Step by Step Removal for n = 11](#step-by-step-removal-for-n--11)
+    * [Two Row Notation](#two-row-notation)
+    * [Cycle Notation](#cycle-notation)
+    * [Circle Permutation Diagram](#circle-permutation-diagram)
 
+
+<br />
+<br />
 
 ## Two Examples
 
@@ -57,7 +65,7 @@ src="images/josephus_8_4_removalix.png" width="350px" />
 </tr>
 </table>
 
-### Step by Step Removal
+### Step by Step Removal for n = 8
 
 Starting at the red dot, we proceed $m-1$ points forward
 through the circle ($m$ if we include the starting
@@ -197,11 +205,17 @@ $$
 \left( 1 \, 5 \, 3 \, 6 \, 8 \, 2 \, 4 \right) \left( 7 \right)
 $$
 
-To represent the cycle permutation graphically, we draw lines 
+
+### Visual Representation of Solution Permutation
+
+To represent the Josephus permutation graphically, we draw lines 
 connecting the edges that permute and form cycles:
 
 <img alt="circle with undirected permutation paths" 
 src="images/josephus_8_4_circ.png" width="350px" />
+
+This is a visual representation of the Josephus permutation
+for $n = 8, m = 4$.
 
 
 ## n = 11, m = 2
@@ -209,6 +223,160 @@ src="images/josephus_8_4_circ.png" width="350px" />
 Next is an example with a step size of two, which
 is a special case of the Josephus problem with a 
 slightly easier solution procedure.
+
+Here is the final Josephus permutation on a circle,
+which is what our procedure below will yield:
+
+<table>
+<tr>
+<td>
+<b>Circle index:</b><br />
+<img alt="indexed by circle location order" 
+src="images/josephus_11_2_circleix.png" width="350px" />
+</td>
+<td>
+<b>Removal index:</b><br />
+<img alt="indexed by removal order" 
+src="images/josephus_11_2_removalix.png" width="350px" />
+</td>
+</tr>
+</table>
+
+### Step by Step Removal for n = 11
+
+As before, we proceed from the red dot, moving
+forward $m-1$ items and removing the $m^{th}$
+item.
+
+We indicate the starting point with a red dot in Step 0,
+then indicate the removal index with a red dot and the
+corresponding removal index.
+
+<table>
+
+<tr>
+<td><b>Step 0: Starting Point
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 0"
+src="images/josephus_11_2_step0R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 1:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 1"
+src="images/josephus_11_2_step1R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 2:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 2"
+src="images/josephus_11_2_step2R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 3:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 3"
+src="images/josephus_11_2_step3R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 4:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 4"
+src="images/josephus_11_2_step4R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 5:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 5"
+src="images/josephus_11_2_step5R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 6:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 6"
+src="images/josephus_11_2_step6R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 7:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 7"
+src="images/josephus_11_2_step7R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 8:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 8"
+src="images/josephus_11_2_step8R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 9:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 9"
+src="images/josephus_11_2_step9R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 10:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 10"
+src="images/josephus_11_2_step10R.png" width="350px" />
+</td>
+</tr>
+
+<tr>
+<td><b>Step 11:
+</b></td>
+</tr><tr>
+<td>
+<img alt="josephus n = 11 m = 2 step 11"
+src="images/josephus_11_2_step11R.png" width="350px" />
+</td>
+</tr>
+
+</table>
+
+### Two Row Notation
 
 Here is the two-row representation:
 
@@ -219,7 +387,23 @@ $$
 \end{smallmatrix}\bigr)
 $$
 
+### Cycle Notation
 
+When factored into a cycle, this gives:
 
+$$
+\left( 1 \, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
+\left( 5 \, 7 \, 11 \, 10 \right)
+$$
 
+### Circle Permutation Diagram
+
+To represent the Josephus permutation graphically, we draw lines 
+connecting the edges that permute and form cycles:
+
+<img alt="circle with undirected permutation paths" 
+src="images/josephus_11_2_circ.png" width="350px" />
+
+This is a visual representation of the Josephus permutation
+for $n = 11, m = 2$.
 
