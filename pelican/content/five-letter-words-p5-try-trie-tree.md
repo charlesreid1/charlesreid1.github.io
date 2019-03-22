@@ -7,7 +7,7 @@ Tags: python, computer science, graphs, algorithms, art of computer programming,
 
 * [Table of Contents](#table-of-contents)
 * [About the Five\-Letter Words](#about-the-five-letter-words)
-* [Introduction to the Try Trie Tree Problem](#introduction-to-the-try-trie-tree-problem)
+* [Introduction to the Try Trie Tree Problem](#intro-try-trie-tree)
 * [The Try Trie Tree](#the-try-trie-tree)
 * [Constructing the Try Trie Tree](#constructing-the-try-trie-tree)
     * [Checking for Minimum Number of Matching Words](#checking-for-minimum-number-of-matching-words)
@@ -21,6 +21,10 @@ Tags: python, computer science, graphs, algorithms, art of computer programming,
 * [Wrap it in a Bow](#wrap-it-in-a-bow)
 * [Output](#output)
 
+<br />
+<br />
+
+<a name="about-the-five-letter-words"></a>
 ## About the Five-Letter Words
 
 In Volume 4 Fascicle 0 of Donald Knuth's <u>Art of Computer Programming</u>, 
@@ -68,6 +72,7 @@ Link to the [Stanford Graph Base](http://www3.cs.stonybrook.edu/~algorith/implem
 Visit [Five Letter Words](https://charlesreid1.com/wiki/Five_Letter_Words)
 on the charlesreid1.com wiki for details.
 
+<a name="intro-try-trie-tree"></a>
 ## Introduction to the Try Trie Tree Problem
 
 In this blog post, we'll cover Exercise 35 of Volume 4, Fascicle 
@@ -127,6 +132,7 @@ constructed either meets our criteria (can be
 included as a branch in a complete binary trie),
 or is pruned.
 
+<a name="the-try-trie-tree"></a>
 ## The Try Trie Tree
 
 To solve this problem, we define a TryTrieTree
@@ -138,6 +144,7 @@ for each letter of the alphabet to come up with
 an answer to the exercise.
 
 
+<a name="constructing-the-try-trie-tree"></a>
 ## Constructing the Try Trie Tree
 
 The construction procedure for the try trie tree
@@ -159,6 +166,7 @@ letter) and proceed from the root down, going
 level by level.
 
 
+<a name="checking-for-minimum-number-of-matching-words"></a>
 ### Checking for Minimum Number of Matching Words
 
 Step 1 proceeds from the top down and marks
@@ -209,6 +217,7 @@ At each level of the trie, we apply the procedure:
 **NOTE:** We are not explicitly constructing the trie,
 so we don't need to assemble the word leaves.
 
+<a name="assemble-method"></a>
 ### Assemble Method
 
 See the [Try Trie Tree Code](#try-trie-tree-code) section 
@@ -253,6 +262,7 @@ recursive assembly function; the recursive function terminates
 at a fixed depth of 4.
 
 
+<a name="verifying-branches-and-bubbling-up-counts"></a>
 ### Verifying Branches and Bubbling Up Counts
 
 However, as we noted, the counts we are using above in Step 1
@@ -295,6 +305,7 @@ binary trie using this `s-a-b` branch.
 We call this procedure a "bubble up" procedure,
 since it is _bottom-up_.
 
+<a name="bubble-up-method"></a>
 ### Bubble Up Method
 
 See the [Try Trie Tree Code](#try-trie-tree-code) section 
@@ -306,11 +317,13 @@ pre-order traversal. This ensures we reach leaf nodes
 before beginning our task, and that counts proceed
 from bottom-up.
 
+<a name="try-trie-tree-code"></a>
 ## Try Trie Tree Code
 
 Below we go through some of the code
 for the Try Trie Tree problem.
 
+<a name="try-trie-trie-class"></a>
 ### Try Trie Trie Class
 
 When dealing with trees, it's always a safe bet
@@ -428,6 +441,7 @@ into a location in the trie:
         # is cut down by one letter each iteration.
 ```
 
+<a name="code-for-assembling-the-tree"></a>
 ### Code for Assembling the Tree
 
 We assemble the tree using a private recursive
@@ -529,6 +543,7 @@ trie depth of 4.
         return
 ```
 
+<a name="code-for-bubbling-up-large-children-counts"></a>
 ### Code for Bubbling Up Large Children Counts
 
 These are a little shorter and simpler than the
@@ -584,6 +599,7 @@ but we could just as easily do it in the base case,
 as the leaf nodes are the base case.
 
 
+<a name="wrap-it-in-a-bow"></a>
 ## Wrap it in a Bow
 
 We can add some extra wrapping around our class,
@@ -695,6 +711,7 @@ if __name__=="__main__":
     #trie_table()
 ```
 
+<a name="output"></a>
 ## Output
 
 When we run with n = 1000, we can see that `s` is the only letter
