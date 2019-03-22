@@ -3,6 +3,16 @@ Date: 2019-03-20 14:00
 Category: Computer Science
 Tags: graphs, puzzles, algorithms, josephus, latex
 
+This is Part 2 of a four-part series.
+
+* [The Josephus Problem: Part 1: The Problem](https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html)
+* [The Josephus Problem: Part 2: Two Examples](https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html)
+* [The Josephus Problem: Part 3: Solving the Double Step Case](https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html)
+* [The Josephus Problem: Part 4: Solving the General Case](#)
+
+<br />
+<br />
+
 ## Table of Contents
 
 * [Two Examples](#two-examples)
@@ -16,11 +26,12 @@ Tags: graphs, puzzles, algorithms, josephus, latex
     * [Two Row Notation](#two-row-notation)
     * [Cycle Notation](#cycle-notation)
     * [Circle Permutation Diagram](#circle-permutation-diagram)
-
+* [Next Steps: Solve!](#next-steps)
 
 <br />
 <br />
 
+<a name="two-examples"></a>
 ## Two Examples
 
 In this blog post we'll walk through two examples
@@ -40,6 +51,7 @@ We will simulate the Josephus process and
 show how the solution is expressed using both 
 permutation notation and cycle notation.
 
+<a name="n--8-m--4"></a>
 ## n = 8, m = 4
 
 We begin with the example that Knuth gives in his
@@ -65,6 +77,7 @@ src="images/josephus_8_4_removalix.png" width="350px" />
 </tr>
 </table>
 
+<a name="step-by-step-removal-for-n--8"></a>
 ### Step by Step Removal for n = 8
 
 Starting at the red dot, we proceed $m-1$ points forward
@@ -170,6 +183,7 @@ src="images/josephus_8_4_step8R.png" width="350px" />
 
 </table>
 
+<a name="writing-the-solution-permutation-two-row-notation"></a>
 ### Writing the Solution Permutation: Two Row Notation
 
 As mentioned in Part 1, we can think about the final removal order
@@ -192,6 +206,7 @@ a variety of questions), it is also inconvenient notation, since
 there are many equivalent ways of writing a single permutation.
 
 
+<a name="writing-the-solution-permutation-cycle-notation"></a>
 ### Writing the Solution Permutation: Cycle Notation
 
 In Part 1 we also introduced cycles and cycle notation. Writing a
@@ -206,6 +221,7 @@ $$
 $$
 
 
+<a name="visual-representation-of-solution-permutation"></a>
 ### Visual Representation of Solution Permutation
 
 To represent the Josephus permutation graphically, we draw lines 
@@ -218,6 +234,7 @@ This is a visual representation of the Josephus permutation
 for $n = 8, m = 4$.
 
 
+<a name="n--11-m--2"></a>
 ## n = 11, m = 2
 
 Next is an example with a step size of two, which
@@ -242,6 +259,7 @@ src="images/josephus_11_2_removalix.png" width="350px" />
 </tr>
 </table>
 
+<a name="step-by-step-removal-for-n--11"></a>
 ### Step by Step Removal for n = 11
 
 As before, we proceed from the red dot, moving
@@ -376,6 +394,7 @@ src="images/josephus_11_2_step11R.png" width="350px" />
 
 </table>
 
+<a name="two-row-notation"></a>
 ### Two Row Notation
 
 Here is the two-row representation:
@@ -387,6 +406,7 @@ $$
 \end{smallmatrix}\bigr)
 $$
 
+<a name="cycle-notation"></a>
 ### Cycle Notation
 
 When factored into a cycle, this gives:
@@ -396,6 +416,7 @@ $$
 \left( 5 \, 7 \, 11 \, 10 \right)
 $$
 
+<a name="circle-permutation-diagram"></a>
 ### Circle Permutation Diagram
 
 To represent the Josephus permutation graphically, we draw lines 
@@ -406,4 +427,16 @@ src="images/josephus_11_2_circ.png" width="350px" />
 
 This is a visual representation of the Josephus permutation
 for $n = 11, m = 2$.
+
+<a name="next-steps"></a>
+## Next Steps: Solve!
+
+Our next steps are simple: solve it! 
+
+In **[Part 3](https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html)** we will show the solution of the
+special case of $m = 2$ (the double-step case).
+
+In **[Part 4](#)** we will show several ways to solve
+the general case, and walk through some examples
+where we apply the solution procedure.
 
