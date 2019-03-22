@@ -1,22 +1,34 @@
-Title: The Josephus Problem: Part 3: Solving the Double Step Case
-Date: 2019-03-21 14:00
+Title: The Josephus Problem: Part 3: Solving the Double Step Case with Algorithm D
+Date: 2019-03-22 14:00
 Category: Computer Science
 Tags: graphs, puzzles, algorithms, josephus, latex
-Status: draft
+
+This is Part 3 of a four-part series.
+
+* [The Josephus Problem: Part 1: The Problem](https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html)
+* [The Josephus Problem: Part 2: Two Examples](https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html)
+* [The Josephus Problem: Part 3: Solving the Double Step Case](https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html)
+* [The Josephus Problem: Part 4: Solving the General Case](#)
+
+<br />
+<br />
 
 ## Table of Contents
 
 * [Solving the Double Step Case](#solving-the-double-step-case)
-    * [An Example](#an-exmample)
-
 * [Algorithm D: Using Doubling Permutation](#algorithm-d-using-doubling-permutation)
+    * [The Algorithm](#the-algorithm)
     * [Write the Doubling Permutation](#write-the-doubling-permutation)
+    * [Table Method](#table-method)
     * [Reverse the Doubling Permutation](#reverse-the-doubling-permutation)
     * [Trim the Reversed Doubling Permutation](#trim-the-reversed-doubling-permutation)
-
 * [Why Does Algorithm D Work?](#why-does-algorithm-d-work)
-
-* [Algorithm S: Label Skipped Nodes](#algorithm-s-label-skipped-nodes)
+    * [An Important Observation](#an-important-observation)
+    * [Three Facts](#three-facts)
+    * [Power of Two Example](#power-of-two-example)
+    * [Not a Power of Two Example](#not-a-power-of-two-example)
+    * [The Power of Two Shortcut](#the-power-of-two-shortcut)
+* [Summary](#summary)
 
 <br />
 <br />
@@ -29,6 +41,23 @@ can be solved two ways:
 - Algorithm D: Doubling Permutation Algorithm
 - Algorithm S: Label Skipped Nodes Algorithm
 
+In this blog post we cover Algorithm D, which makes 
+use of a doubling permutation. 
+
+In the first section ([Algorithm D: Using Doubling Permutation](#algorithm-d-using-doubling-permutation))
+we start by showing the recipe as applied 
+to the case of $n = 11, m = 2$. 
+
+The recipe is straightforward to apply, but it is not
+at all clear how it works, so in the next section
+([Why Does Algorithm D Work?](#why-does-algorithm-d-work))
+we discuss some of the algorithm's inner workings
+and explore the case of $n = 8, m = 2$ (a special
+case where the circle size is a power of two) before
+returning to the example of $n = 11, m = 2$.
+
+We 
+
 We start by covering Algorithm D, which makes
 use of a doubling permutation, and explain how
 Algorithm D works and why.
@@ -39,9 +68,9 @@ essentially a shortcut method for Algorithm D.
 
 We will start with a concrete example of $n = 11, m = 2$
 to illustrate Algorithm D, then walk through how it works.
-We will solve the same concrete example with Algorithm S for 
-comparison. We then give solutions for several other problem 
-sizes using Algorithms D and S.
+We will also cover the case of $n = 8, m = 2$ for comparison,
+since a circle size that is a power of two happens to be a
+special case.
 
 
 ## Algorithm D: Using Doubling Permutation
@@ -63,6 +92,11 @@ at all obvious why the solution procedure works, so
 once we have seen how to apply it, we have to do a
 bit more work before we can understand it.
 
+<br />
+<br />
+
+### The Algorithm
+
 Given an input size $n$, the algorithm steps are:
 
 1. Write the doubling permutation (in table form)
@@ -73,6 +107,8 @@ Given an input size $n$, the algorithm steps are:
 
 The result will be the Josephus permutation cycles.
 
+<br />
+<br />
 
 ### Write the Doubling Permutation
 
@@ -136,6 +172,61 @@ $$
 \left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
 $$
 
+We now have the cycles of the doubling permutation! Step 2 finished.
+
+### Table Method
+
+Slightly more convenient than writing out the cycles the way we did above
+is to create a table, with a column for $j = 1 \dots 2n$, a column for
+$2j$, and a column for $(2j) \mod (2n+1)$.
+
+```
+ j   |  2j  |  2j mod 2n+1
+-----|------|---------------
+  1  |   2  |        2
+  2  |   4  |        4
+  3  |   6  |        6
+  4  |   8  |        8
+  5  |  10  |       10
+  6  |  12  |       12
+  7  |  14  |       14
+  8  |  16  |       16
+  9  |  18  |       18
+ 10  |  20  |       20
+ 11  |  22  |       22
+ 12  |  24  |        1
+ 13  |  26  |        3
+ 14  |  28  |        5
+ 15  |  30  |        7
+ 16  |  32  |        9
+ 17  |  34  |       11
+ 18  |  36  |       13
+ 19  |  38  |       15
+ 20  |  40  |       17
+ 21  |  42  |       19
+ 22  |  44  |       21
+```
+
+Now the cycles can be constructed by starting with the $j$ column of the 
+first row in the table (1), reading off the corresponding entry (2) in the 
+$(2j) \mod (2n+1)$ column, adding the pair $1 \rightarrow 2$ to the cycle,
+and moving to the row of the table with that corresponding $j$ value.
+
+The next step takes us to row 2 of the table, where we read off the value 4
+from the right column, add the pair $2 \rightarrow 4$ to the cycle, and keep
+moving.
+
+Eventually, the procedure will complete the first cycle and take us back to 1.
+Since there are still rows in the table left, repeat the procedure, starting
+with the first available row of the table (5), and keep going until all entries
+of the table are gone. This will yield the same cycles as the process described 
+above, but the bookkeeping is slightly easier:
+
+$$
+\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
+\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
+$$
+
 
 ### Reverse the Doubling Permutation
 
@@ -177,6 +268,11 @@ $$
 $$
 
 Congratulations! You just solved the problem.
+
+
+
+-----
+
 
 
 ## Why Does Algorithm D Work?
@@ -252,10 +348,13 @@ the item at the starting position in that round will be
 the last item removed.**
 
 (Explanation: Combining Fact 1 and Fact 2, we can see
-that eventually we will always reach a "special case"
-where the circle size is a power of 2. The worst case
-is when the circle size takes $n-2$ steps to reduce to
-a size of $2$.)
+that eventually we will always reach the special case
+of the circle size being a power of 2, since with each
+step, we reduce the circle size by 1. For example,
+for a circle size of 22, we must carry out 6 removal
+operations to reach a circle size of 16, at which point
+the item at the starting position will be the last item
+to be removed from the circle.)
 
 <br />
 
@@ -264,7 +363,7 @@ Now we will use these 3 facts to understand Algorithm D.
 ### Power of Two Example
 
 Let's run through a Josephus solution for an example
-where $n$ is a power of 2, specifically, $n = 8, m = 2$.
+where $n$ is a power of two, specifically, $n = 8, m = 2$.
 
 We start by creating the doubling permutation table,
 with columns for $j$, $2j$, and $(2j) \mod (2n+1)$:
@@ -322,8 +421,8 @@ item 4 is removed 2nd. But the problem is that it doesn't
 fit into the existing cycle, so it may belong later in the
 cycle or in another cycle altogether. We can't be certain.
 
-So we double our step size, instead of incrementing our 
-step size. 
+This is why we multiply our step size by 2 each time (2, 4, 8, 16),
+instead of incrementing it by 2 each time (2, 4, 6, 8, 10).
 
 **Fact 1** stated that any items at even-numbered 
 positions are eliminated on the first pass - we can
@@ -337,14 +436,16 @@ $$
 \left( 1 \, 2 \, 4 \, 8 \ 16 \, 15 \, 13 \, 9 \right)
 $$
 
-Consider the `16 -> 15` connection. Stepping through
+Consider the $16 \rightarrow 15$ connection. Stepping through
 the (doubled) circle the first time through, we end
 on 16. The next doubling takes us 16 more steps forward,
 but that's 1 less than the size of the circle (again due 
 to the choice of an odd modulus $2n+1$), so we end up
-at $2n - 1$.
+at $2n - 1$. 15 is larger than the size of the circle, 
+so it will be excluded in the final Josephus cycle.
 
-Continuing to follow this through, we reach 9, which returns
+Continuing to follow this through, we reach 9, which will
+also be excluded from the Josephus cycle, and 9 returns 
 back to 1 and completes the cycle.
 
 Now we continue the process with the remaining items in
@@ -357,9 +458,6 @@ $$
 \left( 3 \, 6 \, 12 \, 17 \, 14 \, 11 \, 5 \, 10 \right)
 $$
 
-
-
-
 Finally, reversing and trimming the values larger than 8:
 
 $$
@@ -367,29 +465,180 @@ $$
 \left( 8 \, 4 \, 2 \, 1 \right)
 $$
 
+and writing in sorted order:
+
 $$
 \left( 1 \, 8 \, 4 \, 2 \right)
 \left( 3 \, 5 \, 7 \, 6 \right)
 $$
 
-We know from Fact 2 that the item in position 1 is the last
-to be removed, and we confirm the cycle does contain 
-`1 \rightarrow 8` (meaning, the item in position 1 
-will be removed 8th).
+**Fact 2** tells us that the item in position 1 is the
+last to be removed, since the size of the circle $n = 8 = 2^3$.  
+We confirm the cycle does contain $1 \rightarrow 8$ 
+(meaning, the item in position 1 will be removed 
+eighth).
+
+### Not a Power of Two Example
+
+Now that we've looked at an example where the size of
+the circle is a power of 2, let's return to the original
+example that we presented in [Part 2](https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html)
+and the beginning of this blog post,
+namely, $n = 11, m = 2$.
+
+Here is the doubling permutation table again: 
+
+```
+ j   |  2j  |  2j mod 2n+1
+-----|------|---------------
+  1  |   2  |        2
+  2  |   4  |        4
+  3  |   6  |        6
+  4  |   8  |        8
+  5  |  10  |       10
+  6  |  12  |       12
+  7  |  14  |       14
+  8  |  16  |       16
+  9  |  18  |       18
+ 10  |  20  |       20
+ 11  |  22  |       22
+ 12  |  24  |        1
+ 13  |  26  |        3
+ 14  |  28  |        5
+ 15  |  30  |        7
+ 16  |  32  |        9
+ 17  |  34  |       11
+ 18  |  36  |       13
+ 19  |  38  |       15
+ 20  |  40  |       17
+ 21  |  42  |       19
+ 22  |  44  |       21
+```
+
+As before, the last column splits into odd and even,
+with all the evens coming first, so we consider
+$2n$ elements to cover all $n$ odd and even items,
+and use an odd modulus to ensure we don't wrap back
+around to the even numbers the second time through.
+
+We follow the entries of the table to factor this 
+permutation into cycles, as above, yielding the two
+cycles:
+
+$$
+\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9 \, 18 \, 13 \, 3 \, 6 \, 12 \right)
+$$
+
+and 
+
+$$
+\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
+$$
+
+Finally, we reverse these and eliminate the numbers larger
+than $n$, giving the Josephus permutation cycle:
+
+$$
+\left( 6 \, 3 \, 9 \, 8 \, 4 \, 2 \, 1 \right)
+\left( 7 \, 11 \, 10 \, 5 \right)
+$$
+
+or, rearranging into sorted order:
+
+$$
+\left( 1\, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
+\left( 5 \, 7 \, 11 \, 10 \right)
+$$
+
+However, there is a faster way to figure out the last
+item in the circle that will be removed that only
+requires us to carry out 3 steps.
 
 
+### The Power of Two Shortcut
+
+Unlike the circle whose size was a power of two,
+we don't know ahead of time who goes last. 
+However, **Fact 3** tells us that eventually
+our circle will reach the size of a power of two.
+For this case it only takes 3 steps (11 - 8).
+At that point, the circle item at the starting point
+for the next step will be the last item removed.
+
+Here is the diagram for the third removal operation
+(left labels show removal indices, right labels show
+circle position indices):
+
+<table>
+<tr>
+<td>
+<img alt="step 3 of josephus circle n = 11 m = 2 labeled by removal order" 
+src="images/josephus_11_2_step3R.png" height="350px" />
+</td>
+
+<td>
+<img alt="josephus circle n = 11 m = 2 labeled by circle location" 
+src="images/josephus_11_2_labonly.png" height="350px" />
+</td>
+</tr>
+</table>
+
+**Fact 3** is in effect here, because after the third item 
+is removed, our starting "cursor" is on item 7 in the circle,
+and the circle is of size $2^3$, so from **Fact 2** we know
+that 7 will be the last item removed from the circle. 
+
+We can see from the final permutation that $7 \rightarrow 11$,
+so indeed, this holds true.
+
+To translate this into mathematical terms, we are 
+carrying out $r$ operations, where
+
+$$
+r = n - 2^{ \left\lfloor{ \lg{n} }\right\rfloor }
+$$
+
+and at the conclusion of those $r$ operations, we mark the
+starting item for the next round. That item will be the 
+last item to be removed.
 
 
+## Summary
 
+To summarize what we covered in this blog post:
 
+This post covers a method for solving the Josephus
+problem for the special case of a step size of two,
+$m = 2$.
 
-## Algorithm S: Label Skipped Nodes
+We started by covering the recipe for Algorithm D,
+which uses a doubling permutation to obtain the
+Josephus permutation in cycle form. We illustrated
+the three steps of the recipe (populate the table,
+write the doubling permutation cycles, then 
+filter and reverse) using an example case.
 
-Step through circle
+Then we got into the question of _why_ Algorithm D 
+works, by making an observation and building upon
+it. We deduced several facts that allowed us to 
+come up with a shortcut for the $m = 2$ case.
 
-Each person that is skipped, label $n+1$
+Our final solution technique (making use of the 
+above-mentioned shortcut) is as follows:
 
-Repeat until all even
+1. Carry out as many removal operations as needed
+   to make the circle the size of a power of 2
+   (see formula for $r$ above)
 
-Removal index is k/2
+2. The starting item for the next round (where our
+   "removal cursor" will start counting) will be
+   the last item removed from the circle.
+
+So if you find yourself being rounded up in some
+sort of weird mass execution scheme that happens
+to be a Josephus problem with a step size of 2,
+the key to surviving is to remember your powers
+of 2, to carry out $r = n - 2^{ \left\lfloor{ \lg{n} }\right\rfloor }$
+removal operations, and to
+grab the next open spot in the circle.
 
