@@ -102,6 +102,596 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Perl vs. Java: N Queens Problem
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-03-22T22:00:00-07:00" pubdate>Wednesday 03/22/2017</time>
+                in 
+                <a href="/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/perl-vs-java-n-queens-problem.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2>Table of Contents</h2>
+<ul>
+<li><a href="#pvj-background">Background: Huh?</a></li>
+<li><a href="#pvj-nqueensproblem">N Queens Problem</a></li>
+<li><a href="#pvj-nqueenssoln">N Queens Solution</a><ul>
+<li><a href="#pvj-perlsoln">Perl Solution</a></li>
+<li><a href="#pvj-javasoln">Java Solution</a></li>
+</ul>
+</li>
+<li><a href="#pvj-h2hnqueens">Head to Head: Walltime vs. Number of Queens</a></li>
+<li><a href="#pvj-perlprof">Perl Profiling</a></li>
+<li><a href="#pvj-perlprofresults">Perl Profiling Results</a></li>
+<li><a href="#pvj-javaprof">Java Profiling</a></li>
+<li><a href="#pvj-javaprofresults">Java Profiling Results</a></li>
+<li><a href="#pvj-h2hntested">Head to Head: Walltime vs. Number of Solutions Tested</a></li>
+<li><a href="#pvj-applesoranges">Apples and Oranges</a></li>
+<li><a href="#pvj-sources">Sources</a></li>
+</ul>
+<h2>Summary</h2>
+<p>In this post, we describe an implementation of the <a href="https://en.wikipedia.org/wiki/Eight_queens_puzzle">N Queens Problem</a>,
+which is a puzzle related to optimization, combinatorics, and recursive backtracking.
+The puzzle asks: how many configurations are there for placing 8 queens on a chessboard
+such that no queen can attack any othr queen?</p>
+<p>This problem was implemented in Perl and in Java, the solution results were timed,
+and the codes were profiled. While Perl is an interpreted language, and is therefore
+fully expeted to be much slower than Java (which indeed it is), it is still useful
+to compare the performance between these two codes to gain an appreciation for 
+the advantages and disadvantages to both approaches.</p>
+<p><a name="pvj-background"></a></p>
+<h2>Background: Huh?</h2>
+<p>Recently I read an <a href="http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html">(11 year old) article</a> 
+by Steve Yegge entitled "Execution in the Kingdom of Nouns." In it, Steve describes the way that in Java, 
+"Classes are really the only modeling tool Java provides you. 
+So whenever a new idea occurs to you, you have to sculpt it or wrap it or smash at it until it becomes a thing, 
+even if it began life as an action, a process, or any other non-'thing' concept."</p>
+<p>The article inspired me to try on this verb-oriented mode of thinking in a more... active way. 
+Prior experiences with OCaml were confusing, and Haskell continues to evade me,
+so it was easier to dust off old Perl skills than learn enough Haskell or Ocaml to solve N queens problem.
+Perl was the next-closest verb-oriented "scripting" language.</p>
+<p>I was also familiar with the N queens problem, since I'm a programming instructor (I'll let you guess which language),
+and it seemed like a nice problem for both noun-based and verb-based approaches. 
+But it also meant I had to learn enough Perl to solve the N queens problem.</p>
+<p>...or, use the <a href="http://rosettacode.org/wiki/N-queens_problem#Perl">Perl solution to the N queens problem from Rosetta Code</a>.</p>
+<p>Right...</p>
+<p>So here's the plan: study a verb-oriented implementation of this canonical, deceptively subtle programming problem in Perl; 
+translate it into a verb-oriented Java program; and run the two head-to-head, using a profiler to understand the results.</p>
+<p><a name="pvj-nqueensproblem"></a></p>
+<h2>N Queens Problem</h2>
+<p>The N queens problem predates computers - it's a chess puzzle that asks: how many ways can you place 8 queens on a chessboard
+such that no queen can attack any other queen? </p>
+<p>The number of possible configurations of queens on a chessboard is 64 pick 8, or</p>
+<div class="math">$$
+\dfrac{64!}{(64-8)!} = 64 \times 63 \times \dots \times 57 \times 56 = 178,462,987,637,760 
+$$</div>
+<p>Here's that calculation in Python:</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">np</span><span class="o">.</span><span class="kp">prod</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">64</span><span class="o">-</span><span class="mi">8</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">64</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+<span class="mi">178462987637760</span>
+</pre></div>
+
+
+<p>That's bigger than the net worth of most U.S. Presidents!</p>
+<p>If we implemented a dumb brute-force solution that tested each of these configurations, we'd be waiting until the heat death of the universe.</p>
+<p>Fortunately, as we place queens on the board we can check if it is an invalid placement, and rule out any configurations that would follow from that choice.
+As long as we are making our choices in an orderly fashion, this enables us to rule out most of the nearly 10 quadrillion possibilities. 
+If we place queens column-by-column and rule out rows where there are already queens, by keeping track of where queens have already been placed, 
+we can reduce the number of possible rows by 1 with each queen placed. The first queen has 8 possible rows where it can be placed,
+the second queen has 7 possible rows (excluding the row that the first queen was placed on), and so on. The number of possiblities is:</p>
+<div class="math">$$
+8! = 8 \times 7 \times \dots \times 2 \times 1 = 40,320
+$$</div>
+<p>A big improvement! Here's that calculation in Python:</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="k">def</span> <span class="nf">fact</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+<span class="o">...</span>     <span class="k">if</span><span class="p">(</span><span class="n">n</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
+<span class="o">...</span>         <span class="k">return</span> <span class="mi">1</span>
+<span class="o">...</span>     <span class="k">else</span><span class="p">:</span>
+<span class="o">...</span>         <span class="k">return</span> <span class="n">n</span><span class="o">*</span><span class="n">fact</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="o">...</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">fact</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="mi">40320</span>
+</pre></div>
+
+
+<p>This still-large number of possibilities can be further reduced by using the same procedure, but checking for invalid rows based on the diagonal squares that each already-placed queen attacks.
+This covers each precondition for a solved board, and allows the base case of the recursive backtracking method to be as simple as,
+"If you've reached this point, you have a valid solution. Add it to the solutions bucket."</p>
+<p>Now, let's get to the solution algorithm.</p>
+<p><a name="pvj-nqueenssoln"></a></p>
+<h2>N Queens Solution</h2>
+<p>As a recap, we dusted off our Perl skills to utilize an N queens solution in Perl from <a href="http://rosettacode.org/wiki/N-queens_problem#Perl">Rosetta Code</a>.</p>
+<p>Here's the pseudocode:</p>
+<div class="highlight"><pre><span></span>explore(column):
+    if last column:
+        # base case
+        add to solutions
+    else:
+        # recursive case
+        for each row:
+            if this is a safe row:
+                place queen on this row
+                explore(column+1)
+                remove queen from this row
+</pre></div>
+
+
+<p>Both codes use integer arrays to keep track of where queens are placed. 
+Solutions are stringified version of these arrays, consisting of 8 digits.</p>
+<p><a name="pvj-perlsoln"></a></p>
+<h3>Perl Solution</h3>
+<p>After looking at the Rosetta Code solution for a (long) while and marking it up with comments to understand what it was doing, 
+I decided it was precisely the kind of verb-oriented solution I wanted to test out to compare Perl and Java.
+It uses no objects, but instead relies on fast built-in data structures (arrays), 
+for loop expansion (only <code>for my $i (1 .. $N)</code>, no <code>for($i=1; $i&lt;=$N; $i++)</code>),
+and basic integer math. The cost of solving the problem comes down to basic indexing and array access.</p>
+<p>This is the kind of solution I imagine a human calculator like Alan Turing or John Von Neuman looking at, nodding, and saying, "Makes sense! (And by the way the answer is 92.)"</p>
+<p><a href="https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535">Github gist: nqueens.pl</a></p>
+<div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/perl</span>
+
+<span class="c1"># Solve the N queens problem</span>
+<span class="c1"># using recursive backtracking.</span>
+<span class="c1"># </span>
+<span class="c1"># Author: Charles Reid</span>
+<span class="c1"># Date: March 2017</span>
+
+<span class="c1"># Create an array to store solutions</span>
+<span class="k">my</span> <span class="nv">@solutions</span><span class="p">;</span>
+
+<span class="c1"># Create an array to store where queens have been placed</span>
+<span class="k">my</span> <span class="nv">@queens</span><span class="p">;</span>
+
+<span class="c1"># Mark the rows already used (useful for lookup)</span>
+<span class="k">my</span> <span class="nv">@occupied</span><span class="p">;</span>
+
+<span class="c1"># explore() implements a recursive, depth-first backtracking method</span>
+<span class="k">sub</span> <span class="nf">explore</span> <span class="p">{</span> 
+    <span class="c1"># Parameters:</span>
+    <span class="c1">#   depth : this is the argument passed by the user</span>
+
+    <span class="c1"># First argument passed to the function is $depth </span>
+    <span class="c1"># (how many queens we&#39;ve placed on the board),</span>
+    <span class="c1"># so use shift to pop that out of the parameters </span>
+    <span class="k">my</span> <span class="p">(</span><span class="nv">$depth</span><span class="p">,</span> <span class="nv">@diag</span><span class="p">)</span> <span class="o">=</span> <span class="nb">shift</span><span class="p">;</span>
+
+    <span class="c1"># Explore is a recursive method,</span>
+    <span class="c1"># so we need a base case and a recursive case.</span>
+    <span class="c1">#</span>
+    <span class="c1"># The base case is, we&#39;ve reached a leaf node,</span>
+    <span class="c1"># placed 8 queens, and had no problems, </span>
+    <span class="c1"># so we found a solution.</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nv">$depth</span><span class="o">==</span><span class="nv">$board_size</span><span class="p">)</span> <span class="p">{</span> 
+        <span class="c1"># Here, we store the stringified version of @queens,</span>
+        <span class="c1"># which are the row numbers of prior queens. </span>
+        <span class="c1"># This is a global variable that is shared across</span>
+        <span class="c1"># instances of this recursive function.</span>
+        <span class="nb">push</span> <span class="nv">@solutions</span><span class="p">,</span> <span class="s">&quot;@queens\n&quot;</span><span class="p">;</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Mark the squares that are attackable, </span>
+    <span class="c1"># so that we can cut down on the search space.</span>
+    <span class="nv">$#diag</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="nv">$board_size</span><span class="p">;</span>
+    <span class="k">for</span><span class="p">(</span> <span class="mi">0</span> <span class="o">..</span> <span class="nv">$#queens</span><span class="p">)</span> <span class="p">{</span> 
+        <span class="nv">$ix1</span> <span class="o">=</span> <span class="nv">$queens</span><span class="p">[</span><span class="nv">$_</span><span class="p">]</span> <span class="o">+</span> <span class="nv">$depth</span> <span class="o">-</span> <span class="nv">$_</span> <span class="p">;</span>
+        <span class="nv">$diag</span><span class="p">[</span> <span class="nv">$ix1</span> <span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+        <span class="nv">$ix2</span> <span class="o">=</span> <span class="nv">$queens</span><span class="p">[</span><span class="nv">$_</span><span class="p">]</span> <span class="o">-</span> <span class="nv">$depth</span> <span class="o">+</span> <span class="nv">$_</span> <span class="p">;</span>
+        <span class="nv">$diag</span><span class="p">[</span> <span class="nv">$ix2</span> <span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="k">my</span> <span class="nv">$row</span> <span class="p">(</span><span class="mi">0</span> <span class="o">..</span> <span class="nv">$board_size</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1"># Cut down on the search space:</span>
+        <span class="c1"># if this square is already occupied</span>
+        <span class="c1"># or will lead to an invalid solution,</span>
+        <span class="c1"># don&#39;t bother exploring it.</span>
+        <span class="k">next</span> <span class="k">if</span> <span class="nv">$occupied</span><span class="p">[</span><span class="nv">$row</span><span class="p">]</span> <span class="o">||</span> <span class="nv">$diag</span><span class="p">[</span><span class="nv">$row</span><span class="p">];</span>
+
+        <span class="c1"># Make a choice</span>
+        <span class="nb">push</span> <span class="nv">@queens</span><span class="p">,</span> <span class="nv">$row</span><span class="p">;</span>
+        <span class="c1"># Mark the square as occupied</span>
+        <span class="nv">$occupied</span><span class="p">[</span><span class="nv">$row</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+        <span class="c1"># Explore the consequences</span>
+        <span class="n">explore</span><span class="p">(</span><span class="nv">$depth</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+
+        <span class="c1"># Unmake the choice</span>
+        <span class="nb">pop</span> <span class="nv">@queens</span><span class="p">;</span>
+
+        <span class="c1"># Mark the square as unoccupied</span>
+        <span class="nv">$occupied</span><span class="p">[</span><span class="nv">$row</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nv">$board_size</span> <span class="o">=</span> <span class="mi">8</span><span class="p">;</span> 
+
+<span class="n">explore</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+
+<span class="k">print</span> <span class="s">&quot;total &quot;</span><span class="p">,</span> <span class="nb">scalar</span><span class="p">(</span><span class="nv">@solutions</span><span class="p">),</span> <span class="s">&quot; solutions\n&quot;</span><span class="p">;</span>
+</pre></div>
+
+
+<p><a name="pvj-javasoln"></a></p>
+<h3>Java Solution</h3>
+<p>Starting with the Rosetta Code solution in Perl, I translated the algorithm into Java, sticking as closely as possible to the Way of the Verb.
+I replicated the solution in Java with a minimal amount of object-oriented-ness. 
+A Board class simply wraps the same set of arrays and array manipulations that the Perl solution implements directly.
+These constitute the lookahead check for safe places to put the queen. </p>
+<p>The Java solution implements a static class containing a Linked List to store solutions. 
+This is the only use of non-array objects and has a trivial impact on the solution walltime.</p>
+<p><a href="https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535">Github gist: NQueens.java</a></p>
+<p>(Verbatim code not included for length.)</p>
+<p><a name="pvj-h2hnqueens"></a></p>
+<h2>Head to Head: Walltime vs. Number of Queens</h2>
+<p><img alt="Graph of walltime versus number of queens" src="/images/perl-vs-java-nqueens.png"></p>
+<div class="highlight"><pre><span></span>-----------------------------------------------
+| NQueens | Nsolutions | Java [s]  | Perl [s] |
+|---------|------------|-----------|----------|
+| 8       | 92         | 0.003     | 0.016    |
+| 9       | 352        | 0.006     | 0.067    |
+| 10      | 724        | 0.017     | 0.259    |
+| 11      | 2680       | 0.061     | 1.542    |
+| 12      | 14200      | 0.240     | 8.431    |
+| 13      | 73712      | 1.113     | 48.542   |
+| 14      | 365596     | 6.557     | 303.278  |
+| 15      | 2279184    | 42.619    | 2057.052 |
+-----------------------------------------------
+</pre></div>
+
+
+<p>Java smokes Perl.</p>
+<p>Initially I was using the Unix <code>time</code> utility to time these two,
+and it seemed to be close for smaller problem sizes (N=9 or smaller) - 
+Perl would start up and run faster than Java, measured end-to-end.
+But when you time the program by using timers built into the language, 
+it removes some of the overhead from the timing comparisons,
+and Java becomes the clear winner.</p>
+<p>We can dig deeper and understand this comparison better by using some profiling tools.</p>
+<p><a name="pvj-perlprof"></a></p>
+<h2>Perl Profiling</h2>
+<p>I profiled Perl with <code>Devel::NYTProf</code> , 
+an excellent Perl module <a href="http://search.cpan.org/~timb/Devel-NYTProf-6.04/lib/Devel/NYTProf.pm">available here on Cpanm</a>.</p>
+<p>More details about the profiling tools I used for Perl are on the charlesreid1 wiki at 
+<a href="https://charlesreid1.com/wiki/Perl/Profiling">Perl/Profiling</a>. </p>
+<p>To run with <code>Devel::NYTProf</code>, use `cpanm:</p>
+<div class="highlight"><pre><span></span>$ cpanm Devel::NYTProf
+</pre></div>
+
+
+<p>Now you can run Perl with <code>Devel::NYTProf</code> by doing:</p>
+<div class="highlight"><pre><span></span>$ perl -d:NYTProf nqueens.pl
+</pre></div>
+
+
+<p>This results in a binary output file called <code>nytprof.out</code> that can be processed with several 
+NYTProf post-processing tools. Use the CSV file tool to begin with:</p>
+<div class="highlight"><pre><span></span>$ nytprofcsv nytprof.out
+</pre></div>
+
+
+<p>This puts the CSV file in a folder called <code>nytprof/</code>.</p>
+<p><a name="pvj-perlprofresults"></a></p>
+<h2>Perl Profiling Results</h2>
+<p>The CSV output of the NYTProf module gives a breakdown of 
+the amount of time spent in each method call, how many times it was called, and how much time per call was spent.
+From this we can see the busiest lines are the lines accessing the arrays, and looping over the rows.
+This is confirmation that this algorithm is testing the performance of the arrays,
+and confirms the N queens problem is profiling Perl's core performance with its built-in data structures.</p>
+<p>The profiling results of the 11 queens problem are shown below.</p>
+<div class="highlight"><pre><span></span><span class="c1"># Profile data generated by Devel::NYTProf::Reader</span>
+<span class="c1"># Version: v6.04</span>
+<span class="c1"># More information at http://metacpan.org/release/Devel-NYTProf/</span>
+<span class="c1"># Format: time,calls,time/call,code</span>
+<span class="mf">0.000238</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mf">0.000119</span><span class="p">,</span><span class="k">use</span> <span class="nn">Time::HiRes</span> <span class="sx">qw(time)</span><span class="p">;</span>
+<span class="mf">0.000039</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mf">0.000019</span><span class="p">,</span><span class="k">use</span> <span class="nn">strict</span><span class="p">;</span>
+<span class="mf">0.000491</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mf">0.000246</span><span class="p">,</span><span class="k">use</span> <span class="nn">warnings</span><span class="p">;</span>
+<span class="mf">0.000021</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.000021</span><span class="p">,</span><span class="k">my</span> <span class="nv">$start</span> <span class="o">=</span> <span class="nb">time</span><span class="p">;</span>
+<span class="mf">0.010338</span><span class="p">,</span><span class="mi">2680</span><span class="p">,</span><span class="mf">0.000004</span><span class="p">,</span><span class="nb">push</span> <span class="nv">@solutions</span><span class="p">,</span> <span class="s">&quot;@queens\n&quot;</span><span class="p">;</span>
+<span class="mf">0.009993</span><span class="p">,</span><span class="mi">2680</span><span class="p">,</span><span class="mf">0.000004</span><span class="p">,</span><span class="k">return</span><span class="p">;</span>
+<span class="mf">0.186298</span><span class="p">,</span><span class="mi">164246</span><span class="p">,</span><span class="mf">0.000001</span><span class="p">,</span><span class="nv">$#attacked</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="nv">$board_size</span><span class="p">;</span>
+<span class="mf">0.150338</span><span class="p">,</span><span class="mi">164246</span><span class="p">,</span><span class="mf">0.000001</span><span class="p">,</span><span class="k">for</span><span class="p">(</span> <span class="mi">0</span> <span class="o">..</span> <span class="nv">$#queens</span><span class="p">)</span> <span class="p">{</span> 
+<span class="mf">0.675523</span><span class="p">,</span><span class="mf">1.26035e+06</span><span class="p">,</span><span class="mf">0.000001</span><span class="p">,</span><span class="nv">$attacked</span><span class="p">[</span> <span class="nv">$ix2</span> <span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="mf">1.242624</span><span class="p">,</span><span class="mi">164246</span><span class="p">,</span><span class="mf">0.000008</span><span class="p">,</span><span class="k">for</span> <span class="k">my</span> <span class="nv">$row</span> <span class="p">(</span><span class="mi">0</span> <span class="o">..</span> <span class="nv">$board_size</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+<span class="mf">0.267469</span><span class="p">,</span><span class="mi">166925</span><span class="p">,</span><span class="mf">0.000002</span><span class="p">,</span><span class="n">explore</span><span class="p">(</span><span class="nv">$depth</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+<span class="mf">0.125272</span><span class="p">,</span><span class="mi">166925</span><span class="p">,</span><span class="mf">0.000001</span><span class="p">,</span><span class="nv">$occupied</span><span class="p">[</span><span class="nv">$row</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="mf">0.000002</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.000002</span><span class="p">,</span><span class="n">explore</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="mf">0.000011</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.000011</span><span class="p">,</span><span class="k">my</span> <span class="nv">$duration</span> <span class="o">=</span> <span class="nb">time</span> <span class="o">-</span> <span class="nv">$start</span><span class="p">;</span>
+<span class="mf">0.000075</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.000075</span><span class="p">,</span><span class="k">print</span> <span class="s">&quot;Found &quot;</span><span class="p">,</span> <span class="nb">scalar</span><span class="p">(</span><span class="nv">@solutions</span><span class="p">),</span> <span class="s">&quot; solutions\n&quot;</span><span class="p">;</span>
+<span class="mf">0.000050</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.000050</span><span class="p">,</span><span class="nb">printf</span> <span class="s">&quot;Execution time: %0.3f s \n&quot;</span><span class="p">,</span><span class="nv">$duration</span><span class="p">;</span>
+</pre></div>
+
+
+<p>One of the more interesting pieces of information comes from several lines 
+populating the squares that are on the diagonals with other queens (<code>$attacked</code>):</p>
+<div class="highlight"><pre><span></span># Format: time,calls,time/call,code
+0.186298,164246,0.000001,$#attacked = 2 * $board_size;
+</pre></div>
+
+
+<p>The second column gives the number of times this line is executed - 164,246.
+This is actually the number of solutions that are tried,
+excluding the deepest depth of the tree (the base recursive case).</p>
+<p>The Java profiler will show us that Java explores the exact same number of solutions,
+which is confirmation that these tests are comparing the two languages on equal footing.</p>
+<p><a name="pvj-javaprof"></a></p>
+<h2>Java Profiling</h2>
+<p>More details about the profiling tools I used for Java are on the charlesreid1 wiki at 
+<a href="https://charlesreid1.com/wiki/Java/Profiling">Java/Profiling</a></p>
+<p>I profiled Java with two tools, the <a href="http://jiprof.sourceforge.net/">Java Interactive Profiler (JIP)</a>
+and the <a href="https://docs.oracle.com/javase/7/docs/technotes/samples/hprof.html">HPROF tool</a> 
+that Oracle provides with Java.</p>
+<p>No special compiler flags are needed, so compile as normal:</p>
+<div class="highlight"><pre><span></span>$ javac NQueens.java
+</pre></div>
+
+
+<p>If you are profiling with JIP, you want the JIP jar, as described on the wiki: <a href="https://charlesreid1.com/wiki/Java/Profiling">Java/Profiling</a> 
+Then run Java with the <code>-javaagent</code> flag:</p>
+<div class="highlight"><pre><span></span>$ <span class="nb">export</span> <span class="nv">PATH2JIP</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">HOME</span><span class="si">}</span><span class="s2">/Downloads/jip&quot;</span>
+$ java -javaagent:<span class="si">${</span><span class="nv">PATH2JIP</span><span class="si">}</span>/profile/profile.jar NQueens
+</pre></div>
+
+
+<p>This results in a <code>profile.txt</code> file with detailed profiling information
+(an example is shown below).</p>
+<p>The HPROF tool likewise requires no special compiler flags. 
+It can be run with various options from the command line. 
+Here's a basic usage of HPROF that will reduce the amount of output slightly,
+making the size of the output file a little smaller:</p>
+<div class="highlight"><pre><span></span>$ java -agentlib:hprof<span class="o">=</span><span class="nv">verbose</span><span class="o">=</span>n NQueens
+</pre></div>
+
+
+<p>This dumps out a file called <code>java.hprof.txt</code> that contains a significant amount of information.
+The most useful, though, is at the end, so use tail to get a quick overview of the results:</p>
+<div class="highlight"><pre><span></span>$ tail -n <span class="m">100</span> java.hprof.txt
+</pre></div>
+
+
+<p><a name="pvj-javaprof"></a></p>
+<h2>Java Profiling Results</h2>
+<p>The profiling results from JIP for the 11 queens problem are shown below.</p>
+<div class="highlight"><pre><span></span>+----------------------------------------------------------------------
+|  File: profile.txt
+|  Date: 2017.03.19 19:34:18 PM
++----------------------------------------------------------------------
+
++--------------------------------------+
+| Most expensive methods summarized    |
++--------------------------------------+
+
+               Net
+          ------------
+ Count     Time    Pct  Location
+ =====     ====    ===  ========
+166926    909.5   82.2  NQueens:explore
+164246     55.6    5.0  Board:getDiagAttacked
+166925     41.4    3.7  Board:unchoose
+166925     40.7    3.7  Board:choose
+164246     31.0    2.8  Board:getOccupied
+     1     18.2    1.6  NQueens:main
+  2680      7.3    0.7  Board:toString
+  2680      2.3    0.2  SolutionSaver:saveSolution
+     1      0.2    0.0  SolutionSaver:nSolutions
+     1      0.1    0.0  SolutionSaver:&lt;init&gt;
+     1      0.0    0.0  Board:&lt;init&gt;
+</pre></div>
+
+
+<p>From this output we can see that the method getDiagAttacked, 
+which is called each time we check a solution in the recursive case,
+is called 164,246 times - exactly the same number of solutions that the Perl profiler showed.
+One of the downsides of the JIP profiler is that it only gives high-level 
+profiling information about methods and classes - it stops there.</p>
+<p>Fortunately, however, the HPROF tool picks up where JIP leaves off.
+The HPROF tool makes the program much slower but yields a huge amount of information.
+In addition to an enormous heap dump of all objects appearing on Java's heap at any point,
+it also shows where the time was spent in the low-level methods.</p>
+<div class="highlight"><pre><span></span>SITES BEGIN (ordered by live bytes) Sun Mar 19 19:34:21 2017
+          percent          live          alloc&#39;ed  stack class
+ rank   self  accum     bytes objs     bytes  objs trace name
+    1 86.01% 86.01%  10510976 164234  10510976 164234 300462 int[]
+    2  1.93% 87.94%    235840 2680    235840  2680 300467 char[]
+    3  1.09% 89.03%    133320 1515    133320  1515 300465 char[]
+    4  1.07% 90.11%    131200    8    131200     8 300263 char[]
+    5  1.05% 91.16%    128640 2680    128640  2680 300464 char[]
+    6  1.04% 92.20%    127560 1313    127560  1313 300010 char[]
+    7  0.76% 92.96%     92728 1009     92728  1009 300000 char[]
+    8  0.54% 93.50%     65664    8     65664     8 300260 byte[]
+    9  0.53% 94.02%     64320 2680     64320  2680 300468 java.util.LinkedList$Node
+   10  0.53% 94.55%     64320 2680     64320  2680 300466 java.lang.String
+SITES END
+</pre></div>
+
+
+<p>HPROF tells us that over 86% of the time spent on this program was spent accessing integer arrays.
+Again, confirmation that we are getting a fair measurement of Java's performance with a core data type, the integer array.</p>
+<p><a name="pvj-h2hntested"></a></p>
+<h2>Head to Head: Walltime vs. Number of Solutions Tested</h2>
+<p>Using the results of the profilers from each N queens problem, <code>N = 8 .. 15</code>, 
+I extracted the total number of solutions tried, and confirmed that these numbers were the same 
+between Java and Perl for each of the problem sizes.</p>
+<p>Here is a table of the number of solutions found, and number of solutions tried, versus problem size:</p>
+<div class="highlight"><pre><span></span>-------------------------------------------------------------
+| NQueens | Nsolutions | Ntested     | Java [s]  | Perl [s] |
+|---------|------------|-------------|-----------|----------|
+| 8       | 92         | 1965        | 0.003     | 0.016    |
+| 9       | 352        | 8042        | 0.006     | 0.067    |
+| 10      | 724        | 34815       | 0.017     | 0.259    |
+| 11      | 2680       | 164246      | 0.061     | 1.542    |
+| 12      | 14200      | 841989      | 0.240     | 8.431    |
+| 13      | 73712      | 4601178     | 1.113     | 48.542   |
+| 14      | 365596     | 26992957    | 6.557     | 303.278  |
+| 15      | 2279184    | 168849888   | 42.619    | 2057.052 |
+-------------------------------------------------------------
+</pre></div>
+
+
+<p>When the wall time for Java and Perl are plotted against the number of solutions tested,
+an interesting trend emerges: the two scale the same way, with a fixed vertical offset.</p>
+<p><img alt="Graph of walltime versus number of solutions tested" src="/images/perl-vs-java-ntested.png"></p>
+<p>While this is proving what we already knew, 
+that a compiled language beats a scripted language every time,
+it also provides proof Perl can scale as well as Java - 
+it just takes significantly more overhead and time per statement.</p>
+<p><a name="pvj-applesoranges"></a></p>
+<h2>Why Java Beat Perl</h2>
+<p>Compiled languages are turned into bytecode and pre-optimized for the processor.</p>
+<p>Perl is a scripted and interpreted language, like Python, evaluated piece by piece.</p>
+<p>So, we didn't learn anything surprising. But we did find an interesting result - 
+Perl can scale as well as Java in its implementation of the N queens recursive backtracking algorithm.</p>
+<p><a name="pvj-sources"></a></p>
+<h2>Sources</h2>
+<ol>
+<li>
+<p>"Execution in the Kingdom of Nouns". Steve Yegge. March 2006. Accessed 18 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html">https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html</a>&gt;</p>
+</li>
+<li>
+<p>"N-Queens Problem". Rosetta Code, GNU Free Documentation License. Edited 6 March 2017. Accessed 21 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081421/http://rosettacode.org/wiki/N-queens_problem">https://web.archive.org/web/20170320081421/http://rosettacode.org/wiki/N-queens_problem</a>&gt;</p>
+</li>
+<li>
+<p>"nqueens.pl". Charles Reid. Github Gist, Github Inc. Edited 20 March 2017. Accessed 20 March 2017.
+&lt;<a href="https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535">https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535</a>&gt;</p>
+</li>
+<li>
+<p>"NQueens.java". Charles Reid. Github Gist, Github Inc. Edited 20 March 2017. Accessed 20 March 2017.
+&lt;<a href="https://gist.github.com/charlesreid1/7b8d7b9dffb7b3090039849d72c5fff5">https://gist.github.com/charlesreid1/7b8d7b9dffb7b3090039849d72c5fff5</a>&gt;</p>
+</li>
+<li>
+<p>"Devel::NYTProf". Adam Kaplan, Tim Bunce. Copyright 2008-2016, Tim Bunce. Published 4 March 2008. Accessed 20 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081508/http://search.cpan.org/~timb/Devel-NYTProf-6.04/lib/Devel/NYTProf.pm">https://web.archive.org/web/20170320081508/http://search.cpan.org/~timb/Devel-NYTProf-6.04/lib/Devel/NYTProf.pm</a>&gt;</p>
+</li>
+<li>
+<p>"Perl/Profiling". Charles Reid. Edited 20 March 2017. Accessed 20 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081532/https://charlesreid1.com/wiki/Perl/Profiling">https://web.archive.org/web/20170320081532/https://charlesreid1.com/wiki/Perl/Profiling</a>&gt;</p>
+</li>
+<li>
+<p>"Java/Profiling". Charles Reid. Edited 20 March 2017. Accessed 20 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081535/https://charlesreid1.com/wiki/Java/Profiling">https://web.archive.org/web/20170320081535/https://charlesreid1.com/wiki/Java/Profiling</a>&gt;</p>
+</li>
+<li>
+<p>"JIP - The Java Interactive Profiler." Andrew Wilcox. Published 30 April 2010. Accessed 20 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081538/http://jiprof.sourceforge.net/">https://web.archive.org/web/20170320081538/http://jiprof.sourceforge.net/</a>&gt;</p>
+</li>
+<li>
+<p>"HPROF". Oracle Corporation. Copyright 1993, 2016. Published 2016. Accessed 20 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081540/https://docs.oracle.com/javase/7/docs/technotes/samples/hprof.html">https://web.archive.org/web/20170320081540/https://docs.oracle.com/javase/7/docs/technotes/samples/hprof.html</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/java.html">java</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/perl.html">perl</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/n-queens.html">n-queens</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Enigma Cipher Implementation: Part 4: Combinatorics
             </b></h1>
         
@@ -1135,379 +1725,6 @@ The following code will not recover the original plain text <code>message</code>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Enigma Cipher Implementation: Part 2: Pseudocode
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-03-21T21:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
-                in 
-                <a href="/category/enigma.html">Enigma</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/enigma-cipher-implementation-part-2-pseudocode.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is the second of several posts walking through an implementation of the Enigma cipher in code.</p>
-<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
-detailed, accurate information entirely free of graduate level mathematics, 
-and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
-<h2>The Goal</h2>
-<p>The goal of analyzing the Enigma machine is to better understand the workings of a device that played an important role in the history of computing.
-It is also an excellent system to better understand some of the design decisions we make when creating a code representation of a problem. </p>
-<p>The intention is to replicate some of the encryption mechanisms of the original Enigma. 
-From the Part 1 post, which covered more about how Enigma works, we have built up a basic understanding of what each step does.
-In this post we discuss how to implement this functionality.</p>
-<p>The basic idea is to start with a plaintext input (typed by the operator) and apply a rotating cripher to encrypt it, resulting in a ciphertext output:</p>
-<div class="highlight"><pre><span></span>                _________
-               |         |
-PLAINTEXT ---&gt; | ENIGMA  | ----&gt; CIPHERTEXT
-               |_________|
-</pre></div>
-
-
-<h2>Function or Object?</h2>
-<p>One of the first decisions typically made (sometimes implicitly) is whether to implement the Enigma as a function or an object.
-Is the Enigma a noun, or a verb?</p>
-<h3>The Noun Approach</h3>
-<p>Programming in a language like Java or C++, the noun approach seems perfectly natural:
-start with an Enigma object (the noun), and create more objects to represent more of the nouns (the switchboard, the rotor wheels, and the reflector). 
-Each component is modeled as a black box function taking a character in and returning a character out. 
-Each component stores and organizes information important for it to perform its particular transformation.
-For example, the rotors would store the scrambled version of the alphabet that they implement, 
-while the switchboard and the reflector would store the connected letter pairs.</p>
-<p>This approach reflects the kind of engineering approach that was taken to the design of the Enigma: 
-many simple components, working together in concert, result in a more complex integrated system.</p>
-<p>But one of the reasons the Enigma machine is an interesting system for implementing in code 
-is because of the simplicity of the mechanical operations performed. 
-This can help identify where a person actually begins the software design process. 
-If the design process starts with one foot in the world of objects already, the object approach will be adopted by default.</p>
-<p>With this approach, we are reshaping our data structures to fit the problem. 
-This makes the implementation more modular and the driver easier to read at a high level. 
-However, reshaping the data structures to fit the problem and our abstraction of it 
-can lead to more inefficient code and implementations.</p>
-<h3>The Verb Approach</h3>
-<p>Instead, we can start by examining the encryption process itself - the verb of encryption. 
-The action of encryption consists of elementary steps - swapping out two characters. 
-Each of these actions is simple enough that it can be implemented using built-in string manipulation methods,
-and all of the quantities being stored are likewise simple enough that no exotic data structures are required. </p>
-<p>The verb approach requires considering the problem up-front (possibly recasting it in different terms),
-and thinking through the actions involved in order to best utilize simple, built-in data structures and functionality.</p>
-<p>With this approach we essentially reshape the problem to fit our data structures, rather than the other way around.</p>
-<h2>Applying the Verb Approach to the Rotors</h2>
-<h3>Rotors</h3>
-<p>To get a better sense of what the verb approach looks like, let's look at the Enigma rotors.</p>
-<p>Each rotor implements a particular permutations of the 26 letters of the alphabet: </p>
-<p><img alt="Enigma rotor" src="/images/enigma_rotor.jpg"></p>
-<p>This is equivalent to matching up two strings. To make things slightly more concrete, let's look at Rotor I, nicknamed Royal
-(due to the location of its notch at the letter R), implemented the scrambled alphabet "EKMFLGDQVZNTOWYHXUSPAIBRCJ".
-With an offset of 0, this would therefore implement the following shift:</p>
-<div class="highlight"><pre><span></span>ABCDEFGHIJKLMNOPQRSTUVWXYZ
-||||||||||||||||||||||||||
-EKMFLGDQVZNTOWYHXUSPAIBRCJ
-</pre></div>
-
-
-<p>This operation, when broken down, is trivial: we are matching two characters from two strings, both at a particular location.</p>
-<p>Starting with a char, representing the character coming into the rotor,
-we can perform a two-step operation: 
-1. Get the index of the incoming character in the normal alphabet <code>ABCDEF...</code>.
-2. Get the corresponding character at that index in the scrambled alphabet <code>EKMFLG...</code>.</p>
-<p>We will also need to perform the reverse operation when we return the signal back through the machine from the reflector.
-In that case, we're actually performing the opposite lookup, for the same wheel:</p>
-<div class="highlight"><pre><span></span>EKMFLGDQVZNTOWYHXUSPAIBRCJ
-||||||||||||||||||||||||||
-ABCDEFGHIJKLMNOPQRSTUVWXYZ
-</pre></div>
-
-
-<p>When we were going through Rotor I the first time, A became E, and E became L;
-when going through in reverse, E now becomes A, and L now becomes E.</p>
-<p>The procedure can also be reversed:
-1. Get the index of the incoming character in the scrambled alphabet <code>EKMFLG...</code>.
-2. Get the corresponding character at that index in the normal alphabet <code>ABCDEF...</code>.</p>
-<p>Applying this multiple times in sequence applies multiple scrambles
-and replicates multiple rotors.</p>
-<h3>Example of Verb Approach: Rotor Rotation</h3>
-<p>One of the reasons an object-oriented approach may seem natural,
-besides the chosen language suggesting it, 
-is because the Enigma is an object with a <em>state</em>.
-Objects provide a natural way of representing things with an internal state, 
-or information specific to that entity and required for its operation.</p>
-<p>For this reason, it may seem at first blush that the Engima <em>requires</em> an object-oriented implementation.
-However, we can continue with our verb-centric thinking, and examine how the operations change when the wheels are rotated.</p>
-<div class="highlight"><pre><span></span>After 2 rotations:
-
-ABCDEFGHIJKLMNOPQRSTUVWXYZAB
-  ||||||||||||||||||||||||||
-  EKMFLGDQVZNTOWYHXUSPAIBRCJ
-
-After 4 rotations:
-
-ABCDEFGHIJKLMNOPQRSTUVWXYZABCD
-    ||||||||||||||||||||||||||
-    EKMFLGDQVZNTOWYHXUSPAIBRCJ
-</pre></div>
-
-
-<p>As the wheels rotate, we are still performing the same index lookup operations, 
-we are just rotating each scrambled alphabet by one character. 
-Again, this is a trivial operation that is probably built in for string types. </p>
-<h3>Rotor Pseudocode</h3>
-<p>Putting all of this together, here's pseudocode for a single forward transformation by an Engima rotor: </p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabet 
-for each character in plaintext message:
-    get index of input character in normal alphabet
-    get new character at that index in scrambled alphabet
-    concatenate transformed character to ciphertext message 
-</pre></div>
-
-
-<p>Because the Enigma has multiple rotors, we also want pseudocode for multiple rotors:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-    concatenate transformed character to ciphertext message 
-</pre></div>
-
-
-<p>Likewise, to apply multiple rotations in reverse, we just swap the alphabets out:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
-    for each scrambled alphabet:
-        get index of character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-    concatenate transformed character to ciphertext message 
-</pre></div>
-
-
-<h3>A More Complete Enigma Pseudocode</h3>
-<p>To combine these operations, or add additional operations, we just add them before concatenating the final transformed character to the ciphertext message.
-Thus, a more complete pseudocode would include other steps:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-
-    # Apply forward rotor transformation
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-
-    concatenate transformed character to ciphertext message 
-</pre></div>
-
-
-<p>Now let's cover the switchboard and reflector transformations.</p>
-<h2>The Switchboard</h2>
-<p>We can take the same verb-based approach to the switchboard as we took for the rotors.
-When we think through the actual operation being performed by the switchboard, 
-it is even simpler than the operation performed by the rotor wheels.
-We have pairs of letters, and we are simply looking for one letter in a pair, and swapping it out with the other letter in the pair.
-In the case of the switchboard, Enigma operators utilized 7-10 wires to connect pairs of letters; the remaining letters were unchanged.
-So the switchboard step is very simple:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define list of switchboard swap pairs
-for each character in message:
-    for each pair in swap pairs:
-        if character in swap pair, swap its value
-    add character to ciphertext
-</pre></div>
-
-
-<p>That's it! No need for a reverse function, since the swap procedure is symmetric. 
-(Note that if there is no wire connecting a letter to another letter, there is no swap operation, and the character is added to the ciphertext directly.)</p>
-<h2>The Reflector</h2>
-<p>The reflector pseudocode looks identical to the switchboard pseudocode,
-except the reflector defines pairings for all 13 posible letter pairs, instead of only 7-10.</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define list of reflector swap pairs
-for each character in message:
-    for each pair in swap pairs:
-        if character in swap pair, swap its value
-    add character to ciphertext
-</pre></div>
-
-
-<p>Again, no need for a reverse version, since the reflector is a symmetric transformation.</p>
-<h2>Nearing a Complete Enigma Pseudocode</h2>
-<p>Almost there. We have one more thing going on - those rotor wheels are moving.
-Add the "increment rotor wheels" verb, and define that below.</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply forward rotor transformation
-    for each rotor/scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    concatenate transformed input character to ciphertext message 
-
-    increment rotor wheels
-</pre></div>
-
-
-<h2>Incrementing the Rotor Wheels</h2>
-<p>Each rotor wheel has a notch located at a particular letter.
-The wheels were identified by the letter on which the notch was located 
-(Rotor I was "Royal" because the notch was located at "R", and so on).</p>
-<p>The notches were designed to catch on the notches of other rotor wheels,
-in such a way that the wheels would turn together periodically.
-The right-most wheel would rotate once per keypress. 
-Once per 26 letters (if S = 26), the notch would catch the notch of the next rotor over
-and advance it forward by 1 letter. It was this mechanism that kept the machine
-constantly skipping through the space of possible keys, mapping each character to each other character,
-with one distinct key (alphabet scramble) used per letter of the message.</p>
-<p>To increment the wheels in pseudocode:</p>
-<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">increment</span> <span class="nx">rotors</span>:
-    <span class="kt">for</span> <span class="nx">each</span> <span class="nx">rotor</span><span class="o">/</span><span class="nx">scrambled</span> <span class="nx">alphabet</span><span class="p">,</span> <span class="nx">left</span> <span class="nx">to</span> <span class="nx">right</span>:
-        <span class="kt">get</span> <span class="nx">index</span> <span class="nx">of</span> <span class="nx">left</span> <span class="nx">notch</span> <span class="k">in</span> <span class="nx">left</span> <span class="nx">alphabet</span>
-        <span class="nx">get</span> <span class="nx">index</span> <span class="nx">of</span> <span class="nx">right</span> <span class="nx">notch</span> <span class="k">in</span> <span class="nx">right</span> <span class="nx">alphabet</span>
-        <span class="k">if</span> <span class="nx">left</span> <span class="nx">index</span> <span class="nx">equals</span> <span class="nx">right</span> <span class="nx">index</span>:
-            <span class="kt">cycle</span> <span class="nx">left</span> <span class="nx">alphabet</span> <span class="nx">forward</span> <span class="mi">1</span> <span class="nx">character</span>
-    <span class="nx">cycle</span> <span class="nx">right</span><span class="o">-</span><span class="nx">most</span> <span class="nx">alphabet</span> <span class="nx">forward</span> <span class="mi">1</span> <span class="nx">character</span>
-</pre></div>
-
-
-<h2>Enigma Pseudocode</h2>
-<p>Almost there. We have one more thing going on - those rotor wheels are moving.
-Add the "increment rotor wheels" verb, and define that below.</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply forward rotor transformation
-    for each rotor/scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    concatenate transformed input character to ciphertext message 
-
-    # Increment rotor wheels
-    for each rotor/scrambled alphabet, left to right:
-        get index of left notch in left alphabet
-        get index of right notch in right alphabet
-        if left index equals right index:
-            cycle left alphabet forward 1 character
-    cycle right-most alphabet forward 1 character
-</pre></div>
-
-
-<h2>Sources</h2>
-<ol>
-<li>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</li>
-</ol></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/ciphers.html">ciphers</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/enigma.html">enigma</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/encryption.html">encryption</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1543,6 +1760,9 @@ for each character in plaintext message:
 
             <h2>March 2019</h2>
 
+            <p class="archive">
+            <a href="/the-josephus-problem-part-2-two-examples.html">The Josephus Problem: Part 2: Two Examples</a>
+            </p>
             <p class="archive">
             <a href="/the-josephus-problem-part-1-the-problem.html">The Josephus Problem: Part 1: The Problem</a>
             </p>

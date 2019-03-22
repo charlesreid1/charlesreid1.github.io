@@ -102,6 +102,236 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                AWSome Day Seattle Notes: Part 1: The Basics
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-04-11T10:00:00-07:00" pubdate>Tuesday 04/11/2017</time>
+                in 
+                <a href="/category/charlesreid1.html">Charlesreid1</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="/awsome-day-seattle-notes-part-1-the-basics.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>These notes are also available on git.charlesreid1.com 
+<a href="https://git.charlesreid1.com/charlesreid1/aws/src/branch/master/awsome-day-sea-2018/Part1.md">here</a>
+or in
+<a href="https://git.charlesreid1.com/charlesreid1/aws">https://git.charlesreid1.com/charlesreid1/aws</a>.</p>
+<h1>AWSome Day Notes: Part 1: The Basics</h1>
+<p>Following are some notes from Amazon's AWSome Day (Tuesday, February 27, 2018).</p>
+<h2>EC2 Costs and Scheduling</h2>
+<p>Cost of a node:</p>
+<ul>
+<li>Important to understand Amazon's price model: users pay for <em>access</em>, not for <em>hardware</em></li>
+<li>Cost of AWS node is cost for <em>on the spot access</em></li>
+</ul>
+<p>Scheduling:</p>
+<ul>
+<li>If you can anticipate your usage, you can schedule instances in advance, and get a discount</li>
+<li>Discount of 50% for one-year reservation (if you keep it busy for 6 months, you've made your money back)</li>
+<li>Spot instances also available - need to be robust to sudden starts/stops (good for embarrassingly parallel jobs)</li>
+<li>Cheaper to anticipate your usage and plan ahead</li>
+</ul>
+<h2>EC2 Transfer Costs</h2>
+<p>EC2 Instances:</p>
+<ul>
+<li>See <a href="https://aws.amazon.com/ec2/pricing/on-demand/">EC2 Instance Pricing - Data Transfer</a> section</li>
+<li>Network costs for AWS nodes are an important consideration for high-traffic nodes (&gt;10 TB)</li>
+</ul>
+<p>EC2-Internet:</p>
+<ul>
+<li>Traffic going from the internet <em>into</em> a node is always free</li>
+<li>Traffic going from the node <em>out</em> to the internet incurrs costs after 10 TB</li>
+<li>Outbound traffic costs ~$90/TB</li>
+</ul>
+<p>AWS Regions:</p>
+<ul>
+<li>Traffic <em>within</em> a region does not incur costs (well... it's complicated)</li>
+<li>Traffic <em>between</em> regions will incur costs</li>
+</ul>
+<p>EC2-S3:</p>
+<ul>
+<li>Transfer <em>into</em> an EC2 node from S3 bucket in same AWS region does not incur costs</li>
+<li>Transfer <em>out of</em> an EC2 node into S3 bucket in same AWS region does not incur costs</li>
+<li>(If they did charge you, they would be double-dipping...)</li>
+</ul>
+<p>Note: the list of prices is like a legal document, so use the <a href="https://calculator.s3.amazonaws.com/index.html">AWS Monthly Calculator</a> to estimate monthly costs with more detail.</p>
+<h2>S3 Transfer Costs</h2>
+<ul>
+<li>See <a href="https://aws.amazon.com/s3/pricing/">S3 Pricing - Data Transfer</a></li>
+<li>Price model for storage is simliar to price model for AWS nodes: you pay for <em>access</em>, not for <em>hardware</em></li>
+<li>To give a sense of why, think about logistics of a large "disk farm": all the intensive operations are done by the head nodes, disks are just passive</li>
+<li>Busier disk farm needs sophisticated hardware for parallel read/write, high-bandwidth network lines, fast encryption</li>
+</ul>
+<p>S3 storage pricing:</p>
+<ul>
+<li>Rule of thumb: ~$20/TB to store the data</li>
+</ul>
+<p>S3-Internet:</p>
+<ul>
+<li>Transfer <em>into</em> an S3 bucket from the internet is always free (getting stuff into the bucket is the easy part - that's how they get ya)</li>
+<li>Transfer <em>out</em> of an S3 bucket to the internet costs ~$90/TB</li>
+</ul>
+<p>S3-EC2:</p>
+<ul>
+<li>Transfer <em>out</em> of an S3 bucket to most other Amazon regions costs ~$20/TB</li>
+<li>Transfer <em>out</em> of an S3 bucket into an EC2 node in the same AWS region does not incur costs</li>
+<li>Transfer <em>into</em> an S3 bucket from an EC2 node in the same AWS region does not incur costs</li>
+</ul>
+<p>As mentioned above, this means you won't be double-charged for transferring data from an S3 bucket to an EC2 node, then from the EC2 node out to the internet.</p>
+<h2>S3 Storage Hierarchies</h2>
+<p>Continuing with the theme of planning ahead...</p>
+<p>Storage hierarchies:</p>
+<ul>
+<li>Biggest cost of storage is not disk space, it's transfer</li>
+<li>Paying for speed, paying for timeliness, paying for <em>on the spot access</em> to your data</li>
+<li>Your data will be cheaper if you're willing to wait a few minutes or deal with a slow connection</li>
+</ul>
+<p>Storage hierarchies:</p>
+<ul>
+<li>Standard (~$20/TB)</li>
+<li>Infrequent access (~$13/TB) - less frequent access, but at same transfer speed</li>
+<li>Glacier (~$4/TB) - delay of up to 12 hours (smaller files = faster), deleting data <em>newer</em> than 3 months incurrs costs</li>
+</ul>
+<p><a href="https://aws.amazon.com/glacier/pricing/">Glacier Pricing</a></p>
+<p>Lifecycle rules:
+* Can create rules to move old data from S3 buckets into Glacier</p>
+<h2>EFS vs EBS vs S3</h2>
+<p>When do you use EFS, EBS, or S3?</p>
+<p>Elastic Block Storage (EBS):</p>
+<ul>
+<li><strong>This is probably what you want</strong></li>
+<li>EBS is block storage for one EC2 node - designed for general purpose applications</li>
+<li>Cost: ~$120/TB/mo</li>
+</ul>
+<p>Elastic File System (EFS):</p>
+<ul>
+<li>EFS is block storage for multiple EC2 nodes - designed for fast read-write operations, many incremental changes to files</li>
+<li>"Elastic" part of EFS - can dynamically grow as hard drive grows (PB+ scale)</li>
+<li>Hard drive on steroids - like plugging in a hard drive over a network, but big/fast/smart enough to be accessible to thousands+ of machines</li>
+<li>Expensive: ~$300/TB/mo</li>
+</ul>
+<p>S3:</p>
+<ul>
+<li>S3 is object storage - it stores blobs of raw data, creates snapshots in time</li>
+<li>If you change a single character of a large file, bucket has to create new shapshot</li>
+<li>Booting from S3 as a hard disk would take you about a thousand years... don't do that</li>
+<li>Cheapest: ~$20/TB</li>
+</ul>
+<p>Cool but <span class="math">\($\)</span>:</p>
+<ul>
+<li>You may see "appliances" mentioned in Amazon documentation - Amazon will ship you a physical data transfer appliance that encrypts and copies data on site (<a href="https://docs.aws.amazon.com/snowball/latest/ug/images/Snowball-closed-600w.png">Snowball</a>)</li>
+<li>Can also purchase special network connections that bypass the public internet - like ISP putting alligator clips between your network lines and Amazon's network lines</li>
+</ul>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="/tag/aws.html">aws</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/cloud.html">cloud</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/vpc.html">vpc</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/containers.html">containers</a>
+                    &nbsp;&nbsp;
+                    <a href="/tag/data-engineering.html">data engineering</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Setting Up a Self-Hosted Github Clone with Gitea
             </b></h1>
         
@@ -1209,474 +1439,6 @@ exploring yet another application of this unusually handy language.</p></div>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Fixing Bottlenecks in the Guava Traveling Salesperson Problem Code
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-03-29T14:00:00-07:00" pubdate>Wednesday 03/29/2017</time>
-                in 
-                <a href="/category/java.html">Java</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="/fixing-bottlenecks-in-the-guava-traveling-salesperson-problem-code.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><ul>
-<li><a href="#tsp2-intro">Intro</a></li>
-<li><a href="#tsp2-graphs">The Graphs We Are Solving</a><ul>
-<li><a href="#tsp2-viz-graphs">Visualizations of Graphs</a></li>
-</ul>
-</li>
-<li><a href="#tsp2-guava-tsp-soln">Guava TSP Solution</a><ul>
-<li><a href="#tsp2-timing-guava-tsp">Timing the TSP Solution</a></li>
-</ul>
-</li>
-<li><a href="#tsp2-improving">Improving the Guava TSP Solution</a><ul>
-<li><a href="#tsp2-flaw">The Flaw</a></li>
-<li><a href="#tsp2-fixing">Fixing the Flaw</a></li>
-<li><a href="#tsp2-pessimist">The Pessimist Algorithm</a></li>
-</ul>
-</li>
-<li><a href="#tsp2-timing">Timing Results</a></li>
-<li><a href="#tsp2-future">Future Work</a></li>
-</ul>
-<p><a name="tsp2-intro"></a></p>
-<h2>Intro</h2>
-<p>In a prior blog post we introduced you to the traveling salesperson problem (TSP),
-which involves finding the shortest path through every city in a group of cities
-connected by a network of roads. Using Google Guava, we have implemented a solution 
-to the TSP in Java.</p>
-<p>Our philosophy toward timing, profiling, and optimization is that it is always best 
-to work from data - and timing is the first place to begin collecting data.
-As we will show in this blog post, simply timing your function for different problem sizes
-can reveal scaling behavior that indicates bottlenecks, bugs, or inefficiencies in the algorithm.</p>
-<p>In this post, we use simple timing tools and a spreadsheet 
-to plot scaling behavior and identify bottlenecks in the 
-traveling salesperson problem code. Fixing the bottleneck
-led to a reduction in cost of <strong>two orders of magnitude</strong>.</p>
-<p>Here's a preview:</p>
-<p><img alt="TSP Guava Solution scaling results - initial and pessimist algorithms" src="/images/tsp-guava-initial-pessimist.png"></p>
-<p>In this post we'll cover what we did to time the problem,
-the initial results, and the algorithm improvement that led to 
-the massive performance improvement.</p>
-<p>But first, let's look at some of the graphs that are being solved.</p>
-<p><a name="tsp2-graphs"></a></p>
-<h2>The Graphs We Are Solving</h2>
-<p>Let's start by having a look at some of the graphs we will be solving,
-and the representation of the problem.</p>
-<p><a name="tsp2-viz-graphs"></a></p>
-<h3>Visualizations of Graphs</h3>
-<p>The first few graphs start out simple: here is a randomly generated 4-node traveling salesman problem
-(we wil cover the code that generates the graph pictured here in a moment):</p>
-<p><img alt="TSP graph with 4 nodes" src="/images/graphviz_tsp_4.png"></p>
-<p><strong>Shortest Route: [0, 2, 3, 1] Distance: 112.0</strong></p>
-<p>Here is another randomly generated graph with 5 nodes:</p>
-<p><img alt="TSP graph with 5 nodes" src="/images/graphviz_tsp_5.png"></p>
-<p><strong>Shortest Route: [0, 4, 2, 1, 3]   Distance: 130.0</strong></p>
-<p>With 6 nodes:</p>
-<p><img alt="TSP graph with 6 nodes" src="/images/graphviz_tsp_6.png"></p>
-<p><strong>Shortest Route: [0, 2, 4, 1, 5, 3]    Distance: 163.0</strong></p>
-<p>But problem of this sise are still trivially easy for a processor to handle.
-Our inefficient, first-pass algorithm started to show signs of eating up CPU cycles 
-at around 9 nodes (albeit less than 1 second). Here is the graph with 9 nodes:</p>
-<p><img alt="TSP graph with 9 nodes" src="/images/graphviz_tsp_9.png"></p>
-<p><strong>Shortest Route: [0, 6, 1, 7, 3, 2, 5, 8, 4]   Distance: 166.0</strong></p>
-<p>With 12 nodes:</p>
-<p><img alt="TSP graph with 12 nodes" src="/images/graphviz_tsp_12.png"></p>
-<p><strong>Shortest Route: [0, 7, 5, 4, 1, 8, 6, 10, 11, 9, 3, 2]    Distance: 236.0</strong></p>
-<p>At 14 nodes, even the efficient algorithm crosses the 1 second threshold.</p>
-<p><img alt="TSP graph with 14 nodes" src="/images/graphviz_tsp_14.png"></p>
-<p><strong>Shortest Route: [0, 2, 6, 10, 13, 12, 7, 4, 1, 11, 5, 3, 9, 8]    Distance: 277.0</strong></p>
-<p>We tested randomly-generated, fully-connected graphs of up to 18 nodes, 
-and the algorithm was able to compute solutions within a few minutes.
-Here is an 18-node graph:</p>
-<p><img alt="TSP graph with 18 nodes" src="/images/graphviz_tsp_18.png"></p>
-<p><strong>Shortest Route: [0, 3, 10, 6, 12, 5, 11, 2, 14, 8, 13, 4, 7, 1, 9]    Distance: 267.0</strong></p>
-<p><a name="tsp2-guava-tsp-soln"></a></p>
-<h2>The Guava TSP Solution</h2>
-<p>In a prior post we covered the implementation of a solution to the TSP 
-using Guava's Network objects. This implementation utilized a recursive
-depth-first search algorithm to search for the shortest path among all nodes.</p>
-<p>To recap, here was our pseudocode for the TSP solution:</p>
-<div class="highlight"><pre><span></span>explore(neighbors):
-
-    if(no more unvisited neighbors):
-        # This is the base case.
-        if total distance is less than current minimum:
-            save path and new minimum
-
-    else:
-        # This is the recursive case.
-        for neighbor in unvisited neighbors:
-            visit neighbor
-            explore(new_neighbors)
-            unvisit neighbor
-</pre></div>
-
-
-<p>And here is what the recursive backtracking <code>explore()</code> method looked like
-when implemented in Java:</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** Recursive backtracking method: explore possible solutions starting at this node, having made nchoices */</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">explore</span><span class="o">(</span><span class="n">Node</span> <span class="n">node</span><span class="o">,</span> <span class="kt">int</span> <span class="n">nchoices</span><span class="o">)</span> <span class="o">{</span>
-
-        <span class="k">if</span><span class="o">(</span><span class="n">nchoices</span> <span class="o">==</span> <span class="n">graphSize</span><span class="o">)</span> <span class="o">{</span>
-            <span class="c1">// </span>
-            <span class="c1">// BASE CASE</span>
-            <span class="c1">//</span>
-            <span class="k">if</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">&lt;</span> <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">||</span> <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
-                <span class="c1">// Solution base case</span>
-                <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span><span class="o">;</span>
-                <span class="n">printSolution</span><span class="o">();</span>
-            <span class="o">}</span>
-
-        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-            <span class="c1">//</span>
-            <span class="c1">// RECURSIVE CASE</span>
-            <span class="c1">//  </span>
-            <span class="n">Set</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="na">adjacentNodes</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
-            <span class="k">for</span><span class="o">(</span><span class="n">Node</span> <span class="n">neighbor</span> <span class="o">:</span> <span class="n">neighbors</span><span class="o">)</span> <span class="o">{</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">neighbor</span><span class="o">.</span><span class="na">visited</span> <span class="o">==</span> <span class="kc">false</span><span class="o">)</span> <span class="o">{</span>
-
-                    <span class="kt">int</span> <span class="n">distance_btwn</span> <span class="o">=</span> <span class="o">-</span><span class="mi">10000</span><span class="o">;</span>
-
-                    <span class="k">for</span><span class="o">(</span> <span class="n">Edge</span> <span class="n">edge</span> <span class="o">:</span> <span class="n">graph</span><span class="o">.</span><span class="na">edgesConnecting</span><span class="o">(</span><span class="n">node</span><span class="o">,</span> <span class="n">neighbor</span><span class="o">)</span> <span class="o">)</span> <span class="o">{</span>
-                        <span class="n">distance_btwn</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="na">value</span><span class="o">;</span>
-                    <span class="o">}</span>
-
-                    <span class="c1">// Make a choice</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="n">neighbor</span><span class="o">.</span><span class="na">id</span><span class="o">;</span>
-                    <span class="n">neighbor</span><span class="o">.</span><span class="na">visit</span><span class="o">();</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">+=</span> <span class="n">distance_btwn</span><span class="o">;</span>
-
-                    <span class="c1">// Explore the consequences</span>
-                    <span class="n">explore</span><span class="o">(</span><span class="n">neighbor</span><span class="o">,</span><span class="n">nchoices</span><span class="o">+</span><span class="mi">1</span><span class="o">);</span>
-
-                    <span class="c1">// Unmake the choice</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="o">;</span>
-                    <span class="n">neighbor</span><span class="o">.</span><span class="na">unvisit</span><span class="o">();</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">-=</span> <span class="n">distance_btwn</span><span class="o">;</span>
-                <span class="o">}</span>
-                <span class="c1">// Move on to the next choice (continue loop)</span>
-            <span class="o">}</span>               
-        <span class="o">}</span> <span class="c1">// End base/recursive case</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<p>Note: full TSP code available at <a href="http://git.charlesreid1.com/charlesreid1/tsp">http://git.charlesreid1.com/charlesreid1/tsp</a>.</p>
-<p><a name="tsp2-timing-guava-tsp"></a></p>
-<h3>Timing the TSP Solution</h3>
-<p>To time the Guava solution to the TSP, we utilized Java's system time
-to measure the amount of time it took to compute solutions, 
-excluding the time spent on graph construction.</p>
-<p>Here is the code that performs the timing of the call to the explore method:</p>
-<div class="highlight"><pre><span></span>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IllegalArgumentException</span> <span class="o">{</span> 
-
-        <span class="o">...</span>
-
-        <span class="kt">double</span> <span class="n">conn</span> <span class="o">=</span> <span class="mf">1.00</span><span class="o">;</span>
-        <span class="n">TSP</span> <span class="n">t</span> <span class="o">=</span> <span class="k">new</span> <span class="n">TSP</span><span class="o">(</span><span class="n">N</span><span class="o">,</span><span class="n">conn</span><span class="o">);</span>
-
-        <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="n">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span>
-        <span class="n">t</span><span class="o">.</span><span class="na">solve</span><span class="o">();</span>
-        <span class="kt">long</span> <span class="n">end</span> <span class="o">=</span> <span class="n">System</span><span class="o">.</span><span class="na">nanoTime</span><span class="o">();</span>
-        <span class="kt">long</span> <span class="n">duration</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="o">;</span>
-
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">printf</span><span class="o">(</span><span class="s">&quot;Elapsed time %03f s\n &quot;</span><span class="o">,</span> <span class="o">(</span><span class="n">duration</span><span class="o">/</span><span class="mf">1E9</span><span class="o">)</span> <span class="o">);</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<p>The elapsed time is computed using <code>System.nanoTime()</code>.</p>
-<p>Writing a script to feed variable size graphs and time the resulting code 
-showed some pretty awful scaling behavior: </p>
-<p><img alt="Java Guava TSP Solution Scaling" src="/images/tsp-java-scaling.png"></p>
-<p>This scaling behavior reveals a bottleneck in the algorithm:
-the algorithm scales the same way the problem size scales.
-A more efficient algorithm would be capable of ruling out 
-more of the solution space as the graph size grows,
-allowing the algorithm to scale better at large problem sizes.</p>
-<p>This led to some reconsideration of the algorithm.</p>
-<p><a name="tsp2-improving"></a></p>
-<h2>Improving the Guava TSP Solution</h2>
-<p>The original TSP algorithm implemented a subtle flaw - 
-not by implementing a mistake in the calculation, 
-but by ignoring an important piece of information.</p>
-<p><a name="tsp2-theflaw"></a></p>
-<h3>The Flaw</h3>
-<p>As the recursive depth-first search traverses the graph, the algorithm is checking if all nodes have been traversed.
-When all nodes have been traversed, it then compares the distance of that journey to the current shortest journey.
-If the new journey is shorter, it is saved as the new shortest journey, otherwise it is ignored and we move on.</p>
-<p>What this ignores is the fact that any path, at any point, can be checked to see if it is 
-longer than the current minimum, and if it is, any possibilities that follow from it can be skipped.</p>
-<p>For example, consider the TSP on a graph of six cities, A B C D E F.</p>
-<p>Suppose that the algorithm is in the midst of the recursive backtracking solution,
-and has a current minimum distance and minimum path of the route <code>A-B-E-D-C-F</code>, which is 24 miles.</p>
-<p>Now suppose that the algorithm is searching for solutions that begin with the choice <code>A-E-C</code>,
-and the distance <code>A-E-C</code> is 28 miles.</p>
-<p>The naive algorithm ignores this information, and continues choosing from among the 
-3 remaining cities, computing the total length for <span class="math">\(3! = 6\)</span> additional routes, and finding 
-that all six of them do not work.</p>
-<p>The smart algorithm checks <em>each time it chooses a new node</em> whether the length of the current route
-exceeds the current minimum route distance (if one has been found/set).
-If not, the algorithm keeps going, but if so, it skips choosing neighbors 
-and returns directly to the parent caller.</p>
-<p><a name="tsp2-fixing"></a></p>
-<h3>Fixing the Flaw</h3>
-<p>Fixing the flaw is surpsingly easy: we just add an if statement.</p>
-<p>Illustrating first with the pseudocode:</p>
-<div class="highlight"><pre><span></span>explore(neighbors):
-
-    if(no more unvisited neighbors):
-        # This is the base case.
-        if total distance is less than current minimum:
-            save path and new minimum
-
-    else:
-        # This is the recursive case.
-        if current distance is greater than current minimum:
-            skip
-        else:
-            for neighbor in unvisited neighbors:
-                visit neighbor
-                explore(new_neighbors)
-                unvisit neighbor
-</pre></div>
-
-
-<p>In our Java implementation, the algorithm simply prints out solutions as it goes,
-then returns to the calling function whether a solution was found or not.
-Thus, we can "skip" a set of solutions by just returning to the calling function,
-using a <code>return</code> statement.</p>
-<div class="highlight"><pre><span></span>        <span class="k">if</span><span class="o">(</span><span class="n">nchoices</span> <span class="o">==</span> <span class="n">graphSize</span><span class="o">)</span> <span class="o">{</span>
-            <span class="c1">// </span>
-            <span class="c1">// BASE CASE</span>
-            <span class="c1">//</span>
-            <span class="k">if</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">&lt;</span> <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">||</span> <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
-                <span class="c1">// Solution base case:</span>
-                <span class="k">this</span><span class="o">.</span><span class="na">min_distance</span> <span class="o">=</span> <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span><span class="o">;</span>
-                <span class="n">printSolution</span><span class="o">();</span>
-            <span class="o">}</span>
-
-        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-            <span class="c1">//</span>
-            <span class="c1">// RECURSIVE CASE</span>
-            <span class="c1">//  </span>
-
-            <span class="cm">/* </span>
-<span class="cm">             * The following lines result in a huge computational cost savings.</span>
-<span class="cm">            */</span>
-            <span class="k">if</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">min_distance</span><span class="o">&gt;</span><span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span><span class="o">&gt;</span><span class="k">this</span><span class="o">.</span><span class="na">min_distance</span><span class="o">)</span> <span class="o">{</span>
-                <span class="c1">// Just give up already. It&#39;s meaningless. There&#39;s no point.</span>
-                <span class="k">return</span><span class="o">;</span>
-            <span class="o">}</span>
-
-            <span class="c1">// Everything else stays exactly the same</span>
-            <span class="n">Set</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="na">adjacentNodes</span><span class="o">(</span><span class="n">node</span><span class="o">);</span>
-            <span class="k">for</span><span class="o">(</span><span class="n">Node</span> <span class="n">neighbor</span> <span class="o">:</span> <span class="n">neighbors</span><span class="o">)</span> <span class="o">{</span>
-                <span class="k">if</span><span class="o">(</span><span class="n">neighbor</span><span class="o">.</span><span class="na">visited</span> <span class="o">==</span> <span class="kc">false</span><span class="o">)</span> <span class="o">{</span>
-
-                    <span class="kt">int</span> <span class="n">distance_btwn</span> <span class="o">=</span> <span class="o">-</span><span class="mi">10000</span><span class="o">;</span>
-
-                    <span class="k">for</span><span class="o">(</span> <span class="n">Edge</span> <span class="n">edge</span> <span class="o">:</span> <span class="n">graph</span><span class="o">.</span><span class="na">edgesConnecting</span><span class="o">(</span><span class="n">node</span><span class="o">,</span> <span class="n">neighbor</span><span class="o">)</span> <span class="o">)</span> <span class="o">{</span>
-                        <span class="n">distance_btwn</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="na">value</span><span class="o">;</span>
-                    <span class="o">}</span>
-
-                    <span class="c1">// Make a choice</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="n">neighbor</span><span class="o">.</span><span class="na">id</span><span class="o">;</span>
-                    <span class="n">neighbor</span><span class="o">.</span><span class="na">visit</span><span class="o">();</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">+=</span> <span class="n">distance_btwn</span><span class="o">;</span>
-
-                    <span class="c1">// Explore the consequences</span>
-                    <span class="n">explore</span><span class="o">(</span><span class="n">neighbor</span><span class="o">,</span><span class="n">nchoices</span><span class="o">+</span><span class="mi">1</span><span class="o">);</span>
-
-                    <span class="c1">// Unmake the choice</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="o">;</span>
-                    <span class="n">neighbor</span><span class="o">.</span><span class="na">unvisit</span><span class="o">();</span>
-                    <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span> <span class="o">-=</span> <span class="n">distance_btwn</span><span class="o">;</span>
-                <span class="o">}</span>
-                <span class="c1">// Move on to the next choice (continue loop)</span>
-            <span class="o">}</span>               
-        <span class="o">}</span> <span class="c1">// End base/recursive case</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<p><a name="tsp2-pessimist"></a></p>
-<h3>The Pessimist Algorithm</h3>
-<p>This algorithm is dubbed The Pessimist Algorithm. Let's see how it works.
-Here is that new if statement:</p>
-<div class="highlight"><pre><span></span><span class="k">if</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">min_distance</span><span class="o">&gt;</span><span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="o">.</span><span class="na">this_distance</span><span class="o">&gt;</span><span class="k">this</span><span class="o">.</span><span class="na">min_distance</span><span class="o">)</span> <span class="o">{</span>
-    <span class="c1">// Just give up already. It&#39;s meaningless. There&#39;s no point.</span>
-    <span class="k">return</span><span class="o">;</span>
-<span class="o">}</span>
-</pre></div>
-
-
-<p>This if statement tests two conditions - first, we check if a first minimum distance has actually been found,
-and second, we check if the distance of the current path is greater than the minimum distance.
-If it is, we give up continuing our search down this path, and just return back to the calling function.</p>
-<p>This introduces a small computational cost - 
-we now have an if statement to check every time the <code>explore()</code> method is called -
-but it results in such significant cost savings that it does not matter.</p>
-<p><a name="tsp-timing"></a></p>
-<h2>Timing Results</h2>
-<p>Shown below is a graph of the walltime for various problem sizes,
-showing both the original algorithm and the pessimist algorithm
-and their scaling behavior. </p>
-<p>The pessimist algorithm led to a <em>drastic</em> improvement in scale-up -
-the results are striking.</p>
-<p><img alt="TSP Guava Solution scaling results - initial and pessimist algorithms" src="/images/tsp-guava-initial-pessimist.png"></p>
-<p>And here are the results in a table form:</p>
-<div class="highlight"><pre><span></span>-----------------------------------------------------------------------------------------
-| Number of Nodes N | Initial Algorithm Walltime [s] | Pessimist Algorithm Walltime [s] |
-|-------------------|--------------------------------|----------------------------------|
-| 4                 | 0.005                          | 0.006                            |
-| 5                 | 0.006                          | 0.006                            |
-| 6                 | 0.009                          | 0.008                            |
-| 7                 | 0.017                          | 0.011                            |
-| 8                 | 0.029                          | 0.020                            |
-| 9                 | 0.083                          | 0.023                            |
-| 10                | 0.305                          | 0.053                            |
-| 11                | 1.443                          | 0.118                            |
-| 12                | 15.808                         | 0.149                            |
-| 13                | 180.078                        | 0.524                            |
-| 14                |                                | 1.276                            |
-| 15                |                                | 3.905                            |
-| 16                |                                | 216.827                          |
-| 17                |                                | 106.992                          |
-| 18                |                                | 337.930                          |
------------------------------------------------------------------------------------------
-</pre></div>
-
-
-<p>For a problem with 13 nodes, the initial algorithm took 3 minutes; 
-the pessimist algorithm didn't even break the one second mark!</p>
-<h2>Future Work</h2>
-<p>Now that we've got the algorithm running faster and more efficiently,
-we can tackle larger problems and explore the impact of problem topology
-on solutions, and we can rest assured we have an efficient algorithm
-that can scale to larger and more interesting problems.</p>
-<p>There are further improvements we could make to the algorithm to improve it, though.
-By examining the solutions that are found, we can see that the solutions
-usually, but not always, connects from each neighbor to its next-closest neighbor.
-If, when iterating over neighbors, we start by searching the nearest neighbors first,
-we can potentially get to the minimum solution faster, which would allow us
-to more quickly rule out larger portions of the solution space that are infeasible.</p>
-<p>This would induce an additional overhead cost of sorting, since the Guava library
-returns the edges that connect to a node as an unordered Set. These edges would 
-have to be added to a container and sorted to implement the nearest-neighbor search.</p>
-<p>However, we saw with the pessimist solution that a small increase in complexity
-can rule out large enough portions of the solution space to make it worthwhile,
-so it may be that the cost of sorting each edge pays off in the computational savings that result.</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/guava.html">guava</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/graph.html">graph</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/tsp.html">TSP</a>
-                    &nbsp;&nbsp;
-                    <a href="/tag/performance.html">performance</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1712,6 +1474,9 @@ so it may be that the cost of sorting each edge pays off in the computational sa
 
             <h2>March 2019</h2>
 
+            <p class="archive">
+            <a href="/the-josephus-problem-part-2-two-examples.html">The Josephus Problem: Part 2: Two Examples</a>
+            </p>
             <p class="archive">
             <a href="/the-josephus-problem-part-1-the-problem.html">The Josephus Problem: Part 1: The Problem</a>
             </p>
