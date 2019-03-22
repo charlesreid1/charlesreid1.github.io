@@ -385,6 +385,7 @@ class CaptureStdout(list):
         return self
 ```
 
+<a name="_exit"></a>
 ### Exit method
 
 To clean up, we will need to restore `sys.stdout`
