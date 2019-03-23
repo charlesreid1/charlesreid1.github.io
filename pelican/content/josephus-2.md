@@ -213,7 +213,8 @@ permutation as a cycle is a unique representation of that permutation.
 By tracing which elements are permuted with other elements, we can
 turn the two-row representation into a cycle representation.
 
-Here is the Josephus permutation in cycle notation:
+Here is the Josephus permutation for $n = 8, m = 4$ 
+in cycle notation:
 
 $$
 \left( 1 \, 5 \, 3 \, 6 \, 8 \, 2 \, 4 \right) \left( 7 \right)
