@@ -82,11 +82,12 @@ JINJA_FILTERS = {'month_name':int_to_month}
 
 # --------------8<---------------------
 
-# Feed generation is usually not desired when developing
-FEED_ALL_ATOM = None
+FEED_DOMAIN = SITEURL
+FEED_ALL_ATOM = 'atom.xml'
 CATEGORY_FEED_ATOM = None
 TRANSLATION_FEED_ATOM = None
 AUTHOR_FEED_ATOM = None
+FEED_ALL_RSS = 'feed.xml'
 AUTHOR_FEED_RSS = None
 
 TIMEZONE = 'America/Los_Angeles'
