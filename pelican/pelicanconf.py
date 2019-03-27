@@ -3,7 +3,7 @@
 from __future__ import unicode_literals
 import re, os
 
-SITEURL = ''
+SITEURL = 'https://charlesreid1.github.io'
 AUTHOR = u'charlesreid1'
 SITENAME = u'charlesreid1'
 
@@ -82,8 +82,9 @@ JINJA_FILTERS = {'month_name':int_to_month}
 
 # --------------8<---------------------
 
-# Feed generation is usually not desired when developing
-FEED_ALL_ATOM = None
+FEED_DOMAIN = SITEURL
+FEED_ALL_ATOM = 'atom.xml'
+FEED_ALL_RSS = 'feed.xml'
 CATEGORY_FEED_ATOM = None
 TRANSLATION_FEED_ATOM = None
 AUTHOR_FEED_ATOM = None
