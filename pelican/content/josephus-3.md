@@ -49,24 +49,23 @@ we start by showing the recipe as applied
 to the case of $n = 11, m = 2$. 
 
 The recipe is straightforward to apply, but it is not
-at all clear how it works, so in the next section
-([Why Does Algorithm D Work?](#why-does-algorithm-d-work))
-we discuss some of the algorithm's inner workings
-and explore the case of $n = 8, m = 2$ (a special
-case where the circle size is a power of two) before
-returning to the example of $n = 11, m = 2$.
+at all clear how it works. We start by introducing the
+algorithm, then carrying it out for the case of $n = 11, m = 2$
+(this is a familiar case that we have covered in 
+prior posts).
 
-We will start with a concrete example of $n = 11, m = 2$
-to illustrate Algorithm D. To explain why the algorithm works,
-we use another case for comparison, $n = 8, m = 2$, since circle
-sizes that are a power of two are a special case. Finally, we 
-return to the $n = 11, m = 2$ case to examine why it works
-and demonstrate a shortcut.
+We make observations about the procedure by comparing
+the case of $n = 8, m = 2$ (a special
+case where the circle size is a power of two) before
+returning to the example of $n = 11, m = 2$ to make
+generalizations and give a shortcut method for
+the general double-step case.
+
 
 <a name="algorithm-d-using-doubling-permutation"></a>
 ## Algorithm D: Using Doubling Permutation
 
-In Exercise 29, Knuth asks a question that reveals
+In Exercise 29, Knuth asks a question that lays out
 a solution procedure for the special case of $m = 2$,
 and asks the reader to prove it:
 
