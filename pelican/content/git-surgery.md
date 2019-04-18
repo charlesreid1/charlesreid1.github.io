@@ -1,67 +1,81 @@
-Title: Performing a Git-Commit-Ectomy
-Date: 2018-05-12 15:00
+Title: The Git-Commit-Ectomy
+Date: 2019-04-17 12:00
 Category: Git
 Tags: git, rebase, cherry-pick, branching, version control
-Status: draft
 
-scenario
+TLDR: Visit the git-commit-ectomy guide: <http://pages.charlesreid1.com/git-commit-ectomy>
 
-## simple version walkthrough
+<br />
 
-High-level description/summary of steps
+Consider the following _completely hypothetical_
+scenario.
 
-Link to repo
+Suppose you've been working for a while on your latest
+invention, a brand-new whiz-bang command line
+tool that's fast and solves an important problem
+and you're chugging your way to the finish line.
 
-## multi-branch walkthrough 
+As part of preparing to release your software tool,
+you add some tests, because that's what you do.
 
-Multiple branches cause complications
+Those tests require some data, so you add a few test
+data sets, a few hundred kilobytes each, nothing fancy.
 
-Patch branches, existing pull requests
+Then one day, **the intern** (who is just trying to be 
+helpful by adding a new test) slips in a 70 MB test
+data set, and slips it in with a string of commits
+that somehow get incorporated into the master branch.
 
-How to handle multiple branches? 
+(Side note: you turned on branch protection to prevent
+this whole mess, didn't you? _Didn't you??_ 
+'Course you did. This is all
+just a hypothetical scenario.)
 
-- clear out the undergrowth (dead branches)
-- identify and tag split point: where does existing branch diverge?
-- identify and tag join point: where to join on new branch?
-- git rebase join-here split-here patch-branch
+Now, the situation is complicated: there are several
+open pull requests and active branches, and a non-trivial
+amount of history that's been added since the time the
+large test data set was accidentally added.
 
-## cherry pick walkthrough
+**The intern** apologizes profusely and promises to 
+bring in donuts every day next week. But the damage 
+is done.
 
-blog repo problem:
-    - originally forked from octopress repo with long history
-    - lots of crap 
-    - abandoned octopress and ruby in favor of python
-    - git.charlesreid1.com wasting a gigabyte of space on crap
+**The intern**, a git novice, pulls out a laptop
+and runs a `git rm` on the files, pushing to the
+remote and happily, ignorantly believing the problem
+has been solved.
 
-blog repo solution:
-    - identify the zero/empty commit
-    - rebase or cherry pick only the commits we want, toss out the rest
+But **the intern** does not understand how git works.
+It has a perfect memory, and remembers every file in
+every commit. Since the problematic first commit that
+added the large files, git has remembered and will always
+remember that large file. It's in git's blood. 
+It's what git was designed to do.
 
-try to rebase first:
-    - if successful, easiest solution
-    - this may fail - need to apply commits to branches one at a time
-    - usually happens if there is one particular set of commits that diverge and are merged
-    - cherry pick all the commits up to a particular complicated point 
-    - handle complicated situations by hand
-    - cherry pick all the rest of the commits
+Once the intern has been, ahem, moved along,
+and branch protection has been turned on,
+it's time to find a git surgeon to perform a 
+git-commit-ectomy to remove the problematic
+large files from the repository entirely.
 
-to cherry pick lots of commits at once:
-    - git log to a file
-    - tail -r to reverse file
-    - turn it into bash script
-    - run git cherry-pick commit-hash
 
-merge problems: 
-    - conflicts may arise with split/merge commits
-    - command to abort cherry pick: git cherry-pick --abort
-    - command to undo one commit at a time: git 
-    - these commands allow you to try different ways of cherry picking problematic commits
-    - try these commits, try those commits
+## Dr. Reid's Patented Git-Commit-Ectomy
 
-bypassing merge problems:
-    - worst case scenario: stop at a particular point, hop over merge commits, use github or another copy of the repo 
-    - copy the _exact_ state of the repo at a particular commit 
-    - literally, exactly, trailing whitespaces and newlines and all
-    - you can have extra files, but if a file was in the repo at that commit, it must match exactly
-    - now begin the cherry-picking operation from the next commit
+If it's a git-commit-ectomy you need,
+try Dr. Reid's Patented Git-Commit-Ectomy
+to ease your git commit pains.
+
+Whether you want to keep thing simple
+and remove a git commit from a single branch,
+or if you've got multiple branches, Dr. Reid's
+Patented Git-Commit-Ectomy will get you back
+on your feet.
+
+Dr. Reid's Patented Git-Commit-Ectomy can handle
+even the most messy, confused, and tangled git 
+commit history - with a bit of work and a gifted
+surgeon the git-commit-ectomy can smooth things 
+out and get you feeling right as rain.
+
+Visit the git-commit-ectomy guide: <http://pages.charlesreid1.com/git-commit-ectomy>
 
