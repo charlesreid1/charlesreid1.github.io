@@ -102,6 +102,512 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Building Snakemake Command Line Wrappers for Workflows
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-01-21T22:00:00-08:00" pubdate>Monday 01/21/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/snakemake.html">Snakemake</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/building-snakemake-command-line-wrappers-for-workflows.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><strong>NOTE:</strong> These ideas are implemented in the repository
+<a href="https://github.com/charlesreid/2019-snakemake-cli">charlesreid1/2019-snakemake-cli</a>.</p>
+<p><br />
+<br /></p>
+<h2>Table of Contents:</h2>
+<ul>
+<li><a href="#basic">Basic Idea: Wrapping Snakemake API Calls</a><ul>
+<li><a href="#2018">2018-snakemake-cli</a></li>
+<li><a href="#2019">2019-snakemake-cli</a></li>
+</ul>
+</li>
+<li><a href="#exe">Turning Executables into Packages</a></li>
+<li><a href="#using">End Result: Using bananas</a></li>
+<li><a href="#travis">Adding Travis CI Tests</a></li>
+<li><a href="#next">Next Steps</a></li>
+</ul>
+<p><br />
+<br /></p>
+<p><a name="basic"></a></p>
+<h1>Basic Idea: Wrapping Snakemake API Calls</h1>
+<p><a name="2018"></a></p>
+<h2>2018-snakemake-cli</h2>
+<p>This blog post covers the implementation of an idea
+that was originally explored in a blog post from 
+Titus Brown, <a href="http://ivory.idyll.org/blog/2018-workflows-applications.html">Pydoit, snakemake, and workflows-as-applications</a>.</p>
+<p>That blog post implemented a basic command line
+wrapper around the Snakemake API to demonstrate
+how a Snakemake workflow could be turned into
+an executable.</p>
+<p>Relevant code is in <a href="https://github.com/ctb/2018-snakemake-cli">ctb/2018-snakemake-cli</a>,
+but the basic idea is to implement a command line
+utility that takes two orthogonal sets of inputs:
+a workflow configuration file, and a parameter set.</p>
+<div class="highlight"><pre><span></span>./run &lt;workflow-config&gt; &lt;workflow-params&gt;
+</pre></div>
+
+
+<p>The <a href="https://github.com/ctb/2018-snakemake-cli/blob/master/run">run script</a>
+is a Python executable file that parses arguments
+from the user.</p>
+<p>Here is the main entrypoint of <code>run</code>:</p>
+<div class="highlight"><pre><span></span><span class="ch">#! /usr/bin/env python</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Execution script for snakemake workflows.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">snakemake</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">pprint</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="n">thisdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="c1"># </span>
+    <span class="c1"># ...see below...</span>
+    <span class="c1">#</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;run snakemake workflows&#39;</span><span class="p">,</span> <span class="n">usage</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;run &lt;workflow&gt; &lt;parameters&gt; [&lt;target&gt;]</span>
+<span class="s1">Run snakemake workflows, using the given workflow name &amp; parameters file.</span>
+<span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;workflowfile&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;paramsfile&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-n&#39;</span><span class="p">,</span> <span class="s1">&#39;--dry-run&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">main</span><span class="p">(</span><span class="n">args</span><span class="p">))</span>
+</pre></div>
+
+
+<p>The <code>main()</code> method uses the <code>os</code> module to look for
+the Snakefile, the config file, and the params file,
+then makes a call to the Snakemake API:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="c1">#</span>
+    <span class="c1"># ...find the snakefile...</span>
+    <span class="c1"># ...find the config file...</span>
+    <span class="c1"># ...find the params file...</span>
+    <span class="c1"># </span>
+
+    <span class="n">target</span> <span class="o">=</span> <span class="n">workflow_info</span><span class="p">[</span><span class="s1">&#39;workflow_target&#39;</span><span class="p">]</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;--------&#39;</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;details!&#39;</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">snakefile: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">snakefile</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">config: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">workflowfile</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">params: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">paramsfile</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">target: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;--------&#39;</span><span class="p">)</span>
+
+    <span class="c1"># run!!</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="n">snakemake</span><span class="o">.</span><span class="n">snakemake</span><span class="p">(</span><span class="n">snakefile</span><span class="p">,</span> 
+                                 <span class="n">configfile</span><span class="o">=</span><span class="n">paramsfile</span><span class="p">,</span>
+                                 <span class="n">targets</span><span class="o">=</span><span class="p">[</span><span class="n">target</span><span class="p">],</span> 
+                                 <span class="n">printshellcmds</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                 <span class="n">dryrun</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">dry_run</span><span class="p">,</span> 
+                                 <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">status</span><span class="p">:</span> <span class="c1"># translate &quot;success&quot; into shell exit code of 0</span>
+       <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="mi">1</span>
+</pre></div>
+
+
+<p>This call uses the provided parameters file to set
+the Snakemake configuration dictionary, but this can
+be overridden with the <code>config</code> dictionary.
+Additional argparser flags can be added, and the
+<code>config</code> dictionary contents modified based on
+the flags.</p>
+<p><a name="2019"></a></p>
+<h2>2019-snakemake-cli</h2>
+<p>We wanted to take this demo a step further, and add
+a few things to it:</p>
+<ul>
+<li>
+<p>Bundle the Snakefile and command line utility as an
+  installable Python package with a <code>setup.py</code></p>
+</li>
+<li>
+<p>Implement Travis CI tests of the Snakemake workflow.</p>
+</li>
+</ul>
+<p>We implemented a bundled Snakemake workflow as a 
+command line tool called <code>bananas</code>.</p>
+<p><a name="exe"></a></p>
+<h1>Turning Executables into Packages</h1>
+<p>We began with an executable script <code>run</code> and wished
+to turn it into an installable command line utility
+called <code>bananas</code>.</p>
+<p>To do this, we moved the contents of <code>run</code> into 
+a new file <code>command.py</code> in a new Python module 
+called <code>cli</code>:</p>
+<div class="highlight"><pre><span></span>cli/
+├── Snakefile
+├── __init__.py
+└── command.py
+</pre></div>
+
+
+<p>The <code>Snakefile</code> will contain the workflow. Here is the
+very simple workflow from <a href="https://github.com/ctb/2018-snakemake-cli">ctb/2018-snakemake-cli</a>.
+The named rules are specified by the workflow configuration
+file, while the parameters in <code>{}</code> are provided through
+the parameters file (or via command line flags).</p>
+<p><code>cli/Snakefile</code>:</p>
+<div class="highlight"><pre><span></span>name = config[&#39;name&#39;]
+
+rule rulename1:
+     input:
+        &quot;hello.txt&quot;
+
+rule target1:
+     output:
+        &quot;hello.txt&quot;
+     shell:
+        &quot;echo hello {name} &gt; {output}&quot;
+
+rule target2:
+     output:
+        &quot;goodbye.txt&quot;
+     shell:
+        &quot;echo goodbye {name} &gt; {output}&quot;
+</pre></div>
+
+
+<p><strong>NOTE:</strong> In this case we are bundling the Snakefile
+with the command line wrapper, and writing the command
+line wrapper to expect the Snakefile to be in the package.
+But we can modify the command line wrapper function
+(below) to look for the Snakefile in a local directory,
+allowing the user to provide Snakefiles and workflows
+to the command line wrapper.</p>
+<p>The <code>__init__.py</code> file sets two important parameters:
+the name of the command line utility, and the version
+number:</p>
+<p><code>cli/__init__.py</code>:</p>
+<div class="highlight"><pre><span></span>_program = &quot;bananas&quot;
+__version__ = &quot;0.1.0&quot;
+</pre></div>
+
+
+<p>The contents of <code>command.py</code> are similar to <code>run</code> and
+basically control how the command line utility runs:</p>
+<p><code>cli/command.py</code>:</p>
+<div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Command line interface driver for snakemake workflows</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">snakemake</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">pprint</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">_program</span>
+
+
+<span class="n">thisdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="n">parentdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">thisdir</span><span class="p">,</span><span class="s1">&#39;..&#39;</span><span class="p">)</span>
+<span class="n">cwd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">sysargs</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">prog</span> <span class="o">=</span> <span class="n">_program</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;bananas: run snakemake workflows&#39;</span><span class="p">,</span> <span class="n">usage</span><span class="o">=</span><span class="s1">&#39;&#39;&#39;bananas &lt;workflow&gt; &lt;parameters&gt; [&lt;target&gt;]</span>
+
+<span class="s1">bananas: run snakemake workflows, using the given workflow name &amp; parameters file.</span>
+
+<span class="s1">&#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;workflowfile&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;paramsfile&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-n&#39;</span><span class="p">,</span> <span class="s1">&#39;--dry-run&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-f&#39;</span><span class="p">,</span> <span class="s1">&#39;--force&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">sysargs</span><span class="p">)</span>
+
+    <span class="c1"># ...find the Snakefile...</span>
+    <span class="c1"># ...find the config file...</span>
+    <span class="c1"># ...find the params file...</span>
+
+    <span class="n">target</span> <span class="o">=</span> <span class="n">workflow_info</span><span class="p">[</span><span class="s1">&#39;workflow_target&#39;</span><span class="p">]</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;--------&#39;</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;details!&#39;</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">snakefile: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">snakefile</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">config: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">workflowfile</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">params: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">paramsfile</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">target: {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;--------&#39;</span><span class="p">)</span>
+
+    <span class="c1"># run bananas!!</span>
+    <span class="n">status</span> <span class="o">=</span> <span class="n">snakemake</span><span class="o">.</span><span class="n">snakemake</span><span class="p">(</span><span class="n">snakefile</span><span class="p">,</span> <span class="n">configfile</span><span class="o">=</span><span class="n">paramsfile</span><span class="p">,</span>
+                                 <span class="n">targets</span><span class="o">=</span><span class="p">[</span><span class="n">target</span><span class="p">],</span> <span class="n">printshellcmds</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                 <span class="n">dryrun</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">dry_run</span><span class="p">,</span> <span class="n">forceall</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">force</span><span class="p">,</span>
+                                 <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">status</span><span class="p">:</span> <span class="c1"># translate &quot;success&quot; into shell exit code of 0</span>
+       <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="mi">1</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+
+<p>The last component here is to make the function
+in <code>cli/command.py</code> the entrypoint of a command line
+utility called <code>bananas</code>, which can be done via
+<code>setup.py</code>. This will put the executable <code>bananas</code>
+in the Python binaries folder when the package is
+installed.</p>
+<p><code>setup.py</code>:</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">setuptools</span> <span class="kn">import</span> <span class="n">setup</span><span class="p">,</span> <span class="n">find_packages</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;requirements.txt&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">required</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">x</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)]</span>
+
+<span class="c1"># Note: the _program variable is set in __init__.py.</span>
+<span class="c1"># it determines the name of the package/final command line tool.</span>
+<span class="kn">from</span> <span class="nn">cli</span> <span class="kn">import</span> <span class="n">__version__</span><span class="p">,</span> <span class="n">_program</span>
+
+<span class="n">setup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;bananas&#39;</span><span class="p">,</span>
+      <span class="n">version</span><span class="o">=</span><span class="n">__version__</span><span class="p">,</span>
+      <span class="n">packages</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;cli&#39;</span><span class="p">],</span>
+      <span class="n">test_suite</span><span class="o">=</span><span class="s1">&#39;pytest.collector&#39;</span><span class="p">,</span>
+      <span class="n">tests_require</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;pytest&#39;</span><span class="p">],</span>
+      <span class="n">description</span><span class="o">=</span><span class="s1">&#39;bananas command line interface&#39;</span><span class="p">,</span>
+      <span class="n">url</span><span class="o">=</span><span class="s1">&#39;https://charlesreid1.github.io/2019-snakemake-cli&#39;</span><span class="p">,</span>
+      <span class="n">author</span><span class="o">=</span><span class="s1">&#39;@charlesreid1&#39;</span><span class="p">,</span>
+      <span class="n">author_email</span><span class="o">=</span><span class="s1">&#39;cmreid@ucdavis.edu&#39;</span><span class="p">,</span>
+      <span class="n">license</span><span class="o">=</span><span class="s1">&#39;MIT&#39;</span><span class="p">,</span>
+      <span class="n">entry_points</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">      [console_scripts]</span>
+<span class="s2">      {program} = cli.command:main</span>
+<span class="s2">      &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">program</span> <span class="o">=</span> <span class="n">_program</span><span class="p">),</span>
+      <span class="n">install_requires</span><span class="o">=</span><span class="n">required</span><span class="p">,</span>
+      <span class="n">include_package_data</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+      <span class="n">keywords</span><span class="o">=</span><span class="p">[],</span>
+      <span class="n">zip_safe</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+
+
+<p>First, we grab the variables from <code>__init__.py</code>:</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">cli</span> <span class="kn">import</span> <span class="n">__version__</span><span class="p">,</span> <span class="n">_program</span>
+</pre></div>
+
+
+<p>Next we specify where our package lives, the <code>cli</code> directory:</p>
+<div class="highlight"><pre><span></span><span class="n">setup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;bananas&#39;</span><span class="p">,</span>
+        <span class="o">...</span>
+        <span class="n">packages</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;cli&#39;</span><span class="p">],</span>
+</pre></div>
+
+
+<p>and finally, we specify that we want to build a command line 
+interface, with the entrypoint being the <code>main()</code> method of the
+<code>cli/command.py</code> file using <code>entry_points</code>:</p>
+<div class="highlight"><pre><span></span><span class="n">setup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;bananas&#39;</span><span class="p">,</span>
+        <span class="o">...</span>
+        <span class="n">entry_points</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">[console_scripts]</span>
+<span class="s2">{program} = cli.command:main</span>
+<span class="s2">      &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">program</span> <span class="o">=</span> <span class="n">_program</span><span class="p">),</span>
+</pre></div>
+
+
+<p><a name="using"></a></p>
+<h1>End Result: Using bananas</h1>
+<p>The end result is a command line utility that bundles a
+Snakemake workflow. The repository contains some tests,
+so let's run through the quick start installation and
+run the tests.</p>
+<h2>Quick Start: Installing</h2>
+<p>Start by setting up a virtual environment:</p>
+<div class="highlight"><pre><span></span>virtualenv vp
+<span class="nb">source</span> vp/bin/activate
+</pre></div>
+
+
+<p>Install required components, then install the package:</p>
+<div class="highlight"><pre><span></span>pip install -r requirements.txt
+python setup.py build install
+</pre></div>
+
+
+<p>Now you should see <code>bananas</code> on your path:</p>
+<div class="highlight"><pre><span></span>which bananas
+</pre></div>
+
+
+<h2>Quick Start: Running Tests</h2>
+<div class="highlight"><pre><span></span>pytest
+</pre></div>
+
+
+<h2>Quick Start: Running Examples</h2>
+<p>Change to the <code>test/</code> directory and run tests with
+the example config and param files.</p>
+<div class="highlight"><pre><span></span>cd test
+</pre></div>
+
+
+<p>Run the hello workflow with Amy params:</p>
+<div class="highlight"><pre><span></span>rm -f hello.txt
+bananas workflow-hello params-amy
+</pre></div>
+
+
+<p>Run the hello workflow with Beth params:</p>
+<div class="highlight"><pre><span></span>rm -f hello.txt
+bananas workflow-hello params-beth
+</pre></div>
+
+
+<p>Run the goodbye workflow with Beth params:</p>
+<div class="highlight"><pre><span></span>rm -f goodbye.txt
+bananas workflow-goodbye params-beth
+</pre></div>
+
+
+<p><a name="travis"></a></p>
+<h1>Adding Travis CI Tests</h1>
+<p>To test or workflow, we break down the necessary tasks:</p>
+<ul>
+<li>Use a Python environment</li>
+<li>Install our requirements (snakemake)</li>
+<li>Install bananas with setup.py</li>
+<li>Run pytest</li>
+</ul>
+<p>This is an easy Travis file to write, following the
+<a href="https://docs.travis-ci.com/user/languages/python/">Travis docs</a>.</p>
+<p><code>.travis.yml</code>:</p>
+<div class="highlight"><pre><span></span><span class="nt">language</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">python</span>
+<span class="nt">python</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="s">&quot;3.5&quot;</span>
+  <span class="p p-Indicator">-</span> <span class="s">&quot;3.6&quot;</span>
+  <span class="c1">#- &quot;3.7-dev&quot; # fails due to datrie build failure (snakemake dependency)</span>
+
+<span class="c1"># command to install dependencies</span>
+<span class="nt">install</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">pip install -r requirements.txt</span>
+  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">python setup.py build install</span>
+
+<span class="c1"># command to run tests</span>
+<span class="nt">script</span><span class="p">:</span>
+  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">pytest</span>
+</pre></div>
+
+
+<p><a name="repo"></a></p>
+<h1>Final Repository</h1>
+<p>All of the code for this repository is in
+<a href="https://github.com/charlesreid1/2019-snakemake-cli">charlesreid1/2019-snakemake-cli</a>.</p>
+<p>See the <a href="https://github.com/charlesreid1/2019-snakemake-cli/releases/tag/v2.0">v2.0 tag</a>
+in case there are changes to the code that are not reflected in
+this blog post.</p>
+<p><a name="next"></a></p>
+<h1>Next Steps</h1>
+<p>This demo provides a starting point for creating executable Snakemake
+workflows that are installable.</p>
+<p>A few open question and directions:</p>
+<ul>
+<li>
+<p>Bundling the Snakefile vs. user-provided Snakefles</p>
+<ul>
+<li>There is obviously more utility and flexibility in letting the user provide Snakefiles.</li>
+<li>User-provided Snakefiles provide more ways for workflows to go wrong.</li>
+<li>Testing is either more difficult, or shifted to the workflow author.</li>
+<li>Bundled Snakefiles take the burden of writing the workflow off of the user,
+  so they can focus on param/config files.</li>
+</ul>
+</li>
+<li>
+<p>Kubernetes</p>
+<ul>
+<li>Can we make the command line wrapper work with a Kubernetes cluster?</li>
+<li>See <a href="https://github.com/charlesreid1/2019-snakemake-byok8s">charlesreid1/2019-snakemake-byok8s</a>
+  for proof of concept.</li>
+</ul>
+</li>
+<li>
+<p>Applications</p>
+<ul>
+<li>How can we apply this concept?</li>
+<li><a href="https://github.com/spacegraphcats/spacegraphcats">spacegraphcats</a></li>
+<li><a href="https://github.com/dib-lab/eelpond">eelpond</a></li>
+<li><a href="https://github.com/dahak-metagenomics/dahak">dahak</a> and 
+  <a href="https://github.com/dahak-metagenomics/dahak-taco">dahak-taco</a> </li>
+</ul>
+</li>
+</ul></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/workflows.html">workflows</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pipelines.html">pipelines</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/snakemake.html">snakemake</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/travis.html">travis</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Recursive Backtracking in Go for Bioinformatics Applications: 3. Go Implementation of Backtracking
             </b></h1>
         
@@ -1075,487 +1581,6 @@ Go implementation of these functions.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Recursive Backtracking in Go for Bioinformatics Applications: 1. Counting Variations
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2018-12-26T18:00:00-08:00" pubdate>Wednesday 12/26/2018</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/rosalind.html">Rosalind</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p><em>This is the first in a series of three blog posts describing our
-solution to a bioinformatics problem from Rosalind.info,
-<a href="http://rosalind.info/problems/ba1i/">Problem BA1(i) (Find most frequent words with mismatches
-in a string)</a>.
-To solve this problem and generate variations of a DNA string
-as required, we implemented a recursive backtracking method
-in the Go programming language.</em></p>
-<ul>
-<li><em>Part 1: Counting Variations (you are here)</em></li>
-<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">Part 2: Generating Variations</a></em></li>
-<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Part 3: Go Implementation of Recursive Backtracking</a></em></li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="toc"></a></p>
-<h2>Table of Contents</h2>
-<ul>
-<li><a href="#problem-descr">Problem Description</a></li>
-<li><a href="#functions">Useful Functions</a><ul>
-<li><a href="#binomial">Binomial Function</a></li>
-<li><a href="#factorial">Factorial Function</a></li>
-</ul>
-</li>
-<li><a href="#counting-permutations">Counting Permutations</a><ul>
-<li><a href="#deriving">Deriving the Formula</a></li>
-<li><a href="#indices">Term 1: Picking DNA Indices</a></li>
-<li><a href="#side-note">Term 1: Side Note on Ordering</a></li>
-<li><a href="#modifying">Term 2: Modifying DNA Codons</a></li>
-</ul>
-</li>
-<li><a href="#final">Final Counting Formula</a></li>
-<li><a href="#golang">Implementing in Go</a><ul>
-<li><a href="#golang-bionomial-factorial">Binomial and Factorial Functions in Go</a></li>
-<li><a href="#variations">Variations Counting Function in Go</a></li>
-</ul>
-</li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="problem-descr"></a></p>
-<h2>Problem Description</h2>
-<p>The task at hand is to take a given input strand of DNA,
-and generate variations from it that have up to <span class="math">\(d\)</span> differences
-(a Hamming distance of <span class="math">\(d\)</span>) in the codons (base pairs).</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">part 1 of this series</a>, we walk through the
-construction of an analytical formula to count the number
-of variations of a given DNA string that can be generated,
-given the constraints of the problem.</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">part 2 of this series</a>, we cover several techniques to
-generate variations on a DNA string, and present pseudocode
-for the recursive backtracking method that we use here.</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">part 3 of this series</a>, we will cover our implementation
-of the recursive backtracking method in the Go programming
-language.</p>
-<p><a name="functions"></a></p>
-<h2>Useful Functions</h2>
-<p>It's always useful to review some basic mathematics
-useful for combinatorics applications. We'll review
-the factorial and binomial functions, which will
-show up in our final formula for the total nubmer
-of variations we will be generating.</p>
-<p><a name="factorial"></a></p>
-<h3>Factorial Function</h3>
-<p>The factorial function for an integer <span class="math">\(n\)</span> is written
-<span class="math">\(n!\)</span> and is defined for <span class="math">\(n \geq 1\)</span> as:</p>
-<div class="math">$$
-n! = n \cdot (n-1) \cdot \dots \cdot 2 \cdot 1
-$$</div>
-<p>for example, <span class="math">\(5!\)</span> would be:</p>
-<div class="math">$$
-5! = 5 \times 4 \times 3 \times 2 \times 1 = 120
-$$</div>
-<p><a name="binomial"></a></p>
-<h3>Binomial Function</h3>
-<p>The binomial function has many applications in combinatorics.
-It is the number of ways of independently selecting <span class="math">\(k\)</span> items
-from a set of <span class="math">\(n\)</span> items, and is written:</p>
-<div class="math">$$
-\binom{n}{k} = \dfrac{ n! }{ k! (n-k)! }
-$$</div>
-<p><br />
-<br /></p>
-<p><a name="counting-permutations"></a></p>
-<h2>Counting Permutations</h2>
-<p>What we want is a formula to count the number of permutations</p>
-<p>To derive a formula, it helps to think through the problem
-starting with smaller special cases, and generalize 
-from there in terms of the problem parameters.</p>
-<p><a name="deriving"></a></p>
-<h3>Deriving the Formula</h3>
-<p>The problem we're trying to solve is generating all perms
-with hamming distance less than or equal to d, but let's
-start with a simpler problem: generating all perms with 
-hamming distance of exactly d.</p>
-<p>Then we can just sum up over each d.</p>
-<p>Start with a simple situation: string of dna with 3 codons.
-Case of hamming distance 0 too trivial, so start with case of
-hamming distance of 1.</p>
-<p>There are two terms in our combinatorics formula that we
-need to think about:</p>
-<ul>
-<li>
-<p><strong>Term 1:</strong> We have a certain number of codons to modify (this is fixed
-  by the Hamming distance d that we pick). Term 1 counts up the
-  number of ways of selecting which indices of the original 
-  DNA string to modify.</p>
-</li>
-<li>
-<p><strong>Term 2:</strong> Once we've picked out the indices we are going to modify, we
-  have several variations for each index (4 total codons, so 3
-  variations). Term 2 is a count of the number of variations that are
-  possible, given the choice of indices in the original DNA string
-  to modify.</p>
-</li>
-</ul>
-<p>The approach here is to think about these two terms
-independently and separately. Each term has a formula
-to count the number of possibilities indexed by each.
-Then, because these are independent choices, the total
-number of combined choices is the product of these two
-terms.</p>
-<p><a name="indices"></a></p>
-<h3>Term 1: Picking DNA Indices</h3>
-<p>The first term in our formula for number of variations
-will be the term representing the number of ways of 
-choosing which indices in the original DNA input string
-to edit.</p>
-<p>Given a Hamming distance of <span class="math">\(d\)</span>, and the fact that we
-have one and only one edit (Hamming distance unit) per
-base pair, Term 1 counts the number of ways of picking
-<span class="math">\(d\)</span> items from a set of <span class="math">\(n\)</span> items. Order does not matter.</p>
-<p>This problem is equivalent to having a row of <span class="math">\(n\)</span> on/off
-switches, all in the off position, and counting the number
-of ways of throwing exactly <span class="math">\(d\)</span> of them into the on position.</p>
-<p>Likewise, it is equivalent to having <span class="math">\(d\)</span> identical colored balls, 
-and counting the number of ways of placing them into <span class="math">\(n\)</span>
-slots, one ball per slot.</p>
-<p>We can see how the problem has a kind of triangular structure.
-Returning to the scenario of <span class="math">\(n\)</span> on/off switches:</p>
-<ul>
-<li>
-<p>If we have <span class="math">\(d = n\)</span> switches to throw, or if we have 
-  <span class="math">\(d = 0\)</span> switches to throw, in either case we have
-  only 1 possible outcome.</p>
-</li>
-<li>
-<p>If we have <span class="math">\(d = n-1\)</span> switches to throw, or if we 
-  have <span class="math">\(d = 1\)</span> switch to throw, either way we have
-  <span class="math">\(n\)</span> possible outcomes</p>
-</li>
-<li>
-<p>If we have <span class="math">\(d = n-2\)</span> or <span class="math">\(d = 2\)</span> switches to throw,
-  there are <span class="math">\(n (n-1)\)</span> possible outcomes; etc.</p>
-</li>
-</ul>
-<p>In fact, this problem - choosing <span class="math">\(d\)</span> things
-from a set of <span class="math">\(n\)</span> things - is common enough that
-there is a special function just to describe it,
-and that's the binomial function (covered above).</p>
-<p>The binomial function is defined as:</p>
-<div class="math">$$
-\binom{n}{k} = \dfrac{ n! }{ k! (n-k)! }
-$$</div>
-<p>In the scenarios posed above, the order of our choices
-did not matter - the balls were not numbered, the order
-in which we threw each switch did not affect the outcome.</p>
-<p>If the order did matter, if the order in which the on/off
-switches were thrown mattered or if the balls that were
-placed into slots had sequential numbers on them, then we
-would need a different function - the expression above 
-to count the number of outcomes would not have a <span class="math">\(k!\)</span> in 
-the denominator.</p>
-<p><a name="side-note"></a></p>
-<h3>Term 1: Side Note on Ordering</h3>
-<p>If the order of the index choices does not matter, 
-the <span class="math">\(k!\)</span> term in the denominator must be included 
-to cancel out double-counting in the situations where
-(for example) <span class="math">\(i\)</span> is chosen first and <span class="math">\(j\)</span> is chosen second,
-and then the situation where <span class="math">\(j\)</span> is chosen first and <span class="math">\(i\)</span>
-is chosen second.</p>
-<p>If the <span class="math">\(k!\)</span> term is present in the denominator, it says
-that the order in which items are selected does not matter,
-in which case we are generating <em>combinations</em>.</p>
-<p>To count combinations, use the "n choose k" function. See the 
-<a href="http://mathworld.wolfram.com/Combination.html">Combination</a>
-article on Wolfram MathWorld.</p>
-<p>If the <span class="math">\(k!\)</span> term is <em>not</em> present in the denominator, it says
-that the order in which items are selected does matter,
-in which case we are generating <em>permutations</em>.</p>
-<p>To count permutations, use the "n pick k" function. See the 
-<a href="http://mathworld.wolfram.com/Permutation.html">Permutation</a>
-article on Wolfram MathWorld.</p>
-<p><a name="modifying"></a></p>
-<h3>Term 2: Modifying DNA Codons</h3>
-<p>Once we've selected the <span class="math">\(d\)</span> indices in the original DNA
-string that we are going to modify, we have to count the
-number of ways those base pairs can be modified.</p>
-<p>We have <span class="math">\(d\)</span> base pairs to modify, and <span class="math">\(c = 4\)</span> total
-codons (ATGC). Each base pair that we are modifying
-has <span class="math">\(c-1\)</span> possible codons that it we can swap it out
-with, and each choice is independent, so the number
-of possibile outcomes (Term 2) is:</p>
-<div class="math">$$
-(c-1)^{d}
-$$</div>
-<p><br />
-<br /></p>
-<p><a name="final"></a></p>
-<h2>Final Counting Formula</h2>
-<p>To write the final formula for counting the number of variations <span class="math">\(V\)</span>
-of a given DNA string of length <span class="math">\(n\)</span> that are a Hamming
-distance of less than or equal to <span class="math">\(d\)</span>, with <span class="math">\(c\)</span> possible codons 
-(A, T, G, C), we will need to sum over Hamming distances
-from 0 to <span class="math">\(d\)</span>:</p>
-<div class="math">$$
-V = \sum_{k = 0}^{d} \binom{n}{k} (c-1)^{k}
-$$</div>
-<p><a name="golang"></a></p>
-<h2>Implementing in Go</h2>
-<p>Now, let's look at how we would implement this counting
-formula in Go. This will be useful, since programs run 
-much faster when they are able to allocate all the sapce
-they need in memory ahead of time. Counting the number
-of variations of our DNA input string will allow us to
-do just that.</p>
-<p><a name="golang-binomial-factorial"></a></p>
-<h3>Binomial and Factorial Functions in Go</h3>
-<p>We'll start with binomial and factorial functions in Go:
-continuing with our theme of recursion, we implement
-a recursive factorial function.</p>
-<div class="highlight"><pre><span></span><span class="c1">// Compute the factorial of an integer.</span>
-<span class="kd">func</span> <span class="nx">Factorial</span><span class="p">(</span><span class="nx">n</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
-    <span class="k">if</span> <span class="nx">n</span> <span class="p">&lt;</span> <span class="mi">2</span> <span class="p">{</span>
-        <span class="c1">// base case</span>
-        <span class="k">return</span> <span class="mi">1</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-        <span class="c1">// recursive case</span>
-        <span class="k">return</span> <span class="nx">n</span> <span class="o">*</span> <span class="nx">Factorial</span><span class="p">(</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</pre></div>
-
-
-<p>The factorial function will behave correctly for the
-case of <span class="math">\(n=1\)</span> and <span class="math">\(n=0\)</span>, and will return 1 if <span class="math">\(n\)</span> is
-negative (which is reasonable behavior for our purposes.)</p>
-<p>The binomial function utilizes the factorial function:</p>
-<div class="highlight"><pre><span></span><span class="c1">// Returns value of the binomial coefficient Binom(n, k).</span>
-<span class="kd">func</span> <span class="nx">Binomial</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">k</span> <span class="kt">int</span><span class="p">)</span> <span class="kt">int</span> <span class="p">{</span>
-
-    <span class="nx">result</span> <span class="o">:=</span> <span class="mi">1</span>
-
-    <span class="c1">// Since C(n, k) = C(n, n-k)</span>
-    <span class="k">if</span> <span class="nx">k</span> <span class="p">&gt;</span> <span class="p">(</span><span class="nx">n</span> <span class="o">-</span> <span class="nx">k</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nx">k</span> <span class="p">=</span> <span class="nx">n</span> <span class="o">-</span> <span class="nx">k</span>
-    <span class="p">}</span>
-
-    <span class="c1">// Calculate value of:</span>
-    <span class="c1">//</span>
-    <span class="c1">// ( n * (n-1) * ... * (n-k+1) )</span>
-    <span class="c1">// -----------------------------</span>
-    <span class="c1">//   ( k * (k-1) * ... * 1 )</span>
-    <span class="c1">// </span>
-    <span class="k">for</span> <span class="nx">i</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="p">&lt;</span> <span class="nx">k</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-        <span class="nx">result</span> <span class="o">*=</span> <span class="nx">n</span> <span class="o">-</span> <span class="nx">i</span>
-        <span class="nx">result</span> <span class="o">/=</span> <span class="nx">i</span> <span class="o">+</span> <span class="mi">1</span>
-    <span class="p">}</span>
-
-    <span class="k">return</span> <span class="nx">result</span>
-<span class="p">}</span>
-</pre></div>
-
-
-<p>(Note that we might want to add some additional error checks to the
-<code>Binomial()</code> function.)</p>
-<p><a name="variations"></a></p>
-<h3>Variations Counting Function in Go</h3>
-<p>Now we can put everything together into a function to count
-the number of "Hamming neighbors" - variations on a given 
-DNA string that are a Hamming distance of up to <span class="math">\(d\)</span> away
-from the original DNA string.</p>
-<p>To count the number of Hamming neighbors, we implement
-the formula above. We leave out the error checks on the
-parameter values here, for brevity.</p>
-<p>The inputs are:</p>
-<ul>
-<li><span class="math">\(n\)</span> - length of DNA input string</li>
-<li><span class="math">\(d\)</span> - maximum Hamming distance</li>
-<li><span class="math">\(c\)</span> - number of codons (4, ATGC)</li>
-</ul>
-<div class="highlight"><pre><span></span><span class="c1">// Given an input string of DNA of length n,</span>
-<span class="c1">// a maximum Hamming distance of d,</span>
-<span class="c1">// and a number of codons c, determine</span>
-<span class="c1">// the number of Hamming neighbors of</span>
-<span class="c1">// distance less than or equal to d</span>
-<span class="c1">// using a combinatorics formula.</span>
-<span class="kd">func</span> <span class="nx">CountHammingNeighbors</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">d</span><span class="p">,</span> <span class="nx">c</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-
-    <span class="c1">// We require the following:</span>
-    <span class="c1">// n &gt; 0</span>
-    <span class="c1">// d &gt;= 0</span>
-    <span class="c1">// c &gt; 0</span>
-
-    <span class="c1">// Use combinatorics to calculate number of variations</span>
-    <span class="nx">nv</span> <span class="o">:=</span> <span class="mi">0</span>
-    <span class="k">for</span> <span class="nx">dd</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">dd</span> <span class="o">&lt;=</span> <span class="nx">d</span><span class="p">;</span> <span class="nx">dd</span><span class="o">++</span> <span class="p">{</span>
-
-        <span class="c1">// Binomial(n,d) =&gt; number of ways we can</span>
-        <span class="c1">//                  pick codons to edit</span>
-        <span class="nx">next_term</span> <span class="o">:=</span> <span class="nx">Binomial</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span> <span class="nx">dd</span><span class="p">)</span>
-
-        <span class="c1">// (c-1)^d =&gt; number of ways that the codons</span>
-        <span class="c1">//            we picked to edit can be edited</span>
-        <span class="k">for</span> <span class="nx">j</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">j</span> <span class="p">&lt;</span> <span class="nx">dd</span><span class="p">;</span> <span class="nx">j</span><span class="o">++</span> <span class="p">{</span>
-            <span class="nx">next_term</span> <span class="o">*=</span> <span class="p">(</span><span class="nx">c</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="p">}</span>
-        <span class="nx">nv</span> <span class="o">+=</span> <span class="nx">next_term</span>
-    <span class="p">}</span>
-    <span class="k">return</span> <span class="nx">nv</span><span class="p">,</span> <span class="kc">nil</span>
-<span class="p">}</span>
-</pre></div>
-
-
-<p>We can run this with a few values of k and d to verify it returns
-the expected values:</p>
-<div class="highlight"><pre><span></span>For kmer AAA k = 3:
-d = 0, count = 1
-d = 1, count = 10
-d = 2, count = 37
-d = 3, count = 64
-</pre></div>
-
-
-<p>for a kmer of length 3, we can compute the first 3 values (1, 10, 37)
-by hand. The last value, when <span class="math">\(d = k\)</span>, is a special case where every
-base pair in the DNA strand can be changed to any codon. Since there
-are 4 possible codons, this leads to <span class="math">\(4^k = 2^{2k}\)</span> possibilities.</p>
-<p>For <span class="math">\(d = k = 3\)</span>, we have <span class="math">\(2^6 = 64\)</span> possible DNA strings.</p>
-<p>Now, moving on to <span class="math">\(k=5\)</span>:</p>
-<div class="highlight"><pre><span></span>For kmer AAAAA k = 5:
-d = 0, count = 1
-d = 1, count = 16
-d = 2, count = 106
-d = 3, count = 376
-d = 4, count = 781
-d = 5, count = 1024
-</pre></div>
-
-
-<p>We can calculate 1 and 16 by hand, verifying those two numbers.
-As before, the case of <span class="math">\(k = d = 5\)</span> gives a total of <span class="math">\(4^5 = 2^{10} = 1024\)</span>
-possible DNA strings.</p>
-<p><br />
-<br /></p>
-<p><strong>Next: <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html"> Recursive Backtracking in Go for Bioinformatics Applications: 2. Generating Variations</a></strong></p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/strings.html">strings</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/combinatorics.html">combinatorics</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1585,6 +1610,19 @@ possible DNA strings.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>April 2019</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/the-git-commit-ectomy.html">The Git-Commit-Ectomy</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
