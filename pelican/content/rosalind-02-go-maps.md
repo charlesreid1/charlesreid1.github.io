@@ -1,7 +1,7 @@
 Title: Basic Data Structures in Go: Maps
 Date: 2018-12-20 17:00
-Category: Rosalind
-Tags: go, golang, rosalind, bioinformatics, maps
+Category: Computational Biology
+Tags: go, golang, rosalind, computational biology, bioinformatics, maps
 
 ## Basic Data Structures in Go: Maps
 

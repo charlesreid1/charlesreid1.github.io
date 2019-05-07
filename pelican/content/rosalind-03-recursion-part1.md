@@ -1,7 +1,7 @@
 Title: Recursive Backtracking in Go for Bioinformatics Applications: 1. Counting Variations
 Date: 2018-12-26 18:00
-Category: Rosalind
-Tags: go, golang, rosalind, bioinformatics, recursion, backtracking, strings, combinatorics
+Category: Computational Biology
+Tags: go, golang, rosalind, computational biology, bioinformatics, recursion, backtracking, strings, combinatorics
 
 _This is the first in a series of three blog posts describing our
 solution to a bioinformatics problem from Rosalind.info,

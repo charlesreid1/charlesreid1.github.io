@@ -1,7 +1,7 @@
 Title: Learning Bioinformatics with Go and Rosalind
 Date: 2018-12-18 20:00
-Category: Rosalind
-Tags: go, golang, rosalind, bioinformatics
+Category: Computational Biology
+Tags: go, golang, rosalind, computational biology, bioinformatics
 
 ## Learning Go with Rosalind
 
