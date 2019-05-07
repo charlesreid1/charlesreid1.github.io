@@ -2,13 +2,12 @@ Title: Graphs for Bioinformatics, Part 1: de Bruijn Graphs, Hamiltonian Paths, a
 Date: 2019-05-02 19:00
 Category: Computational Biology
 Tags: go, golang, rosalind, computational biology, bioinformatics, euler, recursion, backtracking, graphs, algorithms, hamiltonian, eulerian
-Status: draft
 
 # Table of Contents
 
 * [The Context: Rosalind\.info](#the-context-rosalindinfo)
 * [Graphs for Bioinformatics](#graphs-for-bioinformatics)
-    * [Building a Kmer Graph (The Wrong Graph)](#building-a-kmer-graph-the-wrong-graph)
+    * [Building a K-mer Graph (The Wrong Graph)](#building-a-k-mer-graph-the-wrong-graph)
     * [Building a De Bruijn Graph (The Right Graph)](#building-a-de-bruijn-graph-the-right-graph)
     * [Transform the Problem: Hamiltonian Paths to Eulerian Paths](#transform-the-problem-hamiltonian-paths-to-eulerian-paths)
 * [An Example](#an-example)
@@ -53,7 +52,7 @@ of edges (one for each **k-mer**, that is, a chunk of the sequence of length k),
 and vertices (one for each k-mer prefix and k-mer suffix, connected by a directed edge
 of the k-mer). We will cover more of the details of these graphs shortly.
 
-## Building a Kmer Graph (The Wrong Graph)
+## Building a K-mer Graph (The Wrong Graph)
 
 The Bioinformatics Algorithm book starts with a general discussion of how to 
 represent a sequence of DNA nucleotides using a graph. The idea they discuss 
@@ -92,7 +91,7 @@ of the source.
 
 If we did not know this sequence in advance, we could draw _every_
 edge with that property - every time the last (k-1) characters of
-a kmer match the first (k-1) characters of another kmer, an edge
+a k-mer match the first (k-1) characters of another k-mer, an edge
 is drawn between those two vertices. 
 
 That graph would result in _many_ more edges than the graph shown above.
@@ -157,10 +156,10 @@ k-mer `TAA` is represented by the edge `TA -> AA`.
 
 ## Transform the Problem: Hamiltonian Paths to Eulerian Paths
 
-The change in the problem representation (kmers as vertices to kmers
+The change in the problem representation (k-mers as vertices to k-mers
 as edges) changes the problem of finding the **Hamiltonian path** 
 (a path through the graph that visits every _vertex_ exactly once) 
-into the probelm of finding the **Eulerian path**
+into the problem of finding the **Eulerian path**
 (a path through the graph that visits every _edge_ exactly once).
 
 # An Example
@@ -254,4 +253,12 @@ which is tractable even for large graphs.
 Compare this with string matching algorithms utilizing
 dynamic programming, which can cost $O(N^2)$ and make
 genome assembly computationally infeasible.
+
+Part 1 (this post) has covered the basic idea behind 
+assembling DNA sequences using de Bruijn graphs. In
+Part 2 of this post, we will move on to a discussion
+of the "real world" problem, warts and all, and how 
+we can relax some of the strict assumptions (like assuming
+perfect coverage of the original sequence and assuming
+that all reads are perfect).
 
