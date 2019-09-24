@@ -102,6 +102,489 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Graphs for Bioinformatics, Part 1: de Bruijn Graphs, Hamiltonian Paths, and Eulerian Paths
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-05-02T19:00:00-07:00" pubdate>Thursday 05/02/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h1>Table of Contents</h1>
+<ul>
+<li><a href="#the-context-rosalindinfo">The Context: Rosalind.info</a></li>
+<li><a href="#graphs-for-bioinformatics">Graphs for Bioinformatics</a><ul>
+<li><a href="#building-a-k-mer-graph-the-wrong-graph">Building a K-mer Graph (The Wrong Graph)</a></li>
+<li><a href="#building-a-de-bruijn-graph-the-right-graph">Building a De Bruijn Graph (The Right Graph)</a></li>
+<li><a href="#transform-the-problem-hamiltonian-paths-to-eulerian-paths">Transform the Problem: Hamiltonian Paths to Eulerian Paths</a></li>
+</ul>
+</li>
+<li><a href="#an-example">An Example</a></li>
+<li><a href="#back-to-dna">Back to DNA</a></li>
+</ul>
+<p><br />
+<br /></p>
+<h1>The Context: Rosalind.info</h1>
+<p>To provide a bit of context for a discussion of Euler paths and Euler cycles:
+starting around December, a group of us in the <a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology (DIB Lab)</a>
+started working through the textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
+and the associated website, <a href="https://rosalind.info">Rosalind.info</a>.</p>
+<p>Rosalind.info is a site that is similar in style to <a href="https://projecteuler.net/">Project Euler</a>,
+a <a href="https://charlesreid1.github.io/tag/project-euler.html">familiar topic on this blog</a>.
+Project Euler poses computationally challenging problems in the domain of mathematics.</p>
+<p>Like Project Euler, the visitor is given one small example input and the corresponding 
+correct output, and one large example input and corresponding output. Also like Project
+Euler, the problems vary in how much computer science versus domain expertise is needed,
+but they are largely focused on writing algorithms rather than on the science behind the
+computations.</p>
+<p>Unlike Project Euler, however, Rosalind.info does give plenty of hints (via the textbook,
+if you have a copy), and sometimes even gives pseudocode for the algorithm. <strong>The book is
+required to get enough context to answer some of the Rosalind.info problems.</strong></p>
+<h1>Graphs for Bioinformatics</h1>
+<p>The textbook focuses on different problems in each chapter. For example, Chapter 1 uses
+the example of a string of DNA that marks where replication begins to introduce some
+basic bioinformatics concepts and algorithms. Chapter 2 uses the concept of molecular
+clocks to introduce motifs and motif-finding, the focus of most of the problems in
+Chapter 2.</p>
+<p>Chapter 3 focuses on the problem of genome assembly - how we assemble an entire genome
+from short segments alone. In particular, the chapter focuses on de Bruijn graphs, 
+which are graphs that, given a sequence of symbols drawn from an alphabet, are composed 
+of edges (one for each <strong>k-mer</strong>, that is, a chunk of the sequence of length k),
+and vertices (one for each k-mer prefix and k-mer suffix, connected by a directed edge
+of the k-mer). We will cover more of the details of these graphs shortly.</p>
+<h2>Building a K-mer Graph (The Wrong Graph)</h2>
+<p>The Bioinformatics Algorithm book starts with a general discussion of how to 
+represent a sequence of DNA nucleotides using a graph. The idea they discuss 
+initially (which is an obvious, but not necessarily good, one) is splitting
+the sequence into k-mer chunks, like so:</p>
+<div class="highlight"><pre><span></span>      <span class="n">Sequence</span><span class="p">:</span>   <span class="n">TAATGCCATGGGATGTT</span>
+      <span class="n">Pieces</span><span class="p">:</span>     <span class="n">TAA</span> 
+                   <span class="n">AAT</span>
+                    <span class="n">ATG</span> 
+                     <span class="n">TGC</span>
+                      <span class="n">GCC</span> 
+                       <span class="n">CCA</span>
+                        <span class="n">CAT</span> 
+                         <span class="n">ATG</span>
+                          <span class="n">TGG</span> 
+                           <span class="n">GGG</span>
+                            <span class="n">GGA</span> 
+                             <span class="n">GAT</span>
+                              <span class="n">ATG</span> 
+                               <span class="n">TGT</span>
+                                <span class="n">GTT</span>
+</pre></div>
+
+
+<p>and letting one k-mer be represented by one vertex. Then the sequence
+above could be turned into the graph:</p>
+<div class="highlight"><pre><span></span><span class="n">TAA</span> <span class="o">-&gt;</span> <span class="n">AAT</span> <span class="o">-&gt;</span> <span class="n">ATG</span> <span class="o">-&gt;</span> <span class="n">TGC</span> <span class="o">-&gt;</span> <span class="n">GCC</span> <span class="o">-&gt;</span> <span class="n">CCA</span> <span class="o">-&gt;</span> <span class="n">CAT</span> <span class="o">-&gt;</span> <span class="n">ATG</span> <span class="o">-&gt;</span> <span class="n">TGG</span> <span class="o">-&gt;</span> <span class="n">GGG</span> <span class="o">-&gt;</span> <span class="n">GGA</span> <span class="o">-&gt;</span> <span class="n">GAT</span> <span class="o">-&gt;</span> <span class="n">ATG</span> <span class="o">-&gt;</span> <span class="n">TGT</span> <span class="o">-&gt;</span> <span class="n">GTT</span>
+</pre></div>
+
+
+<p>On this graph, every edge has the property that the first (k-1)
+nucleotides of the destination match the last (k-1) nucleotides
+of the source. </p>
+<p>If we did not know this sequence in advance, we could draw <em>every</em>
+edge with that property - every time the last (k-1) characters of
+a k-mer match the first (k-1) characters of another k-mer, an edge
+is drawn between those two vertices. </p>
+<p>That graph would result in <em>many</em> more edges than the graph shown above.</p>
+<p>Furthermore, in theory, if each read sequence came from a single genome
+and we had the entire genome covered by read sequences, a path through
+the graph that visits every vertex (every k-mer) would yield the full
+genome.</p>
+<p>A path through a graph that visits every vertex once is called a 
+<strong>Hamiltonian path</strong>.</p>
+<p>Why is this hard? Because the problem of proving a Hamiltonian
+path exists, let alone finding it, becomes very difficult for
+large graphs.</p>
+<h2>Building a De Bruijn Graph (The Right Graph)</h2>
+<p>Nicolaas de Bruijn introduced (in 1946, in a paper entitled simply
+<a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>)
+a new way of representing a sequence with a graph. He split a given
+sequence into k-mers, as before, but instead of representing
+each k-mer as a <em>vertex</em> on the graph, he represented each 
+k-mer as an <em>edge</em> on the graph.</p>
+<p>This type of graph is called a <strong>de Bruijn graph</strong>.</p>
+<p>Specifically, for a DNA sequence, each k-mer from the sequence is
+represented by an edge, where the source vertex
+is that k-mer's (k-1)-nucleotide suffix and the destination vertex
+is that k-mer's (k-1)-nucleotide prefix.</p>
+<div class="highlight"><pre><span></span>      <span class="n">Sequence</span><span class="p">:</span>   <span class="n">TAATGCCATGGGATGTT</span>
+      <span class="n">Pieces</span><span class="p">:</span>     <span class="n">TA</span>  
+                   <span class="n">AA</span>
+                    <span class="k">AT</span> 
+                     <span class="n">TG</span>
+                      <span class="n">GC</span> 
+                       <span class="n">CC</span>
+                        <span class="n">CA</span> 
+                         <span class="k">AT</span>
+                          <span class="n">TG</span> 
+                           <span class="n">GG</span>
+                            <span class="n">GG</span> 
+                             <span class="n">GA</span> 
+                              <span class="k">AT</span>  
+                               <span class="n">TG</span> 
+                                <span class="n">GT</span> 
+                                 <span class="n">TT</span>
+</pre></div>
+
+
+<p>Now this sequence is written as the graph:</p>
+<div class="highlight"><pre><span></span><span class="n">TA</span> <span class="o">-&gt;</span> <span class="n">AA</span> <span class="o">-&gt;</span> <span class="k">AT</span> <span class="o">-&gt;</span> <span class="n">TG</span> <span class="o">-&gt;</span> <span class="n">GC</span> <span class="o">-&gt;</span> <span class="n">CC</span> <span class="o">-&gt;</span> <span class="n">CA</span> <span class="o">-&gt;</span> <span class="k">AT</span> <span class="o">-&gt;</span> <span class="n">TG</span> <span class="o">-&gt;</span> <span class="n">GG</span> <span class="o">-&gt;</span> <span class="n">GG</span> <span class="o">-&gt;</span> <span class="n">GA</span> <span class="o">-&gt;</span> <span class="k">AT</span> <span class="o">-&gt;</span> <span class="n">TG</span> <span class="o">-&gt;</span> <span class="n">GT</span> <span class="o">-&gt;</span> <span class="n">TT</span>
+</pre></div>
+
+
+<p>so that the original breakup of the sequence into k-mers is still
+represented, but now as edges rather than as vertices. That is, the 
+k-mer <code>TAA</code> is represented by the edge <code>TA -&gt; AA</code>.</p>
+<h2>Transform the Problem: Hamiltonian Paths to Eulerian Paths</h2>
+<p>The change in the problem representation (k-mers as vertices to k-mers
+as edges) changes the problem of finding the <strong>Hamiltonian path</strong> 
+(a path through the graph that visits every <em>vertex</em> exactly once) 
+into the problem of finding the <strong>Eulerian path</strong>
+(a path through the graph that visits every <em>edge</em> exactly once).</p>
+<h1>An Example</h1>
+<p>Let's look at a slightly simpler example - the one de Bruijn was
+originally considering - so we can see de Bruijn graphs in action
+in a slightly simpler case.</p>
+<p>In his 1946 paper <a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>,
+de Bruijn describes the problem thus:</p>
+<blockquote>
+<p>Some years ago Ir. K. Posthumus stated an interesting conjecture
+concerning certain cycles of digits 0 or 1, which we shall call
+<span class="math">\(P_n\)</span> cycles. For <span class="math">\(n = 1, 2, 3, \dots\)</span>, a <span class="math">\(P_n\)</span> cycle be an ordered
+cycle of <span class="math">\(2^n\)</span> digits 0 or 1, such that the <span class="math">\(2^n\)</span> possible ordered
+sets of <span class="math">\(n\)</span> consecutive digits of that cycle are all different.
+As a consequence, any ordered set of <span class="math">\(n\)</span> digits 0 or 1 occurs exactly
+once in that cycle.</p>
+<p>For example, a <span class="math">\(P_3\)</span> cycle is <span class="math">\(00010111\)</span>, respectively showing the
+triples 000, 001, 010, 011, 111, 100, 100, which are all the possible
+triples indeed.</p>
+</blockquote>
+<p>In this case, de Bruijn is discussing <em>complete</em> de Bruijn graphs - he
+constructs a de Bruijn graph of all possible 3-mers (our k-mers, <span class="math">\(k = 3\)</span>),
+and constructs a path through the graph that visits every edge of the
+graph. Here is the sequence broken down as above:</p>
+<div class="highlight"><pre><span></span>      <span class="n">Sequence</span><span class="p">:</span>   <span class="mi">00010111</span>
+      <span class="n">Pieces</span><span class="p">:</span>     <span class="mi">00</span>  
+                   <span class="mi">00</span>
+                    <span class="mi">01</span>
+                     <span class="mi">10</span>
+                      <span class="mi">01</span>
+                       <span class="mi">11</span>
+                        <span class="mi">11</span>
+</pre></div>
+
+
+<p>The alphabet here is binary: 0 and 1. </p>
+<p>This (seemingly simple) example is a bit confusing, but here's
+what's going on: we have four vertices on the de Bruijn graph,
+consisting of the 2-mers:</p>
+<div class="highlight"><pre><span></span><span class="mi">00</span>
+<span class="mi">01</span>
+<span class="mi">10</span>
+<span class="mi">11</span>
+</pre></div>
+
+
+<p>Now, if we draw an edge for every possible 3-mer, we would 
+start with the 3-mer <code>000</code>, which is actually represented
+by a self-edge from vertex <code>00</code> to vertex <code>00</code>, because the
+prefix matches the suffix.</p>
+<p>Similarly, the 3-mer <code>111</code> is represented by a self-edge
+from vertex <code>11</code> to vertex <code>11</code>.</p>
+<p>The other 3-mers are represented by their corresponding edges:
+<code>001</code> is represented by the edge <code>00 -&gt; 01</code>, <code>010</code> by the edge
+<code>01 -&gt; 10</code>, etc.</p>
+<p>By drawing <strong>every possible edge</strong> (to represent every possible
+3-mer), we assemble the <strong>complete de Bruijn graph</strong> (that is,
+the de Bruijn graph containing vertices for all possible
+2-mers connected by edges representing every possible 3-mer
+in the given alphabet).</p>
+<p>The sequence de Bruijn gives in his paper is an Euler path
+through the <em>complete</em> (de Bruijn) graph (that is, a path 
+through the de Bruijn graph that visits every edge exactly 
+once):</p>
+<div class="highlight"><pre><span></span><span class="n">Sequence</span><span class="o">:</span> <span class="mi">00010111</span>
+
+<span class="mi">00</span> <span class="o">-&gt;</span> <span class="mi">00</span> <span class="o">-&gt;</span> <span class="mi">01</span> <span class="o">-&gt;</span> <span class="mi">10</span> <span class="o">-&gt;</span> <span class="mi">01</span> <span class="o">-&gt;</span> <span class="mi">11</span> <span class="o">-&gt;</span> <span class="mi">11</span>
+</pre></div>
+
+
+<h1>Back to DNA</h1>
+<p>Now the utility of the de Bruijn methodology is more clear:
+if we can come up with fast, efficient algorithms to find
+Euler paths on large graphs, we can transform the assembly 
+problem (given fragments of a long sequence, reconstruct
+the sequence) into the problem of finding an Eulerian path,
+which is tractable even for large graphs.</p>
+<p>Compare this with string matching algorithms utilizing
+dynamic programming, which can cost <span class="math">\(O(N^2)\)</span> and make
+genome assembly computationally infeasible.</p>
+<p>Part 1 (this post) has covered the basic idea behind 
+assembling DNA sequences using de Bruijn graphs. In
+Part 2 of this post, we will move on to a discussion
+of the "real world" problem, warts and all, and how 
+we can relax some of the strict assumptions (like assuming
+perfect coverage of the original sequence and assuming
+that all reads are perfect).</p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                The Git-Commit-Ectomy
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-04-17T12:00:00-07:00" pubdate>Wednesday 04/17/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/the-git-commit-ectomy.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>TLDR: Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p>
+<p><br /></p>
+<p>Consider the following <em>completely hypothetical</em>
+scenario.</p>
+<p>Suppose you've been working for a while on your latest
+invention, a brand-new whiz-bang command line
+tool that's fast and solves an important problem
+and you're chugging your way to the finish line.</p>
+<p>As part of preparing to release your software tool,
+you add some tests, because that's what you do.</p>
+<p>Those tests require some data, so you add a few test
+data sets, a few hundred kilobytes each, nothing fancy.</p>
+<p>Then one day, <strong>the intern</strong> (who is just trying to be 
+helpful by adding a new test) slips in a 70 MB test
+data set, and slips it in with a string of commits
+that somehow get incorporated into the master branch.</p>
+<p>(Side note: you turned on branch protection to prevent
+this whole mess, didn't you? <em>Didn't you??</em> 
+'Course you did. This is all
+just a hypothetical scenario.)</p>
+<p>Now, the situation is complicated: there are several
+open pull requests and active branches, and a non-trivial
+amount of history that's been added since the time the
+large test data set was accidentally added.</p>
+<p><strong>The intern</strong> apologizes profusely and promises to 
+bring in donuts every day next week. But the damage 
+is done.</p>
+<p><strong>The intern</strong>, a git novice, pulls out a laptop
+and runs a <code>git rm</code> on the files, pushing to the
+remote and happily, ignorantly believing the problem
+has been solved.</p>
+<p>But <strong>the intern</strong> does not understand how git works.
+It has a perfect memory, and remembers every file in
+every commit. Since the problematic first commit that
+added the large files, git has remembered and will always
+remember that large file. It's in git's blood. 
+It's what git was designed to do.</p>
+<p>Once the intern has been, ahem, moved along,
+and branch protection has been turned on,
+it's time to find a git surgeon to perform a 
+git-commit-ectomy to remove the problematic
+large files from the repository entirely.</p>
+<h2>Dr. Reid's Patented Git-Commit-Ectomy</h2>
+<p>If it's a git-commit-ectomy you need,
+try Dr. Reid's Patented Git-Commit-Ectomy
+to ease your git commit pains.</p>
+<p>Whether you want to keep thing simple
+and remove a git commit from a single branch,
+or if you've got multiple branches, Dr. Reid's
+Patented Git-Commit-Ectomy will get you back
+on your feet.</p>
+<p>Dr. Reid's Patented Git-Commit-Ectomy can handle
+even the most messy, confused, and tangled git 
+commit history - with a bit of work and a gifted
+surgeon the git-commit-ectomy can smooth things 
+out and get you feeling right as rain.</p>
+<p>Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 The Josephus Problem: Part 3: Solving the Double Step Case
             </b></h1>
         
@@ -228,20 +711,20 @@ bit more work before we can understand it.</p>
 <span class="math">\(n = 11, m = 2\)</span>.</p>
 <p>We start by writing the doubling permutation for
 the integers <span class="math">\(1 \dots 2n\)</span>:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1 \, 2 \, 4 \, 8 \, 16 \, 32 \, \dots \right)
-$$</div>
+$\)</span></p>
 <p>When a number is greater than <span class="math">\(2n+1\)</span>, it is
 reduced <span class="math">\(\mod (2n+1)\)</span>, so the next few terms of the
 doubling permutation written out and reduced modulo
 <span class="math">\(2n+1\)</span> are:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1 \, 2 \, 4 \, 8 \, 16 \, 32 \, 64 \, 128 \, 256 \, 512 \, 1024 \right)
-$$</div>
+$\)</span></p>
 <p>which reduces modulo <span class="math">\(2n+1\)</span> to:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
-$$</div>
+$\)</span></p>
 <p>After 12, we reach 1 again, the starting value, so further 
 doublings will result in repetition of the elements we have
 so far. </p>
@@ -250,54 +733,54 @@ Start with the smallest element not included in the
 cycle found above, which is 5, and continue the operation
 of doubling and reducing modulo <span class="math">\(2n+1\)</span>. Doing this results in
 the terms:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 5 \, 10 \, 20 \, 40 \, 80 \, \dots \right)
-$$</div>
+$\)</span></p>
 <p>which reduces modulo <span class="math">\(2n+1\)</span> to:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 5 \, 10 \, 20 \, 17 \, 11 \, \dots \right)
-$$</div>
+$\)</span></p>
 <p>Repeating this until the first element repeats
 yields all of the remaining elements:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
+$\)</span></p>
 <p>Now the final doubling permutation can be written as the 
 product of the two cycles:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
 \left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
+$\)</span></p>
 <p>We now have the cycles of the doubling permutation! Step 2 finished.</p>
 <p><a name="table-method"></a></p>
 <h3>Table Method</h3>
 <p>Slightly more convenient than writing out the cycles the way we did above
 is to create a table, with a column for <span class="math">\(j = 1 \dots 2n\)</span>, a column for
 <span class="math">\(2j\)</span>, and a column for <span class="math">\((2j) \mod (2n+1)\)</span>.</p>
-<div class="highlight"><pre><span></span> j   |  2j  |  2j mod 2n+1
------|------|---------------
-  1  |   2  |        2
-  2  |   4  |        4
-  3  |   6  |        6
-  4  |   8  |        8
-  5  |  10  |       10
-  6  |  12  |       12
-  7  |  14  |       14
-  8  |  16  |       16
-  9  |  18  |       18
- 10  |  20  |       20
- 11  |  22  |       22
- 12  |  24  |        1
- 13  |  26  |        3
- 14  |  28  |        5
- 15  |  30  |        7
- 16  |  32  |        9
- 17  |  34  |       11
- 18  |  36  |       13
- 19  |  38  |       15
- 20  |  40  |       17
- 21  |  42  |       19
- 22  |  44  |       21
+<div class="highlight"><pre><span></span> <span class="n">j</span>   <span class="o">|</span>  <span class="mi">2</span><span class="n">j</span>  <span class="o">|</span>  <span class="mi">2</span><span class="n">j</span> <span class="k">mod</span> <span class="mi">2</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span>
+<span class="c1">-----|------|---------------</span>
+  <span class="mi">1</span>  <span class="o">|</span>   <span class="mi">2</span>  <span class="o">|</span>        <span class="mi">2</span>
+  <span class="mi">2</span>  <span class="o">|</span>   <span class="mi">4</span>  <span class="o">|</span>        <span class="mi">4</span>
+  <span class="mi">3</span>  <span class="o">|</span>   <span class="mi">6</span>  <span class="o">|</span>        <span class="mi">6</span>
+  <span class="mi">4</span>  <span class="o">|</span>   <span class="mi">8</span>  <span class="o">|</span>        <span class="mi">8</span>
+  <span class="mi">5</span>  <span class="o">|</span>  <span class="mi">10</span>  <span class="o">|</span>       <span class="mi">10</span>
+  <span class="mi">6</span>  <span class="o">|</span>  <span class="mi">12</span>  <span class="o">|</span>       <span class="mi">12</span>
+  <span class="mi">7</span>  <span class="o">|</span>  <span class="mi">14</span>  <span class="o">|</span>       <span class="mi">14</span>
+  <span class="mi">8</span>  <span class="o">|</span>  <span class="mi">16</span>  <span class="o">|</span>       <span class="mi">16</span>
+  <span class="mi">9</span>  <span class="o">|</span>  <span class="mi">18</span>  <span class="o">|</span>       <span class="mi">18</span>
+ <span class="mi">10</span>  <span class="o">|</span>  <span class="mi">20</span>  <span class="o">|</span>       <span class="mi">20</span>
+ <span class="mi">11</span>  <span class="o">|</span>  <span class="mi">22</span>  <span class="o">|</span>       <span class="mi">22</span>
+ <span class="mi">12</span>  <span class="o">|</span>  <span class="mi">24</span>  <span class="o">|</span>        <span class="mi">1</span>
+ <span class="mi">13</span>  <span class="o">|</span>  <span class="mi">26</span>  <span class="o">|</span>        <span class="mi">3</span>
+ <span class="mi">14</span>  <span class="o">|</span>  <span class="mi">28</span>  <span class="o">|</span>        <span class="mi">5</span>
+ <span class="mi">15</span>  <span class="o">|</span>  <span class="mi">30</span>  <span class="o">|</span>        <span class="mi">7</span>
+ <span class="mi">16</span>  <span class="o">|</span>  <span class="mi">32</span>  <span class="o">|</span>        <span class="mi">9</span>
+ <span class="mi">17</span>  <span class="o">|</span>  <span class="mi">34</span>  <span class="o">|</span>       <span class="mi">11</span>
+ <span class="mi">18</span>  <span class="o">|</span>  <span class="mi">36</span>  <span class="o">|</span>       <span class="mi">13</span>
+ <span class="mi">19</span>  <span class="o">|</span>  <span class="mi">38</span>  <span class="o">|</span>       <span class="mi">15</span>
+ <span class="mi">20</span>  <span class="o">|</span>  <span class="mi">40</span>  <span class="o">|</span>       <span class="mi">17</span>
+ <span class="mi">21</span>  <span class="o">|</span>  <span class="mi">42</span>  <span class="o">|</span>       <span class="mi">19</span>
+ <span class="mi">22</span>  <span class="o">|</span>  <span class="mi">44</span>  <span class="o">|</span>       <span class="mi">21</span>
 </pre></div>
 
 
@@ -313,39 +796,39 @@ Since there are still rows in the table left, repeat the procedure, starting
 with the first available row of the table (5), and keep going until all entries
 of the table are gone. This will yield the same cycles as the process described 
 above, but the bookkeeping is slightly easier:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
 \left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
+$\)</span></p>
 <p><a name="reverse-the-doubling-permutation"></a></p>
 <h3>Reverse the Doubling Permutation</h3>
 <p>The next step is to reverse the permutation from left to right,
 which means we step through all cycles from left to right,
 and step through each cycle from left to right.</p>
 <p>Starting with the doubling permutation:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
 \left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
+$\)</span></p>
 <p>We obtain the reverse:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 14 \, 7 \, 15 \, 19 \, 21 \, 22 \, 11 \, 17 \, 20 \, 10 \, 5 \right)
 \left( 12 \, 6 \, 3 \, 13 \, 18 \, 9 \, 16 \, 8 \, 4 \, 2 \, 1 \right)
-$$</div>
+$\)</span></p>
 <p><a name="trim-the-reversed-doubling-permutation"></a></p>
 <h3>Trim the Reversed Doubling Permutation</h3>
 <p>Now we eliminate any numbers from the reversed doubling permutation
 that are larger than <span class="math">\(n = 11\)</span>, to get the trimmed permutation:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 7 \, 11 \, 10 \, 5 \right)
 \left( 6 \, 3 \, 9 \, 8 \, 4 \, 2 \, 1 \right)
-$$</div>
+$\)</span></p>
 <p>This is the final Josephus permutation. The one remaining step is to
 rewrite the cycles in standard "sorted" order:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1 \, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
 \left( 5 \, 7 \, 11 \, 10 \right)
-$$</div>
+$\)</span></p>
 <p>Congratulations! You just solved the problem.</p>
 <p><br />
 <br /></p>
@@ -368,9 +851,9 @@ at work in Algorithm D. </p>
 <p>Start with an important observation: each time we complete one 
 circuit of the circle, we have reduced the number of items 
 in the circle by </p>
-<div class="math">$$
+<p><span class="math">\($
 \left\lfloor{ \frac{n}{2} }\right\rfloor
-$$</div>
+$\)</span></p>
 <p>If our circle size is even, that means we cut our circle
 size in half each time through the circle.</p>
 <p>The halving operation means the Josephus problem is
@@ -422,24 +905,24 @@ to be removed from the circle.)</p>
 where <span class="math">\(n\)</span> is a power of two, specifically, <span class="math">\(n = 8, m = 2\)</span>.</p>
 <p>We start by creating the doubling permutation table,
 with columns for <span class="math">\(j\)</span>, <span class="math">\(2j\)</span>, and <span class="math">\((2j) \mod (2n+1)\)</span>:</p>
-<div class="highlight"><pre><span></span> j   |  2j  |  2j mod 2n+1
------|------|---------------
-  1  |   2  |        2
-  2  |   4  |        4
-  3  |   6  |        6
-  4  |   8  |        8
-  5  |  10  |       10
-  6  |  12  |       12
-  7  |  14  |       14
-  8  |  16  |       16
-  9  |  18  |        1
- 10  |  20  |        3
- 11  |  22  |        5
- 12  |  24  |        7
- 13  |  26  |        9
- 14  |  28  |       11
- 15  |  30  |       13
- 16  |  32  |       15
+<div class="highlight"><pre><span></span> <span class="n">j</span>   <span class="o">|</span>  <span class="mi">2</span><span class="n">j</span>  <span class="o">|</span>  <span class="mi">2</span><span class="n">j</span> <span class="k">mod</span> <span class="mi">2</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span>
+<span class="c1">-----|------|---------------</span>
+  <span class="mi">1</span>  <span class="o">|</span>   <span class="mi">2</span>  <span class="o">|</span>        <span class="mi">2</span>
+  <span class="mi">2</span>  <span class="o">|</span>   <span class="mi">4</span>  <span class="o">|</span>        <span class="mi">4</span>
+  <span class="mi">3</span>  <span class="o">|</span>   <span class="mi">6</span>  <span class="o">|</span>        <span class="mi">6</span>
+  <span class="mi">4</span>  <span class="o">|</span>   <span class="mi">8</span>  <span class="o">|</span>        <span class="mi">8</span>
+  <span class="mi">5</span>  <span class="o">|</span>  <span class="mi">10</span>  <span class="o">|</span>       <span class="mi">10</span>
+  <span class="mi">6</span>  <span class="o">|</span>  <span class="mi">12</span>  <span class="o">|</span>       <span class="mi">12</span>
+  <span class="mi">7</span>  <span class="o">|</span>  <span class="mi">14</span>  <span class="o">|</span>       <span class="mi">14</span>
+  <span class="mi">8</span>  <span class="o">|</span>  <span class="mi">16</span>  <span class="o">|</span>       <span class="mi">16</span>
+  <span class="mi">9</span>  <span class="o">|</span>  <span class="mi">18</span>  <span class="o">|</span>        <span class="mi">1</span>
+ <span class="mi">10</span>  <span class="o">|</span>  <span class="mi">20</span>  <span class="o">|</span>        <span class="mi">3</span>
+ <span class="mi">11</span>  <span class="o">|</span>  <span class="mi">22</span>  <span class="o">|</span>        <span class="mi">5</span>
+ <span class="mi">12</span>  <span class="o">|</span>  <span class="mi">24</span>  <span class="o">|</span>        <span class="mi">7</span>
+ <span class="mi">13</span>  <span class="o">|</span>  <span class="mi">26</span>  <span class="o">|</span>        <span class="mi">9</span>
+ <span class="mi">14</span>  <span class="o">|</span>  <span class="mi">28</span>  <span class="o">|</span>       <span class="mi">11</span>
+ <span class="mi">15</span>  <span class="o">|</span>  <span class="mi">30</span>  <span class="o">|</span>       <span class="mi">13</span>
+ <span class="mi">16</span>  <span class="o">|</span>  <span class="mi">32</span>  <span class="o">|</span>       <span class="mi">15</span>
 </pre></div>
 
 
@@ -479,9 +962,9 @@ Once we reach 16 (double the size of the circle),
 the integers begin to loop back around through the 
 odd numbers (also thanks to the choice of the odd
 modulus <span class="math">\(2n+1\)</span>):</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1 \, 2 \, 4 \, 8 \ 16 \, 15 \, 13 \, 9 \right)
-$$</div>
+$\)</span></p>
 <p>Consider the <span class="math">\(16 \rightarrow 15\)</span> connection. Stepping through
 the (doubled) circle the first time through, we end
 on 16. The next doubling takes us 16 more steps forward,
@@ -497,19 +980,19 @@ the table, starting with the smallest, which is 3.
 Doubling 3, we see the <code>3 -&gt; 6</code> connection we mentioned
 earlier, which we expected to see since it indicates the
 known fact that item 6 will be removed 3rd. </p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 3 \, 6 \, 12 \, 17 \, 14 \, 11 \, 5 \, 10 \right)
-$$</div>
+$\)</span></p>
 <p>Finally, reversing and trimming the values larger than 8:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 5 \, 7 \, 6 \, 3 \right)
 \left( 8 \, 4 \, 2 \, 1 \right)
-$$</div>
+$\)</span></p>
 <p>and writing in sorted order:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1 \, 8 \, 4 \, 2 \right)
 \left( 3 \, 5 \, 7 \, 6 \right)
-$$</div>
+$\)</span></p>
 <p><strong>Fact 2</strong> tells us that the item in position 1 is the
 last to be removed, since the size of the circle <span class="math">\(n = 8 = 2^3\)</span>.<br>
 We confirm the cycle does contain <span class="math">\(1 \rightarrow 8\)</span> 
@@ -523,30 +1006,30 @@ example that we presented in <a href="https://charlesreid1.github.io/the-josephu
 and the beginning of this blog post,
 namely, <span class="math">\(n = 11, m = 2\)</span>.</p>
 <p>Here is the doubling permutation table again: </p>
-<div class="highlight"><pre><span></span> j   |  2j  |  2j mod 2n+1
------|------|---------------
-  1  |   2  |        2
-  2  |   4  |        4
-  3  |   6  |        6
-  4  |   8  |        8
-  5  |  10  |       10
-  6  |  12  |       12
-  7  |  14  |       14
-  8  |  16  |       16
-  9  |  18  |       18
- 10  |  20  |       20
- 11  |  22  |       22
- 12  |  24  |        1
- 13  |  26  |        3
- 14  |  28  |        5
- 15  |  30  |        7
- 16  |  32  |        9
- 17  |  34  |       11
- 18  |  36  |       13
- 19  |  38  |       15
- 20  |  40  |       17
- 21  |  42  |       19
- 22  |  44  |       21
+<div class="highlight"><pre><span></span> <span class="n">j</span>   <span class="o">|</span>  <span class="mi">2</span><span class="n">j</span>  <span class="o">|</span>  <span class="mi">2</span><span class="n">j</span> <span class="k">mod</span> <span class="mi">2</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span>
+<span class="c1">-----|------|---------------</span>
+  <span class="mi">1</span>  <span class="o">|</span>   <span class="mi">2</span>  <span class="o">|</span>        <span class="mi">2</span>
+  <span class="mi">2</span>  <span class="o">|</span>   <span class="mi">4</span>  <span class="o">|</span>        <span class="mi">4</span>
+  <span class="mi">3</span>  <span class="o">|</span>   <span class="mi">6</span>  <span class="o">|</span>        <span class="mi">6</span>
+  <span class="mi">4</span>  <span class="o">|</span>   <span class="mi">8</span>  <span class="o">|</span>        <span class="mi">8</span>
+  <span class="mi">5</span>  <span class="o">|</span>  <span class="mi">10</span>  <span class="o">|</span>       <span class="mi">10</span>
+  <span class="mi">6</span>  <span class="o">|</span>  <span class="mi">12</span>  <span class="o">|</span>       <span class="mi">12</span>
+  <span class="mi">7</span>  <span class="o">|</span>  <span class="mi">14</span>  <span class="o">|</span>       <span class="mi">14</span>
+  <span class="mi">8</span>  <span class="o">|</span>  <span class="mi">16</span>  <span class="o">|</span>       <span class="mi">16</span>
+  <span class="mi">9</span>  <span class="o">|</span>  <span class="mi">18</span>  <span class="o">|</span>       <span class="mi">18</span>
+ <span class="mi">10</span>  <span class="o">|</span>  <span class="mi">20</span>  <span class="o">|</span>       <span class="mi">20</span>
+ <span class="mi">11</span>  <span class="o">|</span>  <span class="mi">22</span>  <span class="o">|</span>       <span class="mi">22</span>
+ <span class="mi">12</span>  <span class="o">|</span>  <span class="mi">24</span>  <span class="o">|</span>        <span class="mi">1</span>
+ <span class="mi">13</span>  <span class="o">|</span>  <span class="mi">26</span>  <span class="o">|</span>        <span class="mi">3</span>
+ <span class="mi">14</span>  <span class="o">|</span>  <span class="mi">28</span>  <span class="o">|</span>        <span class="mi">5</span>
+ <span class="mi">15</span>  <span class="o">|</span>  <span class="mi">30</span>  <span class="o">|</span>        <span class="mi">7</span>
+ <span class="mi">16</span>  <span class="o">|</span>  <span class="mi">32</span>  <span class="o">|</span>        <span class="mi">9</span>
+ <span class="mi">17</span>  <span class="o">|</span>  <span class="mi">34</span>  <span class="o">|</span>       <span class="mi">11</span>
+ <span class="mi">18</span>  <span class="o">|</span>  <span class="mi">36</span>  <span class="o">|</span>       <span class="mi">13</span>
+ <span class="mi">19</span>  <span class="o">|</span>  <span class="mi">38</span>  <span class="o">|</span>       <span class="mi">15</span>
+ <span class="mi">20</span>  <span class="o">|</span>  <span class="mi">40</span>  <span class="o">|</span>       <span class="mi">17</span>
+ <span class="mi">21</span>  <span class="o">|</span>  <span class="mi">42</span>  <span class="o">|</span>       <span class="mi">19</span>
+ <span class="mi">22</span>  <span class="o">|</span>  <span class="mi">44</span>  <span class="o">|</span>       <span class="mi">21</span>
 </pre></div>
 
 
@@ -558,24 +1041,24 @@ around to the even numbers the second time through.</p>
 <p>We follow the entries of the table to factor this 
 permutation into cycles, as above, yielding the two
 cycles:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1 \, 2 \, 4 \, 8 \, 16 \, 9 \, 18 \, 13 \, 3 \, 6 \, 12 \right)
-$$</div>
+$\)</span></p>
 <p>and </p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
+$\)</span></p>
 <p>Finally, we reverse these and eliminate the numbers larger
 than <span class="math">\(n\)</span>, giving the Josephus permutation cycle:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 6 \, 3 \, 9 \, 8 \, 4 \, 2 \, 1 \right)
 \left( 7 \, 11 \, 10 \, 5 \right)
-$$</div>
+$\)</span></p>
 <p>or, rearranging into sorted order:</p>
-<div class="math">$$
+<p><span class="math">\($
 \left( 1\, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
 \left( 5 \, 7 \, 11 \, 10 \right)
-$$</div>
+$\)</span></p>
 <p>However, there is a faster way to figure out the last
 item in the circle that will be removed that only
 requires us to carry out 3 steps.</p>
@@ -613,9 +1096,9 @@ that 7 will be the last item removed from the circle. </p>
 so indeed, this holds true.</p>
 <p>To translate this into mathematical terms, we are 
 carrying out <span class="math">\(r\)</span> operations, where</p>
-<div class="math">$$
+<p><span class="math">\($
 r = n - 2^{ \left\lfloor{ \lg{n} }\right\rfloor }
-$$</div>
+$\)</span></p>
 <p>and at the conclusion of those <span class="math">\(r\)</span> operations, we mark the
 starting item for the next round. That item will be the 
 last item to be removed.</p>
@@ -671,10 +1154,13 @@ grab the next open spot in the circle.</p>
     mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
     mathjaxscript.type = 'text/javascript';
     mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
         "MathJax.Hub.Config({" +
         "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
         "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
         "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
         "    displayAlign: '"+ align +"'," +
@@ -688,6 +1174,8 @@ grab the next open spot in the circle.</p>
         "        preview: 'TeX'," +
         "    }, " +
         "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
         "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
         "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
         "    }, " +
@@ -708,1144 +1196,8 @@ grab the next open spot in the circle.</p>
                 "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
             "});" +
         "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
 
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/puzzles.html">puzzles</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/josephus.html">josephus</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/latex.html">latex</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                The Josephus Problem: Part 2: Two Examples
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-03-20T14:00:00-07:00" pubdate>Wednesday 03/20/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is Part 2 of an N-part series.</p>
-<ul>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html">The Josephus Problem: Part 1: The Problem</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">The Josephus Problem: Part 2: Two Examples</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">The Josephus Problem: Part 3: Solving the Double Step Case</a></li>
-</ul>
-<p><br />
-<br /></p>
-<h2>Table of Contents</h2>
-<ul>
-<li><a href="#two-examples">Two Examples</a></li>
-<li><a href="#n--8-m--4">n = 8, m = 4</a><ul>
-<li><a href="#step-by-step-removal-for-n--8">Step by Step Removal for n = 8</a></li>
-<li><a href="#writing-the-solution-permutation-two-row-notation">Writing the Solution Permutation: Two Row Notation</a></li>
-<li><a href="#writing-the-solution-permutation-cycle-notation">Writing the Solution Permutation: Cycle Notation</a></li>
-<li><a href="#visual-representation-of-solution-permutation">Visual Representation of Solution Permutation</a></li>
-</ul>
-</li>
-<li><a href="#n--11-m--2">n = 11, m = 2</a><ul>
-<li><a href="#step-by-step-removal-for-n--11">Step by Step Removal for n = 11</a></li>
-<li><a href="#two-row-notation">Two Row Notation</a></li>
-<li><a href="#cycle-notation">Cycle Notation</a></li>
-<li><a href="#circle-permutation-diagram">Circle Permutation Diagram</a></li>
-</ul>
-</li>
-<li><a href="#next-steps">Next Steps: Solve!</a></li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="two-examples"></a></p>
-<h2>Two Examples</h2>
-<p>In this blog post we'll walk through two examples
-of a Josephus problem:</p>
-<div class="math">$$
-n = 8, m = 4
-$$</div>
-<p>and</p>
-<div class="math">$$
-n = 11, m = 2
-$$</div>
-<p>We will simulate the Josephus process and
-show how the solution is expressed using both 
-permutation notation and cycle notation.</p>
-<p><a name="n--8-m--4"></a></p>
-<h2>n = 8, m = 4</h2>
-<p>We begin with the example that Knuth gives in his
-problem statement, <span class="math">\(n = 8, m = 4\)</span>, along with its
-solution, <span class="math">\(54613872\)</span>.</p>
-<p>Here is the Josephus circle for this case, and the
-corresponding removal index on the right (the red dot
-indicates the starting point for the process):</p>
-<table>
-<tr>
-<td>
-<b>Circle index:</b><br />
-<img alt="indexed by circle location order" 
-src="images/josephus_8_4_circleix.png" width="350px" />
-</td>
-<td>
-<b>Removal index:</b><br />
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_removalix.png" width="350px" />
-</td>
-</tr>
-</table>
-
-<p><a name="step-by-step-removal-for-n--8"></a></p>
-<h3>Step by Step Removal for n = 8</h3>
-<p>Starting at the red dot, we proceed <span class="math">\(m-1\)</span> points forward
-through the circle (<span class="math">\(m\)</span> if we include the starting
-point), skipping items that have already been removed,
-and remove an item from the circle.</p>
-<p>We indicate the starting point with a red dot in Step 0,
-then indicate the removal index with a red dot and the
-corresponding removal index.</p>
-<table>
-
-<tr>
-<td><b>Step 0: Starting Point
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step0R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 1:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step1R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 2:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step2R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 3:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step3R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 4:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step4R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 5:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step5R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 6:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step6R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 7:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step7R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 8:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step8R.png" width="350px" />
-</td>
-</tr>
-
-</table>
-
-<p><a name="writing-the-solution-permutation-two-row-notation"></a></p>
-<h3>Writing the Solution Permutation: Two Row Notation</h3>
-<p>As mentioned in Part 1, we can think about the final removal order
-of sushi plates (or mice, or soldiers) as a special permutation, 
-the Josephus permutation. If we want to write the Josephus permutation
-using the standard two-row notation for permutations, we would write
-the circle order (the index of items around the circle) on the top row,
-and the removal order (the index of items as they are removed) on the 
-bottom row. This gives:</p>
-<div class="math">$$
-\bigl(\begin{smallmatrix}
-    1 &amp; 2 &amp; 3 &amp; 4 &amp; 5 &amp; 6 &amp; 7 &amp; 8 \\
-    5 &amp; 4 &amp; 6 &amp; 1 &amp; 3 &amp; 8 &amp; 7 &amp; 2
-\end{smallmatrix}\bigr)
-$$</div>
-<p>While this notation is more intuitive (makes it easier to answer
-a variety of questions), it is also inconvenient notation, since
-there are many equivalent ways of writing a single permutation.</p>
-<p><a name="writing-the-solution-permutation-cycle-notation"></a></p>
-<h3>Writing the Solution Permutation: Cycle Notation</h3>
-<p>In Part 1 we also introduced cycles and cycle notation. Writing a
-permutation as a cycle is a unique representation of that permutation.
-By tracing which elements are permuted with other elements, we can
-turn the two-row representation into a cycle representation.</p>
-<p>Here is the Josephus permutation for <span class="math">\(n = 8, m = 4\)</span> 
-in cycle notation:</p>
-<div class="math">$$
-\left( 1 \, 5 \, 3 \, 6 \, 8 \, 2 \, 4 \right) \left( 7 \right)
-$$</div>
-<p><a name="visual-representation-of-solution-permutation"></a></p>
-<h3>Visual Representation of Solution Permutation</h3>
-<p>To represent the Josephus permutation graphically, we draw lines 
-connecting the edges that permute and form cycles:</p>
-<p><img alt="circle with undirected permutation paths" 
-src="images/josephus_8_4_circ.png" width="350px" /></p>
-<p>This is a visual representation of the Josephus permutation
-for <span class="math">\(n = 8, m = 4\)</span>.</p>
-<p><a name="n--11-m--2"></a></p>
-<h2>n = 11, m = 2</h2>
-<p>Next is an example with a step size of two, which
-is a special case of the Josephus problem with a 
-slightly easier solution procedure.</p>
-<p>Here is the final Josephus permutation on a circle,
-which is what our procedure below will yield:</p>
-<table>
-<tr>
-<td>
-<b>Circle index:</b><br />
-<img alt="indexed by circle location order" 
-src="images/josephus_11_2_circleix.png" width="350px" />
-</td>
-<td>
-<b>Removal index:</b><br />
-<img alt="indexed by removal order" 
-src="images/josephus_11_2_removalix.png" width="350px" />
-</td>
-</tr>
-</table>
-
-<p><a name="step-by-step-removal-for-n--11"></a></p>
-<h3>Step by Step Removal for n = 11</h3>
-<p>As before, we proceed from the red dot, moving
-forward <span class="math">\(m-1\)</span> items and removing the <span class="math">\(m^{th}\)</span>
-item.</p>
-<p>We indicate the starting point with a red dot in Step 0,
-then indicate the removal index with a red dot and the
-corresponding removal index.</p>
-<table>
-
-<tr>
-<td><b>Step 0: Starting Point
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 0"
-src="images/josephus_11_2_step0R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 1:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 1"
-src="images/josephus_11_2_step1R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 2:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 2"
-src="images/josephus_11_2_step2R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 3:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 3"
-src="images/josephus_11_2_step3R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 4:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 4"
-src="images/josephus_11_2_step4R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 5:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 5"
-src="images/josephus_11_2_step5R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 6:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 6"
-src="images/josephus_11_2_step6R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 7:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 7"
-src="images/josephus_11_2_step7R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 8:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 8"
-src="images/josephus_11_2_step8R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 9:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 9"
-src="images/josephus_11_2_step9R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 10:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 10"
-src="images/josephus_11_2_step10R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 11:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 11"
-src="images/josephus_11_2_step11R.png" width="350px" />
-</td>
-</tr>
-
-</table>
-
-<p><a name="two-row-notation"></a></p>
-<h3>Two Row Notation</h3>
-<p>Here is the two-row representation:</p>
-<div class="math">$$
-\bigl(\begin{smallmatrix}
-     1 &amp;  2 &amp;  3 &amp;  4 &amp;  5 &amp;  6 &amp;  7 &amp;  8 &amp;  9 &amp; 10 &amp; 11 \\
-     6 &amp;  1 &amp;  9 &amp;  2 &amp;  7 &amp;  3 &amp; 11 &amp;  4 &amp;  8 &amp;  5 &amp; 10
-\end{smallmatrix}\bigr)
-$$</div>
-<p><a name="cycle-notation"></a></p>
-<h3>Cycle Notation</h3>
-<p>When factored into a cycle, this gives:</p>
-<div class="math">$$
-\left( 1 \, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
-\left( 5 \, 7 \, 11 \, 10 \right)
-$$</div>
-<p><a name="circle-permutation-diagram"></a></p>
-<h3>Circle Permutation Diagram</h3>
-<p>To represent the Josephus permutation graphically, we draw lines 
-connecting the edges that permute and form cycles:</p>
-<p><img alt="circle with undirected permutation paths" 
-src="images/josephus_11_2_circ.png" width="350px" /></p>
-<p>This is a visual representation of the Josephus permutation
-for <span class="math">\(n = 11, m = 2\)</span>.</p>
-<p><a name="next-steps"></a></p>
-<h2>Next Steps: Solve!</h2>
-<p>Our next steps are simple: solve it! </p>
-<p>In <strong><a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">Part 3</a></strong> we will show the solution of the
-special case of <span class="math">\(m = 2\)</span> (the double-step case).</p>
-<p>In <strong><a href="#">Part 4</a></strong> we will show several ways to solve
-the general case, and walk through some examples
-where we apply the solution procedure.</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/puzzles.html">puzzles</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/josephus.html">josephus</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/latex.html">latex</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                The Josephus Problem: Part 1: The Problem
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-03-16T14:00:00-07:00" pubdate>Saturday 03/16/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is Part 1 of an N-part series.</p>
-<ul>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html">The Josephus Problem: Part 1: The Problem</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">The Josephus Problem: Part 2: Two Examples</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">The Josephus Problem: Part 3: Solving the Double Step Case</a></li>
-</ul>
-<p><br />
-<br /></p>
-<h2>Table of Contents</h2>
-<ul>
-<li><a href="#the-josephus-problem-and-variations">The Josephus Problem and Variations</a><ul>
-<li><a href="#the-sushi-boat-variation">The Sushi Boat Variation</a></li>
-<li><a href="#more-backstory">More Backstory</a></li>
-</ul>
-</li>
-<li><a href="#the-tools">The Tools</a><ul>
-<li><a href="#permutations">Permutations</a></li>
-<li><a href="#cycles">Cycles</a></li>
-<li><a href="#circular-linked-lists">Circular Linked Lists</a></li>
-</ul>
-</li>
-<li><a href="#tex-for-diagrams">TeX for Diagrams</a><ul>
-<li><a href="#empty-josephus-circle-diagram">Empty Josephus Circle Diagram</a></li>
-<li><a href="#josephus-circle-diagram-with-permutation-paths">Josephus Circle Diagram With Permutation Paths</a></li>
-</ul>
-</li>
-<li><a href="#next-steps-examples-and-solutions">Next Steps: Examples and Solutions</a></li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="the-josephus-problem-and-variations"></a></p>
-<h2>The Josephus Problem and Variations</h2>
-<p>The following problem, Cat and Mice, is Puzzle 88 
-in Boris Kordemsky's The Moscow Puzzles.</p>
-<blockquote>
-<p>Purrer has decided to take a nap. He dreams
-he is encircled by <span class="math">\(n\)</span> mice: <span class="math">\(n-1\)</span> gray and 1 white.
-He hears is owner saying, "Purrer, you are to
-eat each <span class="math">\(m\)</span>-th mouse, keeping the same 
-direction. The last mouse you eat must be
-the white one.</p>
-<p>Which mouse should he start with?</p>
-</blockquote>
-<p>This problem presents a scenario that is nearly identical to
-a classic problem that has a more grisly backstory: the 
-Josephus problem.</p>
-<p>Donald Knuth presents a more unsettling version of this problem,
-so I'll just let his (rather gleeful) description of the original
-problem suffice (except - what's this "we" stuff?)</p>
-<p>From Section 1.3.2 of <u>The Art of Computer Programming</u> (Vol. 1),
-Exercise 22 presents the Josephus Problem:</p>
-<blockquote>
-<p><strong>22. (The Josephus Problem.)</strong> There are <span class="math">\(n\)</span> men arranged in a circle. Beginning
-with a particular position, we count around the circle and brutally execute
-every <span class="math">\(m^{th}\)</span> man (the circle closing as men are decapitated). For example,
-the execution order when <span class="math">\(n = 8, m = 4\)</span> is <span class="math">\(54613872\)</span>: the first man is fifth
-to go, the second man is fourth, etc. Write a program which prints outs the
-order of execution when <span class="math">\(n = 24, m = 11\)</span>.  Try to design a clever algorithm
-that works at high speed when <span class="math">\(n\)</span> and <span class="math">\(m\)</span> are large.</p>
-</blockquote>
-<p><a name="the-sushi-boat-variation"></a></p>
-<h3>The Sushi Boat Variation</h3>
-<p>You are at the sushi boat restaurant, where plates of
-sushi in tiny boats float by in front of you.</p>
-<p>There are <span class="math">\(n\)</span> plates of sushi, each on a sushi boat.  Each plate of sushi is
-labeled <span class="math">\(1 \dots n\)</span> and arranged in order on the boats.</p>
-<p>Beginning at plate 1, you count <span class="math">\(m\)</span> plates of sushi,
-stopping at the <span class="math">\(m^{th}\)</span> boat and taking the plate of
-sushi off the boat to eat it.</p>
-<p>In what order will the sushi plates be stacked when you are done?</p>
-<p>Which plate of sushi will be eaten last?</p>
-<p><a name="more-backstory"></a></p>
-<h3>More Backstory</h3>
-<p>More background on the Josephus problem and its various solutions is given in a
-letter to the editor from the Fibonacci Quarterly, Issue 1 of 1976 (<a href="https://fq.math.ca/Scanned/14-1/letter2-a.pdf">Part
-1</a> and <a href="https://fq.math.ca/Scanned/14-1/letter2-b.pdf">Part
-2</a>) written in response to an
-article that gave a solution to the problem of "Idiot's Roulette" (identical to
-the Josephus problem as presented above) without referencing the Josephus
-problem.  Here is <a href="https://fq.math.ca/Scanned/13-2/booth.pdf">the original article</a>.</p>
-<p><a name="the-tools"></a></p>
-<h2>The Tools</h2>
-<p>To solve the Josephus problem, we need to use several 
-conceptual and computational tools. Below we cover
-some notation we will use and give links to pages on the
-<a href="https://charlesreid1.com/wiki/">charlesreid1.com wiki</a>
-that are useful.</p>
-<p><a name="permutations"></a></p>
-<h3>Permutations</h3>
-<p>We can think of the outcome of the Josephus problem as a
-"Josephus permutation" - a permutation that reorders the
-sushi plates in the circle (numbered by their positoin in the 
-circle) into the order in which they are removed from the
-circle.</p>
-<p>For example, in Knuth's problem statement, he gives
-an example of <span class="math">\(n = 8, m = 4\)</span> (eating every 4th plate
-of sushi, in a train of 8 sushi boats), which results
-in the plates being removed in the following order:</p>
-<div class="math">$$
-5, 4, 6, 1, 3, 8, 7, 2
-$$</div>
-<p>To write this permutation using mathematical notation,
-we write two rows. The top row is the ordering 
-of plates in the circle, the "natural" ordering, 
-and the second row is the order of removal of plates,
-which is the Josephus permutation:</p>
-<div class="math">$$
-\bigl(\begin{smallmatrix}
-    1 &amp; 2 &amp; 3 &amp; 4 &amp; 5 &amp; 6 &amp; 7 &amp; 8 \\
-    5 &amp; 4 &amp; 6 &amp; 1 &amp; 3 &amp; 8 &amp; 7 &amp; 2
-\end{smallmatrix}\bigr)
-$$</div>
-<p>As Knuth would point out, this Josephus permutation
-can be written in 40,319 other equivalent ways (that's
-8! total, minus the 1 way shown above) by reordering the
-columns (as long as we reorder the columns in the top and
-bottom rows in the same way).</p>
-<p>We can read this permutation from left to right as follows:</p>
-<ul>
-<li>The first sushi plate (labeled 1) will be eaten fifth;</li>
-<li>The second sushi plate (labeled 2) will be eaten fourth;</li>
-<li>etc.</li>
-</ul>
-<p>Ordering the permutation as above (circle index on top,
-removal index on bottom) makes it easy to answer the 
-second question, "Which sushi plate will be eaten last?"</p>
-<p>We find 8 in the bottom row (the removal index), and read
-the corresponding number in the top row (the plate 
-number/circle position), plate 6.</p>
-<p>If we wish to answer the first question, "in what order will
-the plates be removed," we have a bit more work to do.
-We mentioned that the above permutation is 1 of a total of 
-40,320 equivalent ways of writing the same permutation. 
-Another way of writing it would be to maintain the pairing
-between top and bottom but sort the bottom elements:</p>
-<div class="math">$$
-\bigl(\begin{smallmatrix}
-    4 &amp; 8 &amp; 5 &amp; 2 &amp; 1 &amp; 3 &amp; 7 &amp; 6 \\
-    1 &amp; 2 &amp; 3 &amp; 4 &amp; 5 &amp; 6 &amp; 7 &amp; 8
-\end{smallmatrix}\bigr)
-$$</div>
-<p>Now we can find the order of the plates by reading
-the top row right-to-left. The last plate removed
-is plate 6, so that will be on top of the stack of
-plates (stacks are first in, last out).</p>
-<p>We cover permutations and permutation notation 
-in the context of Rubiks Cubes on the 
-<a href="https://charlesreid1.com/wiki/Rubiks_Cube/Permutations">Rubiks Cube/Permutations</a>
-page of the charlesreid1.com wiki.</p>
-<p><a name="cycles"></a></p>
-<h3>Cycles</h3>
-<p>While the above permutation notation is useful,
-the variety of ways of expressing the same
-permutation is inconvenient. This is where
-cycles become useful - cycles are a way of
-implicitly representing both rows of the 
-permutation. </p>
-<p>To do this, we "thread" our way through the
-permutation to create the cycle of which items
-move to which positions.</p>
-<p>Starting with the left-most column of the
-permutation,</p>
-<div class="math">$$
-\bigl(\begin{smallmatrix}
-    1 &amp; 2 &amp; 3 &amp; 4 &amp; 5 &amp; 6 &amp; 7 &amp; 8 \\
-    5 &amp; 4 &amp; 6 &amp; 1 &amp; 3 &amp; 8 &amp; 7 &amp; 2
-\end{smallmatrix}\bigr)
-$$</div>
-<p>we know that <span class="math">\(1 \rightarrow 5\)</span>. Now we find
-the column that has 5 in the top: the fifth
-column. We write <span class="math">\(5 \rightarrow 3\)</span>. Now we
-find the column with 3 in the top: the third
-column. We write <span class="math">\(3 \rightarrow 6\)</span>. Next, we
-write <span class="math">\(6 \rightarrow 8\)</span>, then <span class="math">\(8 \rightarrow 2\)</span>,
-then <span class="math">\(2 \rightarrow 4\)</span>. Once we see that the 
-last step of the cycle is <span class="math">\(4 \rightarrow 1\)</span>,
-which brings us back to the beginning, we
-write that closed cycle in parentheses.
-If we have elements left, we repeat the
-procedure starting with any of the remaining
-elements. Sometimes there is a single cycle,
-and sometimes there are multiple cycles.
-In this case we have two cycles:</p>
-<div class="math">$$
-\left( 1 \, 5 \, 3 \, 6 \, 8 \, 2 \, 4 \right) \left( 7 \right)
-$$</div>
-<p>This indicates that 7 does not change
-position, i.e., the 7th plate of sushi
-is eaten 7th.</p>
-<p>This notation is very convenient for
-finding solutions, and it turns out that
-Knuth gives a general solution procedure
-for the Josephus problem that involves a
-rather complicated application of the cycle
-notation, so a solid understanding of
-cycle notation is important.</p>
-<p>We cover cycle notation in the context of Rubiks Cubes
-on the <a href="https://charlesreid1.com/wiki/Rubiks_Cube/Permutations">Rubiks Cube/Permutations</a>
-page of the charlesreid1.com wiki (in particular,
-the sections on <a href="https://charlesreid1.com/wiki/Rubiks_Cube/Permutations#Permutation_Algebra">Permutation Algebra</a>
-that cover intercalation products).</p>
-<p><a name="circular-linked-lists"></a></p>
-<h3>Circular Linked Lists</h3>
-<p>Among the many ways of solving the Josephus problem,
-the easiest method is to just carry out the procedure 
-by hand to find the final Josephus permutation, then 
-use it to answer the original question. This technique
-is referred to as the <em>simulation</em> technique.</p>
-<p>This technique would become infeasible if we were to 
-ask more difficult versions of the Josephus problem,
-such as posing a scenario where there are 5 million
-plates of sushi, and we wish to know which position
-(which plate of sushi) will be eaten 2,999,998th,
-and we also wish to have the answer instantaneously.</p>
-<p>If we're dealing with smaller values of n and m,
-though, we can simulate a solution to the Josephus 
-problem using a circular linked list.</p>
-<p><strong>Linked Lists</strong></p>
-<p>Briefly, a linked list is a type of list whose
-elements consist of <em>nodes</em>, small bundles containing
-a piece of data (the list item's value) and 
-pointers to other nodes (the next and/or previous
-elements in the list).</p>
-<p>See <a href="https://charlesreid1.com/wiki/Linked_Lists">Linked Lists</a>
-for notes on linked lists and some answers to
-textbook exercises.</p>
-<p>See <a href="https://charlesreid1.com/wiki/Lists_Study_Guide">Lists Study Guide</a>
-for a summary of important information about
-and properties of lists.</p>
-<p><strong>Circular Linked Lists:</strong></p>
-<p>A circular linked list is just what it sounds like:
-each of the elements points to the next element,
-and the last element in the list points to the
-first element in the list. We can use the list
-by maintaining a pointer to a particular item
-(the first item in the list).</p>
-<p>We can insert items into the list by creating a new
-node, and inserting it between two nodes (e.g., the
-front and back of the list) by updating the pointers of
-the front and back nodes to point to the new list item.</p>
-<p>Usefully, we can also remove items from the list
-with some pointer manipulation. To remove a node,
-we modify the next/previous pointers of the nodes 
-before/after the doomed node so that they point
-to each other instead of to the doomed node.</p>
-<p>This allows us to explicitly model the sushi boat
-(a.k.a. the "kill ring") in the Josephus problem.</p>
-<p>Circular linked lists are covered on the 
-charlesreid1.com wiki on the <a href="https://charlesreid1.com/wiki/Linked_Lists/Java/Circular">Linked Lists/Java/Circular</a>
-page, and are implemented in Java in the 
-<a href="https://git.charlesreid1.com/cs/java">cs/java</a>
-repo: <a href="https://git.charlesreid1.com/cs/java/src/branch/master/lists/linked-lists">https://git.charlesreid1.com/cs/java/src/branch/master/lists/linked-lists</a></p>
-<p>A Python implementation used to solve the Josephus
-problem is available in the cs/josephus repo:
-repo: <a href="https://git.charlesreid1.com/cs/josephus">https://git.charlesreid1.com/cs/josephus</a></p>
-<p><a name="tex-for-diagrams"></a></p>
-<h2>TeX for Diagrams</h2>
-<p>In addition to writing The Art of Computer Programming,
-which has remained a gold standard algorithm textbook
-for over 40 years, Knuth also invented the TeX 
-typesetting system, which is also the gold standard
-for typesetting mathematical equations.</p>
-<p>We use the <a href="https://sourceforge.net/projects/pgf/">PGF/TikZ</a>
-package to draw polygons that are useful in
-illustrating the circles of the Josephus problem
-and in visualizing various permutations.</p>
-<p>A few examples and links to Github Gists with TeX 
-code follow.</p>
-<p><a name="empty-josephus-circle-diagram"></a></p>
-<h3>Empty Josephus Circle Diagram</h3>
-<p><a href="https://gist.github.com/charlesreid1/a5f1cf398fb9c56e7ed5c2f55d01e10f">Link to gist with TeX code</a></p>
-<p><img alt="empty josephus circle diagram" 
-src="images/poly_circ_empty.png" width="350px" /></p>
-<p>Here is the TeX code to generate this diagram:</p>
-<div class="highlight"><pre><span></span><span class="k">\documentclass</span><span class="na">[border=2mm]</span><span class="nb">{</span>standalone<span class="nb">}</span>
-<span class="k">\usepackage</span><span class="nb">{</span>tikz<span class="nb">}</span>
-<span class="k">\usepackage</span><span class="nb">{</span>xintexpr<span class="nb">}</span>
-<span class="k">\usetikzlibrary</span><span class="nb">{</span>shapes.geometric<span class="nb">}</span>
-
-<span class="k">\begin</span><span class="nb">{</span>document<span class="nb">}</span>
-<span class="k">\begin</span><span class="nb">{</span>tikzpicture<span class="nb">}</span>[scale=3]
-
-<span class="c">% make a node with variable name pol (with the list of features given) at the location (0,0), and don&#39;t label it</span>
-<span class="k">\node</span> (pol) [draw=none, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) <span class="nb">{}</span>;
-
-
-<span class="c">% anchor is &quot;corner 1&quot;</span>
-<span class="c">% label is 1/2/3/4/etc</span>
-<span class="c">% placement is placement w.r.t. coordinate location</span>
-<span class="k">\foreach</span> <span class="k">\anchor</span>/<span class="k">\label</span>/<span class="k">\placement</span> in
-    <span class="nb">{</span>corner 1/<span class="s">$</span><span class="m">1</span><span class="s">$</span>/above,
-     corner 2/<span class="s">$</span><span class="m">2</span><span class="s">$</span>/above left,
-     corner 3/<span class="s">$</span><span class="m">3</span><span class="s">$</span>/left,
-     corner 4/<span class="s">$</span><span class="m">4</span><span class="s">$</span>/left,
-     corner 5/<span class="s">$</span><span class="m">5</span><span class="s">$</span>/below left,
-     corner 6/<span class="s">$</span><span class="m">6</span><span class="s">$</span>/below,
-     corner 7/<span class="s">$</span><span class="m">7</span><span class="s">$</span>/below,
-     corner 8/<span class="s">$</span><span class="m">8</span><span class="s">$</span>/below right,
-     corner 9/<span class="s">$</span><span class="m">9</span><span class="s">$</span>/right,
-     corner 10/<span class="s">$</span><span class="nb">{</span><span class="m">10</span><span class="nb">}</span><span class="s">$</span>/right,
-     corner 11/<span class="s">$</span><span class="nb">{</span><span class="m">11</span><span class="nb">}</span><span class="s">$</span>/above right<span class="nb">}</span>
-<span class="k">\draw</span><span class="na">[shift=(pol.\anchor)]</span> plot coordinates<span class="nb">{</span>(0,0)<span class="nb">}</span> node[font=<span class="k">\scriptsize</span>,<span class="k">\placement</span>] <span class="nb">{</span><span class="k">\label</span><span class="nb">}</span>;
-
-
-<span class="c">% draw a circle connecting all points</span>
-<span class="k">\draw</span> circle[radius=1.01cm];
-
-
-<span class="c">% Draw a red dot at the starting point</span>
-<span class="k">\filldraw</span><span class="na">[red]</span> (pol.corner 1) circle[radius=0.8pt];
-
-<span class="c">% optional: black dots at each circle location</span>
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 2) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 3) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 4) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 5) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 6) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 7) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 8) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 9) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 10) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 11) circle[radius=0.4pt];
-
-<span class="k">\end</span><span class="nb">{</span>tikzpicture<span class="nb">}</span>
-<span class="k">\end</span><span class="nb">{</span>document<span class="nb">}</span>
-</pre></div>
-
-
-<p><a name="josephus-circle-diagram-with-permutation-paths"></a></p>
-<h3>Josephus Circle Diagram With Permutation Paths</h3>
-<p>Next, we can illustrate cycles in the permutation
-by drawing paths between connected nodes.</p>
-<p>The edges are directed (<code>1 -&gt; 4</code> is not the
-same as <code>4 -&gt; 1</code>). We draw both directed and
-undirected versions.</p>
-<p><a href="https://gist.github.com/charlesreid1/c279eeb798776ae92b8d1cb4666d2ef4">Link to gist with TeX code</a></p>
-<p><img alt="josephus circle diagram with undirected edges" 
-src="images/poly_undirected_circ.png" width="350px" /></p>
-<p><img alt="josephus circle diagram with directed edges" 
-src="images/poly_directed_circ.png" width="350px" /></p>
-<p>The code to generate these diagrams is below.</p>
-<p><strong>Undirected Paths:</strong></p>
-<div class="highlight"><pre><span></span><span class="k">\documentclass</span><span class="na">[border=2mm]</span><span class="nb">{</span>standalone<span class="nb">}</span>
-<span class="k">\usepackage</span><span class="nb">{</span>tikz<span class="nb">}</span>
-<span class="k">\usepackage</span><span class="nb">{</span>xintexpr<span class="nb">}</span>
-<span class="k">\usetikzlibrary</span><span class="nb">{</span>shapes.geometric<span class="nb">}</span>
-
-<span class="k">\begin</span><span class="nb">{</span>document<span class="nb">}</span>
-<span class="k">\begin</span><span class="nb">{</span>tikzpicture<span class="nb">}</span>[scale=3]
-
-<span class="c">% make a node with variable name pol (with the list of features given) at the location (0,0), and don&#39;t label it</span>
-<span class="k">\node</span> (pol) [draw=none, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) <span class="nb">{}</span>; 
-
-
-<span class="c">% anchor is &quot;corner 1&quot;</span>
-<span class="c">% label is 1/2/3/4/etc</span>
-<span class="c">% placement is placement w.r.t. coordinate location</span>
-<span class="k">\foreach</span> <span class="k">\anchor</span>/<span class="k">\label</span>/<span class="k">\placement</span> in
-    <span class="nb">{</span>corner 1/<span class="s">$</span><span class="m">1</span><span class="s">$</span>/above, 
-     corner 2/<span class="s">$</span><span class="m">2</span><span class="s">$</span>/above left, 
-     corner 3/<span class="s">$</span><span class="m">3</span><span class="s">$</span>/left, 
-     corner 4/<span class="s">$</span><span class="m">4</span><span class="s">$</span>/left,
-     corner 5/<span class="s">$</span><span class="m">5</span><span class="s">$</span>/below left,   
-     corner 6/<span class="s">$</span><span class="m">6</span><span class="s">$</span>/below,
-     corner 7/<span class="s">$</span><span class="m">7</span><span class="s">$</span>/below,
-     corner 8/<span class="s">$</span><span class="m">8</span><span class="s">$</span>/below right,
-     corner 9/<span class="s">$</span><span class="m">9</span><span class="s">$</span>/right,
-     corner 10/<span class="s">$</span><span class="nb">{</span><span class="m">10</span><span class="nb">}</span><span class="s">$</span>/right,
-     corner 11/<span class="s">$</span><span class="nb">{</span><span class="m">11</span><span class="nb">}</span><span class="s">$</span>/above right<span class="nb">}</span>
-<span class="k">\draw</span><span class="na">[shift=(pol.\anchor)]</span> plot coordinates<span class="nb">{</span>(0,0)<span class="nb">}</span> node[font=<span class="k">\scriptsize</span>,<span class="k">\placement</span>] <span class="nb">{</span><span class="k">\label</span><span class="nb">}</span>;
-
-<span class="c">% solution for n = 11, m = 4:</span>
-<span class="c">% ( 1 3 7 6 4 ) ( 2 8 ) ( 5 9 11 ) ( 10 )</span>
-
-<span class="c">% internal paths</span>
-
-<span class="c">% cycle (1 3 7 6 4)</span>
-<span class="k">\path</span> [-] (pol.corner 1) edge (pol.corner 3);
-<span class="k">\path</span> [-] (pol.corner 3) edge (pol.corner 7);
-<span class="k">\path</span> [-] (pol.corner 7) edge (pol.corner 6);
-<span class="k">\path</span> [-] (pol.corner 6) edge (pol.corner 4);
-<span class="k">\path</span> [-] (pol.corner 4) edge (pol.corner 1);
-
-<span class="c">% cycle 2 (2 8)</span>
-<span class="k">\path</span> [-] (pol.corner 2) edge (pol.corner 8);
-<span class="k">\path</span> [-] (pol.corner 8) edge (pol.corner 2);
-
-<span class="c">% cycle 3 (5 9 11 )</span>
-<span class="k">\path</span> [-] (pol.corner 5) edge (pol.corner 9);
-<span class="k">\path</span> [-] (pol.corner 9) edge (pol.corner 11);
-<span class="k">\path</span> [-] (pol.corner 11) edge (pol.corner 5);
-
-
-<span class="c">% draw a circle connecting all points</span>
-<span class="k">\draw</span> circle[radius=1.01cm];
-
-
-<span class="c">% Draw a red dot at the starting point </span>
-<span class="k">\filldraw</span><span class="na">[red]</span> (pol.corner 1) circle[radius=0.8pt];
-
-<span class="c">% optional: black dots at each circle location</span>
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 2) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 3) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 4) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 5) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 6) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 7) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 8) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 9) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 10) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 11) circle[radius=0.4pt];
-
-<span class="k">\end</span><span class="nb">{</span>tikzpicture<span class="nb">}</span>
-<span class="k">\end</span><span class="nb">{</span>document<span class="nb">}</span>
-</pre></div>
-
-
-<p><strong>Directed Paths:</strong></p>
-<div class="highlight"><pre><span></span><span class="k">\documentclass</span><span class="na">[border=2mm]</span><span class="nb">{</span>standalone<span class="nb">}</span>
-<span class="k">\usepackage</span><span class="nb">{</span>tikz<span class="nb">}</span>
-<span class="k">\usepackage</span><span class="nb">{</span>xintexpr<span class="nb">}</span>
-<span class="k">\usetikzlibrary</span><span class="nb">{</span>shapes.geometric<span class="nb">}</span>
-
-<span class="k">\begin</span><span class="nb">{</span>document<span class="nb">}</span>
-<span class="k">\begin</span><span class="nb">{</span>tikzpicture<span class="nb">}</span>[scale=3]
-
-<span class="c">% make a node with variable name pol (with the list of features given) at the location (0,0), and don&#39;t label it</span>
-<span class="k">\node</span> (pol) [draw=none, thick, black!90!black,rotate=0,minimum size=6cm,regular polygon, regular polygon sides=11] at (0,0) <span class="nb">{}</span>; 
-
-
-<span class="c">% anchor is &quot;corner 1&quot;</span>
-<span class="c">% label is 1/2/3/4/etc</span>
-<span class="c">% placement is placement w.r.t. coordinate location</span>
-<span class="k">\foreach</span> <span class="k">\anchor</span>/<span class="k">\label</span>/<span class="k">\placement</span> in
-    <span class="nb">{</span>corner 1/<span class="s">$</span><span class="m">1</span><span class="s">$</span>/above, 
-     corner 2/<span class="s">$</span><span class="m">2</span><span class="s">$</span>/above left, 
-     corner 3/<span class="s">$</span><span class="m">3</span><span class="s">$</span>/left, 
-     corner 4/<span class="s">$</span><span class="m">4</span><span class="s">$</span>/left,
-     corner 5/<span class="s">$</span><span class="m">5</span><span class="s">$</span>/below left,   
-     corner 6/<span class="s">$</span><span class="m">6</span><span class="s">$</span>/below,
-     corner 7/<span class="s">$</span><span class="m">7</span><span class="s">$</span>/below,
-     corner 8/<span class="s">$</span><span class="m">8</span><span class="s">$</span>/below right,
-     corner 9/<span class="s">$</span><span class="m">9</span><span class="s">$</span>/right,
-     corner 10/<span class="s">$</span><span class="nb">{</span><span class="m">10</span><span class="nb">}</span><span class="s">$</span>/right,
-     corner 11/<span class="s">$</span><span class="nb">{</span><span class="m">11</span><span class="nb">}</span><span class="s">$</span>/above right<span class="nb">}</span>
-<span class="k">\draw</span><span class="na">[shift=(pol.\anchor)]</span> plot coordinates<span class="nb">{</span>(0,0)<span class="nb">}</span> node[font=<span class="k">\scriptsize</span>,<span class="k">\placement</span>] <span class="nb">{</span><span class="k">\label</span><span class="nb">}</span>;
-
-<span class="c">% solution for n = 11, m = 4:</span>
-<span class="c">% ( 1 3 7 6 4 ) ( 2 8 ) ( 5 9 11 ) ( 10 )</span>
-
-<span class="c">% internal paths</span>
-
-<span class="c">% cycle (1 3 7 6 4)</span>
-<span class="k">\path</span> [-&gt;, shorten &gt; = 3 pt, blue, shorten &lt; = 4 pt, &gt; = stealth] (pol.corner 1) edge (pol.corner 3);
-<span class="k">\path</span> [-&gt;, shorten &gt; = 3 pt, blue, shorten &lt; = 4 pt, &gt; = stealth] (pol.corner 3) edge (pol.corner 7);
-<span class="k">\path</span> [-&gt;, shorten &gt; = 3 pt, blue, shorten &lt; = 4 pt, &gt; = stealth] (pol.corner 7) edge (pol.corner 6);
-<span class="k">\path</span> [-&gt;, shorten &gt; = 3 pt, blue, shorten &lt; = 4 pt, &gt; = stealth] (pol.corner 6) edge (pol.corner 4);
-<span class="k">\path</span> [-&gt;, shorten &gt; = 3 pt, blue, shorten &lt; = 4 pt, &gt; = stealth] (pol.corner 4) edge (pol.corner 1);
-
-<span class="c">% cycle 2 (2 8)</span>
-<span class="k">\path</span> [-&gt;, shorten &gt; = 3 pt, green, shorten &lt; = 4 pt, &gt; = stealth] (pol.corner 2) edge (pol.corner 8);
-<span class="k">\path</span> [-&gt;, shorten &gt; = 3 pt, green, shorten &lt; = 4 pt, &gt; = stealth] (pol.corner 8) edge (pol.corner 2);
-
-<span class="c">% cycle 3 (5 9 11 )</span>
-<span class="k">\path</span> [-&gt;, shorten &gt; = 3 pt, red, shorten &lt; = 4 pt, &gt; = stealth] (pol.corner 5) edge (pol.corner 9);
-<span class="k">\path</span> [-&gt;, shorten &gt; = 3 pt, red, shorten &lt; = 4 pt, &gt; = stealth] (pol.corner 9) edge (pol.corner 11);
-<span class="k">\path</span> [-&gt;, shorten &gt; = 3 pt, red, shorten &lt; = 4 pt, &gt; = stealth] (pol.corner 11) edge (pol.corner 5);
-
-
-<span class="c">% draw a circle connecting all points</span>
-<span class="k">\draw</span> circle[radius=1.01cm];
-
-
-<span class="c">% draw a red dot at the starting point </span>
-<span class="k">\filldraw</span><span class="na">[red]</span> (pol.corner 1) circle[radius=0.8pt];
-
-<span class="c">% optional: black dots at each circle location</span>
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 2) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 3) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 4) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 5) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 6) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 7) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 8) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 9) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 10) circle[radius=0.4pt];
-<span class="k">\filldraw</span><span class="na">[black]</span> (pol.corner 11) circle[radius=0.4pt];
-
-<span class="k">\end</span><span class="nb">{</span>tikzpicture<span class="nb">}</span>
-<span class="k">\end</span><span class="nb">{</span>document<span class="nb">}</span>
-</pre></div>
-
-
-<p><a name="next-steps-examples-and-solutions"></a></p>
-<h2>Next Steps: Examples and Solutions</h2>
-<p>So far in <strong><a href="https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html">Part 1</a></strong> we have covered some common
-forms of the Josephus problem.</p>
-<p>In <strong><a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">Part 2</a></strong> we'll cover some examples 
-of different <span class="math">\(n, m\)</span> values (<span class="math">\(n\)</span> is circle size,
-<span class="math">\(m\)</span> is skip length) and show how the
-process plays out.</p>
-<p>In <strong><a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">Part 3</a></strong> we will show the solution of the
-special case of <span class="math">\(m = 2\)</span> (the double-step case).</p>
-<p>In <strong><a href="#">Part 4</a></strong> we will show several ways to solve
-the general case, and walk through some examples
-where we apply the solution procedure.</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
 </script></div>
@@ -1907,6 +1259,32 @@ where we apply the solution procedure.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>September 2019</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/mocking-aws-in-unit-tests.html">Mocking AWS in Unit Tests</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>August 2019</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/writing-a-vim-plugin-with-python.html">Writing a Vim Plugin with Python</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

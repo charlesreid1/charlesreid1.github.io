@@ -102,6 +102,343 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Mocking AWS in Unit Tests
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-09-23T09:00:00-07:00" pubdate>Monday 09/23/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/mocking-aws-in-unit-tests.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2>Table of Contents</h2>
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#a-simple-example-mocking-api-responses">A Simple Example: Mocking API Responses</a><ul>
+<li><a href="#the-genuine-aws-call">The Genuine AWS Call</a></li>
+<li><a href="#the-mocked-aws-call">The Mocked AWS Call</a></li>
+</ul>
+</li>
+</ul>
+<h2>Overview</h2>
+<p>This post covers a technique for mocking AWS in unit tests so that you can test functionality that normally
+requires API calls and handling responses, by mocking those responses instead of making actual API calls.</p>
+<h2>A Simple Example: Mocking API Responses</h2>
+<h3>The Genuine AWS Call</h3>
+<p>Let's start with an example of an AWS API call. Here's how our program will be structured:
+start with a driver <code>lister.py</code> that creates an AWS secrets manager client and defines a 
+function to list secrets using the secrets manager client, then a test for it in <code>test_lister.py</code>
+that mocks the AWS call.</p>
+<p>This example is simple and uses just one function, <code>list_secrets()</code>,
+which returns a JSON response that looks something like this:</p>
+<div class="highlight"><pre><span></span><span class="err">{</span>
+  <span class="ss">&quot;SecretList&quot;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="err">{</span>
+      <span class="ss">&quot;ARN&quot;</span><span class="p">:</span> <span class="ss">&quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret1-abc123&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;Name&quot;</span><span class="p">:</span> <span class="ss">&quot;prefix/es_source_ip&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;LastChangedDate&quot;</span><span class="p">:</span> <span class="ss">&quot;2019-09-23 17:29:16.267000-07:00&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="ss">&quot;2019-09-23 17:00:00-07:00&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;SecretVersionsToStages&quot;</span><span class="p">:</span> <span class="err">{</span>
+        <span class="ss">&quot;658c3b41-0806-48b9-b05d-ea7dc2dbf237&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="ss">&quot;AWSCURRENT&quot;</span>
+        <span class="p">],</span>
+        <span class="ss">&quot;f37ccfe2-16e0-4305-a250-ef89d2c47ece&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="ss">&quot;AWSPREVIOUS&quot;</span>
+        <span class="p">]</span>
+      <span class="err">}</span>
+    <span class="err">}</span><span class="p">,</span>
+    <span class="err">{</span>
+      <span class="ss">&quot;ARN&quot;</span><span class="p">:</span> <span class="ss">&quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret2-def789&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;Name&quot;</span><span class="p">:</span> <span class="ss">&quot;prefix/secret2&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;LastChangedDate&quot;</span><span class="p">:</span> <span class="ss">&quot;2019-09-22 17:05:01.431000-07:00&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="ss">&quot;2019-09-22 17:00:00-07:00&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;SecretVersionsToStages&quot;</span><span class="p">:</span> <span class="err">{</span>
+        <span class="ss">&quot;95AE5F8B-34E7-4EDF-A672-9E3AF1A4732E&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="ss">&quot;AWSCURRENT&quot;</span>
+        <span class="p">],</span>
+        <span class="ss">&quot;F29E224A-BC03-4780-B64E-EA666B99D952&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="ss">&quot;AWSPREVIOUS&quot;</span>
+        <span class="p">]</span>
+      <span class="err">}</span>
+    <span class="err">}</span>
+  <span class="p">]</span>
+<span class="err">}</span>
+</pre></div>
+
+
+<p>Using the secrets manager API:</p>
+<p><strong><code>lister.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">boto3</span>
+
+<span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">print_secret_names</span><span class="p">():</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">secret</span> <span class="ow">in</span> <span class="n">s</span><span class="p">[</span><span class="s1">&#39;SecretList&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="s1">&#39;Name&#39;</span> <span class="ow">in</span> <span class="n">secret</span> <span class="ow">and</span> <span class="s1">&#39;LastAccessedDate&#39;</span> <span class="ow">in</span> <span class="n">secret</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Secret Name: {secret[&#39;Name&#39;]} (last accessed: {secret[&#39;LastAccessedDate&#39;]})&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">print_secret_names</span><span class="p">()</span>
+</pre></div>
+
+
+<p>If we run this file, we'll see a list of secrets in the real secrets manager -
+that is, the secrets manager that is linked to the boto credentials in <code>~/.aws</code>,
+so the secrets we see are the actual secrets in the secret manager:</p>
+<div class="highlight"><pre><span></span>$ python lister.py
+Secret Name: prefix/secret1 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">17</span>:00:00-07:00<span class="o">)</span>
+Secret Name: prefix/secret2 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">17</span>:00:00-07:00<span class="o">)</span>
+Secret Name: prefix/secret3 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">17</span>:00:00-07:00<span class="o">)</span>
+</pre></div>
+
+
+<h3>The Mocked AWS Call</h3>
+<p>It is important to only mock the functionality we need.
+We should mock the returned JSON, but only the <code>Name</code>
+and <code>LastAccessedDate</code> fields.</p>
+<p>To mock the call to <code>list_secrets()</code>, we start by importing
+<code>mock</code> from <code>unittest</code>. Then we import the file that has the
+function we want to test. We also import any other modules
+we need.</p>
+<p>Next, we are mocking a call to a method of an object,
+which we can do by creating a context via <code>with mock.patch()</code>
+(and passing it a string with the name of the object we want
+to mock, or patch).</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="k">class</span> <span class="nc">TestMo</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mo.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
+            <span class="o">...</span>
+            <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span> <span class="o">...</span> <span class="p">)</span>
+            <span class="o">...</span>
+</pre></div>
+
+
+<p>Any calls made to <code>sm_client</code> in the <code>mo</code> module will be mocked
+using the <code>mock.MagicMock</code> object that we define in the context,
+so we craft the response we want before we call the method we 
+want to test (which in turn will call <code>sm_client.list_secrets()</code>).</p>
+<p>The full version of the test looks like this:</p>
+<p><strong><code>test_lister.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="k">class</span> <span class="nc">TestLister</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;lister.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
+            <span class="n">return_json</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;SecretList&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret1&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                    <span class="p">},</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret2&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                    <span class="p">}</span>
+                <span class="p">]</span>
+            <span class="p">}</span>
+            <span class="n">sm</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">return_json</span><span class="p">)</span>
+            <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+
+<p>When the test file is run via Python, we see the fake secrets:</p>
+<div class="highlight"><pre><span></span>$ python test_lister.py
+Secret Name: fakesecret1 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">20</span>:31:49.186874<span class="o">)</span>
+Secret Name: fakesecret2 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">20</span>:31:49.186880<span class="o">)</span>
+.
+----------------------------------------------------------------------
+Ran <span class="m">1</span> <span class="nb">test</span> in <span class="m">0</span>.000s
+
+OK
+</pre></div></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pytest.html">pytest</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/tests.html">tests</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/aws.html">aws</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Writing a Vim Plugin with Python
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-08-22T09:00:00-07:00" pubdate>Thursday 08/22/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/writing-a-vim-plugin-with-python.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>This blog is a quick rundown of a recent vim plugin I wrote
+using Python - covering how it works, how to write a vim plugin
+that calls Python functions, and how to do more advanced things
+like use visual selections. </p>
+<h2>Summary</h2>
+<p><a href="https://github.com/chmreid/eightball">eightball</a> is a vim plugin
+that provides functionality for formatting Python code using Black
+and other code formatting tools to help create consistent, clean
+Python code with no extra effort from the user. (Well, okay, maybe
+a few keystrokes.)</p>
+<h2>Some Background</h2>
+<p>eightball was borne of necessity. I write Python at work, and have for many
+years. Personally, I cannot be bothered with the finer details of how code is
+formatted. This attitude was one I developed after using the Go language, which
+has a code format step (gofmt) built into the compilation step - gofmt conforms
+to a single standard, set by Go developers (the ones who care far more about
+the placement of spaces and commas and equals signs than I do), and
+consequently no one who writes Go has to argue about stupid things like whether
+you should write <code>if (2+2 == 4)</code> or <code>if(2+2==4)</code> or <code>if ( 2 + 2 == 4 )</code>.</p>
+<p>That's why I like <a href="https://github.com/psf/black">Black</a> so much -
+it defines a single universal standard for formatting Python code,
+and can be used similar to gofmt, to style code universally and
+consistently. But it is for Python!</p>
+<h2>Where Black Fell Short</h2>
+<p>If I like Black so much, what's wrong with using the batteries-included
+Black vim plugin?</p>
+<p>Unfortunately, the developers of Black (for obvious reasons) have opted
+not to get bogged down in the complicated nuances of vim plugins, and
+have provided a useful library with a simple API and a convenient way
+to apply it to an <em>entire document</em>. But there is more work to be done.</p>
+<p>The problem with Black is that applying it wholesale to existing code
+bases under version control is a no-no, as it will create massive diffs and
+cause conflicts in virtually everybody's working tree.</p>
+<p>This is the need eightball serves - the ability to apply Black selectively,
+or to format sections of code. This plugin and blog post demonstrate how to 
+use Python modules that provide code formatting functionality to format text 
+in vim by writing a Python plugin.</p>
+<h2>Where To Begin</h2>
+<p>The Black vim plugin itself is an excellent starting point, as it illustrates
+(first) how a vim plugin can be written in Python, and (second) how a vim Python
+plugin can manage its own virtual environment to ensure it has a consistent
+and hassle-free Python environment. eightball also illustrates how to bind
+Python functionality to keyboard shortcuts.</p>
+<p>How to write a vim plugin with python
+- eightball plugin
+    - using black as guide
+    - expanding functionality
+- vim python plugin
+    - vim buffer
+    - vim cursor
+    - obtaining visual selection contents
+    - modifying buffer contents
+    - calling python function with text
+    - calling system function with text
+    - putting it all together</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/vim.html">vim</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/plugin.html">plugin</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/black.html">black</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Deconvoluting Convolutional Neural Networks
             </b></h1>
         
@@ -239,9 +576,9 @@ of each layer's inputs and outputs are determined.</p>
 <p><strong>TL;DR:</strong> The size of the cat and dog images is 150 x 150 pixels.
 Each image is a color image, so it consists of 3 channels. Therefore,
 the input to the very first layer has a shape of</p>
-<div class="math">$$
+<p><span class="math">\($
 (\mbox{None}, w_0, h_0, c_0) = (\mbox{None}, 150, 150, 3)
-$$</div>
+$\)</span></p>
 <p>(where "None" indicates a variable-size dimension that is equal to
 the number of total input images, or alternatively, the number of 
 images per batch, if we are using batch learning).</p>
@@ -249,15 +586,15 @@ images per batch, if we are using batch learning).</p>
 <h2>First Convolution Layer</h2>
 <p><strong>TL;DR:</strong> A convolutional layer with a kernel size of <span class="math">\(k_1 \times k_1\)</span>
 and a number of filters <span class="math">\(c_1\)</span> will transform the shape of the input image to:</p>
-<div class="math">$$
+<p><span class="math">\($
 (\mbox{None}, w_1, h_1, c_1) = 
 (\mbox{None}, 148, 148, 32)
-$$</div>
+$\)</span></p>
 <p>where</p>
-<div class="math">$$
+<p><span class="math">\($
 w_1 = w_0 - k_1 + 1 \\
 h_1 = h_0 - k_1 + 1
-$$</div>
+$\)</span></p>
 <p>Importantly, each of the three input channels are added together to determine
 their contribution to the final convolution filters - the number of input channels
 does not affect the number of output channels. </p>
@@ -269,9 +606,9 @@ in the convolution layer. </p>
 each individual value from the output of the convolution layer is fed through
 the rectified linear unit (ReLU) function and the resulting output value becomes
 the input to the next layer. The ReLU function is given by:</p>
-<div class="math">$$
+<p><span class="math">\($
 \mbox{ReLU}(x) = \max(0,x)
-$$</div>
+$\)</span></p>
 <p>The activation layer does not change the shape of the input tensor.</p>
 <p><a href="https://tinyurl.com/deconvoluting-convolutions#First-Activation-Layer">Link to "First Activation Layer" section of notebook</a></p>
 <h2>First MaxPooling Layer</h2>
@@ -282,10 +619,10 @@ the size of the filter, not the number of channels.</p>
 <p>If we use a max pooling window of <span class="math">\(p_1 \times p_1\)</span>, we will reduce the image
 size by <span class="math">\(\mbox{ceil}(w_1/p_1)\)</span> and <span class="math">\(\mbox{ceil}(h_1/p_1)\)</span>. This reduces the input tensor shape
 to:</p>
-<div class="math">$$
+<p><span class="math">\($
 (\mbox{None}, \mbox{ceil}(w_1/p_1), \mbox{ceil}(h_1/p_1), c_1) = 
 (\mbox{None}, 74, 74, 32)
-$$</div>
+$\)</span></p>
 <p><a href="https://tinyurl.com/deconvoluting-convolutions#First-Max-Pooling-Layer">Link to "First Max Pooling Layer" section of notebook</a></p>
 <h2>Second Convolution Layer</h2>
 <p><strong>TL;DR:</strong> The second convolutional layer has a kernel size 
@@ -301,15 +638,15 @@ input channels to the second convolutional layer does not affect
 the number of output channels from the second convolutional
 layer.</p>
 <p>The final shape coming out of the second convolutional layer is:</p>
-<div class="math">$$
+<p><span class="math">\($
 (\mbox{None}, w_2, h_2, c_2) = 
 (\mbox{None}, 72, 72, 32)
-$$</div>
+$\)</span></p>
 <p>where</p>
-<div class="math">$$
+<p><span class="math">\($
 w_2 = w_1 - k_2 + 1 \\
 h_2 = h_1 - k_2 + 1 \\
-$$</div>
+$\)</span></p>
 <p><a href="https://tinyurl.com/deconvoluting-convolutions#Second-Convolution-Layer">Link to "Second Convolutional Layer" section of notebook</a></p>
 <h2>Second Activation Layer</h2>
 <p><strong>TL;DR:</strong> The activation layer again uses a function to
@@ -322,25 +659,25 @@ input tensor.</p>
 window of size <span class="math">\(p_2 \times p_2\)</span>. This will reduce the input
 size to <span class="math">\(\mbox{ceil}(w_2/p_2) \times \mbox{ceil}(h_2/p_2)\)</span>. This reduces 
 the input tensor shape to:</p>
-<div class="math">$$
+<p><span class="math">\($
 (\mbox{None}, \mbox{ceil}(w_2/p), \mbox{ceil}(h_2/p), c_2) = 
 (\mbox{None}, 36, 36, 32)
-$$</div>
+$\)</span></p>
 <p><a href="https://tinyurl.com/deconvoluting-convolutions#Second-Max-Pooling-Layer">Link to "Second Max Pooling Layer" section of notebook</a></p>
 <h2>Third Convolution Layer</h2>
 <p><strong>TL;DR:</strong> The third convolution layer with a kernel size 
 of <span class="math">\(k_3 \times k_3\)</span> and <span class="math">\(c_3\)</span> output filters will transform
 the input tensor shape in the following way (note that the
 third convolutional layer has 64 filters, not 32):</p>
-<div class="math">$$
+<p><span class="math">\($
 (\mbox{None}, w_3, h_3, c_3) =
 (\mbox{None}, 34, 34, 64)
-$$</div>
+$\)</span></p>
 <p>where</p>
-<div class="math">$$
+<p><span class="math">\($
 w_3 = w_2 - k_3 + 1 \\
 h_3 = h_2 - k_3 + 1
-$$</div>
+$\)</span></p>
 <p><a href="https://tinyurl.com/deconvoluting-convolutions#Third-Convolution-Layer">Link to "Third Convolutional Layer" section of notebook</a></p>
 <h2>Third Activation Layer</h2>
 <p><strong>TL;DR:</strong> The activation layer again uses a function to
@@ -353,10 +690,10 @@ input tensor.</p>
 window of size <span class="math">\(p_3 \times p_3\)</span>. This will reduce the input
 size to <span class="math">\(\mbox{ceil}(w_3/p_3) \times \mbox{ceil}(h_3/p_3)\)</span>. This reduces 
 the input tensor shape to:</p>
-<div class="math">$$
+<p><span class="math">\($
 (\mbox{None}, \mbox{ceil}(w_3/p_3), \mbox{ceil}(h_3/p_3), c_2) = 
 (\mbox{None}, 17, 17, 64)
-$$</div>
+$\)</span></p>
 <p><a href="https://tinyurl.com/deconvoluting-convolutions#Third-Max-Pooling-Layer">Link to "Third Max Pooling Layer" section of notebook</a></p>
 <h2>Flatten and Dense Layers</h2>
 <p><strong>TL;DR:</strong> The flatten layer converts a tensor of dimension <span class="math">\((\mbox{None}, 17, 17, 64)\)</span>
@@ -395,11 +732,11 @@ and horizontally flipping) to each image during the training process.</p>
 
 
 <p>This can then be used to generate test image data:</p>
-<div class="highlight"><pre><span></span>train_generator = train_datagen.flow_from_directory(
-    &#39;train&#39;,
-    target_size=(img_width, img_height),
-    batch_size=batch_size,
-    class_mode=&#39;binary&#39;)
+<div class="highlight"><pre><span></span><span class="n">train_generator</span> <span class="o">=</span> <span class="n">train_datagen</span><span class="p">.</span><span class="n">flow_from_directory</span><span class="p">(</span>
+    <span class="s1">&#39;train&#39;</span><span class="p">,</span>
+    <span class="n">target_size</span><span class="o">=</span><span class="p">(</span><span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span><span class="p">),</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+    <span class="n">class_mode</span><span class="o">=</span><span class="s1">&#39;binary&#39;</span><span class="p">)</span>
 </pre></div>
 
 
@@ -435,10 +772,13 @@ binding sites.  </p>
     mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
     mathjaxscript.type = 'text/javascript';
     mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
         "MathJax.Hub.Config({" +
         "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
         "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
         "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
         "    displayAlign: '"+ align +"'," +
@@ -452,6 +792,8 @@ binding sites.  </p>
         "        preview: 'TeX'," +
         "    }, " +
         "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
         "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
         "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
         "    }, " +
@@ -472,6 +814,8 @@ binding sites.  </p>
                 "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
             "});" +
         "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
 </script></div>
@@ -508,482 +852,6 @@ binding sites.  </p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Graphs for Bioinformatics, Part 1: de Bruijn Graphs, Hamiltonian Paths, and Eulerian Paths
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-05-02T19:00:00-07:00" pubdate>Thursday 05/02/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h1>Table of Contents</h1>
-<ul>
-<li><a href="#the-context-rosalindinfo">The Context: Rosalind.info</a></li>
-<li><a href="#graphs-for-bioinformatics">Graphs for Bioinformatics</a><ul>
-<li><a href="#building-a-k-mer-graph-the-wrong-graph">Building a K-mer Graph (The Wrong Graph)</a></li>
-<li><a href="#building-a-de-bruijn-graph-the-right-graph">Building a De Bruijn Graph (The Right Graph)</a></li>
-<li><a href="#transform-the-problem-hamiltonian-paths-to-eulerian-paths">Transform the Problem: Hamiltonian Paths to Eulerian Paths</a></li>
-</ul>
-</li>
-<li><a href="#an-example">An Example</a></li>
-<li><a href="#back-to-dna">Back to DNA</a></li>
-</ul>
-<p><br />
-<br /></p>
-<h1>The Context: Rosalind.info</h1>
-<p>To provide a bit of context for a discussion of Euler paths and Euler cycles:
-starting around December, a group of us in the <a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology (DIB Lab)</a>
-started working through the textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
-and the associated website, <a href="https://rosalind.info">Rosalind.info</a>.</p>
-<p>Rosalind.info is a site that is similar in style to <a href="https://projecteuler.net/">Project Euler</a>,
-a <a href="https://charlesreid1.github.io/tag/project-euler.html">familiar topic on this blog</a>.
-Project Euler poses computationally challenging problems in the domain of mathematics.</p>
-<p>Like Project Euler, the visitor is given one small example input and the corresponding 
-correct output, and one large example input and corresponding output. Also like Project
-Euler, the problems vary in how much computer science versus domain expertise is needed,
-but they are largely focused on writing algorithms rather than on the science behind the
-computations.</p>
-<p>Unlike Project Euler, however, Rosalind.info does give plenty of hints (via the textbook,
-if you have a copy), and sometimes even gives pseudocode for the algorithm. <strong>The book is
-required to get enough context to answer some of the Rosalind.info problems.</strong></p>
-<h1>Graphs for Bioinformatics</h1>
-<p>The textbook focuses on different problems in each chapter. For example, Chapter 1 uses
-the example of a string of DNA that marks where replication begins to introduce some
-basic bioinformatics concepts and algorithms. Chapter 2 uses the concept of molecular
-clocks to introduce motifs and motif-finding, the focus of most of the problems in
-Chapter 2.</p>
-<p>Chapter 3 focuses on the problem of genome assembly - how we assemble an entire genome
-from short segments alone. In particular, the chapter focuses on de Bruijn graphs, 
-which are graphs that, given a sequence of symbols drawn from an alphabet, are composed 
-of edges (one for each <strong>k-mer</strong>, that is, a chunk of the sequence of length k),
-and vertices (one for each k-mer prefix and k-mer suffix, connected by a directed edge
-of the k-mer). We will cover more of the details of these graphs shortly.</p>
-<h2>Building a K-mer Graph (The Wrong Graph)</h2>
-<p>The Bioinformatics Algorithm book starts with a general discussion of how to 
-represent a sequence of DNA nucleotides using a graph. The idea they discuss 
-initially (which is an obvious, but not necessarily good, one) is splitting
-the sequence into k-mer chunks, like so:</p>
-<div class="highlight"><pre><span></span>      Sequence:   TAATGCCATGGGATGTT
-      Pieces:     TAA 
-                   AAT
-                    ATG 
-                     TGC
-                      GCC 
-                       CCA
-                        CAT 
-                         ATG
-                          TGG 
-                           GGG
-                            GGA 
-                             GAT
-                              ATG 
-                               TGT
-                                GTT
-</pre></div>
-
-
-<p>and letting one k-mer be represented by one vertex. Then the sequence
-above could be turned into the graph:</p>
-<div class="highlight"><pre><span></span>TAA -&gt; AAT -&gt; ATG -&gt; TGC -&gt; GCC -&gt; CCA -&gt; CAT -&gt; ATG -&gt; TGG -&gt; GGG -&gt; GGA -&gt; GAT -&gt; ATG -&gt; TGT -&gt; GTT
-</pre></div>
-
-
-<p>On this graph, every edge has the property that the first (k-1)
-nucleotides of the destination match the last (k-1) nucleotides
-of the source. </p>
-<p>If we did not know this sequence in advance, we could draw <em>every</em>
-edge with that property - every time the last (k-1) characters of
-a k-mer match the first (k-1) characters of another k-mer, an edge
-is drawn between those two vertices. </p>
-<p>That graph would result in <em>many</em> more edges than the graph shown above.</p>
-<p>Furthermore, in theory, if each read sequence came from a single genome
-and we had the entire genome covered by read sequences, a path through
-the graph that visits every vertex (every k-mer) would yield the full
-genome.</p>
-<p>A path through a graph that visits every vertex once is called a 
-<strong>Hamiltonian path</strong>.</p>
-<p>Why is this hard? Because the problem of proving a Hamiltonian
-path exists, let alone finding it, becomes very difficult for
-large graphs.</p>
-<h2>Building a De Bruijn Graph (The Right Graph)</h2>
-<p>Nicolaas de Bruijn introduced (in 1946, in a paper entitled simply
-<a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>)
-a new way of representing a sequence with a graph. He split a given
-sequence into k-mers, as before, but instead of representing
-each k-mer as a <em>vertex</em> on the graph, he represented each 
-k-mer as an <em>edge</em> on the graph.</p>
-<p>This type of graph is called a <strong>de Bruijn graph</strong>.</p>
-<p>Specifically, for a DNA sequence, each k-mer from the sequence is
-represented by an edge, where the source vertex
-is that k-mer's (k-1)-nucleotide suffix and the destination vertex
-is that k-mer's (k-1)-nucleotide prefix.</p>
-<div class="highlight"><pre><span></span>      Sequence:   TAATGCCATGGGATGTT
-      Pieces:     TA  
-                   AA
-                    AT 
-                     TG
-                      GC 
-                       CC
-                        CA 
-                         AT
-                          TG 
-                           GG
-                            GG 
-                             GA 
-                              AT  
-                               TG 
-                                GT 
-                                 TT
-</pre></div>
-
-
-<p>Now this sequence is written as the graph:</p>
-<div class="highlight"><pre><span></span>TA -&gt; AA -&gt; AT -&gt; TG -&gt; GC -&gt; CC -&gt; CA -&gt; AT -&gt; TG -&gt; GG -&gt; GG -&gt; GA -&gt; AT -&gt; TG -&gt; GT -&gt; TT
-</pre></div>
-
-
-<p>so that the original breakup of the sequence into k-mers is still
-represented, but now as edges rather than as vertices. That is, the 
-k-mer <code>TAA</code> is represented by the edge <code>TA -&gt; AA</code>.</p>
-<h2>Transform the Problem: Hamiltonian Paths to Eulerian Paths</h2>
-<p>The change in the problem representation (k-mers as vertices to k-mers
-as edges) changes the problem of finding the <strong>Hamiltonian path</strong> 
-(a path through the graph that visits every <em>vertex</em> exactly once) 
-into the problem of finding the <strong>Eulerian path</strong>
-(a path through the graph that visits every <em>edge</em> exactly once).</p>
-<h1>An Example</h1>
-<p>Let's look at a slightly simpler example - the one de Bruijn was
-originally considering - so we can see de Bruijn graphs in action
-in a slightly simpler case.</p>
-<p>In his 1946 paper <a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>,
-de Bruijn describes the problem thus:</p>
-<blockquote>
-<p>Some years ago Ir. K. Posthumus stated an interesting conjecture
-concerning certain cycles of digits 0 or 1, which we shall call
-<span class="math">\(P_n\)</span> cycles. For <span class="math">\(n = 1, 2, 3, \dots\)</span>, a <span class="math">\(P_n\)</span> cycle be an ordered
-cycle of <span class="math">\(2^n\)</span> digits 0 or 1, such that the <span class="math">\(2^n\)</span> possible ordered
-sets of <span class="math">\(n\)</span> consecutive digits of that cycle are all different.
-As a consequence, any ordered set of <span class="math">\(n\)</span> digits 0 or 1 occurs exactly
-once in that cycle.</p>
-<p>For example, a <span class="math">\(P_3\)</span> cycle is <span class="math">\(00010111\)</span>, respectively showing the
-triples 000, 001, 010, 011, 111, 100, 100, which are all the possible
-triples indeed.</p>
-</blockquote>
-<p>In this case, de Bruijn is discussing <em>complete</em> de Bruijn graphs - he
-constructs a de Bruijn graph of all possible 3-mers (our k-mers, <span class="math">\(k = 3\)</span>),
-and constructs a path through the graph that visits every edge of the
-graph. Here is the sequence broken down as above:</p>
-<div class="highlight"><pre><span></span>      Sequence:   00010111
-      Pieces:     00  
-                   00
-                    01
-                     10
-                      01
-                       11
-                        11
-</pre></div>
-
-
-<p>The alphabet here is binary: 0 and 1. </p>
-<p>This (seemingly simple) example is a bit confusing, but here's
-what's going on: we have four vertices on the de Bruijn graph,
-consisting of the 2-mers:</p>
-<div class="highlight"><pre><span></span>00
-01
-10
-11
-</pre></div>
-
-
-<p>Now, if we draw an edge for every possible 3-mer, we would 
-start with the 3-mer <code>000</code>, which is actually represented
-by a self-edge from vertex <code>00</code> to vertex <code>00</code>, because the
-prefix matches the suffix.</p>
-<p>Similarly, the 3-mer <code>111</code> is represented by a self-edge
-from vertex <code>11</code> to vertex <code>11</code>.</p>
-<p>The other 3-mers are represented by their corresponding edges:
-<code>001</code> is represented by the edge <code>00 -&gt; 01</code>, <code>010</code> by the edge
-<code>01 -&gt; 10</code>, etc.</p>
-<p>By drawing <strong>every possible edge</strong> (to represent every possible
-3-mer), we assemble the <strong>complete de Bruijn graph</strong> (that is,
-the de Bruijn graph containing vertices for all possible
-2-mers connected by edges representing every possible 3-mer
-in the given alphabet).</p>
-<p>The sequence de Bruijn gives in his paper is an Euler path
-through the <em>complete</em> (de Bruijn) graph (that is, a path 
-through the de Bruijn graph that visits every edge exactly 
-once):</p>
-<div class="highlight"><pre><span></span><span class="n">Sequence</span><span class="o">:</span> <span class="mi">00010111</span>
-
-<span class="mi">00</span> <span class="o">-&gt;</span> <span class="mi">00</span> <span class="o">-&gt;</span> <span class="mi">01</span> <span class="o">-&gt;</span> <span class="mi">10</span> <span class="o">-&gt;</span> <span class="mi">01</span> <span class="o">-&gt;</span> <span class="mi">11</span> <span class="o">-&gt;</span> <span class="mi">11</span>
-</pre></div>
-
-
-<h1>Back to DNA</h1>
-<p>Now the utility of the de Bruijn methodology is more clear:
-if we can come up with fast, efficient algorithms to find
-Euler paths on large graphs, we can transform the assembly 
-problem (given fragments of a long sequence, reconstruct
-the sequence) into the problem of finding an Eulerian path,
-which is tractable even for large graphs.</p>
-<p>Compare this with string matching algorithms utilizing
-dynamic programming, which can cost <span class="math">\(O(N^2)\)</span> and make
-genome assembly computationally infeasible.</p>
-<p>Part 1 (this post) has covered the basic idea behind 
-assembling DNA sequences using de Bruijn graphs. In
-Part 2 of this post, we will move on to a discussion
-of the "real world" problem, warts and all, and how 
-we can relax some of the strict assumptions (like assuming
-perfect coverage of the original sequence and assuming
-that all reads are perfect).</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                The Git-Commit-Ectomy
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-04-17T12:00:00-07:00" pubdate>Wednesday 04/17/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-git-commit-ectomy.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>TLDR: Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p>
-<p><br /></p>
-<p>Consider the following <em>completely hypothetical</em>
-scenario.</p>
-<p>Suppose you've been working for a while on your latest
-invention, a brand-new whiz-bang command line
-tool that's fast and solves an important problem
-and you're chugging your way to the finish line.</p>
-<p>As part of preparing to release your software tool,
-you add some tests, because that's what you do.</p>
-<p>Those tests require some data, so you add a few test
-data sets, a few hundred kilobytes each, nothing fancy.</p>
-<p>Then one day, <strong>the intern</strong> (who is just trying to be 
-helpful by adding a new test) slips in a 70 MB test
-data set, and slips it in with a string of commits
-that somehow get incorporated into the master branch.</p>
-<p>(Side note: you turned on branch protection to prevent
-this whole mess, didn't you? <em>Didn't you??</em> 
-'Course you did. This is all
-just a hypothetical scenario.)</p>
-<p>Now, the situation is complicated: there are several
-open pull requests and active branches, and a non-trivial
-amount of history that's been added since the time the
-large test data set was accidentally added.</p>
-<p><strong>The intern</strong> apologizes profusely and promises to 
-bring in donuts every day next week. But the damage 
-is done.</p>
-<p><strong>The intern</strong>, a git novice, pulls out a laptop
-and runs a <code>git rm</code> on the files, pushing to the
-remote and happily, ignorantly believing the problem
-has been solved.</p>
-<p>But <strong>the intern</strong> does not understand how git works.
-It has a perfect memory, and remembers every file in
-every commit. Since the problematic first commit that
-added the large files, git has remembered and will always
-remember that large file. It's in git's blood. 
-It's what git was designed to do.</p>
-<p>Once the intern has been, ahem, moved along,
-and branch protection has been turned on,
-it's time to find a git surgeon to perform a 
-git-commit-ectomy to remove the problematic
-large files from the repository entirely.</p>
-<h2>Dr. Reid's Patented Git-Commit-Ectomy</h2>
-<p>If it's a git-commit-ectomy you need,
-try Dr. Reid's Patented Git-Commit-Ectomy
-to ease your git commit pains.</p>
-<p>Whether you want to keep thing simple
-and remove a git commit from a single branch,
-or if you've got multiple branches, Dr. Reid's
-Patented Git-Commit-Ectomy will get you back
-on your feet.</p>
-<p>Dr. Reid's Patented Git-Commit-Ectomy can handle
-even the most messy, confused, and tangled git 
-commit history - with a bit of work and a gifted
-surgeon the git-commit-ectomy can smooth things 
-out and get you feeling right as rain.</p>
-<p>Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1007,6 +875,32 @@ out and get you feeling right as rain.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>September 2019</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/mocking-aws-in-unit-tests.html">Mocking AWS in Unit Tests</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>August 2019</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/writing-a-vim-plugin-with-python.html">Writing a Vim Plugin with Python</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

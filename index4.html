@@ -102,6 +102,1131 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Five Letter Words: Part 5: The Try Trie Tree
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-03-11T18:00:00-07:00" pubdate>Monday 03/11/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/five-letter-words-part-5-the-try-trie-tree.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2>Table of Contents</h2>
+<ul>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#about-the-five-letter-words">About the Five-Letter Words</a></li>
+<li><a href="#intro-try-trie-tree">Introduction to the Try Trie Tree Problem</a></li>
+<li><a href="#the-try-trie-tree">The Try Trie Tree</a></li>
+<li><a href="#constructing-the-try-trie-tree">Constructing the Try Trie Tree</a><ul>
+<li><a href="#checking-for-minimum-number-of-matching-words">Checking for Minimum Number of Matching Words</a></li>
+<li><a href="#assemble-method">Assemble Method</a></li>
+<li><a href="#verifying-branches-and-bubbling-up-counts">Verifying Branches and Bubbling Up Counts</a></li>
+<li><a href="#bubble-up-method">Bubble Up Method</a></li>
+</ul>
+</li>
+<li><a href="#try-trie-tree-code">Try Trie Tree Code</a><ul>
+<li><a href="#try-trie-trie-class">Try Trie Trie Class</a></li>
+<li><a href="#code-for-assembling-the-tree">Code for Assembling the Tree</a></li>
+<li><a href="#code-for-bubbling-up-large-children-counts">Code for Bubbling Up Large Children Counts</a></li>
+</ul>
+</li>
+<li><a href="#wrap-it-in-a-bow">Wrap it in a Bow</a></li>
+<li><a href="#output">Output</a></li>
+</ul>
+<p><br />
+<br /></p>
+<p><a name="about-the-five-letter-words"></a></p>
+<h2>About the Five-Letter Words</h2>
+<p>In Volume 4 Fascicle 0 of Donald Knuth's <u>Art of Computer Programming</u>, 
+Knuth introduces a tool for exploring concepts in graph theory: the five-letter
+words. This is a collection of 5,757 five-letter words compiled by Knuth
+and useful in exploring ways of constructing efficient algorithms.</p>
+<p>The word list is large enough that an <span class="math">\(O(N^2)\)</span> algorithm will take a solid
+chunk of CPU time, so there's a definite incentive to think carefully about
+implementation.</p>
+<p>Knuth introduces a list of five-letter words, as well as associated exercises
+utilizing techniques from dynamic programming and graph theory, among other 
+topics.</p>
+<p>We have covered this topic before in prior blog posts:</p>
+<ul>
+<li><a href="https://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html">Five Letter Words: Part 1: Getting Familiar With The List</a></li>
+<li><a href="https://charlesreid1.github.io/five-letter-words-part-2-more-five-word-algorithms.html">Five Letter Words: Part 2: More Five-Word Algorithms</a></li>
+<li><a href="https://charlesreid1.github.io/five-letter-words-part-3-letter-coverage-and-dynamic-programming.html">Five Letter Words: Part 3: Letter Coverage and Dynamic Programming</a></li>
+</ul>
+<p>and a recent addendum to Part 1:</p>
+<ul>
+<li><a href="https://charlesreid1.github.io/five-letter-words-part-4-revisiting-diff-by-one.html">Five Letter Words: Part 4: Revisiting Diff by One</a></li>
+</ul>
+<p>We continue our coverage in this blog post with a newer problem,
+one that is rated by Knuth at 26, on his scale of 0 to 50:</p>
+<div class="highlight"><pre><span></span><span class="mi">00</span>  <span class="k">Immediate</span>
+<span class="mi">10</span>  <span class="k">Simple</span> <span class="p">(</span><span class="mi">1</span> <span class="k">minute</span><span class="p">)</span>
+<span class="mi">20</span>  <span class="n">Medium</span> <span class="p">(</span><span class="n">quarter</span> <span class="n">hour</span><span class="p">)</span>
+<span class="mi">30</span>  <span class="n">Moderately</span> <span class="n">hard</span>
+<span class="mi">40</span>  <span class="n">Term</span> <span class="n">project</span>
+<span class="mi">50</span>  <span class="n">Research</span> <span class="n">problem</span>
+</pre></div>
+
+
+<p>(from Volume 1, Notes on the Exercises.)</p>
+<p>Here's the <a href="https://github.com/charlesreid1/five-letter-words/blob/master/sgb-words.txt">list of words</a>
+if you want to play along.</p>
+<p>Link to the <a href="http://www3.cs.stonybrook.edu/~algorith/implement/graphbase/implement.shtml">Stanford Graph Base</a>.</p>
+<p>Visit <a href="https://charlesreid1.com/wiki/Five_Letter_Words">Five Letter Words</a>
+on the charlesreid1.com wiki for details.</p>
+<p><a name="intro-try-trie-tree"></a></p>
+<h2>Introduction to the Try Trie Tree Problem</h2>
+<p>In this blog post, we'll cover Exercise 35 of Volume 4, Fascicle 
+of Donald Knuth's <u>Art of Computer Programming</u>.</p>
+<p>The problem is as follows:</p>
+<blockquote>
+<p>Sixteen well-chosen elements of <code>WORDS(1000)</code> lead to the 
+branching pattern (figure), which is a complete binary 
+trie of words that begin with the letter <code>s</code>.
+But there's no such pattern of words beginning with <code>a</code>,
+even if we consider the full collection <code>WORDS(5757)</code>.</p>
+<p>What letters of the alphabet can be used as the starting
+letter of sixteen words that form a complete binary trie
+within <code>WORDS(n)</code>, given n?</p>
+</blockquote>
+<p>For the benefit of those without the book, here is an attempt
+to represent the trie that Knuth includes in the exercise:</p>
+<div class="highlight"><pre><span></span>                     <span class="n">s</span>
+
+            <span class="n">h</span>                 <span class="n">t</span>
+
+        <span class="n">e</span>       <span class="n">o</span>         <span class="n">a</span>       <span class="n">e</span>
+
+      <span class="n">e</span>   <span class="n">l</span>   <span class="n">r</span>   <span class="n">w</span>     <span class="n">l</span>   <span class="n">r</span>   <span class="n">a</span>   <span class="n">e</span>
+
+      <span class="n">sheep</span>             <span class="n">stalk</span>
+      <span class="n">sheet</span>             <span class="n">stall</span>
+
+          <span class="n">shelf</span>             <span class="n">stars</span>
+          <span class="n">shell</span>             <span class="k">start</span>
+
+              <span class="n">shore</span>             <span class="n">steal</span>
+              <span class="n">short</span>             <span class="n">steam</span>
+
+                  <span class="n">shown</span>             <span class="n">steel</span>
+                  <span class="n">shows</span>             <span class="n">steep</span>
+</pre></div>
+
+
+<p>To answer the question, of whether a complete binary
+trie can be completed for a given letter, given a
+set of n words, we construct a "try trie tree,"
+which is a tree data structure that greedily builds
+a trie with as many branches as possible.</p>
+<p>The full trie of <span class="math">\(26^4+1 = 456,977\)</span> nodes
+would be expensive to assemble in full, for each
+starting letter. Instead we use the word list 
+to build up a tree of possible candidate branches
+for the trie. Once we've constructed all possible
+branches using the faster but less precise method,
+we verify that each candidate branch we have
+constructed either meets our criteria (can be
+included as a branch in a complete binary trie),
+or is pruned.</p>
+<p><a name="the-try-trie-tree"></a></p>
+<h2>The Try Trie Tree</h2>
+<p>To solve this problem, we define a TryTrieTree
+class that holds the nodes and links that make
+up our tree. We define some methods for it
+to perform the assembly and verification operations
+described below, then assemble one try trie tree
+for each letter of the alphabet to come up with 
+an answer to the exercise.</p>
+<p><a name="constructing-the-try-trie-tree"></a></p>
+<h2>Constructing the Try Trie Tree</h2>
+<p>The construction procedure for the try trie tree
+proceeds in two steps:</p>
+<p>Step 1 is to assemble a tree, from the top down,
+by searching the entire space of <span class="math">\(456,977\)</span> nodes
+and marking particular nodes and paths on this tree
+as candidates for the final perfect binary trie.</p>
+<p>Step 2 is to revisit the candidate branches,
+proceeding from the bottom up, and determine
+if the candidate branches do, in fact, have
+enough sibling nodes and word matches to form
+a complete branch in a perfect binary trie.</p>
+<p>We start Step 1 at the root node (the starting
+letter) and proceed from the root down, going
+level by level.</p>
+<p><a name="checking-for-minimum-number-of-matching-words"></a></p>
+<h3>Checking for Minimum Number of Matching Words</h3>
+<p>Step 1 proceeds from the top down and marks
+branches that are candidates to end up in the
+final perfect binary trie.</p>
+<p>At each level of the trie, we count
+the number of words in the overall word set 
+that have a prefix matching the prefix
+corresponding to that node.</p>
+<p>For example, the trie node <code>b</code> on the path
+<code>s-a-b</code> would yield four words:</p>
+<div class="highlight"><pre><span></span><span class="n">saber</span>
+<span class="n">sable</span>
+<span class="n">sabre</span>
+<span class="n">sabra</span>
+</pre></div>
+
+
+<p>If enough words match, that branch of the trie
+is a possible candidate to end up in the perfect
+binary trie (but may be trimmed in Step 2).</p>
+<p><strong>Example:</strong> If we are assembling the complete
+trie for <code>s</code> given by the author in the exercise,
+we can verify that there are at least 16 words that
+begin with the letter <code>s</code>. We would then verify that
+there are at least 8 words that begin with <code>sa</code>,
+which there are. Then we would verify that there
+are at least 4 words that begin with <code>saa</code>, which
+there are not, so we would move on to verifying
+that there are at least 4 words that begin with
+<code>sab</code>, which there are. We would proceed in this
+fashion until we had assembled a candidate trie
+branch, <code>s-a-b-r</code> (which contains two words,
+<code>sabra</code> and <code>sabre</code>). For Step 1, we keep <code>s-a-b-r</code>
+as a candidate branch. (We will see in Step 2
+that this branch will get trimmed.)</p>
+<p>At each level of the trie, we apply the procedure:
+- At level 1, we require a minimum of <span class="math">\(2^{5-1} = 16\)</span> words.
+- At level 2, we require a minimum of <span class="math">\(2^{5-2} = 8\)</span> words.
+- At level 3, we require a minimum of <span class="math">\(2^{5-3} = 4\)</span> words.
+- At level 4, we require a minimum of <span class="math">\(2^{5-4} = 2\)</span> words.</p>
+<p><strong>NOTE:</strong> We are not explicitly constructing the trie,
+so we don't need to assemble the word leaves.</p>
+<p><a name="assemble-method"></a></p>
+<h3>Assemble Method</h3>
+<p>See the <a href="#try-trie-tree-code">Try Trie Tree Code</a> section 
+for the code for the public and private assembly methods.</p>
+<p>To peform the assembly of all possible branches of the
+try trie, we use the <code>assemble()</code> method. This is a 
+public method that starts a recursive call to a private
+method <code>_assemble()</code>.</p>
+<p>We are given a starting letter (in the example given
+by the author, the starting letter is "s").
+We explore every possible prefix that starts with the
+root letter, "sa", "sb", "sc", "sd", and so on.</p>
+<p>For each of those possible prefixes, we explore every possible
+third letter, "saa", "sab", and so on, and then once more
+in a fourth step, "saaa", "saab", ..., for a total of 
+<span class="math">\(26^4 = 456,976\)</span> iterations (checks for existence
+of words starting with a given substring).</p>
+<p>A substantial number of these checks will do nothing - 
+from the fact that</p>
+<p><span class="math">\(\frac{5757}{456976} \sim 5e3/5e5 \sim 0.01\)</span> </p>
+<p>we know that the maximum number of loops that would actually
+lead to a branch being added will be 1% of that <span class="math">\(26^4\)</span> total.</p>
+<p>We also know that any efforts to speed up this program
+should focus on the way we are checking the number of
+words that start with a given substring - since that's
+where we'll spend most of our time.</p>
+<p>The recursive assembly method takes a prefix string input
+(which maps to a location in the tree), and it explores
+all 26 possible children of that prefix (location in the trie).</p>
+<p>When a leaf node is reached, at the fourth level, it represents
+the longest prefix in our trie. This is the base case of the
+recursive assembly function; the recursive function terminates
+at a fixed depth of 4.</p>
+<p><a name="verifying-branches-and-bubbling-up-counts"></a></p>
+<h3>Verifying Branches and Bubbling Up Counts</h3>
+<p>However, as we noted, the counts we are using above in Step 1
+are just approximations (checking there are a <em>minimum</em> number of
+words with a given prefix). There is no way to guarantee that a 
+trie branch can be used in the final complete perfect binary trie
+until all child leaf nodes have been visited.</p>
+<p>This is where Step 2 comes in. In Step 2 we perform a pre-order
+depth-first traversal of the tree, visiting the leaf nodes first
+and proceeding from the bottom up. The number of words matching
+the prefix of each leaf node must be 2, to keep the leaf node.</p>
+<p>We then proceed up the tree, level by level, and at each level
+we require that each node have at least 2 "large" children.
+This is a recursive definition - for a child to be "large", it
+must itself have 2 "large" children, or (if it is a leaf node)
+it must have at least 2 words that match the 4-letter prefix.</p>
+<p>In our TryTrieTree, a complete binary trie is 
+only possible if each node at each level has
+<em>two or more</em> children that are "large enough",
+where "large enough" means that either (a) both child
+nodes have <em>two or more</em> children that are
+"large enough", or (b) if we are at a leaf node
+(representing 4 characters), and there are
+<em>two or more</em> words that begin with the 4 characters
+corresponding to this trie node.</p>
+<p>Let's go through an example.</p>
+<p>Continuing with the example above for <code>s</code>, we
+assembled the branch <code>s-a-b-r</code>, which contains
+the minimum two words required. However, <code>s-a-b</code>
+is not a common enough prefix! The only child
+of <code>s-a-b</code> with two or more words matching
+is <code>s-a-b-r</code>, which means we can't form a complete
+binary trie using this <code>s-a-b</code> branch.</p>
+<p>We call this procedure a "bubble up" procedure,
+since it is <em>bottom-up</em>.</p>
+<p><a name="bubble-up-method"></a></p>
+<h3>Bubble Up Method</h3>
+<p>See the <a href="#try-trie-tree-code">Try Trie Tree Code</a> section 
+for the code for the public and private bubble up methods.</p>
+<p>Similar to the assembly method, our bubble up method
+is also a recursive method, performing a depth-first
+pre-order traversal. This ensures we reach leaf nodes
+before beginning our task, and that counts proceed
+from bottom-up.</p>
+<p><a name="try-trie-tree-code"></a></p>
+<h2>Try Trie Tree Code</h2>
+<p>Below we go through some of the code
+for the Try Trie Tree problem.</p>
+<p><a name="try-trie-trie-class"></a></p>
+<h3>Try Trie Trie Class</h3>
+<p>When dealing with trees, it's always a safe bet
+that we'll need a Node class, so we start with
+a utility class for tree nodes:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">letter</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">letter</span> <span class="o">=</span> <span class="n">letter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="n">count</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="bp">None</span>
+</pre></div>
+
+
+<p>The TryTrieTree class has a constructor that 
+starts with an empty root. The tree
+should also contain a pointer to the original
+word set, so that we can reference it in later
+methods where needed.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">TryTrieTree</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">words</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">words</span> <span class="o">=</span> <span class="n">words</span>
+</pre></div>
+
+
+<p>In the final class we defined a <code>__str__()</code>
+method to create a string representation
+of the TryTrieTree, but we will skip that
+for now.</p>
+<p>Next we have a method to set the root to
+a given Node:</p>
+<div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">set_root</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">root_letter</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">root_letter</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Additionally, we have two utility methods that 
+help us navigate between locations in the tree 
+and the corresponding string prefixes. These two
+methods convert between string prefixes (like
+<code>s-a-b-r</code>) and locations in the trie (like the
+<code>r</code> trie node at the end of the path <code>s-a-b-r</code>):</p>
+<ul>
+<li>
+<p><code>get_prefix_from_node()</code> (utility method): given a
+  Node in the trie, return the string prefix that would
+  lead to that Node.</p>
+</li>
+<li>
+<p><code>get_node_from_prefix()</code> (utility method): given a
+  string prefix, return the Node in the trie that 
+  corresponds to the given string prefix.
+  Return None if no such Node exists.</p>
+</li>
+</ul>
+<p>These methods are given below.</p>
+<p>First, to convert a particular node location to a string
+prefix, we use the parent pointer of each node to traverse
+up the tree and assemble the corresponding prefix string
+from the path (so that traversing from <code>b</code> to <code>a</code> to the 
+root <code>s</code> would yield <code>sab</code>):</p>
+<div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">get_prefix_from_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Given a node in the trie,</span>
+<span class="sd">        return the string prefix that</span>
+<span class="sd">        would lead to that node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">==</span><span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">elif</span> <span class="n">node</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="k">while</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span>
+                <span class="n">prefix</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">letter</span> <span class="o">+</span> <span class="n">prefix</span>
+            <span class="k">return</span> <span class="n">prefix</span>
+</pre></div>
+
+
+<p>and the reverse, to convert a string prefix
+into a location in the trie:</p>
+<div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">get_node_from_prefix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">prefix</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Given a string prefix,</span>
+<span class="sd">        return the node that represents</span>
+<span class="sd">        the tail end of that sequence</span>
+<span class="sd">        of letters in this trie. Return</span>
+<span class="sd">        None if the path does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">!=</span><span class="bp">None</span>
+
+        <span class="k">if</span> <span class="n">prefix</span><span class="o">==</span><span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="k">assert</span> <span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">letter</span>
+
+        <span class="c1"># Base case</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span>
+
+        <span class="c1"># Recursive case</span>
+        <span class="n">parent_prefix</span><span class="p">,</span> <span class="n">suffix</span> <span class="o">=</span> <span class="n">prefix</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">prefix</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node_from_prefix</span><span class="p">(</span><span class="n">parent_prefix</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">parent</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">letter</span> <span class="o">==</span> <span class="n">suffix</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">child</span>
+
+        <span class="c1"># We know this will end because we handle</span>
+        <span class="c1"># the base case of prefix=&quot;&quot;, and prefix</span>
+        <span class="c1"># is cut down by one letter each iteration.</span>
+</pre></div>
+
+
+<p><a name="code-for-assembling-the-tree"></a></p>
+<h3>Code for Assembling the Tree</h3>
+<p>We assemble the tree using a private recursive
+method. Here is how that looks (again, these
+methods are defined on the <code>TryTrieTree</code>
+class):</p>
+<div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">assemble</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Assemble the trie from the set of words</span>
+<span class="sd">        passed to the constructor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">!=</span><span class="bp">None</span>
+
+        <span class="n">words</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">words</span>
+
+        <span class="c1"># start with an empty prefix</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">candidate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">letter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assemble</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span><span class="n">candidate</span><span class="p">,</span><span class="n">words</span><span class="p">)</span>
+</pre></div>
+
+
+<p>In the private recursive method, we assemble the branches
+of the tree, only checking to make sure each branch has
+the minimum number of words required.</p>
+<p>At the start of each assemble method, we whittle the set
+of words down to only the words that start with the prefix
+for the given node. This trick uses a little extra space
+but the payoff is avoiding searching the entire word set
+for each node to count the number of words matching a given
+prefix. If a node's parent is <code>s-a-b</code> and we have already done
+the work of filtering all words starting with <code>sab</code>, 
+there is no need to repeat that work when finding 
+and filtering all words that start with <code>sabr</code>.</p>
+<div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">_assemble</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">prefix</span><span class="p">,</span><span class="n">candidate</span><span class="p">,</span><span class="n">words</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Recursive private method called by assemble().</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">prefix_depth</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span>
+        <span class="n">candidate_depth</span> <span class="o">=</span> <span class="n">prefix_depth</span><span class="o">+</span><span class="mi">1</span>
+
+        <span class="n">ppc</span> <span class="o">=</span> <span class="n">prefix</span><span class="o">+</span><span class="n">candidate</span>
+        <span class="n">words_with_candidate</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span> <span class="k">if</span> <span class="n">w</span><span class="p">[:</span><span class="n">candidate_depth</span><span class="p">]</span><span class="o">==</span><span class="n">ppc</span><span class="p">]</span>
+</pre></div>
+
+
+<p>Next lines are the checks to ensure we have the minimum
+number of words required to form a candidate branch in
+the trie.</p>
+<p>If we do, we will create a new child node for that 
+branch and recurse by calling assemble on it.</p>
+<p>Of course, we have to check for the base case, which in
+this scenario checks when we have reached the fixed
+trie depth of 4.</p>
+<div class="highlight"><pre><span></span>        <span class="n">min_branches_req</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">5</span><span class="o">-</span><span class="n">candidate_depth</span><span class="p">))</span>
+        <span class="n">max_number_branches</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">words_with_candidate</span><span class="p">)</span>
+
+        <span class="c1"># If we exceed the minimum number of </span>
+        <span class="c1"># branches required, add candidate</span>
+        <span class="c1"># as a new node on the trie.</span>
+        <span class="k">if</span> <span class="n">max_number_branches</span> <span class="o">&gt;=</span> <span class="n">min_branches_req</span><span class="p">:</span>
+
+            <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node_from_prefix</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span>
+
+            <span class="c1"># If we are looking at the root node,</span>
+            <span class="k">if</span> <span class="n">prefix</span><span class="o">==</span><span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="c1"># parent will be None.</span>
+                <span class="c1"># In this case don&#39;t worry about</span>
+                <span class="c1"># creating new child or introducing</span>
+                <span class="c1"># parent and child, b/c the &quot;new child&quot;</span>
+                <span class="c1"># is the root (already exists).</span>
+                <span class="k">pass</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Otherwise, create the new child,</span>
+                <span class="c1"># and introduce the parent &amp; child.</span>
+                <span class="n">new_child</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+                <span class="n">new_child</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+                <span class="n">parent</span><span class="o">.</span><span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_child</span><span class="p">)</span>
+
+            <span class="c1"># Base case</span>
+            <span class="k">if</span> <span class="n">candidate_depth</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span>
+                <span class="n">new_child</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="n">max_number_branches</span>
+                <span class="k">return</span>
+
+            <span class="c1"># Recursive case</span>
+            <span class="k">for</span> <span class="n">new_candidate</span> <span class="ow">in</span> <span class="n">ALPHABET</span><span class="p">:</span>
+                <span class="n">new_prefix</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">candidate</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_assemble</span><span class="p">(</span><span class="n">new_prefix</span><span class="p">,</span><span class="n">new_candidate</span><span class="p">,</span><span class="n">words_with_candidate</span><span class="p">)</span>
+
+        <span class="c1"># otherwise, we don&#39;t have enough</span>
+        <span class="c1"># branches to continue downward,</span>
+        <span class="c1"># so stop here and do nothing.</span>
+        <span class="k">return</span>
+</pre></div>
+
+
+<p><a name="code-for-bubbling-up-large-children-counts"></a></p>
+<h3>Code for Bubbling Up Large Children Counts</h3>
+<p>These are a little shorter and simpler than the
+assembly method above:</p>
+<div class="highlight"><pre><span></span>    <span class="k">def</span> <span class="nf">bubble_up</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Do a depth-first traversal of the</span>
+<span class="sd">        entire trytrietree, pruning as we go.</span>
+<span class="sd">        This is a pre-order traversal,</span>
+<span class="sd">        meaning we traverse children first,</span>
+<span class="sd">        then the parents, so we always </span>
+<span class="sd">        know the counts of children</span>
+<span class="sd">        (or we are on a leaf node).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bubble_up</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_bubble_up</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Pre-order depth-first traversal</span>
+<span class="sd">        starting at the leaf nodes and proceeding</span>
+<span class="sd">        upwards.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Base case</span>
+            <span class="c1"># Leaf nodes already have counts          </span>
+            <span class="c1"># Do nothing</span>
+            <span class="k">return</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Recursive case</span>
+            <span class="c1"># Pre-order traversal: visit/bubble up children first</span>
+            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_bubble_up</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+
+            <span class="c1"># Now that we&#39;ve completed leaf node counts, we can do interior node counts.</span>
+            <span class="c1"># Interior node counts are equal to number of large (&gt;=2) children.</span>
+            <span class="n">large_children</span> <span class="o">=</span> <span class="p">[</span><span class="n">child</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span> <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">count</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">]</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">large_children</span><span class="p">)</span>
+</pre></div>
+
+
+<p>You can see how we converted the definition of
+"large children" into a rule above - we use the
+recursive case of the "large children" definition
+in the recursive case, and we use the base case
+of the "large children definition" (for leaf nodes)
+when we are on the base case.</p>
+<p>Also note that each leaf node was initialized with
+the number of words that start with the corresponding
+4-letter prefix (that was done in the assembly method),
+but we could just as easily do it in the base case,
+as the leaf nodes are the base case.</p>
+<p><a name="wrap-it-in-a-bow"></a></p>
+<h2>Wrap it in a Bow</h2>
+<p>We can add some extra wrapping around our class,
+and call each of the methods in order for the
+various letters of the alphabet.</p>
+<p>Below, we process an input argument n (which is
+the size of the wordlist, 5757, if the user does
+not specify n). It then creates a TryTrieTree
+for each letter, and determines if a complete
+binary trie can be constructed. Finally, it prints
+a summary of the results.</p>
+<div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="kn">from</span> <span class="nn">get_words</span> <span class="kn">import</span> <span class="n">get_words</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">math</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">tries.py</span>
+
+<span class="sd">Donald Knuth, Art of Computer Programming, Volume 4 Fascicle 0</span>
+<span class="sd">Exercise #35</span>
+
+<span class="sd">Problem:</span>
+<span class="sd">What letters of the alphabet can be used</span>
+<span class="sd">as the starting letter of sixteen words that</span>
+<span class="sd">form a complete binary trie within</span>
+<span class="sd">WORDS(n), given n?</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">ALPHABET</span> <span class="o">=</span> <span class="s2">&quot;abcdefghijklmnopqrstuvwxyz&quot;</span>
+<span class="n">FIVE</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="o">...</span>
+
+
+<span class="k">class</span> <span class="nc">TryTrieTree</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="o">...</span>
+
+<span class="k">def</span> <span class="nf">trie_search</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+
+    <span class="n">words</span> <span class="o">=</span> <span class="n">get_words</span><span class="p">()</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">words</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span>
+
+    <span class="n">perfect_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">imperfect_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">letter</span> <span class="ow">in</span> <span class="n">ALPHABET</span><span class="p">:</span>
+
+        <span class="n">tree</span> <span class="o">=</span> <span class="n">TryTrieTree</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+        <span class="n">tree</span><span class="o">.</span><span class="n">set_root</span><span class="p">(</span><span class="n">letter</span><span class="p">)</span>
+        <span class="n">tree</span><span class="o">.</span><span class="n">assemble</span><span class="p">()</span>
+        <span class="n">tree</span><span class="o">.</span><span class="n">bubble_up</span><span class="p">()</span>
+        <span class="c1">#print(tree)</span>
+
+        <span class="k">if</span> <span class="n">tree</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">count</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;The letter {0:s} has a perfect binary trie in WORDS({1:d}).&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">letter</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+            <span class="n">perfect_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;The letter {0:s} has no perfect binary trie in WORDS({1:d}).&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">letter</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+            <span class="n">imperfect_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Perfect count: {:d}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">perfect_count</span><span class="p">))</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Imperfect count: {:d}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">imperfect_count</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">perfect_count</span><span class="p">,</span> <span class="n">imperfect_count</span>
+
+
+
+<span class="k">def</span> <span class="nf">trie_table</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Compute and print a table of</span>
+<span class="sd">    number of words n versus number of</span>
+<span class="sd">    perfect tries formed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%8s</span><span class="se">\t</span><span class="si">%8s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="s2">&quot;n&quot;</span><span class="p">,</span><span class="s2">&quot;perfect tries&quot;</span><span class="p">))</span>
+
+    <span class="n">ns</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="mi">5757</span><span class="p">,</span><span class="mi">500</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">:</span>
+        <span class="n">p</span><span class="p">,</span><span class="n">i</span> <span class="o">=</span> <span class="n">trie_search</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%8d</span><span class="se">\t</span><span class="si">%8d</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="n">p</span><span class="p">))</span>
+
+    <span class="n">n</span> <span class="o">=</span> <span class="mi">5757</span>
+    <span class="n">p</span><span class="p">,</span><span class="n">i</span> <span class="o">=</span> <span class="n">trie_search</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%8d</span><span class="se">\t</span><span class="si">%8d</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="n">p</span><span class="p">))</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span><span class="o">&lt;</span><span class="mi">2</span><span class="p">:</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="mi">5757</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">5757</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="mi">5757</span>
+
+    <span class="n">_</span><span class="p">,</span><span class="n">_</span> <span class="o">=</span> <span class="n">trie_search</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="c1">#trie_table()</span>
+</pre></div>
+
+
+<p><a name="output"></a></p>
+<h2>Output</h2>
+<p>When we run with n = 1000, we can see that <code>s</code> is the only letter
+that forms a perfect binary trie for that value of n:</p>
+<div class="highlight"><pre><span></span>$ python tries.py <span class="m">1000</span>
+The letter a has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter b has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter c has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter d has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter e has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter f has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter g has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter h has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter i has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter j has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter k has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter l has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter m has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter n has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter o has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter p has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter q has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter r has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter s has a perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter t has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter u has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter v has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter w has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter x has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter y has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+The letter z has no perfect binary trie in WORDS<span class="o">(</span><span class="m">1000</span><span class="o">)</span>.
+
+Perfect count: <span class="m">1</span>
+Imperfect count: <span class="m">25</span>
+</pre></div>
+
+
+<p>In fact, 978 is the smallest number of words to find any perfect tries:</p>
+<div class="highlight"><pre><span></span>$ python tries.py <span class="m">978</span>
+The letter a has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter b has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter c has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter d has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter e has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter f has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter g has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter h has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter i has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter j has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter k has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter l has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter m has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter n has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter o has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter p has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter q has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter r has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter s has a perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter t has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter u has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter v has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter w has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter x has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter y has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+The letter z has no perfect binary trie in WORDS<span class="o">(</span><span class="m">978</span><span class="o">)</span>.
+
+Perfect count: <span class="m">1</span>
+Imperfect count: <span class="m">25</span>
+</pre></div>
+
+
+<p>Running with the full 5757 words leads to 11 more perfect tries:</p>
+<div class="highlight"><pre><span></span>$ python tries.py <span class="m">5757</span>
+The letter a has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter b has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter c has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter d has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter e has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter f has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter g has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter h has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter i has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter j has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter k has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter l has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter m has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter n has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter o has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter p has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter q has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter r has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter s has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter t has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter u has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter v has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter w has a perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter x has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter y has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+The letter z has no perfect binary trie in WORDS<span class="o">(</span><span class="m">5757</span><span class="o">)</span>.
+
+Perfect count: <span class="m">12</span>
+Imperfect count: <span class="m">14</span>
+</pre></div>
+
+
+<p>If we assemble a table of number of five letter words n
+versus number of perfect tries formed, nearly half show up
+only after we include 4,500 words.</p>
+<div class="highlight"><pre><span></span>       <span class="n">n</span>    <span class="n">perfect</span> <span class="n">tries</span>
+    <span class="mi">1000</span>           <span class="mi">1</span>
+    <span class="mi">1500</span>           <span class="mi">1</span>
+    <span class="mi">2000</span>           <span class="mi">1</span>
+    <span class="mi">2500</span>           <span class="mi">1</span>
+    <span class="mi">3000</span>           <span class="mi">3</span>
+    <span class="mi">3500</span>           <span class="mi">3</span>
+    <span class="mi">4000</span>           <span class="mi">4</span>
+    <span class="mi">4500</span>           <span class="mi">6</span>
+    <span class="mi">5000</span>          <span class="mi">11</span>
+    <span class="mi">5500</span>          <span class="mi">12</span>
+    <span class="mi">5757</span>          <span class="mi">12</span>
+</pre></div>
+
+
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/art-of-computer-programming.html">art of computer programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/knuth.html">knuth</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/five-letter-words.html">five letter words</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/tries.html">tries</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/trees.html">trees</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Five Letter Words: Part 4: Revisiting Diff by One
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-03-10T10:00:00-07:00" pubdate>Sunday 03/10/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/five-letter-words-part-4-revisiting-diff-by-one.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2>Table of Contents</h2>
+<ul>
+<li><a href="#five4-about">Five Letter Words, Revisited</a></li>
+<li><a href="#five4-diff-by-one">Different By One, Revisited</a></li>
+<li><a href="#five4-diff-by-n">Different By N, Revisited</a></li>
+</ul>
+<p><a name="five4-about"></a></p>
+<h2>About the Five-Letter Words</h2>
+<p>In Volume 4, Facsimile 0 of Donald Knuth's <u>Art of Computer Programming</u>, 
+in which Knuth covers graph theory, he introduces a list of five-letter words
+as part of a data set useful in exploring graph theory and graph algorithms.</p>
+<p>The <a href="https://github.com/charlesreid1/five-letter-words/blob/master/sgb-words.txt">list of words</a> 
+is part of the <a href="http://www3.cs.stonybrook.edu/~algorith/implement/graphbase/implement.shtml">Stanford Graph Base</a>, 
+a set of data sets that are useful for studying graph theory and networks.</p>
+<p>See <a href="https://charlesreid1.com/wiki/Five_Letter_Words">Five Letter Words</a>
+on the charlesreid1.com wiki for details.</p>
+<p><a name="five4-diff-by-one"></a></p>
+<h2>Different by 1, Revisited</h2>
+<p>This post is revisiting an exercise from the above volume,
+Exercise 28:</p>
+<blockquote>
+<p>Find pairs of SGB word vectors that differ by
++/- 1 in each component.</p>
+</blockquote>
+<p>In a prior blog post (<a href="#">Part 1</a>),
+we had inerpreted the question as finding
+word vectors whose Euclidean distance differed
+by 1 total, which is the same as a Hamming
+distance of 1.</p>
+<p>However, on revisiting the (more interesting)
+question actually being posed by the author,
+we find a different and more difficult problem.</p>
+<p>As an example of what Knuth is asking for:</p>
+<div class="highlight"><pre><span></span><span class="n">rover</span> <span class="o">-&gt;</span> <span class="n">spuds</span>
+</pre></div>
+
+
+<p>Each letter of the words are within an edit
+distance of 1, at each position.</p>
+<p>There are 38 such pairs:</p>
+<div class="highlight"><pre><span></span>$ python diff_by_one_fixed.py
+abaft babes
+absit baths
+adder beefs
+ambit blahs
+anger boffs
+anode boned
+bider chefs
+bidet chefs
+biffs cheer
+ghost hints
+hobos inapt
+holds inker
+honed inode
+hoods inner
+hoofs inner
+hoots input
+hoped inode
+ingot johns
+needs odder
+needs offer
+rider sheds
+rifer sheds
+rinds shoer
+robed spade
+robot snaps
+robot spans
+rover spuds
+ruffs steer
+runts stout
+rusts strut
+sheer tiffs
+sheet tiffs
+shout tints
+sides theft
+sneer toffs
+splat tombs
+spuds toter
+stuns tutor
+Found <span class="m">38</span> pairs of words that differ by +/-1 in each component.
+</pre></div>
+
+
+<p>The approach we used was as follows:</p>
+<ul>
+<li>Iterate over each word in the wordlist
+  (use the first 1,000 words to keep it
+  shorter for testing)</li>
+<li>For each word:</li>
+<li>Generate all variations that are within +/-1 
+    using recursive backtracking (could also use
+    algorithm to generate all 32 binary codes of 
+    length 5, where 0 = -1, 1 = +1)</li>
+<li>For each of the 32 variations,<ul>
+<li>Check if the word is in the wordset
+  (O(1) cost if using a hash table/set)</li>
+<li>If so, add ordered pair (word1,word2)
+  to a set of solutions (to avoid dupes)</li>
+</ul>
+</li>
+</ul>
+<p><a name="five4-diff-by-n"></a></p>
+<h2>Different by N, Revisited</h2>
+<p>We went back and modified the code to take a
+distance parameter d, but storage and compute
+cost, as well as the sparsity of the graph of
+shared bigrams and trigrams among these 5,000
+words, means the number of pairs increases 
+exponentially.</p>
+<div class="highlight"><pre><span></span><span class="o">|</span> <span class="n">Distance</span>  <span class="o">|</span> <span class="nb">Number</span> <span class="k">of</span> <span class="n">pairs</span>   <span class="o">|</span> <span class="n">Walltime</span>       <span class="o">|</span>
+<span class="o">|</span><span class="c1">-----------|-------------------|----------------|</span>
+<span class="o">|</span> <span class="mi">1</span>         <span class="o">|</span> <span class="mi">38</span>                <span class="o">|</span>     <span class="mi">0</span><span class="p">.</span><span class="mi">26</span> <span class="n">s</span>     <span class="o">|</span>
+<span class="o">|</span> <span class="mi">2</span>         <span class="o">|</span> <span class="mi">525</span>               <span class="o">|</span>     <span class="mi">5</span><span class="p">.</span><span class="mi">26</span> <span class="n">s</span>     <span class="o">|</span>
+<span class="o">|</span> <span class="mi">3</span>         <span class="o">|</span> <span class="mi">4982</span>              <span class="o">|</span>    <span class="mi">38</span><span class="p">.</span><span class="mi">87</span> <span class="n">s</span>     <span class="o">|</span>
+<span class="o">|</span> <span class="mi">4</span>         <span class="o">|</span> <span class="o">??</span> <span class="p">(</span><span class="mi">10</span><span class="o">^</span><span class="mi">5</span> <span class="n">est</span><span class="p">.)</span>    <span class="o">|</span>  <span class="mi">10</span> <span class="k">min</span> <span class="p">(</span><span class="n">est</span><span class="p">.)</span> <span class="o">|</span>
+</pre></div>
+
+
+<p>You can find the <code>diff_by_n.py</code> script here:
+<a href="https://git.charlesreid1.com/cs/five-letter-words/">https://git.charlesreid1.com/cs/five-letter-words/</a></p>
+<p>The output:</p>
+<div class="highlight"><pre><span></span>$ python diff_by_n.py
+abaft babes
+absit baths
+adder beefs
+ambit blahs
+anger boffs
+anode boned
+bider chefs
+bidet chefs
+biffs cheer
+ghost hints
+..
+Found <span class="m">38</span> pairs of words that differ by +/-1 in each component.
+Time: <span class="m">0</span>.2673 s
+
+aback babel
+aback cabal
+abaft babes
+abash cacti
+abide baked
+abide caged
+abide caked
+abler bands
+abler bangs
+abode caned
+...
+Found <span class="m">525</span> pairs of words that differ by +/-2 in each component.
+Time: <span class="m">5</span>.2617 s
+
+abaca ceded
+abaci babel
+abaci cabal
+abaci decaf
+abaci decal
+aback babel
+aback cabal
+aback decal
+abaft babes
+abaft bedew
+...
+Found <span class="m">4982</span> pairs of words that differ by +/-3 in each component.
+Time: <span class="m">38</span>.8743 s
+</pre></div></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/art-of-computer-programming.html">art of computer programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/knuth.html">knuth</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/five-letter-words.html">five letter words</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 centillion: a document search engine
             </b></h1>
         
@@ -182,426 +1307,6 @@ search engine tool).</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Any Color You Like, As Long As It's 00ADD8
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-02-23T10:00:00-08:00" pubdate>Saturday 02/23/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/go.html">Go</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/any-color-you-like-as-long-as-its-00add8.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>A short post with some thoughts on how writing Go code has
-helped me learn to stop worrying and love auto-formatting tools.</p>
-<p>Go code is terse. Not Python-terse, but terse. And unlike Java, 
-you don't find yourself constantly resorting to the security
-blanket of objects - something that Python (mercifully) can 
-go either way on.</p>
-<p>I used Java when I taught computer science at South Seattle College,
-and remember telling students once that one day, students taking
-CSC 142/143 would be using Go instead of Java. These days, I'm not
-as certain of that, but given that Go's strengths are asynchronous
-programming (critical for taking advantage of multicore hardware) 
-and tasks suited for the web, it isn't hard to imagine a "Go 2.0"
-that becomes a de-facto standard in school curricula.</p>
-<p>Something else I like about Go is the way there is a toolchain that
-adheres to the Unix tooling philosophy: do one thing and do it well.
-Take <code>gofmt</code> as an example - this is a tool that autoformats
-Go code to conform to the Go standard spec. <code>gofmt</code> is a simple tool
-that does just one thing. This tool can be connected to various text
-editors with hooks, a la <a href="https://github.com/fatih/vim-go">vimgo</a>.</p>
-<p><code>gofmt</code> has taught me the value, and convenience, of embracing 
-the norms and standards set by a language's community. Go
-recommends using tabs, for example, which early on I found
-a bit repulsive. Before I had vimgo set up, I was stubbornly 
-using spaces instead of tabs in my Go code.</p>
-<p>But then I set up vimgo so that, every time I saved a buffer containing
-Go code, it would run <code>gofmt</code> on the code, replacing all of the nitpicky
-details (like how many spaces between parentheses and variables, or wether
-<code>==</code> should be surrounded be spaces) and it just makes an executive decision.</p>
-<p>Sure, it uses tabs instead of spaces, but once you start to work on
-code and save it and you see all of these details just <em>handled</em>, 
-you quickly learn not to worry about it.</p>
-<p>And the surprising thing, to me, was just how much overhead I was spending
-on those things. It adds up.</p>
-<p>The <code>gofmt</code> executive decision strategy is similar to <a href="https://github.com/ambv/black">black</a>,
-"The uncompromising Python code formatter," whose slogan
-is "Any color you like, as long as it's black."</p>
-<p>While I really like black and would love to let it handle all of my Python
-code the way <code>gofmt</code> handles all of my Go code, the unfortunate reality is
-that Python, unlike Go, does not have an official standard, and if you
-automatically apply black formatting to all Python code, you can quickly
-wreak havoc on version-controlled code. You have to tread more lightly
-with black. I apply black more selectively by only applying it to <code>.py</code> 
-files that are in specific project subdirectories.)</p>
-<p>A slogan for <code>gofmt</code> could be, "Any color you like, as long as it's <code>#00ADD8</code>."</p>
-<p>Wait, what? Where did <code>#00ADD8</code> come from?</p>
-<p>It's in the <a href="https://storage.googleapis.com/golang-assets/Go-brand-book-v1.9.5.pdf">Go Brand Book</a>.
-Prior to discovering this (the link was dropped in an unrelated
-discussion on the <a href="https://golang.org/help/">gonuts mailing list</a>),
-I had no idea waht a brand book was. Turns out, this is very much
-<em>a thing</em> in marketing. Companies, projects, and organizations all
-have brand books that lay out the details of their marketing designs,
-branding, looks, everything down to the fonts and colors.</p>
-<p>The Go brand book is short, but it does specify an official color
-for Golang: <code>#00ADD8</code>. It also covers critical details about how to
-depict the Go gopher, including the physics of gopher belly folds:</p>
-<p><img alt="Extremely important details" src="images/bellyfold.png"></p>
-<p>There are some other branding books - the 
-<a href="https://www.flipsnack.com/cardesigns/brandbook-cocacola.html">Coca Cola brand book</a>.
-is simultaneously fascinating and terrible,
-in a late stage capitalism kind of way.</p>
-<p>At any rate, at least the Go brand book is about something useful,
-and contains silly things like gophers.</p>
-<p><img alt="Gopher specs" src="images/gopherpage.png"></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/black.html">black</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/gofmt.html">gofmt</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                A Few of My Favorite PEPs
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-02-11T12:00:00-08:00" pubdate>Monday 02/11/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/a-few-of-my-favorite-peps.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2>Table of Contents</h2>
-<ul>
-<li><a href="#fav">What's your favorite PEP?</a></li>
-<li><a href="#p0">PEP 0</a></li>
-<li><a href="#p8">PEP 8</a></li>
-<li><a href="#p20">PEP 20</a></li>
-<li><a href="#p3099">PEP 3099</a><ul>
-<li><a href="#2to3">Addendum: 2 to 3 Changes</a></li>
-</ul>
-</li>
-<li><a href="#p202">PEP 202</a></li>
-<li><a href="#gh">All the PEPs on Github</a></li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="fav"></a></p>
-<h2>What's your favorite PEP?</h2>
-<p>PEPs, or <strong>Python Enhancement Proposals</strong>, are documents in which
-features, additions, or general ideas are proposed as additions
-to the core Python language.</p>
-<p>As a Python user, we believe it's important to ask questions like this.</p>
-<p>Picking a "favorite PEP" is not just about having a ready and clever
-answer to a question you might expect in a technical interview;
-the PEP documents really <em>are</em> important, and really <em>do</em> shape 
-where Python is today and where it will be in the future.</p>
-<p>So let's look at a few of our favorite PEPs.</p>
-<p><a name="p0"></a></p>
-<h2>PEP 0: The PEP Index</h2>
-<p>PEP0 - the easiest answer to the question, "what's your favorite PEP?"</p>
-<p><a href="https://www.python.org/dev/peps/">PEP 0 - Index of Python Enhancement Proposals (PEPs)</a>
-lists all PEPs, including PEPs about PEPs, accepted PEPs, open PEPs,
-finished PEPs, informational PEPs, and abandoned PEPs.</p>
-<p>This is also a good place to search for a keyword or browse PEPs.</p>
-<p>This PEP is the favorite of people who love enumerations, library card catalogs,
-biblical genealogies, and litanies.</p>
-<p><a name="p8"></a></p>
-<h2>PEP 8: The Python Style Guide</h2>
-<p><a href="https://www.python.org/dev/peps/pep-0008/">PEP 8</a>
-covers the recommended Python style.
-It is a surprisingly quick read.</p>
-<p>This PEP dishes "official" opinions about 
-controversial topics such as:</p>
-<ul>
-<li>tabs or spaces (spoiler: <strong><em>spaces</em></strong>)</li>
-<li>line width</li>
-<li>whitespace</li>
-<li>naming conventions for variables, classes, and modules</li>
-</ul>
-<p>This PEP is the chosen favorite of those programmers who keep their
-crayons organized in the correct color order.</p>
-<p><a name="p20"></a></p>
-<h2>PEP 20: The Zen of Python</h2>
-<p><a href="https://www.python.org/dev/peps/pep-0020/">PEP 20</a> contains
-20 aphorisms that compose the Zen of Python - only 19 of which
-are contained in the PEP...</p>
-<p>Also available from Python via:</p>
-<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">this</span>
-</pre></div>
-
-
-<p>Many of the aphorisms in PEP 20 come in pairs.</p>
-<p>The first seven alone compose an excellent philosophy of programming.
-Six symmetric rules:</p>
-<div class="highlight"><pre><span></span>Beautiful is better than ugly.
-
-Explicit is better than implicit.
-
-Simple is better than complex.
-
-Complex is better than complicated.
-
-Flat is better than nested.
-
-Sparse is better than dense.
-</pre></div>
-
-
-<p>The seventh, one of the principal ideas behind Python:</p>
-<div class="highlight"><pre><span></span>Readability counts.
-</pre></div>
-
-
-<p>The next pair of aphorisms is important to our own style of programming:</p>
-<div class="highlight"><pre><span></span>Special cases aren&#39;t special enough to break the rules.
-
-Although practicality beats purity.
-</pre></div>
-
-
-<p>The latter aphorism is an acknowledgement that, ultimately, programming
-is a means to an end, and Python (or whatever programming language you use)
-should not <em>get in the way</em> of reaching that end - especially not for the
-sake of some abstract principle or theory. </p>
-<p>PEP 20 weighs in on errors:</p>
-<div class="highlight"><pre><span></span>Errors should never pass silently.
-
-Unless explicitly silenced.
-</pre></div>
-
-
-<p>Slightly perplexing:</p>
-<div class="highlight"><pre><span></span>In the face of ambiguity, refuse the temptation to guess.
-</pre></div>
-
-
-<p>More pairs:</p>
-<div class="highlight"><pre><span></span>There should be one-- and preferably only one -- obvious way to do it.
-
-Although that way may not be obvious at first unless you&#39;re Dutch.
-</pre></div>
-
-
-<p>From the <a href="https://en.wikipedia.org/wiki/Guido_van_Rossum">Wikipedia page on Guido van Rossum</a>:</p>
-<blockquote>
-<p>Guido van Rossum is a Dutch programmer...</p>
-</blockquote>
-<div class="highlight"><pre><span></span>Now is better than never.
-
-Although never is often better than *right* now.
-</pre></div>
-
-
-<p>That last one sounds like an excuse for procrastination.</p>
-<div class="highlight"><pre><span></span>If the implementation is hard to explain, it&#39;s a bad idea.
-
-If the implementation is easy to explain, it may be a good idea.
-</pre></div>
-
-
-<p>Finally, the last aphorism covers the reason you never see 
-<code>from module import *</code>:</p>
-<div class="highlight"><pre><span></span><span class="n">Namespaces</span> <span class="n">are</span> <span class="n">one</span> <span class="n">honking</span> <span class="n">great</span> <span class="n">idea</span> <span class="o">-</span> <span class="k">let</span><span class="c">&#39;s do more of those!</span>
-</pre></div>
-
-
-<p>Namespaces, in this case, come from importing everything in 
-a Python package into a particular variable name - like 
-<code>import itertools</code> or <code>import numpy as np</code>.</p>
-<p>It turns out that, yes, in fact, namespaces are a great idea!</p>
-<p><a name="p3099"></a></p>
-<h2>PEP 3099: Things That Will Not Change in Python 3000</h2>
-<p>We can't really decide what we enjoy most about <a href="https://www.python.org/dev/peps/pep-3099/">PEP 3099</a>.
-Maybe it's the fact that it does the opposite of what most 
-proclamations of a new major version do, which is, to say
-what new features it will <em>not</em> have.
-Maybe it's the way the language's creators demonstrate how well
-they have learned from the mistakes of others who adopt
-the "Burn it to the ground and rewrite from scratch"
-philosophy. Or maybe it's the delightful nostalgia of 
-"Python 3000".</p>
-<p>In any case, PEP 3099 is an instructive read, because any feature
-that will explicitly be kept during a major version bump is clearly
-either (a) useful, (b) important, or (c) both. Additionally, it 
-gives some insight into the design decisions made when Python
-was implemented ("Why does Python do X this way, instead of 
-some other easier way?").</p>
-<p>Not only that, you also get to walk through a graveyard of
-abandoned (but still interesting) ideas, and the links given
-in the PEP to the Python mailing list can provide additional
-useful information.</p>
-<p><a name="2to3"></a></p>
-<h2>Addendum: PEPs Affecting 2 to 3 Changes</h2>
-<p>In contrast to PEP 3099, which contains a list of all the things
-that <em>did not</em> change in Python 3, there were a large number of
-PEPs that <em>did</em> cause Python 3 to behave differently from Python 2.</p>
-<ul>
-<li><a href="https://www.python.org/dev/peps/pep-0237">PEP 237</a>: Unified long integers and integers</li>
-<li><a href="https://www.python.org/dev/peps/pep-0238">PEP 238</a>: Changed the division operator</li>
-<li><a href="https://www.python.org/dev/peps/pep-0412">PEP 412</a>: Key-sharing dictionary</li>
-<li><a href="https://www.python.org/dev/peps/pep-0428">PEP 428</a>: Object-oriented filesystem paths</li>
-<li><a href="https://www.python.org/dev/peps/pep-0435">PEP 435</a>: Adding enum type</li>
-<li><a href="https://www.python.org/dev/peps/pep-0448">PEP 448</a>: Unpacking</li>
-<li><a href="https://www.python.org/dev/peps/pep-0450">PEP 450</a>: Adding stats to standard library</li>
-<li><a href="https://www.python.org/dev/peps/pep-0498">PEP 498</a>: Literal string interpolation</li>
-<li><a href="https://www.python.org/dev/peps/pep-0515">PEP 515</a>: Underscores in numeric literals</li>
-<li><a href="https://www.python.org/dev/peps/pep-3101">PEP 3101</a>: Advanced string formatting</li>
-<li><a href="https://www.python.org/dev/peps/pep-3102">PEP 3102</a>: Keyword-only arguments</li>
-<li><a href="https://www.python.org/dev/peps/pep-3105">PEP 3105</a>: Make print a function</li>
-<li><a href="https://www.python.org/dev/peps/pep-3111">PEP 3111</a>: User input in Python 3000</li>
-<li><a href="https://www.python.org/dev/peps/pep-3114">PEP 3114</a>: Renaming <code>next()</code> to <code>__next__()</code></li>
-<li><a href="https://www.python.org/dev/peps/pep-3135">PEP 3135</a>: Super behavior</li>
-</ul>
-<p><a name="p202"></a></p>
-<h2>PEP 202: List Comprehensions</h2>
-<p>Of course, picking your favorite PEP can also be an opportunity
-to make a statement about your favorite language feature of Python,
-since many of Python's most useful language features got their start 
-as PEPs.</p>
-<p>For us, list comprehensions (covered in <a href="https://www.python.org/dev/peps/pep-0202/">PEP 202</a>)
-area clear winner in any competition of most useful language features. 
-List comprehensions are a way of shortening for loop syntax, making it
-much easier to perform map and filtering operations. Some examples
-from PEP 202:</p>
-<div class="highlight"><pre><span></span>&gt;&gt;&gt; print([i for i in range(20) if i%2 == 0])
-[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
-
-&gt;&gt;&gt; nums = [1, 2, 3, 4]
-
-&gt;&gt;&gt; fruit = [&quot;Apples&quot;, &quot;Peaches&quot;, &quot;Pears&quot;, &quot;Bananas&quot;]
-
-&gt;&gt;&gt; print [(i, f) for i in nums for f in fruit]
-[(1, &#39;Apples&#39;), (1, &#39;Peaches&#39;), (1, &#39;Pears&#39;), (1, &#39;Bananas&#39;),
- (2, &#39;Apples&#39;), (2, &#39;Peaches&#39;), (2, &#39;Pears&#39;), (2, &#39;Bananas&#39;),
- (3, &#39;Apples&#39;), (3, &#39;Peaches&#39;), (3, &#39;Pears&#39;), (3, &#39;Bananas&#39;),
- (4, &#39;Apples&#39;), (4, &#39;Peaches&#39;), (4, &#39;Pears&#39;), (4, &#39;Bananas&#39;)]
-
-&gt;&gt;&gt; print([(i, f) for i in nums for f in fruit if f[0] == &quot;P&quot;])
-[(1, &#39;Peaches&#39;), (1, &#39;Pears&#39;),
- (2, &#39;Peaches&#39;), (2, &#39;Pears&#39;),
- (3, &#39;Peaches&#39;), (3, &#39;Pears&#39;),
- (4, &#39;Peaches&#39;), (4, &#39;Pears&#39;)]
-
-&gt;&gt;&gt; print([(i, f) for i in nums for f in fruit if f[0] == &quot;P&quot; if i%2 == 1])
-[(1, &#39;Peaches&#39;), (1, &#39;Pears&#39;), (3, &#39;Peaches&#39;), (3, &#39;Pears&#39;)]
-
-&gt;&gt;&gt; print([i for i in zip(nums, fruit) if i[0]%2==0])
-[(2, &#39;Peaches&#39;), (4, &#39;Bananas&#39;)]
-</pre></div>
-
-
-<p>List comprehensions enable code to be short but expressive, 
-brief but elegant. Brevity is the soul of wit, after all.</p>
-<p><a name="gh"></a></p>
-<h2>All the PEPs on Github</h2>
-<p><a href="https://github.com/python/peps">All the PEPs are available on Github.</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/pep.html">pep</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -631,6 +1336,32 @@ brief but elegant. Brevity is the soul of wit, after all.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>September 2019</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/mocking-aws-in-unit-tests.html">Mocking AWS in Unit Tests</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>August 2019</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/writing-a-vim-plugin-with-python.html">Writing a Vim Plugin with Python</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
