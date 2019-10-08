@@ -3,6 +3,33 @@ Date: 2019-10-07 20:00
 Category: Git
 Tags: git, rebase, cherry-pick, branching, version control
 
+# Table of Contents
+
+* [Source](#source)
+* [[user] section](#user-section)
+* [Bash Aliases](#bash-aliases)
+    * [The Best One Letter Alias Ever](#the-best-one-letter-alias-ever)
+    * [Ending Bad Habits](#ending-bad-habits)
+* [[alias] section](#alias-section)
+    * [Log Utils](#log-utils)
+    * [Status Utils](#status-utils)
+    * [Fetching](#fetching)
+    * [Branch Utils](#branch-utils)
+        * [Branch and Checkout](#branch-and-checkout)
+    * [Remote Utils](#remote-utils)
+    * [Commit Utils](#commit-utils)
+        * [Committing All Changes](#committing-all-changes)
+        * [Fixing Commits](#fixing-commits)
+    * [Miscellaneous Utils](#miscellaneous-utils)
+        * [Rebasing shortcuts](#rebasing-shortcuts)
+        * [Diff shortcuts](#diff-shortcuts)
+        * [Pull shortcuts](#pull-shortcuts)
+        * [Clone shortcuts](#clone-shortcuts)
+        * [Contributor shortcuts](#contributor-shortcuts)
+* [[core] section](#core-section)
+* [[color] section](#color-section)
+* [[url] section](#url-section)
+
 # Source
 
 Most of the good stuff is from
