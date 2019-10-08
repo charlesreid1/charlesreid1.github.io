@@ -414,3 +414,17 @@ This makes some Github-related URLs easier and shorter to type:
     insteadOf = "gist:"
 ```
 
+Now, instead of
+
+```
+$ git clone git@github.com:org-name/repo-name
+```
+
+you can do the much simpler
+
+```
+$ g c gh://org-name/repo-name
+```
+
+Voila! Start integrating these alises into your daily workflow,
+and you'll find yourself using a lot fewer keystrokes!
