@@ -150,9 +150,177 @@ Changes not staged for commit:
 	modified:   pelican/content/git-workflows-2-teams.md
 ```
 
+## Fetching
+
+Fetching is handy to do, since it just fetches changes from a remote and doesn't actually
+change anything or try to merge anything (unlike a `git pull` command).
+
+The most useful fetch command (`git fetch --all`) is aliased to `g f` with the following
+bit in the `[aliases]` section of the `~/.gitconfig` file:
+
+```plain
+    f = fetch --all
+```
+
 ## Branch Utils
 
+The only command I might use more than the status command are branch commands,
+so here are several branch aliases:
+
+```plain
+    b = branch -v
+    bv = branch -v
+    bb = branch -v
+
+    ba = branch -a
+    bb = branch -v -a
+```
+
+In a similar way, you can get a summary view using `g b`:
+
+```plain
+$ g b
+  master 4c828cd [behind 84] update with awsome day notes
+* source b18adfd add two git workflow posts
+
+$ g b
+  master 940ee98 update mocking post
+* source b18adfd add two git workflow posts
+```
+
+and a little bit more information with `g bb`:
+
+```plain
+$ g bb
+  master            940ee98 update mocking post
+* source            b18adfd add two git workflow posts
+  remotes/gh/HEAD   -> gh/source
+  remotes/gh/master 940ee98 update mocking post
+  remotes/gh/source b18adfd add two git workflow posts
+```
+
+### Branch and Checkout
+
+Sometimes if you are creaing a branch with a long branch name, it can be
+inconvenient to have to first create the branch with `git branch <branch-name>`
+and then check it out with `git checkout <branch-name>`.
+
+To resolve this you can define a `git go` alias that creates the branch and
+then switches to that branch:
+
+```plain
+    # Switch to a branch, creating it 
+    # from the current branch if necessary
+    go = "!f() { git checkout -b \"$1\" 2> /dev/null || git checkout \"$1\"; }; f"
+```
+
+Careful you don't mistype the branch name.
+
+## Remote Utils
+
+Another useful git command is the remote command, so here are a few
+remote aliases:
+
+```plain
+    r = remote -v
+    rv = remote -v
+    ra = remote -v
+```
+
 ## Commit Utils
+
+Sometimes you have changes that you've staged using `git add`, but you
+want to see the changes that you've staged, before you commit them.
+
+Normally you'd have to use the inconvenient `git diff --cached <files>`,
+but this can be aliased to `cdiff`, so that you can use `git diff` to see
+unstaged changes and `git cdiff` to see staged changes.
+
+Even better, you can define the alias `g cd` to run `git cdiff`...!
+
+Here's the relevant bit in the `[aliases]` section:
+
+```
+    cdiff = diff --cached
+    cd = diff --cached
+```
+
+### Committing All Changes
+
+```plain
+    # Commit all changes
+    ca = !git add -A && git commit -av
+```
+
+### Fixing Commits
+
+Some common operations for repairing commit history before pushing:
+
+```plain
+    # Amend the currently staged files to the latest commit
+    amend = commit --amend --reuse-message=HEAD
+
+    # Oops
+    fix = commit --amend --reuse-message=HEAD --edit
+```
+
+## Miscellaneous Utils
+
+There are a few other actions that are useful to add to the `[aliases]` section
+of the `~/.gitconfig`:
+
+### Rebasing shortcuts
+
+```plain
+    # Interactive rebase with the given number of latest commits
+    reb = "!r() { git rebase -i HEAD~$1; }; r"
+```
+
+### Diff shortcuts
+
+```plain
+    # Show the diff between the latest commit and the current state
+    d = !"git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat"
+
+    # `git di $number` shows the diff between the state `$number` revisions ago and the current state
+    di = !"d() { git diff --patch-with-stat HEAD~$1; }; git diff-index --quiet HEAD -- || clear; d"
+```
+
+### Pull shortcuts
+
+```plain
+    p = "!f() { git pull $1 $2; }; f"
+```
+
+### Clone shortcuts
+
+```
+    # Clone a repository including all submodules
+    c = clone --recursive
+```
+
+### Contributor shortcuts
+
+This last one is convenient for getting a summary of contributors:
+
+```plain
+    # List contributors with number of commits
+    contributors = shortlog --summary --numbered
+```
+
+An example for <https://github.com/aws/chalice>:
+
+```
+$ cd chalice/
+$ g contributors
+  1053  James Saryerwinnie
+   120  John Carlyle
+    94  stealthycoin
+    42  kyleknap
+    35  jcarlyl
+    19  Kyle Knapp
+    12  Atharva Chauthaiwale
+```
 
 # `[core]` section
 
