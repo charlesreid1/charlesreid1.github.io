@@ -2,7 +2,11 @@ Title: Git Workflows, Part 1: Supercharging your Git Config
 Date: 2019-10-07 20:00
 Category: Git
 Tags: git, rebase, cherry-pick, branching, version control
-Status: draft
+
+# Source
+
+Most of the good stuff is from
+<https://github.com/mathiasbynens/dotfiles>!
 
 # `[user]` section
 
@@ -324,7 +328,89 @@ $ g contributors
 
 # `[core]` section
 
+Because it's the best text editor:
+
+```plain
+[core]
+    editor = vim
+```
+
+I have some other stuff I've collected, many of them from
+<https://github.com/mathiasbynens/dotfiles>:
+
+```plain
+    # Use custom `.gitignore` and `.gitattributes`
+    excludesfile = ~/.gitignore
+    attributesfile = ~/.gitattributes
+
+    # Treat spaces before tabs and all kinds of trailing whitespace as an error
+    # [default] trailing-space: looks for spaces at the end of a line
+    # [default] space-before-tab: looks for spaces before tabs at the beginning of a line
+    whitespace = space-before-tab,-indent-with-non-tab,trailing-space
+
+    # Make `git rebase` safer on macOS
+    # More info: <http://www.git-tower.com/blog/make-git-rebase-safe-on-osx/>
+    ###trustctime = false
+
+    # Prevent showing files whose names contain non-ASCII symbols as unversioned.
+    # http://michael-kuehnel.de/git/2014/11/21/git-mac-osx-and-german-umlaute.html
+    precomposeunicode = false
+
+    # Speed up commands involving untracked files such as `git status`.
+    # https://git-scm.com/docs/git-update-index#_untracked_cache
+    untrackedCache = true
+```
+
 # `[color]` section
 
+Make some nice beautiful colors that are easy to understand:
+
+```plain
+[color]
+
+    # Use colors in Git commands that are capable of colored output when
+    # outputting to the terminal. (This is the default setting in Git ≥ 1.8.4.)
+    ui = auto
+
+[color "branch"]
+
+    current = yellow reverse
+    local = yellow
+    remote = green
+
+[color "diff"]
+
+    meta = yellow bold
+    frag = magenta bold # line info
+    old = red # deletions
+    new = green # additions
+
+[color "status"]
+
+    added = yellow
+    changed = green
+    untracked = cyan
+```
+
 # `[url]` section
+
+This makes some Github-related URLs easier and shorter to type:
+
+```plain
+[url "git@github.com:"]
+
+    insteadOf = "gh:"
+    pushInsteadOf = "github:"
+    pushInsteadOf = "git://github.com/"
+
+[url "git@gist.github.com:"]
+
+    insteadOf = "gst:"
+    pushInsteadOf = "gist:"
+    pushInsteadOf = "git://gist.github.com/"
+
+[url "git://gist.github.com/"]
+
+    insteadOf = "gist:"
+```
 
