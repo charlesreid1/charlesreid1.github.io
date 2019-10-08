@@ -6,11 +6,11 @@ Tags: git, rebase, cherry-pick, branching, version control
 # Table of Contents
 
 * [Source](#source)
-* [[user] section](#user-section)
+* [user section](#user-section)
 * [Bash Aliases](#bash-aliases)
     * [The Best One Letter Alias Ever](#the-best-one-letter-alias-ever)
     * [Ending Bad Habits](#ending-bad-habits)
-* [[alias] section](#alias-section)
+* [alias section](#alias-section)
     * [Log Utils](#log-utils)
     * [Status Utils](#status-utils)
     * [Fetching](#fetching)
@@ -26,16 +26,16 @@ Tags: git, rebase, cherry-pick, branching, version control
         * [Pull shortcuts](#pull-shortcuts)
         * [Clone shortcuts](#clone-shortcuts)
         * [Contributor shortcuts](#contributor-shortcuts)
-* [[core] section](#core-section)
-* [[color] section](#color-section)
-* [[url] section](#url-section)
+* [core section](#core-section)
+* [color section](#color-section)
+* [url section](#url-section)
 
 # Source
 
 Most of the good stuff is from
 <https://github.com/mathiasbynens/dotfiles>!
 
-# `[user]` section
+# user section
 
 Start off easy - here's how you set your email and name for commits:
 
@@ -91,10 +91,10 @@ git() {
 }
 ```
 
-# `[alias]` section
+# alias section
 
 In the ~/.gitconfig` file, aliases specific to git can be 
-defined in a section beginning with `[alias]`.
+defined in a section beginning with alias.
 
 ## Log Utils
 
@@ -102,7 +102,7 @@ Let's start with some utilities for viewing git logs.
 
 (You can never have too many ways to look at a git log.)
 
-Note that we'll assume the `[alias]` bit in the following git config excerpts.
+Note that we'll assume the alias bit in the following git config excerpts.
 
 ```plain
 [alias]
@@ -187,7 +187,7 @@ Fetching is handy to do, since it just fetches changes from a remote and doesn't
 change anything or try to merge anything (unlike a `git pull` command).
 
 The most useful fetch command (`git fetch --all`) is aliased to `g f` with the following
-bit in the `[aliases]` section of the `~/.gitconfig` file:
+bit in the aliases section of the `~/.gitconfig` file:
 
 ```plain
     f = fetch --all
@@ -269,7 +269,7 @@ unstaged changes and `git cdiff` to see staged changes.
 
 Even better, you can define the alias `g cd` to run `git cdiff`...!
 
-Here's the relevant bit in the `[aliases]` section:
+Here's the relevant bit in the aliases section:
 
 ```
     cdiff = diff --cached
@@ -297,7 +297,7 @@ Some common operations for repairing commit history before pushing:
 
 ## Miscellaneous Utils
 
-There are a few other actions that are useful to add to the `[aliases]` section
+There are a few other actions that are useful to add to the aliases section
 of the `~/.gitconfig`:
 
 ### Rebasing shortcuts
@@ -353,7 +353,7 @@ $ g contributors
     12  Atharva Chauthaiwale
 ```
 
-# `[core]` section
+# core section
 
 Because it's the best text editor:
 
@@ -388,7 +388,7 @@ I have some other stuff I've collected, many of them from
     untrackedCache = true
 ```
 
-# `[color]` section
+# color section
 
 Make some nice beautiful colors that are easy to understand:
 
@@ -419,7 +419,7 @@ Make some nice beautiful colors that are easy to understand:
     untracked = cyan
 ```
 
-# `[url]` section
+# url section
 
 This makes some Github-related URLs easier and shorter to type:
 
