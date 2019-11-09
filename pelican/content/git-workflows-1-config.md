@@ -93,7 +93,7 @@ git() {
 
 # alias section
 
-In the ~/.gitconfig` file, aliases specific to git can be 
+In the `~/.gitconfig` file, aliases specific to git can be 
 defined in a section beginning with alias.
 
 ## Log Utils
