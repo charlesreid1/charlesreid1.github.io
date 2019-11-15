@@ -43,10 +43,10 @@ Tags: git, rebase, cherry-pick, branching, version control
 
 # What is a commit
 
-before we get into the good stuff, let's talk about the
+Before we get into the good stuff, let's talk about the
 anatomy of a git commit.
 
-when you add files to your git repository, it's a two-step
+When you add files to your git repository, it's a two-step
 process: `git add` and `git commit`. The first step _stages_
 your changes, the second step memorializes those staged changes
 into a commit that can now be shared with others by pushing it
