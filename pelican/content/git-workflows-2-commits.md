@@ -29,7 +29,7 @@ Tags: git, rebase, cherry-pick, branching, version control
   larger commits later; it's easier to combine smaller commits
   than to split large commits.
 
-* Make use of `git add -p` and `git add --interactive` to stage
+* Make use of `git add -p` and `git add -e` to stage
   changes selectively and atomically.
 
 * Make use of `git rebase` and `git cherry-pick` to edit your
