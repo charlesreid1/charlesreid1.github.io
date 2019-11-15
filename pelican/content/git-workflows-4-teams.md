@@ -1,14 +1,20 @@
 Title: Git Workflows, Part 2: Workflows for Teams
-Date: 2019-10-08 20:00
+Date: 2019-11-08 20:00
 Category: Git
 Tags: git, rebase, cherry-pick, branching, version control
 Status: draft
 
-# Commits
+# The Man Page
 
-- separating changes
-- combine via rebasing later
-- easier to rebase many commits into smaller number once work is finished
+Check out this handy manual page, which comes packaged with git:
+
+```
+man gitworkflows
+```
+
+This blog post is an interpretation of how to apply some of the ideas
+in that document to a real software development team workflow.
+
 
 # Branches
 
