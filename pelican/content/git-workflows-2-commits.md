@@ -2,7 +2,6 @@ Title: Git Workflows, Part 2: Crafting Commits
 Date: 2019-11-14 20:00
 Category: Git
 Tags: git, rebase, cherry-pick, branching, version control
-Status: draft
 
 # Table of Contents
 
