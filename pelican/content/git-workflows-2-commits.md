@@ -109,7 +109,7 @@ This leaves the developer of the feature branch a few choices:
 
 - **rebase** - continue to rebase all commits on the feature branch from the
   original feature branch base commit onto the head commit of the master branch.
-  - Pros: clean history, easy for one-branch-one-dev workflow
+  - Pros: clean history, easy for one-branch-one-developer workflow
   - Cons: requires continual force-pushes, requires coordination between developers
     to prevent squashing others' work, not scalable, some people hate this method
 
@@ -285,17 +285,17 @@ Changes not staged for commit:
 	modified:   doit.sh
 ```
 
-Now `git commit` will commit only the staged portions. 
+Now `git commit` will commit only the staged portions.
 
 Do not provide any filenames to `git commit`, so that git will only commit the staged changes.
 
-To use this in your workflow, think about how you can group different changes together into 
+To use this in your workflow, think about how you can group different changes together into
 different commits. If you get a portion of a feature working, you can commit the changes in
 groups so that related changes get committed together.
 
-Also remember that if your commit history endsd up being excessively long or overly detailed,
-you can always examine what changes different commits made, and reorder them with `git cherry-pick`
-or modify or squash them with `git rebase`.
+Also remember that if your commit history ends up being excessively long or overly detailed,
+you can always examine what changes different commits made with `git diff`, and reorder them
+with `git cherry-pick` or modify/combine them with `git rebase`.
 
 ### git add editor mode
 
@@ -342,7 +342,7 @@ index 326273c..14e4059 100644
  #
 -# This script lists the 50 largest files in the git repo history
 +# This script lists the 10 largest files in the git repo history
- 
+
  $ git rev-list --all --objects | \
       sed -n $(git rev-list --objects --all | \
       cut -f1 -d' ' | \
@@ -356,7 +356,7 @@ index 326273c..14e4059 100644
       while read hash type size; do
            echo -n "-e s/$hash/$size/p ";
       done) | \
--     sort -nru -k1 
+-     sort -nru -k1
 +     sort -nr -k1
 ```
 
@@ -394,7 +394,7 @@ To do a git rebase, an interactive rebase (the `-i` flag) is recommended.
 
 The rebase action takes two commits, and will replay the commits.
 
-**IMPORTANT:** The first commit given (the start commit) is _not_ included 
+**IMPORTANT:** The first commit given (the start commit) is _not_ included
 in the rebase. To include it, add `~1` to the start commit. (For example,
 `0a1b2c3d~1` refers to the commit before commit `0a1b2c3d`.
 
@@ -423,8 +423,8 @@ git rebase -i START_COMMIT_HASH END_COMMIT_HASH --onto TARGET_BRANCH
 the behavior of the prior command, the branch label will not move with you to the new pile
 of commits.
 
-Run `git checkout -b <branchname>` to give your new rebased branch a meaningful name. 
-This creates a branch wherever HEAD is, which is pointing to the top of the pile of rebased 
+Run `git checkout -b <branchname>` to give your new rebased branch a meaningful name.
+This creates a branch wherever HEAD is, which is pointing to the top of the pile of rebased
 commits.
 
 If you want the old branch label to move to the new pile of commits, it requires a bit of branch
@@ -438,7 +438,7 @@ git branch -D <branchname> && git checkout -b <branchname>
 ## Rearranging Commits
 
 Where rebasing allows for editing commits en masse, cherry picking allows the changes made in
-individual commits to be applied anywhere - including other branches. This makes the atomic 
+individual commits to be applied anywhere - including other branches. This makes the atomic
 commit principle from the beginning of this post much easier - groups of related commits that
 happened out of order can be rearranged by cherry picking them onto a new branch, and the new
 branch is a better "story".
@@ -446,7 +446,5 @@ branch is a better "story".
 ## Combining Commits
 
 The cherry pick operation can also be combined with a rebase - once multiple small commits are
-arranged together chronologically, a git rebase operation enables squashing those tiny commits 
+arranged together chronologically, a git rebase operation enables squashing those tiny commits
 into a small number of larger commits, all carrying related changes.
-
-

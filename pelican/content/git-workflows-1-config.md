@@ -93,7 +93,7 @@ git() {
 
 # alias section
 
-In the `~/.gitconfig` file, aliases specific to git can be 
+In the `~/.gitconfig` file, aliases specific to git can be
 defined in a section beginning with alias.
 
 ## Log Utils
@@ -240,7 +240,7 @@ To resolve this you can define a `git go` alias that creates the branch and
 then switches to that branch:
 
 ```plain
-    # Switch to a branch, creating it 
+    # Switch to a branch, creating it
     # from the current branch if necessary
     go = "!f() { git checkout -b \"$1\" 2> /dev/null || git checkout \"$1\"; }; f"
 ```
