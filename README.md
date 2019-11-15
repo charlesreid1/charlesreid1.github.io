@@ -2,7 +2,7 @@
 
 This repository contains a Pelican blog for charlesreid1.com.
 
-Link to blog: [http://charlesreid1.github.io](http://charlesreid1.github.io)
+Link to blog: [https://charlesreid1.github.io](https://charlesreid1.github.io)
 
 `source` branch - contains the files used to generate the blog site (using Pelican). All blog posts are in the `content/` folder of this branch.
 
