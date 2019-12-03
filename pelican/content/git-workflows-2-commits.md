@@ -106,30 +106,35 @@ the feature branch base commit may grow far out of sync with the master branch.
 
 This leaves the developer of the feature branch a few choices:
 
-- **rebase** - continue to rebase all commits on the feature branch from the
+* **rebase** - continue to rebase all commits on the feature branch from the
   original feature branch base commit onto the head commit of the master branch.
-  - Pros: clean history, easy for one-branch-one-developer workflow
-  - Cons: requires continual force-pushes, requires coordination between developers
-    to prevent squashing others' work, not scalable, some people hate this method
+    * Pros: clean history, easy for one-branch-one-developer workflow
+    * Cons: requires continual force-pushes, requires coordination between developers
+      to prevent squashing others' work, not scalable, some people hate this method
 
-- **merge** - occasionally merge work from the master branch into the feature branch.
-  - Pros: simple to understand, simple to carry out, low cognitive load
-  - Cons: clutters PR review by mixing feature changes with merged changes, clutters the
-    commit history
+* **merge** - occasionally merge work from the master branch into the feature branch.
+    * Pros: simple to understand, simple to carry out, low cognitive load
+    * Cons: clutters PR review by mixing feature changes with merged changes, clutters the
+      commit history
 
-- **branch** - by making heavy use of throwaway branches and integration branches,
+* **branch** - by making heavy use of throwaway branches and integration branches,
   it is easier to test out how the integration of a feature branch based on an old
   commit on `master` will do when merging it in with a newer version of `master`.
   Use throwaway integration branches to test out merging the two branches together,
   testing its functionality, etc. You can also rebase or cherry pick commits onto
   the throwaway integration branch, and figure out how to arrange the commits on a
   branch to "rebuild" it into a working, mergeable branch.
+    * Pros: easy to do, encourages local use of throwaway branches
+    * Cons: clutters branches, integration process has to be repeated (can be mitigated
+      with `git rerere`), merge commits must wait until PR is approved
 
 - **pass** - best combined with the branch approach mentioned above, the pass approach
   is to leave the branch history clean, avoid force-pushes, and rely on throwaway
   branches to test out merge strategies once the inevitable PR merge needs to happen.
   It can also be useful to wait for code reviews to finish, then create a merge commit
   to make the merge happen smoothly.
+    * Pros: easy to do
+    * Cons: merge commits must wait until PR is approved
 
 ## git push
 
