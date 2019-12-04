@@ -277,11 +277,167 @@ with no arguments to commit the changes you made.
 
 # Refactoring Large Pull Requests
 
-The approaches above can be useful for refactoring branches. But what about refactoring
-a pull request that's too large or too complicated?
+The approaches above can be useful for refactoring branches. The end result will look something like this:
 
-Using the approach above, we were able to split our three separate changesets, D, E, and F,
-into three (or perhaps more) commits.
+```
+A - B - C (master)
+    \
+     D (feature-d)
+      \ 
+       E (feature-e)
+        \
+         F (feature-f)
+```
+
+Now 3 pull requests can be made, one for each feature. Thanks to the refactoring above, each branch
+should be a more isolated set of changes that are all related, and therefore easier to review.
+
+## Chaining Pull Requests
+
+The three D E F branches should be merged in together, since they are all related. But their changes should
+be kept separate to make reviewing each branch easier. To accomplish this, chain the pull requests together
+like so:
+
+Pull Request 1: merge `feature-d` into `master`
+
+Pull Request 2: merge `feature-e` into `feature-d`
+
+Pull Request 3: merge `feature-f` into `feature-e`
+
+In this way, each pull request only shows the changes specific to that branch.
+
+(If each pull request were made against `master`, then later branches (F) would also incorporate changes
+from prior branches (D), resulting in messy and hard-to-review pull requests.)
+
+Pull requests are reviewed and discussed, and new commits will probably be added to fix things or incorporate
+feedback:
+
+```
+A - B - C (master)
+    \
+     D - DA - DB (feature-d)
+      \ 
+       E - EA - EB (feature-e)
+        \
+         F - FA - FB (feature-f)
+```
+
+## Preparing to Merge Pull Requests
+
+All pull requests are approved and ready to merge. Now what?
+
+Pull requests will need to be merged in reverse order (PR 3 is merged first, then PR 2, then PR 1).
+To test that things go smoothly with the first pull request (`feature-f` into `feature-e`), we should
+create a local E-F integration branch.
+
+The local integration branch will have new commits if changes are needed to resolve merge conflicts or fix
+broken tests. Any changes made can be added to the `feature-f` branch and pushed to the remote, so that
+they are part of the pull request, making the merge into `feature-e` go smoothly.
+
+To create a throwaway E-F integration branch, we start by creating a test integration branch from the tip of the
+`feature-f` branch, and we will merge branch `feature-e` into branch `feature-f`.
+
+```
+git checkout feature-f
+```
+
+Now we create a local E-F integration branch:
+
+```
+git checkout -b integration-e-f
+```
+
+Now we merge `feature-e` into `integration-e-f`, which is the same as `feature-f`:
+
+```
+git merge --no-ff feature-e
+```
+
+The `--no-ff` flag creates a separate merge commit, which is useful here to keep our commit history clean.
+
+If merge conflicts are encountered, those can be resolved in the usual manner, and the (conflict-free) new
+versions of each file, reflecting changes from `feature-f` and `feature-e`, will all be present after the
+merge commit.
+
+Further commits can also be made to make tests pass, with a resulting git diagram:
+
+```
+A - B - C (master)
+    \
+     D - DA - DB (feature-d)
+      \ 
+       E - EA - EB ----
+        \              \
+         F - FA - FB - EF1 - EF2 (integration-e-f)
+                              ^
+                             HEAD
+```
+
+Once the `integration-e-f` branch is polished and passing tests, we can re-label it as `feature-f` and push
+the new commits to the remote. To re-label `integration-e-f` as `feature-f`, assuming we're at the tip of
+the `integration-e-f` branch (where we left off above):
+
+```
+git branch -D feature-f
+git checkout -b feature-f
+```
+
+and push the new commits to the remote's `feature-f` branch, before you merge in the pull request (`feature-f`
+into `feature-e`):
+
+```
+git push origin feature-f
+```
+
+Now you are ready to merge pull request 3.
+
+## Rinse and Repeat
+
+Rinse and repeat for pull requests 2 and 1.
+
+To summarize the steps for Pull Request 2: create a new `integration-d-e-f` branch from the tip of the
+`integration-e-f` branch, and use the same approach of merging in the `feature-d` branch with an explicit
+merge commit:
+
+```
+git checkout integration-d-e
+git checkout -b integration-d-e-f
+git merge --no-ff feature-d
+```
+
+Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
+and you should now have a git commit history like this:
+
+
+```
+A - B - C (master)
+    \
+     D - DA - DB ----------------
+      \                          \
+       E - EA - EB ----           \
+        \              \           \
+         F - FA - FB - EF1 - EF2 - DEF1 - DEF2 (integration-d-e-f)
+                                            ^
+                                           HEAD
+```
+
+Now re-label the `integration-d-e-f` branch as `feature-e`, and push all the new commits
+to the remote to make the merge of `feature-e` into `feature-d` go smoothly:
+
+```
+git branch -D feature-e
+git checkout -b feature-e
+git push origin feature-e
+```
+
+
+
+
+
+
+
+
+
 
 
 # Refactoring Large Commits
