@@ -6,9 +6,14 @@ Status: draft
 
 # Table of Contents
 
-* Summary
-* Managing Complexity
-* Refactoring Large Branches
+* [Summary](#summary)
+* [Managing Complexity](#managing-complexity)
+* [Refactoring Large Branches](#refactoring-large-branches)
+    * [Converting Set of Commits to Unstaged Changes](#converting-set-of-commits-to-unstaged-changes)
+        * [git format\-patch](#git-format-patch)
+        * [cherry\-pick and unstage](#cherry-pick-and-unstage)
+        * [soft reset and commit](#soft-reset-and-commit
+
 * Refactoring Large Pull Requests
 * Refactoring Large Commits
 
@@ -16,10 +21,10 @@ Status: draft
 
 * If a feature branch or pull request gets too complicated and should be refactored
   into simpler pieces:
-    * Squash a set of commits together into a patch
     * Create a new feature branch from the original destination branch
-    * Apply the patch to the new branch
-    * Use `git add --patch` or `git add --edit` to selectively split out changes
+    * Turn commits into patches, or cherry-pick commits (leaving changes unstaged)
+    * Apply patches or cherry-picks to the feature branch
+    * Use `git add --patch` or `git add --edit` to selectively split out changes into separate commits
 
 * If a commit gets too large, you can rebase your branch, and mark that particular commit
   to be edited (`git rebase HASH_OF_COMMIT~1`). 
@@ -28,6 +33,8 @@ Status: draft
     * Use `git add --patch` or `git add --edit` to selectively split out changes
     * Remember you can also perform the same procedure on the resulting commits,
       further splitting each commit into sub-commits.
+
+This post contains many common patterns applied to different workflows.
 
 # Managing Complexity
 
@@ -96,18 +103,190 @@ to this:
 ```plain
 A - B - C (master)
     \
-     D - E - F
+     D - E - F (feature)
 ```
 
 so that the changes in commits D, E, and F are simpler, more limited in scope, and easier to review.
 
 ### git format-patch
 
+To create a set of patches, one per commit, to edit them or apply them in various orders,
+you can use `git format-patch` with a commit range:
+
 ```
-git format-patch
+git format-patch D1..E3
 ```
 
-### squash and unstage
+This will create a series of patches like 
+
+```plain
+patches/0001-the-D1-commit-message.patch
+patches/0001-the-E1-commit-message.patch
+patches/0001-the-D2-commit-message.patch
+patches/0001-the-F1-commit-message.patch
+patches/0001-the-E2-commit-message.patch
+patches/0001-the-F2-commit-message.patch
+patches/0001-the-D3-commit-message.patch
+patches/0001-the-F3-commit-message.patch
+patches/0001-the-E3-commit-message.patch
+```
+
+Patches can be further split or modified, and can be applied in the desired order (although
+changes in line numbers happening out of order may confuse the program applying the patch).
+
+Start by creating a branch from the desired commit (commit `B` in the diagram above):
+
+```
+git checkout B
+```
+
+(where `B` should be either the commit hash for commit B, or a tag or branch that is associated
+with commit B). Now create a branch that will start from that commit (we'll start with our branch
+for feature D here):
+
+```
+git checkout -b feature-d
+```
+
+Now apply patches to the new branch, which will start from commit `B`.
+
+To apply a patch, use `patch -p1`:
+
+```plain
+patch -p1 < 0001-the-D1-commit-message.patch
+```
+
+The `-p1` strips the prefix by 1 directory level, which is necessary with patches created
+by git. We use `patch` rather than `git am` to apply the patch, because we want to apply
+the changes independent of git, and only stage the changes we want into our next commit.
+
+If you have a series of commits that you want to squash, that's also easy to do by applying
+each patch for those commits, then staging all the changes from those patches into a new
+commit.
+
+As patches are applied, particular changes can be staged and commits can be crafted. Use 
+the `--edit` or `--patch` flags of `git add`:
+
+```
+git add --edit <filename>
+git add --patch <filename>
+```
+
+This allows selective filtering of particular edits into the next commit, so that one patch
+(or any number of patches) can be applied, and selective changes can be staged into a commit.
+
+Once you are ready, just run
+
+```plain
+git commit
+```
+
+without specifying the filename. (If you specify the filename, it will stage all changes,
+and ignore the crafting you've done.)
+
+As you create a commit or a set of commits specific to changeset D, you can work on a D branch.
+When you finish all commits related to D, you can start a new branch with
+
+```
+git checkout feature-e
+```
+
+that will start a new branch from where the d-branch left off. Chaining your
+changes together into several small branches that build on each other will 
+help keep pull requests simpler too.
+
+The advantages of this approach include:
+
+* Commits can be split by applying the patch and staging particular edits
+* The ability to split single commits into more commits, or combine/squash commits together, means
+  this approach has a lot of flexibility
+* Best for some situations where, e.g., a long series of commits with many small commits that should
+  be squashed and some large commits that should be split 
+
+The disadvantages of this approach include:
+
+* Patches applied out of order can confuse the program applying the patches
+
+### cherry-pick and unstage
+
+An alternative to the above workflow is to use `git cherry-pick` to apply the changes from particular
+commits, but to leave those changes unstaged using the `--no-commit` or `-n` flag:
+
+```plain
+git cherry-pick --no-commit <commit-hash>
+git cherry-pick -n <commit-hash>
+```
+
+Alternatively, a range of commits can be used instead:
+
+```
+git cherry-pick -n <commit-hash-start>..<commit-hash-end>
+```
+
+This can help achieve a similar level of flexibility to the patch approach.
+
+### soft reset and commit
+
+Suppose the commit history is simple enough that you can squash all of the commits together
+into a single diff set, and pick the changes to split into commits D, E, and F.
+
+In that case, the easiest way might be to roll back all of the commits made, but preserve
+the changes that each commit made. This is precisely what a _soft reset_ will do.
+
+For the git commit history
+
+```
+A - B - C (master)
+    \
+     D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
+```
+
+Run the command
+
+```
+git reset --soft B
+```
+
+to move the HEAD pointer to commit B, while also _preserving_ all changes made from the
+start of the feature branch `D1` to the tip of the feature branch `E3`, all added as
+staged changes (as though they had been `git add`-ed).
+
+The changes will be staged, but changes to files can be unstaged using
+
+```
+git restore --staged <filename>
+```
+
+Now add changes selectively using the `--edit` or `--patch` flags
+
+```
+git add --edit <filename>
+git add --patch <filename>
+```
+
+If desired, those changes can be unstaged, and then re-staged using `git add --edit` or
+`git add --patch` to selectively add changes to particular commits.
+
+When done, run 
+
+```
+git commit
+```
+
+with no arguments to commit the changes you made.
+
+# Refactoring Large Pull Requests
+
+The approaches above can be useful for refactoring branches. But what about refactoring
+a pull request that's too large or too complicated?
+
+Using the approach above, we were able to split our three separate changesets, D, E, and F,
+into three (or perhaps more) commits.
+
+
+# Refactoring Large Commits
+
+
 
 
 
