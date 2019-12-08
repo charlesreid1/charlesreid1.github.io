@@ -1,4 +1,4 @@
-Title: Git Workflows, Part 3: Refactoring Large Pull Requests and Commits
+Title: Git Workflows, Part 3: Refactoring Large Branches and Pull Requests
 Date: 2019-12-08 15:00
 Category: Git
 Tags: git, rebase, cherry-pick, branching, version control
