@@ -86,7 +86,7 @@ Many of the aphorisms in PEP 20 come in pairs.
 The first seven alone compose an excellent philosophy of programming.
 Six symmetric rules:
 
-```plain
+```text
 Beautiful is better than ugly.
 
 Explicit is better than implicit.
@@ -102,13 +102,13 @@ Sparse is better than dense.
 
 The seventh, one of the principal ideas behind Python:
 
-```plain
+```text
 Readability counts.
 ```
 
 The next pair of aphorisms is important to our own style of programming:
 
-```plain
+```text
 Special cases aren't special enough to break the rules.
 
 Although practicality beats purity.
@@ -121,7 +121,7 @@ sake of some abstract principle or theory.
 
 PEP 20 weighs in on errors:
 
-```plain
+```text
 Errors should never pass silently.
 
 Unless explicitly silenced.
@@ -129,13 +129,13 @@ Unless explicitly silenced.
 
 Slightly perplexing:
 
-```plain
+```text
 In the face of ambiguity, refuse the temptation to guess.
 ```
 
 More pairs:
 
-```plain
+```text
 There should be one-- and preferably only one -- obvious way to do it.
 
 Although that way may not be obvious at first unless you're Dutch.
@@ -145,7 +145,7 @@ From the [Wikipedia page on Guido van Rossum](https://en.wikipedia.org/wiki/Guid
 
 > Guido van Rossum is a Dutch programmer...
 
-```plain
+```text
 Now is better than never.
 
 Although never is often better than *right* now.
@@ -153,7 +153,7 @@ Although never is often better than *right* now.
 
 That last one sounds like an excuse for procrastination.
 
-```plain
+```text
 If the implementation is hard to explain, it's a bad idea.
 
 If the implementation is easy to explain, it may be a good idea.
@@ -162,7 +162,7 @@ If the implementation is easy to explain, it may be a good idea.
 Finally, the last aphorism covers the reason you never see 
 `from module import *`:
 
-```plain
+```text
 Namespaces are one honking great idea - let's do more of those!
 ```
 

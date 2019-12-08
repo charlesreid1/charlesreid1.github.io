@@ -153,7 +153,7 @@ To do this, we moved the contents of `run` into
 a new file `command.py` in a new Python module 
 called `cli`:
 
-```plain
+```text
 cli/
 ├── Snakefile
 ├── __init__.py

@@ -57,7 +57,7 @@ an executable Snakemake workflow.
 The end result was a command line utility that could
 be run like so:
 
-```plain
+```text
 ./run <workflow-config> <workflow-params>
 ```
 
@@ -83,7 +83,7 @@ The end result was a command line utility called
 `bananas` that could be installed and run like
 the `run` wrapper above:
 
-```plain
+```text
 bananas <workflow-config> <workflow-params>
 ```
 
@@ -111,7 +111,7 @@ Kubernetes clusters.
 
 Here's what it looks like in practice:
 
-```plain
+```text
 # Get byok8s
 git clone https://github.com/charlesreid1/2019-snakemake-byok8s.git
 cd ~/2019-snakemake-byok8s
@@ -199,7 +199,7 @@ using the `cli/` directory for the command line
 interface package, and specifying it is a cli
 entrypoint in `setup.py`:
 
-```plain
+```text
 cli/
 ├── Snakefile
 ├── __init__.py
@@ -267,7 +267,7 @@ AWS credentials to access the S3 bucket, via two
 environment variables that Snakemake passes through
 to the Kubernetes worker nodes:
 
-```plain
+```text
 AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY
 ```
@@ -342,13 +342,13 @@ To use byok8s from a fresh Ubuntu AWS node
 (bionic)), you will want to install a version
 of conda; we recommend using pyenv and miniconda:
 
-```plain
+```text
 curl https://pyenv.run | bash
 ```
 
 Restart your shell and install miniconda:
 
-```plain
+```text
 pyenv update
 pyenv install miniconda3-4.3.30
 pyenv global miniconda3-4.3.30
@@ -357,7 +357,7 @@ pyenv global miniconda3-4.3.30
 You will also need the virtualenv package to
 set up a virtual environment:
 
-```plain
+```text
 pip install virtualenv
 ```
 
@@ -366,7 +366,7 @@ pip install virtualenv
 
 Start by cloning the repo and installing byok8s:
 
-```plain
+```text
 cd 
 git clone https://github.com/charlesreid1/2019-snakemake-byok8s.git
 cd ~/2019-snakemake-byok8s
@@ -374,7 +374,7 @@ cd ~/2019-snakemake-byok8s
 
 Next, you'll create a virtual environment:
 
-```plain
+```text
 virtualenv vp
 source vp/bin/activate
 
@@ -392,7 +392,7 @@ which byok8s
 
 Install minikube:
 
-```plain
+```text
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 \
   && sudo install minikube-linux-amd64 /usr/local/bin/minikube
 ```
@@ -401,7 +401,7 @@ Now you're ready to start a minikube k8s
 cluster on your AWS node! Start a k8s cluster
 as root with:
 
-```plain
+```text
 sudo minikube start
 ```
 
@@ -411,7 +411,7 @@ it is importat you run them!
 
 Tear down the cluster with:
 
-```plain
+```text
 sudo minikube stop
 ```
 
@@ -444,7 +444,7 @@ If you're having the problem, you will see
 something like this with `kubectl`, where the
 coredns containers are in a `CrashLoopBackOff`:
 
-```plain
+```text
 $ kubectl get pods --namespace=kube-system
 
 NAME                               READY   STATUS             RESTARTS   AGE
@@ -463,7 +463,7 @@ This will cause all Snakemake jobs to fail with a name
 resolution failure when it tries to write its output
 files to the AWS S3 bucket:
 
-```plain
+```text
 $ kubectl logs snakejob-c71fba38-f64b-5803-915d-933ae273d7a4
 
 Building DAG of jobs...
@@ -493,7 +493,7 @@ socket.gaierror: [Errno -3] Temporary failure in name resolution
 
 and the kubernetes log for the CoreDNS container
 
-```plain
+```text
 $ kubectl logs --namespace=kube-system coredns-86c58d9df4-lvq8b
 
 .:53
@@ -565,14 +565,14 @@ when it creates a CoreDNS container, run
 this kubectl command *while the cluster is
 running*:
 
-```plain
+```text
 kubectl apply -f fixcoredns.yml
 ```
 
 Last but not least, delete all `kube-system` containers
 and let Kubernetes regenerate them:
 
-```plain
+```text
 kubectl delete --all pods --namespace kube-system
 ```
 
@@ -581,7 +581,7 @@ check to confirm that the CoreDNS container
 is no longer in the `CrashLoopBackOff` state
 and is `Running` nicely:
 
-```plain
+```text
 kubectl get pods --namespace=kube-system
 ```
 
@@ -600,7 +600,7 @@ directory of the byok8s repository (assuming
 you cloned the repo to `~/byok8s`, and are in
 the same virtual environment as before):
 
-```plain
+```text
 # Return to our virtual environment
 cd ~/2019-snakemake-byok8s/test/
 source vp/bin/activate
@@ -623,7 +623,7 @@ you are passing in via environment variables.
 When you do all of this, you should see the job
 running, then exiting successfully:
 
-```plain
+```text
 $ byok8s --s3-bucket=cmr-0123 -f workflow-alpha params-blue
 --------
 details!
@@ -775,7 +775,7 @@ byok8s end-to-end on a minikube kubernetes cluster
 on an AWS node looks like (slightly modified from
 the intro of our post):
 
-```plain
+```text
 # Install minikube
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 \
   && sudo install minikube-linux-amd64 /usr/local/bin/minikube

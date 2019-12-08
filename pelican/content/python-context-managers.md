@@ -58,14 +58,14 @@ Github user [@bluegenes](https://github.com/bluegenes)
 which asks Snakemake to print the dag when it calls
 the Snakemake API:
 
-```plain
+```text
 ./run_eelpond --dag ... > eelpond_dag.dot
 ```
 
 This .dot file can then be rendered into a .png file
 with another command from the command line,
 
-```plain
+```text
 dot eelpond_dag.dot -Tpng -o eelpond_dag.png
 ```
 
@@ -149,7 +149,7 @@ Here's an example of a simple graph in dot notation:
 
 **`plot.dot`**
 
-```plain
+```text
 digraph G {
     Boston
     "New York"

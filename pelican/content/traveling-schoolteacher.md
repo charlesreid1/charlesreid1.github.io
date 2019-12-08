@@ -50,7 +50,7 @@ The backtracking solution will explore various paths through teh graph, keeping 
 
 Revisiting the original Traveling Salesperson Problem, the recursive backtracking method we implemented was described with the following pseudocode:
 
-```plain
+```text
 explore(neighbors):
 
 	if(no more unvisited neighbors):
@@ -77,7 +77,7 @@ To modify this to solve the Traveling Schoolteacher Problem, we want to make a f
 
 This results in the following pseudocode:
 
-```plain
+```text
 explore(neighbors):
 
 	if(no more unvisited neighbors):

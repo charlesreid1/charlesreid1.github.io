@@ -27,7 +27,7 @@ that mocks the AWS call.
 This example is simple and uses just one function, `list_secrets()`,
 which returns a JSON response that looks something like this:
 
-```plain
+```text
 {
   "SecretList": [
     {
@@ -85,7 +85,7 @@ If we run this file, we'll see a list of secrets in the real secrets manager -
 that is, the secrets manager that is linked to the boto credentials in `~/.aws`,
 so the secrets we see are the actual secrets in the secret manager:
 
-```plain
+```text
 $ python lister.py
 Secret Name: prefix/secret1 (last accessed: 2019-09-23 17:00:00-07:00)
 Secret Name: prefix/secret2 (last accessed: 2019-09-23 17:00:00-07:00)
@@ -162,7 +162,7 @@ if __name__=="__main__":
 
 When the test file is run via Python, we see the fake secrets:
 
-```plain
+```text
 $ python test_lister.py
 Secret Name: fakesecret1 (last accessed: 2019-09-23 20:31:49.186874)
 Secret Name: fakesecret2 (last accessed: 2019-09-23 20:31:49.186880)

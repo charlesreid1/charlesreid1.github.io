@@ -39,7 +39,7 @@ Most of the good stuff is from
 
 Start off easy - here's how you set your email and name for commits:
 
-```plain
+```text
 [user]
     email = foo@bar.com
     name = Foo Bar
@@ -53,7 +53,7 @@ Start supercharging how you use git by creating a one-letter alias.
 
 Add this to your `~/.bashrc` file:
 
-```plain
+```text
 alias g="git"
 ```
 
@@ -104,7 +104,7 @@ Let's start with some utilities for viewing git logs.
 
 Note that we'll assume the alias bit in the following git config excerpts.
 
-```plain
+```text
 [alias]
     # courtesy of https://stackoverflow.com/a/34467298
     lg = !"git lg1"
@@ -123,14 +123,14 @@ Same with the `-specific` commands.
 
 This is one more nice short log command:
 
-```plain
+```text
     # View abbreviated SHA, description, and history graph of the latest 20 commits
     l = log --pretty=oneline -n 20 --graph --abbrev-commit
 ```
 
 Remember to use this with the `g` alias for super short log:
 
-```plain
+```text
 $ g l
 * 4357b28 (HEAD -> source) update mocking aws post
 * 063ad78 (gh/source, gh/HEAD) add mocking post
@@ -151,7 +151,7 @@ $ g lg1
 
 The git status command is one of my most frequently used commands, so I made a few shortcuts:
 
-```plain
+```text
     # View the current working tree status using the short format
     s = status -s
     ss = status
@@ -159,7 +159,7 @@ The git status command is one of my most frequently used commands, so I made a f
 
 This makes checking the short or long status of a git repo easy:
 
-```plain
+```text
 $ g s
 AM pelican/content/git-workflows-1-config.md
 AM pelican/content/git-workflows-2-teams.md
@@ -189,7 +189,7 @@ change anything or try to merge anything (unlike a `git pull` command).
 The most useful fetch command (`git fetch --all`) is aliased to `g f` with the following
 bit in the aliases section of the `~/.gitconfig` file:
 
-```plain
+```text
     f = fetch --all
 ```
 
@@ -198,7 +198,7 @@ bit in the aliases section of the `~/.gitconfig` file:
 The only command I might use more than the status command are branch commands,
 so here are several branch aliases:
 
-```plain
+```text
     b = branch -v
     bv = branch -v
     bb = branch -v
@@ -209,7 +209,7 @@ so here are several branch aliases:
 
 In a similar way, you can get a summary view using `g b`:
 
-```plain
+```text
 $ g b
   master 4c828cd [behind 84] update with awsome day notes
 * source b18adfd add two git workflow posts
@@ -221,7 +221,7 @@ $ g b
 
 and a little bit more information with `g bb`:
 
-```plain
+```text
 $ g bb
   master            940ee98 update mocking post
 * source            b18adfd add two git workflow posts
@@ -239,7 +239,7 @@ and then check it out with `git checkout <branch-name>`.
 To resolve this you can define a `git go` alias that creates the branch and
 then switches to that branch:
 
-```plain
+```text
     # Switch to a branch, creating it
     # from the current branch if necessary
     go = "!f() { git checkout -b \"$1\" 2> /dev/null || git checkout \"$1\"; }; f"
@@ -252,7 +252,7 @@ Careful you don't mistype the branch name.
 Another useful git command is the remote command, so here are a few
 remote aliases:
 
-```plain
+```text
     r = remote -v
     rv = remote -v
     ra = remote -v
@@ -278,7 +278,7 @@ Here's the relevant bit in the aliases section:
 
 ### Committing All Changes
 
-```plain
+```text
     # Commit all changes
     ca = !git add -A && git commit -av
 ```
@@ -287,7 +287,7 @@ Here's the relevant bit in the aliases section:
 
 Some common operations for repairing commit history before pushing:
 
-```plain
+```text
     # Amend the currently staged files to the latest commit
     amend = commit --amend --reuse-message=HEAD
 
@@ -302,14 +302,14 @@ of the `~/.gitconfig`:
 
 ### Rebasing shortcuts
 
-```plain
+```text
     # Interactive rebase with the given number of latest commits
     reb = "!r() { git rebase -i HEAD~$1; }; r"
 ```
 
 ### Diff shortcuts
 
-```plain
+```text
     # Show the diff between the latest commit and the current state
     d = !"git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat"
 
@@ -319,7 +319,7 @@ of the `~/.gitconfig`:
 
 ### Pull shortcuts
 
-```plain
+```text
     p = "!f() { git pull $1 $2; }; f"
 ```
 
@@ -334,7 +334,7 @@ of the `~/.gitconfig`:
 
 This last one is convenient for getting a summary of contributors:
 
-```plain
+```text
     # List contributors with number of commits
     contributors = shortlog --summary --numbered
 ```
@@ -357,7 +357,7 @@ $ g contributors
 
 Because it's the best text editor:
 
-```plain
+```text
 [core]
     editor = vim
 ```
@@ -365,7 +365,7 @@ Because it's the best text editor:
 I have some other stuff I've collected, many of them from
 <https://github.com/mathiasbynens/dotfiles>:
 
-```plain
+```text
     # Use custom `.gitignore` and `.gitattributes`
     excludesfile = ~/.gitignore
     attributesfile = ~/.gitattributes
@@ -392,7 +392,7 @@ I have some other stuff I've collected, many of them from
 
 Make some nice beautiful colors that are easy to understand:
 
-```plain
+```text
 [color]
 
     # Use colors in Git commands that are capable of colored output when
@@ -423,7 +423,7 @@ Make some nice beautiful colors that are easy to understand:
 
 This makes some Github-related URLs easier and shorter to type:
 
-```plain
+```text
 [url "git@github.com:"]
 
     insteadOf = "gh:"

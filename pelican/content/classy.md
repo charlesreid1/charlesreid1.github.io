@@ -32,7 +32,7 @@ equivalent, and middle-middle-lower-middle and lower-middle are equivalent.
 Input files have a line with the number of names, then one name per line,
 with the name, a colon, then the title. For example:
 
-```plain
+```text
 5
 mom: upper upper lowre middle class
 dad: middle middle lower middle class
@@ -44,7 +44,7 @@ unclebob: middle lower middle class
 The proper output should be the name of each person,
 sorted in order according to their social status, e.g.,
 
-```plain
+```text
 queenelizabeth
 mom
 dad

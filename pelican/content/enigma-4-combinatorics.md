@@ -121,7 +121,7 @@ with the same connections chosen in a different order.
 
 Here's how the number of possible combinations that result when we plug in various numbers of wires in: 
 
-```plain
+```text
 S = 2		N = 1		C = 1
 S = 26		N = 1		C = 325
 S = 26		N = 2		C = 44,850
@@ -160,7 +160,7 @@ for an alphabet of $S = 26$ symbols, using $N = 1 \dots 13$ wires:
 
 This pattern holds for other alphabet sizes. Here's a 52-character alphabet:
 
-```plain
+```text
 S = 52		N = 1		C = 1,326
 S = 52		N = 2		C = 812,175
 S = 52		N = 3		C = 305,377,800
@@ -193,7 +193,7 @@ For a 52-symbol alphabet the optimum number of pairs is 23 keys.
 
 Okay, here we go with an alphabet of 100 characters:
 
-```plain
+```text
 S = 100		N = 1		C = 4,950
 S = 100		N = 2		C = 11,763,675
 S = 100		N = 3		C = 17,880,786,000

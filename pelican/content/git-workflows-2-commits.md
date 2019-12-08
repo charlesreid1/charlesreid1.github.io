@@ -188,7 +188,7 @@ git add (patch mode) and git add (interactive mode).
 
 How to use:
 
-```plain
+```text
 git add -p <name-of-file>
 ```
 
@@ -204,7 +204,7 @@ versus changing the name of a variable throughout a file).
 
 For example, suppose we have the following changes to a file named `doit.sh`:
 
-```plain
+```text
 $ git diff doit.sh
 diff --git a/doit.sh b/doit.sh
 index 3b938a1..6c1aec8 100644
@@ -237,7 +237,7 @@ We can split these changes into two commits using `git add -p doit.sh`,
 which will walk through each change in the file and ask if we want to
 stage it:
 
-```plain
+```text
 $ git add -p doit.sh
 diff --git a/doit.sh b/doit.sh
 index 3b938a1..6c1aec8 100644
@@ -273,7 +273,7 @@ Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? n
 Now the two related changes are staged, and the unrelated change is not staged.
 This is reflected in `git status`:
 
-```plain
+```text
 $ git status
 On branch master
 Your branch is ahead of 'gh/master' by 2 commits.
@@ -336,7 +336,7 @@ End of sidebar.
 
 When you pass the `-e` flag to git add, it will open a new editor window with the full diff:
 
-```plain
+```text
 diff --git a/doit.sh b/doit.sh
 index 326273c..14e4059 100644
 --- a/doit.sh

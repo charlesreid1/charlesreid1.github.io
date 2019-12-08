@@ -68,7 +68,7 @@ To review from the prior post, our pseudocode
 for recursive backtracking to explore variations
 or combinations looks like the following:
 
-```plain
+```text
 explore method:
     base case:
         visit this solution

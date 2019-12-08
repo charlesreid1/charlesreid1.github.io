@@ -23,7 +23,7 @@ and implemented each as an object.
 
 Here was the pseudocode:
 
-```plain
+```text
 define plaintext message
 define normal alphabet and scrambled alphabets
 define list of switchboard swap pairs

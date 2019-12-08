@@ -53,7 +53,7 @@ and a recent addendum to Part 1:
 We continue our coverage in this blog post with a newer problem,
 one that is rated by Knuth at 26, on his scale of 0 to 50:
 
-```plain
+```text
 00  Immediate
 10  Simple (1 minute)
 20  Medium (quarter hour)
@@ -93,7 +93,7 @@ The problem is as follows:
 For the benefit of those without the book, here is an attempt
 to represent the trie that Knuth includes in the exercise:
 
-```plain
+```text
                      s
 
             h                 t
@@ -717,7 +717,7 @@ if __name__=="__main__":
 When we run with n = 1000, we can see that `s` is the only letter
 that forms a perfect binary trie for that value of n:
 
-```plain
+```text
 $ python tries.py 1000
 The letter a has no perfect binary trie in WORDS(1000).
 The letter b has no perfect binary trie in WORDS(1000).
@@ -752,7 +752,7 @@ Imperfect count: 25
 
 In fact, 978 is the smallest number of words to find any perfect tries:
 
-```plain
+```text
 $ python tries.py 978
 The letter a has no perfect binary trie in WORDS(978).
 The letter b has no perfect binary trie in WORDS(978).
@@ -787,7 +787,7 @@ Imperfect count: 25
 
 Running with the full 5757 words leads to 11 more perfect tries:
 
-```plain
+```text
 $ python tries.py 5757
 The letter a has no perfect binary trie in WORDS(5757).
 The letter b has a perfect binary trie in WORDS(5757).
@@ -824,7 +824,7 @@ If we assemble a table of number of five letter words n
 versus number of perfect tries formed, nearly half show up
 only after we include 4,500 words.
 
-```plain
+```text
        n	perfect tries
     1000	       1
     1500	       1

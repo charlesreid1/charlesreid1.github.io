@@ -123,7 +123,7 @@ shared bigrams and trigrams among these 5,000
 words, means the number of pairs increases 
 exponentially.
 
-```plain
+```text
 | Distance  | Number of pairs   | Walltime       |
 |-----------|-------------------|----------------|
 | 1         | 38                |     0.26 s     |
@@ -137,7 +137,7 @@ You can find the `diff_by_n.py` script here:
 
 The output:
 
-```plain
+```text
 $ python diff_by_n.py
 abaft babes
 absit baths

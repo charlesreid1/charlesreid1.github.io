@@ -109,7 +109,7 @@ depth-first search algorithm to search for the shortest path among all nodes.
 
 To recap, here was our pseudocode for the TSP solution:
 
-```plain
+```text
 explore(neighbors):
 
 	if(no more unvisited neighbors):
@@ -260,7 +260,7 @@ Fixing the flaw is surpsingly easy: we just add an if statement.
 
 Illustrating first with the pseudocode:
 
-```plain
+```text
 explore(neighbors):
 
 	if(no more unvisited neighbors):

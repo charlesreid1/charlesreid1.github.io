@@ -103,7 +103,7 @@ distance that we are considering be $d = 1$. Then we can code
 each index with a 0 (not chosen) or a 1 (chosen) and turn the
 problem into cycling throgh all binary numbers with 1 bit:
 
-```plain
+```text
 00001
 00010
 00100
@@ -115,7 +115,7 @@ The second step is to cycle through each alternate codon at
 the given position, so that `00001` would generate the 
 variations:
 
-```plain
+```text
 AAAAC
 AAAAG
 AAAAT
@@ -161,7 +161,7 @@ then we would call the method again, and choose a second index
 
 When unrolled, this is equivalent to a nested for loop,
 
-```plain
+```text
 for i in range( 0 .. len(dna_string) ):
     for j in range( 0 .. len(dna_string) ):
         if (i != j):
@@ -176,7 +176,7 @@ for i in range( 0 .. len(dna_string) ):
 
 Basic pseudocode for a backtracking method:
 
-```plain
+```text
 explore method:
     base case:
         visit this solution
@@ -224,7 +224,7 @@ generate a binary number with $d$ bits set to 1 to select
 indices to modify. Suppose $d = 2$; then the first few
 binary numbers are:
 
-```plain
+```text
 AAAAA
 11000
 10100
@@ -248,7 +248,7 @@ Thus we need a minimum of two parameters: an integer
 indicating the depth level of this recursive function
 call, and an integer array of index choices.
 
-```plain
+```text
 function generate_binary_numbers( depth, choices[], ... ):
 
     if depth is 0,
@@ -274,7 +274,7 @@ every combination of 3 codons in every position with a 1
 possible, so the first binary number for $d=2$ would generate
 the variations:
 
-```plain
+```text
 AAAAA
 11000
 -----
@@ -300,7 +300,7 @@ Like the prior task's recursive method, this task's recursive
 method will have one parameter for depth (number of choices
 left to make) and a range of choices to try (codons).
 
-```plain
+```text
 function assemble_variations( depth, choices[], ... ):
 
     if depth is 0,

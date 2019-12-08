@@ -186,7 +186,7 @@ Here is the pseudocode for the program. We utilize one function to compute
 the letter coverage bit vector for a single word, and the rest of the 
 functionality will go in the main method:
 
-```plain
+```text
 function word2bitvector(word):
 	initialize 26-element bit vector with 0s (one 0 per letter)
 	for each letter in word:

@@ -261,7 +261,7 @@ without a square to land in when they are jumped (i.e., landing square blocked
 by another black piece or at edge of board).
 
 
-```plain
+```text
 function is solution piece:
 	for each square of similar "jump" parity:
 		for each neighbor:

@@ -371,7 +371,7 @@ public class SquareRootCF {
 
 and the corresponding output:
 
-```plain
+```text
 $ javac SquareRootCF.java && java SquareRootCF
 sqrt(14) = [3, 1, 2, 1, 6]
 sqrt(19) = [4, 2, 1, 3, 1, 2, 8]
@@ -517,7 +517,7 @@ public class SquareRootCF {
 
 and the corresponding console output:
 
-```plain
+```text
 $ javac SquareRootCF.java && java SquareRootCF
 Convergent 1: 4/1
 Convergent 2: 11/3

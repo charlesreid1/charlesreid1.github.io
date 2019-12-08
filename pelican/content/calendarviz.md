@@ -62,7 +62,7 @@ one column of date/time stamps, and another column of data to plot.
 
 Let's take a look at the [original data](https://bl.ocks.org/mbostock/raw/4063318/dji.csv):
 
-```plain
+```text
 Date,Open,High,Low,Close,Volume,Adj Close
 2010-10-01,10789.72,10907.41,10759.14,10829.68,4298910000,10829.68
 2010-09-30,10835.96,10960.99,10732.27,10788.05,4284160000,10788.05
@@ -82,7 +82,7 @@ In the code, we can see where this data is actually being parsed:
 
 So, to modify this to suit our own custom data set, we can output our data as:
 
-```plain
+```text
 date,series1series2
 2010-10-01,1,150
 2010-10-02,2,250
@@ -129,7 +129,7 @@ The schema used was:
 
 The pseudocode used to extract the page edits was:
 
-```plain
+```text
     get pages generator
     for page in pages:
         get page revisions generator

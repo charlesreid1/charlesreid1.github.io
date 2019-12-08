@@ -259,7 +259,7 @@ $(0,0)$ is located and which quadrants will be visited in which order.
 If we are in the lower left quadrant, $x$ is below $\frac{S}{2}$ and 
 $y$ is below $\frac{S}{2}$, so we rotate and reflect by swapping x and y:
 
-```plain
+```text
         X -> Y
         Y -> X
 ```
@@ -267,7 +267,7 @@ $y$ is below $\frac{S}{2}$, so we rotate and reflect by swapping x and y:
 If we are in the upper left quadrant, x is below $\frac{S}{2}$, y is above $\frac{S}{2}$, 
 so subtract $\frac{S}{2}$ from y and we're done.
 
-```plain
+```text
         X -> X
         Y -> Y-(S/2)
 ```
@@ -275,7 +275,7 @@ so subtract $\frac{S}{2}$ from y and we're done.
 If we are in the upper right quadrant, x is above $\frac{S}{2}$, y is above $\frac{S}{2}$, 
 so subtract $\frac{S}{2}$ from both
 
-```plain
+```text
         X -> X - S/2
         Y -> Y - S/2
 ```
@@ -286,7 +286,7 @@ bounding box to the y coordinate becomes our new x coordinate, while the
 distance from the right of the bounding box S to the x coordinate becomes 
 our new y coordinate:
 
-```plain
+```text
         X -> S/2 - Y
         Y -> S - X
 ```

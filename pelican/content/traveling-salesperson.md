@@ -133,7 +133,7 @@ making the complexity class of the problem $O(N!)$.
 
 Here is pseudocode for a recursive backtracking method:
 
-```plain
+```text
 explore(neighbors):
 
 	if(no more unvisited neighbors):
@@ -414,7 +414,7 @@ which we can then connect up using some built-in methods.
 
 Here are some built-in methods available for a MutableNetwork:
 
-```plain
+```text
 	addEdge(node1, node2, edge)
 	addNode(node1)
 	removeEdge(edge)

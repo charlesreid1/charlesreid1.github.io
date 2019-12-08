@@ -149,7 +149,7 @@ polynomial and Newton's Method will always converge.)
 Here is sample output from a program that varies the tolerance and prints
 the corresponding value of the square root that was computed:
 
-```plain
+```text
 $ javac SquareRoot.java && java SquareRoot
 Actual value sqrt(2) = 1.4142135623730951
 Testing Newton's Method, Specifying Tolerance:
