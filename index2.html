@@ -102,6 +102,225 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Mocking AWS in Unit Tests
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-09-23T09:00:00-07:00" pubdate>Monday 09/23/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/mocking-aws-in-unit-tests.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2>Table of Contents</h2>
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#a-simple-example-mocking-api-responses">A Simple Example: Mocking API Responses</a><ul>
+<li><a href="#the-genuine-aws-call">The Genuine AWS Call</a></li>
+<li><a href="#the-mocked-aws-call">The Mocked AWS Call</a></li>
+</ul>
+</li>
+</ul>
+<h2>Overview</h2>
+<p>This post covers a technique for mocking AWS in unit tests so that you can test functionality that normally
+requires API calls and handling responses, by mocking those responses instead of making actual API calls.</p>
+<h2>A Simple Example: Mocking API Responses</h2>
+<h3>The Genuine AWS Call</h3>
+<p>Let's start with an example of an AWS API call. Here's how our program will be structured:
+start with a driver <code>lister.py</code> that creates an AWS secrets manager client and defines a 
+function to list secrets using the secrets manager client, then a test for it in <code>test_lister.py</code>
+that mocks the AWS call.</p>
+<p>This example is simple and uses just one function, <code>list_secrets()</code>,
+which returns a JSON response that looks something like this:</p>
+<div class="highlight"><pre><span></span><span class="err">{</span>
+  <span class="ss">&quot;SecretList&quot;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="err">{</span>
+      <span class="ss">&quot;ARN&quot;</span><span class="p">:</span> <span class="ss">&quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret1-abc123&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;Name&quot;</span><span class="p">:</span> <span class="ss">&quot;prefix/es_source_ip&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;LastChangedDate&quot;</span><span class="p">:</span> <span class="ss">&quot;2019-09-23 17:29:16.267000-07:00&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="ss">&quot;2019-09-23 17:00:00-07:00&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;SecretVersionsToStages&quot;</span><span class="p">:</span> <span class="err">{</span>
+        <span class="ss">&quot;658c3b41-0806-48b9-b05d-ea7dc2dbf237&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="ss">&quot;AWSCURRENT&quot;</span>
+        <span class="p">],</span>
+        <span class="ss">&quot;f37ccfe2-16e0-4305-a250-ef89d2c47ece&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="ss">&quot;AWSPREVIOUS&quot;</span>
+        <span class="p">]</span>
+      <span class="err">}</span>
+    <span class="err">}</span><span class="p">,</span>
+    <span class="err">{</span>
+      <span class="ss">&quot;ARN&quot;</span><span class="p">:</span> <span class="ss">&quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret2-def789&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;Name&quot;</span><span class="p">:</span> <span class="ss">&quot;prefix/secret2&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;LastChangedDate&quot;</span><span class="p">:</span> <span class="ss">&quot;2019-09-22 17:05:01.431000-07:00&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="ss">&quot;2019-09-22 17:00:00-07:00&quot;</span><span class="p">,</span>
+      <span class="ss">&quot;SecretVersionsToStages&quot;</span><span class="p">:</span> <span class="err">{</span>
+        <span class="ss">&quot;95AE5F8B-34E7-4EDF-A672-9E3AF1A4732E&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="ss">&quot;AWSCURRENT&quot;</span>
+        <span class="p">],</span>
+        <span class="ss">&quot;F29E224A-BC03-4780-B64E-EA666B99D952&quot;</span><span class="p">:</span> <span class="p">[</span>
+          <span class="ss">&quot;AWSPREVIOUS&quot;</span>
+        <span class="p">]</span>
+      <span class="err">}</span>
+    <span class="err">}</span>
+  <span class="p">]</span>
+<span class="err">}</span>
+</pre></div>
+
+
+<p>Using the secrets manager API:</p>
+<p><strong><code>lister.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">boto3</span>
+
+<span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">print_secret_names</span><span class="p">():</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">secret</span> <span class="ow">in</span> <span class="n">s</span><span class="p">[</span><span class="s1">&#39;SecretList&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="s1">&#39;Name&#39;</span> <span class="ow">in</span> <span class="n">secret</span> <span class="ow">and</span> <span class="s1">&#39;LastAccessedDate&#39;</span> <span class="ow">in</span> <span class="n">secret</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Secret Name: {secret[&#39;Name&#39;]} (last accessed: {secret[&#39;LastAccessedDate&#39;]})&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">print_secret_names</span><span class="p">()</span>
+</pre></div>
+
+
+<p>If we run this file, we'll see a list of secrets in the real secrets manager -
+that is, the secrets manager that is linked to the boto credentials in <code>~/.aws</code>,
+so the secrets we see are the actual secrets in the secret manager:</p>
+<div class="highlight"><pre><span></span>$ python lister.py
+Secret Name: prefix/secret1 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">17</span>:00:00-07:00<span class="o">)</span>
+Secret Name: prefix/secret2 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">17</span>:00:00-07:00<span class="o">)</span>
+Secret Name: prefix/secret3 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">17</span>:00:00-07:00<span class="o">)</span>
+</pre></div>
+
+
+<h3>The Mocked AWS Call</h3>
+<p>It is important to only mock the functionality we need.
+We should mock the returned JSON, but only the <code>Name</code>
+and <code>LastAccessedDate</code> fields.</p>
+<p>To mock the call to <code>list_secrets()</code>, we start by importing
+<code>mock</code> from <code>unittest</code>. Then we import the file that has the
+function we want to test. We also import any other modules
+we need.</p>
+<p>Next, we are mocking a call to a method of an object,
+which we can do by creating a context via <code>with mock.patch()</code>
+(and passing it a string with the name of the object we want
+to mock, or patch).</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="k">class</span> <span class="nc">TestMo</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mo.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
+            <span class="o">...</span>
+            <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span> <span class="o">...</span> <span class="p">)</span>
+            <span class="o">...</span>
+</pre></div>
+
+
+<p>Any calls made to <code>sm_client</code> in the <code>mo</code> module will be mocked
+using the <code>mock.MagicMock</code> object that we define in the context,
+so we craft the response we want before we call the method we 
+want to test (which in turn will call <code>sm_client.list_secrets()</code>).</p>
+<p>The full version of the test looks like this:</p>
+<p><strong><code>test_lister.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="k">class</span> <span class="nc">TestLister</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;lister.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
+            <span class="n">return_json</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;SecretList&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret1&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                    <span class="p">},</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret2&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                    <span class="p">}</span>
+                <span class="p">]</span>
+            <span class="p">}</span>
+            <span class="n">sm</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">return_json</span><span class="p">)</span>
+            <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+
+<p>When the test file is run via Python, we see the fake secrets:</p>
+<div class="highlight"><pre><span></span>$ python test_lister.py
+Secret Name: fakesecret1 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">20</span>:31:49.186874<span class="o">)</span>
+Secret Name: fakesecret2 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">20</span>:31:49.186880<span class="o">)</span>
+.
+----------------------------------------------------------------------
+Ran <span class="m">1</span> <span class="nb">test</span> in <span class="m">0</span>.000s
+
+OK
+</pre></div></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pytest.html">pytest</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/tests.html">tests</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/aws.html">aws</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Deconvoluting Convolutional Neural Networks
             </b></h1>
         
@@ -395,11 +614,11 @@ and horizontally flipping) to each image during the training process.</p>
 
 
 <p>This can then be used to generate test image data:</p>
-<div class="highlight"><pre><span></span>train_generator = train_datagen.flow_from_directory(
-    &#39;train&#39;,
-    target_size=(img_width, img_height),
-    batch_size=batch_size,
-    class_mode=&#39;binary&#39;)
+<div class="highlight"><pre><span></span><span class="n">train_generator</span> <span class="o">=</span> <span class="n">train_datagen</span><span class="p">.</span><span class="n">flow_from_directory</span><span class="p">(</span>
+    <span class="s1">&#39;train&#39;</span><span class="p">,</span>
+    <span class="n">target_size</span><span class="o">=</span><span class="p">(</span><span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span><span class="p">),</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+    <span class="n">class_mode</span><span class="o">=</span><span class="s1">&#39;binary&#39;</span><span class="p">)</span>
 </pre></div>
 
 
@@ -435,10 +654,13 @@ binding sites.  </p>
     mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
     mathjaxscript.type = 'text/javascript';
     mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
         "MathJax.Hub.Config({" +
         "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
         "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
         "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
         "    displayAlign: '"+ align +"'," +
@@ -452,6 +674,8 @@ binding sites.  </p>
         "        preview: 'TeX'," +
         "    }, " +
         "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
         "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
         "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
         "    }, " +
@@ -472,6 +696,8 @@ binding sites.  </p>
                 "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
             "});" +
         "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
 </script></div>
@@ -591,28 +817,28 @@ of the k-mer). We will cover more of the details of these graphs shortly.</p>
 represent a sequence of DNA nucleotides using a graph. The idea they discuss 
 initially (which is an obvious, but not necessarily good, one) is splitting
 the sequence into k-mer chunks, like so:</p>
-<div class="highlight"><pre><span></span>      Sequence:   TAATGCCATGGGATGTT
-      Pieces:     TAA 
-                   AAT
-                    ATG 
-                     TGC
-                      GCC 
-                       CCA
-                        CAT 
-                         ATG
-                          TGG 
-                           GGG
-                            GGA 
-                             GAT
-                              ATG 
-                               TGT
-                                GTT
+<div class="highlight"><pre><span></span>      <span class="n">Sequence</span><span class="p">:</span>   <span class="n">TAATGCCATGGGATGTT</span>
+      <span class="n">Pieces</span><span class="p">:</span>     <span class="n">TAA</span> 
+                   <span class="n">AAT</span>
+                    <span class="n">ATG</span> 
+                     <span class="n">TGC</span>
+                      <span class="n">GCC</span> 
+                       <span class="n">CCA</span>
+                        <span class="n">CAT</span> 
+                         <span class="n">ATG</span>
+                          <span class="n">TGG</span> 
+                           <span class="n">GGG</span>
+                            <span class="n">GGA</span> 
+                             <span class="n">GAT</span>
+                              <span class="n">ATG</span> 
+                               <span class="n">TGT</span>
+                                <span class="n">GTT</span>
 </pre></div>
 
 
 <p>and letting one k-mer be represented by one vertex. Then the sequence
 above could be turned into the graph:</p>
-<div class="highlight"><pre><span></span>TAA -&gt; AAT -&gt; ATG -&gt; TGC -&gt; GCC -&gt; CCA -&gt; CAT -&gt; ATG -&gt; TGG -&gt; GGG -&gt; GGA -&gt; GAT -&gt; ATG -&gt; TGT -&gt; GTT
+<div class="highlight"><pre><span></span><span class="n">TAA</span> <span class="o">-&gt;</span> <span class="n">AAT</span> <span class="o">-&gt;</span> <span class="n">ATG</span> <span class="o">-&gt;</span> <span class="n">TGC</span> <span class="o">-&gt;</span> <span class="n">GCC</span> <span class="o">-&gt;</span> <span class="n">CCA</span> <span class="o">-&gt;</span> <span class="n">CAT</span> <span class="o">-&gt;</span> <span class="n">ATG</span> <span class="o">-&gt;</span> <span class="n">TGG</span> <span class="o">-&gt;</span> <span class="n">GGG</span> <span class="o">-&gt;</span> <span class="n">GGA</span> <span class="o">-&gt;</span> <span class="n">GAT</span> <span class="o">-&gt;</span> <span class="n">ATG</span> <span class="o">-&gt;</span> <span class="n">TGT</span> <span class="o">-&gt;</span> <span class="n">GTT</span>
 </pre></div>
 
 
@@ -645,28 +871,28 @@ k-mer as an <em>edge</em> on the graph.</p>
 represented by an edge, where the source vertex
 is that k-mer's (k-1)-nucleotide suffix and the destination vertex
 is that k-mer's (k-1)-nucleotide prefix.</p>
-<div class="highlight"><pre><span></span>      Sequence:   TAATGCCATGGGATGTT
-      Pieces:     TA  
-                   AA
-                    AT 
-                     TG
-                      GC 
-                       CC
-                        CA 
-                         AT
-                          TG 
-                           GG
-                            GG 
-                             GA 
-                              AT  
-                               TG 
-                                GT 
-                                 TT
+<div class="highlight"><pre><span></span>      <span class="n">Sequence</span><span class="p">:</span>   <span class="n">TAATGCCATGGGATGTT</span>
+      <span class="n">Pieces</span><span class="p">:</span>     <span class="n">TA</span>  
+                   <span class="n">AA</span>
+                    <span class="k">AT</span> 
+                     <span class="n">TG</span>
+                      <span class="n">GC</span> 
+                       <span class="n">CC</span>
+                        <span class="n">CA</span> 
+                         <span class="k">AT</span>
+                          <span class="n">TG</span> 
+                           <span class="n">GG</span>
+                            <span class="n">GG</span> 
+                             <span class="n">GA</span> 
+                              <span class="k">AT</span>  
+                               <span class="n">TG</span> 
+                                <span class="n">GT</span> 
+                                 <span class="n">TT</span>
 </pre></div>
 
 
 <p>Now this sequence is written as the graph:</p>
-<div class="highlight"><pre><span></span>TA -&gt; AA -&gt; AT -&gt; TG -&gt; GC -&gt; CC -&gt; CA -&gt; AT -&gt; TG -&gt; GG -&gt; GG -&gt; GA -&gt; AT -&gt; TG -&gt; GT -&gt; TT
+<div class="highlight"><pre><span></span><span class="n">TA</span> <span class="o">-&gt;</span> <span class="n">AA</span> <span class="o">-&gt;</span> <span class="k">AT</span> <span class="o">-&gt;</span> <span class="n">TG</span> <span class="o">-&gt;</span> <span class="n">GC</span> <span class="o">-&gt;</span> <span class="n">CC</span> <span class="o">-&gt;</span> <span class="n">CA</span> <span class="o">-&gt;</span> <span class="k">AT</span> <span class="o">-&gt;</span> <span class="n">TG</span> <span class="o">-&gt;</span> <span class="n">GG</span> <span class="o">-&gt;</span> <span class="n">GG</span> <span class="o">-&gt;</span> <span class="n">GA</span> <span class="o">-&gt;</span> <span class="k">AT</span> <span class="o">-&gt;</span> <span class="n">TG</span> <span class="o">-&gt;</span> <span class="n">GT</span> <span class="o">-&gt;</span> <span class="n">TT</span>
 </pre></div>
 
 
@@ -701,14 +927,14 @@ triples indeed.</p>
 constructs a de Bruijn graph of all possible 3-mers (our k-mers, <span class="math">\(k = 3\)</span>),
 and constructs a path through the graph that visits every edge of the
 graph. Here is the sequence broken down as above:</p>
-<div class="highlight"><pre><span></span>      Sequence:   00010111
-      Pieces:     00  
-                   00
-                    01
-                     10
-                      01
-                       11
-                        11
+<div class="highlight"><pre><span></span>      <span class="n">Sequence</span><span class="p">:</span>   <span class="mi">00010111</span>
+      <span class="n">Pieces</span><span class="p">:</span>     <span class="mi">00</span>  
+                   <span class="mi">00</span>
+                    <span class="mi">01</span>
+                     <span class="mi">10</span>
+                      <span class="mi">01</span>
+                       <span class="mi">11</span>
+                        <span class="mi">11</span>
 </pre></div>
 
 
@@ -716,10 +942,10 @@ graph. Here is the sequence broken down as above:</p>
 <p>This (seemingly simple) example is a bit confusing, but here's
 what's going on: we have four vertices on the de Bruijn graph,
 consisting of the 2-mers:</p>
-<div class="highlight"><pre><span></span>00
-01
-10
-11
+<div class="highlight"><pre><span></span><span class="mi">00</span>
+<span class="mi">01</span>
+<span class="mi">10</span>
+<span class="mi">11</span>
 </pre></div>
 
 
@@ -779,10 +1005,13 @@ that all reads are perfect).</p>
     mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
     mathjaxscript.type = 'text/javascript';
     mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
         "MathJax.Hub.Config({" +
         "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
         "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
         "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
         "    displayAlign: '"+ align +"'," +
@@ -796,6 +1025,8 @@ that all reads are perfect).</p>
         "        preview: 'TeX'," +
         "    }, " +
         "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
         "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
         "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
         "    }, " +
@@ -816,6 +1047,8 @@ that all reads are perfect).</p>
                 "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
             "});" +
         "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
 </script></div>
@@ -862,128 +1095,6 @@ that all reads are perfect).</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                The Git-Commit-Ectomy
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-04-17T12:00:00-07:00" pubdate>Wednesday 04/17/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-git-commit-ectomy.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>TLDR: Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p>
-<p><br /></p>
-<p>Consider the following <em>completely hypothetical</em>
-scenario.</p>
-<p>Suppose you've been working for a while on your latest
-invention, a brand-new whiz-bang command line
-tool that's fast and solves an important problem
-and you're chugging your way to the finish line.</p>
-<p>As part of preparing to release your software tool,
-you add some tests, because that's what you do.</p>
-<p>Those tests require some data, so you add a few test
-data sets, a few hundred kilobytes each, nothing fancy.</p>
-<p>Then one day, <strong>the intern</strong> (who is just trying to be 
-helpful by adding a new test) slips in a 70 MB test
-data set, and slips it in with a string of commits
-that somehow get incorporated into the master branch.</p>
-<p>(Side note: you turned on branch protection to prevent
-this whole mess, didn't you? <em>Didn't you??</em> 
-'Course you did. This is all
-just a hypothetical scenario.)</p>
-<p>Now, the situation is complicated: there are several
-open pull requests and active branches, and a non-trivial
-amount of history that's been added since the time the
-large test data set was accidentally added.</p>
-<p><strong>The intern</strong> apologizes profusely and promises to 
-bring in donuts every day next week. But the damage 
-is done.</p>
-<p><strong>The intern</strong>, a git novice, pulls out a laptop
-and runs a <code>git rm</code> on the files, pushing to the
-remote and happily, ignorantly believing the problem
-has been solved.</p>
-<p>But <strong>the intern</strong> does not understand how git works.
-It has a perfect memory, and remembers every file in
-every commit. Since the problematic first commit that
-added the large files, git has remembered and will always
-remember that large file. It's in git's blood. 
-It's what git was designed to do.</p>
-<p>Once the intern has been, ahem, moved along,
-and branch protection has been turned on,
-it's time to find a git surgeon to perform a 
-git-commit-ectomy to remove the problematic
-large files from the repository entirely.</p>
-<h2>Dr. Reid's Patented Git-Commit-Ectomy</h2>
-<p>If it's a git-commit-ectomy you need,
-try Dr. Reid's Patented Git-Commit-Ectomy
-to ease your git commit pains.</p>
-<p>Whether you want to keep thing simple
-and remove a git commit from a single branch,
-or if you've got multiple branches, Dr. Reid's
-Patented Git-Commit-Ectomy will get you back
-on your feet.</p>
-<p>Dr. Reid's Patented Git-Commit-Ectomy can handle
-even the most messy, confused, and tangled git 
-commit history - with a bit of work and a gifted
-surgeon the git-commit-ectomy can smooth things 
-out and get you feeling right as rain.</p>
-<p>Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1013,6 +1124,19 @@ out and get you feeling right as rain.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>December 2019</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/git-workflows-part-3-refactoring-large-pull-requests-and-commits.html">Git Workflows, Part 3: Refactoring Large Pull Requests and Commits</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

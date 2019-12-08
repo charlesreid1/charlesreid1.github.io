@@ -102,6 +102,493 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Git Workflows, Part 3: Refactoring Large Pull Requests and Commits
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-12-08T15:00:00-08:00" pubdate>Sunday 12/08/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/git-workflows-part-3-refactoring-large-pull-requests-and-commits.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h1>Table of Contents</h1>
+<ul>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#managing-complexity">Managing Complexity</a></li>
+<li><a href="#refactoring-large-branches">Refactoring Large Branches</a></li>
+<li><a href="#converting-set-of-commits-to-unstaged-changes">Converting Set of Commits to Unstaged Changes</a><ul>
+<li><a href="#git-format-patch">git format-patch</a></li>
+<li><a href="#cherry-pick-and-unstage">cherry-pick and unstage</a></li>
+<li><a href="#soft-reset-and-commit">soft reset and commit</a></li>
+</ul>
+</li>
+<li><a href="#refactoring-large-pull-requests">Refactoring Large Pull Requests</a></li>
+<li><a href="#chaining-pull-requests">Chaining Pull Requests</a></li>
+<li><a href="#preparing-to-merge-a-large-pull-request">Preparing to Merge a Large Pull Request</a></li>
+<li><a href="#rinse-and-repeat">Rinse and Repeat</a></li>
+<li><a href="#final-merge-into-master">Final Merge into Master</a></li>
+</ul>
+<h1>Summary</h1>
+<ul>
+<li>
+<p>If a feature branch or pull request gets too complicated and should be refactored
+  into simpler pieces:</p>
+<ul>
+<li>Create a new feature branch from the original destination branch</li>
+<li>Turn commits into patches, or cherry-pick commits (leaving changes unstaged)</li>
+<li>Apply patches or cherry-picks to the feature branch</li>
+<li>Use <code>git add --patch</code> or <code>git add --edit</code> to selectively split out changes into separate commits</li>
+</ul>
+</li>
+<li>
+<p>If a commit gets too large, you can rebase your branch, and mark that particular commit
+  to be edited (<code>git rebase HASH_OF_COMMIT~1</code>). </p>
+<ul>
+<li>The rebase will replay that commit, and stage the changes, but will not 
+  commit them, allowing you to edit the commit.</li>
+<li>Use <code>git add --patch</code> or <code>git add --edit</code> to selectively split out changes</li>
+<li>Remember you can also perform the same procedure on the resulting commits,
+  further splitting each commit into sub-commits.</li>
+</ul>
+</li>
+</ul>
+<p>This post contains many common patterns applied to different workflows.</p>
+<h1>Managing Complexity</h1>
+<p>When collaborating on software, especially large software with people who are not the
+primary developers, it is important to limit the complexity of features and proposed
+changes. Why is it bad practice to propose large, complex changes?</p>
+<ul>
+<li>It is harder to review the proposed changes</li>
+<li>Bugs increase in likelihood, and increase in likelihood far faster than the amount of code.</li>
+<li>More complex changes usually combine </li>
+</ul>
+<h1>Refactoring Large Branches</h1>
+<p>Consider the case of a large feature branch that is suffering from feature creep (trying to
+cram too many changes into one branch.) For example, in the process of implementing a feature,
+you may also implement significant fixups, refactoring of functions, and code cleanup that is
+in the same file but not entirely related. While writing tests for the new feature, you may also
+refactor tests to be cleaner, or to use context manager foobar, or etc.</p>
+<p>To illustrate: suppose you are on a branch called <code>feature</code> (created off of <code>master</code>) that consists of
+three sets of changes, DEF:</p>
+<div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">-</span> <span class="n">B</span> <span class="o">-</span> <span class="k">C</span> <span class="p">(</span><span class="n">master</span><span class="p">)</span>
+    <span class="err">\</span>
+     <span class="n">D1</span> <span class="o">-</span> <span class="n">E1</span> <span class="o">-</span> <span class="n">D2</span> <span class="o">-</span> <span class="n">F1</span> <span class="o">-</span> <span class="n">E2</span> <span class="o">-</span> <span class="n">F2</span> <span class="o">-</span> <span class="n">D3</span> <span class="o">-</span> <span class="n">F3</span> <span class="o">-</span> <span class="n">E3</span> <span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+</pre></div>
+
+
+<ul>
+<li>D corresponds to implementing the new feature and writing tests for it</li>
+<li>E corresponds to fixups to the same file that was changed to implement the feature</li>
+<li>F corresponds to fixups to tests unrelated to the new feature</li>
+</ul>
+<p>Now, in reality, if things were really so clean, if you had a time machine or the patience to
+to rebase commits one at a time and split them into atomic changes only to the features in their
+scope (which would be super easy because of course your git logs are filled with helpful, concise
+commit messages) you could use <code>git cherry-pick</code> to replay commits D1, D2, D3 onto a new D
+branch, and so on. </p>
+<p>But in reality, commit F1 contains a little bit of E1, and D2, and vice versa, and so on.
+It's much easier to navigate a diff and select pieces from it.  That's were <code>git add -e</code>
+(or <code>--edit</code>) will help.</p>
+<p>We also have to turn a set of commits into a single set of unstaged changes (meaning, replay
+the changes each commit made but not replay the commits themselves). There are a few ways
+to do this, we'll cover two ways: squashing and rolling back a set of commits, and converting
+a set of commits into a set of patch files.</p>
+<p>Once the commits have been rolled back and unstaged, particular changes can be staged for each
+split commit using <code>git add -e</code> and using the editor to select which changes to include or exclude
+from the commit. As each commit is created, branches can be created that are linked to the group
+of changes in each new commit.</p>
+<h2>Converting Set of Commits to Unstaged Changes</h2>
+<p>We are trying to untangle a set of unrelated changes into separate commits that group related
+changes together. For the example, we want to convert this:</p>
+<div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">-</span> <span class="n">B</span> <span class="o">-</span> <span class="k">C</span> <span class="p">(</span><span class="n">master</span><span class="p">)</span>
+    <span class="err">\</span>
+     <span class="n">D1</span> <span class="o">-</span> <span class="n">E1</span> <span class="o">-</span> <span class="n">D2</span> <span class="o">-</span> <span class="n">F1</span> <span class="o">-</span> <span class="n">E2</span> <span class="o">-</span> <span class="n">F2</span> <span class="o">-</span> <span class="n">D3</span> <span class="o">-</span> <span class="n">F3</span> <span class="o">-</span> <span class="n">E3</span> <span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+</pre></div>
+
+
+<p>to this:</p>
+<div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">-</span> <span class="n">B</span> <span class="o">-</span> <span class="k">C</span> <span class="p">(</span><span class="n">master</span><span class="p">)</span>
+    <span class="err">\</span>
+     <span class="n">D</span> <span class="o">-</span> <span class="n">E</span> <span class="o">-</span> <span class="n">F</span> <span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+</pre></div>
+
+
+<p>so that the changes in commits D, E, and F are simpler, more limited in scope, and easier to review.</p>
+<h3>git format-patch</h3>
+<p>To create a set of patches, one per commit, to edit them or apply them in various orders,
+you can use <code>git format-patch</code> with a commit range:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">format</span><span class="o">-</span><span class="n">patch</span> <span class="n">D1</span><span class="p">..</span><span class="n">E3</span>
+</pre></div>
+
+
+<p>This will create a series of patches like </p>
+<div class="highlight"><pre><span></span><span class="n">patches</span><span class="o">/</span><span class="mi">0001</span><span class="o">-</span><span class="n">the</span><span class="o">-</span><span class="n">D1</span><span class="o">-</span><span class="k">commit</span><span class="o">-</span><span class="n">message</span><span class="p">.</span><span class="n">patch</span>
+<span class="n">patches</span><span class="o">/</span><span class="mi">0001</span><span class="o">-</span><span class="n">the</span><span class="o">-</span><span class="n">E1</span><span class="o">-</span><span class="k">commit</span><span class="o">-</span><span class="n">message</span><span class="p">.</span><span class="n">patch</span>
+<span class="n">patches</span><span class="o">/</span><span class="mi">0001</span><span class="o">-</span><span class="n">the</span><span class="o">-</span><span class="n">D2</span><span class="o">-</span><span class="k">commit</span><span class="o">-</span><span class="n">message</span><span class="p">.</span><span class="n">patch</span>
+<span class="n">patches</span><span class="o">/</span><span class="mi">0001</span><span class="o">-</span><span class="n">the</span><span class="o">-</span><span class="n">F1</span><span class="o">-</span><span class="k">commit</span><span class="o">-</span><span class="n">message</span><span class="p">.</span><span class="n">patch</span>
+<span class="n">patches</span><span class="o">/</span><span class="mi">0001</span><span class="o">-</span><span class="n">the</span><span class="o">-</span><span class="n">E2</span><span class="o">-</span><span class="k">commit</span><span class="o">-</span><span class="n">message</span><span class="p">.</span><span class="n">patch</span>
+<span class="n">patches</span><span class="o">/</span><span class="mi">0001</span><span class="o">-</span><span class="n">the</span><span class="o">-</span><span class="n">F2</span><span class="o">-</span><span class="k">commit</span><span class="o">-</span><span class="n">message</span><span class="p">.</span><span class="n">patch</span>
+<span class="n">patches</span><span class="o">/</span><span class="mi">0001</span><span class="o">-</span><span class="n">the</span><span class="o">-</span><span class="n">D3</span><span class="o">-</span><span class="k">commit</span><span class="o">-</span><span class="n">message</span><span class="p">.</span><span class="n">patch</span>
+<span class="n">patches</span><span class="o">/</span><span class="mi">0001</span><span class="o">-</span><span class="n">the</span><span class="o">-</span><span class="n">F3</span><span class="o">-</span><span class="k">commit</span><span class="o">-</span><span class="n">message</span><span class="p">.</span><span class="n">patch</span>
+<span class="n">patches</span><span class="o">/</span><span class="mi">0001</span><span class="o">-</span><span class="n">the</span><span class="o">-</span><span class="n">E3</span><span class="o">-</span><span class="k">commit</span><span class="o">-</span><span class="n">message</span><span class="p">.</span><span class="n">patch</span>
+</pre></div>
+
+
+<p>Patches can be further split or modified, and can be applied in the desired order (although
+changes in line numbers happening out of order may confuse the program applying the patch).</p>
+<p>Start by creating a branch from the desired commit (commit <code>B</code> in the diagram above):</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">checkout</span> <span class="n">B</span>
+</pre></div>
+
+
+<p>(where <code>B</code> should be either the commit hash for commit B, or a tag or branch that is associated
+with commit B). Now create a branch that will start from that commit (we'll start with our branch
+for feature D here):</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">checkout</span> <span class="o">-</span><span class="n">b</span> <span class="n">feature</span><span class="o">-</span><span class="n">d</span>
+</pre></div>
+
+
+<p>Now apply patches to the new branch, which will start from commit <code>B</code>.</p>
+<p>To apply a patch, use <code>patch -p1</code>:</p>
+<div class="highlight"><pre><span></span><span class="n">patch</span> <span class="o">-</span><span class="n">p1</span> <span class="o">&lt;</span> <span class="mi">0001</span><span class="o">-</span><span class="n">the</span><span class="o">-</span><span class="n">D1</span><span class="o">-</span><span class="k">commit</span><span class="o">-</span><span class="n">message</span><span class="p">.</span><span class="n">patch</span>
+</pre></div>
+
+
+<p>The <code>-p1</code> strips the prefix by 1 directory level, which is necessary with patches created
+by git. We use <code>patch</code> rather than <code>git am</code> to apply the patch, because we want to apply
+the changes independent of git, and only stage the changes we want into our next commit.</p>
+<p>If you have a series of commits that you want to squash, that's also easy to do by applying
+each patch for those commits, then staging all the changes from those patches into a new
+commit.</p>
+<p>As patches are applied, particular changes can be staged and commits can be crafted. Use 
+the <code>--edit</code> or <code>--patch</code> flags of <code>git add</code>:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="k">add</span> <span class="c1">--edit &lt;filename&gt;</span>
+<span class="n">git</span> <span class="k">add</span> <span class="c1">--patch &lt;filename&gt;</span>
+</pre></div>
+
+
+<p>This allows selective filtering of particular edits into the next commit, so that one patch
+(or any number of patches) can be applied, and selective changes can be staged into a commit.</p>
+<p>Once you are ready, just run</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="k">commit</span>
+</pre></div>
+
+
+<p>without specifying the filename. (If you specify the filename, it will stage all changes,
+and ignore the crafting you've done.)</p>
+<p>As you create a commit or a set of commits specific to changeset D, you can work on a D branch.
+When you finish all commits related to D, you can start a new branch with</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">checkout</span> <span class="n">feature</span><span class="o">-</span><span class="n">e</span>
+</pre></div>
+
+
+<p>that will start a new branch from where the d-branch left off. Chaining your
+changes together into several small branches that build on each other will 
+help keep pull requests simpler too.</p>
+<p>The advantages of this approach include:</p>
+<ul>
+<li>Commits can be split by applying the patch and staging particular edits</li>
+<li>The ability to split single commits into more commits, or combine/squash commits together, means
+  this approach has a lot of flexibility</li>
+<li>Best for some situations where, e.g., a long series of commits with many small commits that should
+  be squashed and some large commits that should be split </li>
+</ul>
+<p>The disadvantages of this approach include:</p>
+<ul>
+<li>Patches applied out of order can confuse the program applying the patches</li>
+</ul>
+<h3>cherry-pick and unstage</h3>
+<p>An alternative to the above workflow is to use <code>git cherry-pick</code> to apply the changes from particular
+commits, but to leave those changes unstaged using the <code>--no-commit</code> or <code>-n</code> flag:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">cherry</span><span class="o">-</span><span class="n">pick</span> <span class="c1">--no-commit &lt;commit-hash&gt;</span>
+<span class="n">git</span> <span class="n">cherry</span><span class="o">-</span><span class="n">pick</span> <span class="o">-</span><span class="n">n</span> <span class="o">&lt;</span><span class="k">commit</span><span class="o">-</span><span class="n">hash</span><span class="o">&gt;</span>
+</pre></div>
+
+
+<p>Alternatively, a range of commits can be used instead:</p>
+<div class="highlight"><pre><span></span><span class="nv">git</span> <span class="nv">cherry</span><span class="o">-</span><span class="nv">pick</span> <span class="o">-</span><span class="nv">n</span> <span class="o">&lt;</span><span class="nv">commit</span><span class="o">-</span><span class="nv">hash</span><span class="o">-</span><span class="nv">start</span><span class="o">&gt;</span>..<span class="o">&lt;</span><span class="nv">commit</span><span class="o">-</span><span class="nv">hash</span><span class="o">-</span><span class="k">end</span><span class="o">&gt;</span>
+</pre></div>
+
+
+<p>This can help achieve a similar level of flexibility to the patch approach.</p>
+<h3>soft reset and commit</h3>
+<p>Suppose the commit history is simple enough that you can squash all of the commits together
+into a single diff set, and pick the changes to split into commits D, E, and F.</p>
+<p>In that case, the easiest way might be to roll back all of the commits made, but preserve
+the changes that each commit made. This is precisely what a <em>soft reset</em> will do.</p>
+<p>For the git commit history</p>
+<div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">-</span> <span class="n">B</span> <span class="o">-</span> <span class="k">C</span> <span class="p">(</span><span class="n">master</span><span class="p">)</span>
+    <span class="err">\</span>
+     <span class="n">D1</span> <span class="o">-</span> <span class="n">E1</span> <span class="o">-</span> <span class="n">D2</span> <span class="o">-</span> <span class="n">F1</span> <span class="o">-</span> <span class="n">E2</span> <span class="o">-</span> <span class="n">F2</span> <span class="o">-</span> <span class="n">D3</span> <span class="o">-</span> <span class="n">F3</span> <span class="o">-</span> <span class="n">E3</span> <span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Run the command</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="k">reset</span> <span class="c1">--soft B</span>
+</pre></div>
+
+
+<p>to move the HEAD pointer to commit B, while also <em>preserving</em> all changes made from the
+start of the feature branch <code>D1</code> to the tip of the feature branch <code>E3</code>, all added as
+staged changes (as though they had been <code>git add</code>-ed).</p>
+<p>The changes will be staged, but changes to files can be unstaged using</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">restore</span> <span class="c1">--staged &lt;filename&gt;</span>
+</pre></div>
+
+
+<p>Now add changes selectively using the <code>--edit</code> or <code>--patch</code> flags</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="k">add</span> <span class="c1">--edit &lt;filename&gt;</span>
+<span class="n">git</span> <span class="k">add</span> <span class="c1">--patch &lt;filename&gt;</span>
+</pre></div>
+
+
+<p>If desired, those changes can be unstaged, and then re-staged using <code>git add --edit</code> or
+<code>git add --patch</code> to selectively add changes to particular commits.</p>
+<p>When done, run </p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="k">commit</span>
+</pre></div>
+
+
+<p>with no arguments to commit the changes you made.</p>
+<h1>Refactoring Large Pull Requests</h1>
+<p>The approaches above can be useful for refactoring branches. The end result will look something like this:</p>
+<div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">-</span> <span class="n">B</span> <span class="o">-</span> <span class="k">C</span> <span class="p">(</span><span class="n">master</span><span class="p">)</span>
+    <span class="err">\</span>
+     <span class="n">D</span> <span class="p">(</span><span class="n">feature</span><span class="o">-</span><span class="n">d</span><span class="p">)</span>
+      <span class="err">\</span> 
+       <span class="n">E</span> <span class="p">(</span><span class="n">feature</span><span class="o">-</span><span class="n">e</span><span class="p">)</span>
+        <span class="err">\</span>
+         <span class="n">F</span> <span class="p">(</span><span class="n">feature</span><span class="o">-</span><span class="n">f</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Now 3 pull requests can be made, one for each feature. Thanks to the refactoring above, each branch
+should be a more isolated set of changes that are all related, and therefore easier to review.</p>
+<h2>Chaining Pull Requests</h2>
+<p>The three D E F branches should be merged in together, since they are all related. But their changes should
+be kept separate to make reviewing each branch easier. To accomplish this, chain the pull requests together
+like so:</p>
+<p>Pull Request 1: merge <code>feature-d</code> into <code>master</code></p>
+<p>Pull Request 2: merge <code>feature-e</code> into <code>feature-d</code></p>
+<p>Pull Request 3: merge <code>feature-f</code> into <code>feature-e</code></p>
+<p>In this way, each pull request only shows the changes specific to that branch.</p>
+<p>(If each pull request were made against <code>master</code>, then later branches (F) would also incorporate changes
+from prior branches (D), resulting in messy and hard-to-review pull requests.)</p>
+<p>Pull requests are reviewed and discussed, and new commits will probably be added to fix things or incorporate
+feedback:</p>
+<div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">-</span> <span class="n">B</span> <span class="o">-</span> <span class="k">C</span> <span class="p">(</span><span class="n">master</span><span class="p">)</span>
+    <span class="err">\</span>
+     <span class="n">D</span> <span class="o">-</span> <span class="n">DA</span> <span class="o">-</span> <span class="n">DB</span> <span class="p">(</span><span class="n">feature</span><span class="o">-</span><span class="n">d</span><span class="p">)</span>
+      <span class="err">\</span> 
+       <span class="n">E</span> <span class="o">-</span> <span class="n">EA</span> <span class="o">-</span> <span class="n">EB</span> <span class="p">(</span><span class="n">feature</span><span class="o">-</span><span class="n">e</span><span class="p">)</span>
+        <span class="err">\</span>
+         <span class="n">F</span> <span class="o">-</span> <span class="n">FA</span> <span class="o">-</span> <span class="n">FB</span> <span class="p">(</span><span class="n">feature</span><span class="o">-</span><span class="n">f</span><span class="p">)</span>
+</pre></div>
+
+
+<h2>Preparing to Merge a Large Pull Request</h2>
+<p>All of your pull requests are approved and ready to merge. Now what?</p>
+<p>Pull requests will need to be merged in reverse order (last PR is merged first - f into e, e into d, d into
+master).  To test that things go smoothly with the first pull request (<code>feature-f</code> into <code>feature-e</code>), we should
+create a local E-F integration branch.</p>
+<p>The local integration branch will have new commits if changes are needed to resolve merge conflicts or fix
+broken tests. Any changes made can be added to the <code>feature-f</code> branch and pushed to the remote, so that
+they are part of the pull request, making the merge into <code>feature-e</code> go smoothly.</p>
+<p>To create a throwaway E-F integration branch, we start by creating a test integration branch from the tip of the
+<code>feature-f</code> branch, and we will merge branch <code>feature-e</code> into branch <code>feature-f</code>.</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">checkout</span> <span class="n">feature</span><span class="o">-</span><span class="n">f</span>
+</pre></div>
+
+
+<p>Now we create a local E-F integration branch:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">checkout</span> <span class="o">-</span><span class="n">b</span> <span class="n">integration</span><span class="o">-</span><span class="n">e</span><span class="o">-</span><span class="n">f</span>
+</pre></div>
+
+
+<p>Now we merge <code>feature-e</code> into <code>integration-e-f</code>, which is the same as <code>feature-f</code>:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">merge</span> <span class="c1">--no-ff feature-e</span>
+</pre></div>
+
+
+<p>The <code>--no-ff</code> flag creates a separate merge commit, which is useful here to keep our commit history clean.</p>
+<p>If merge conflicts are encountered, those can be resolved in the usual manner, and the (conflict-free) new
+versions of each file, reflecting changes from <code>feature-f</code> and <code>feature-e</code>, will all be present after the
+merge commit.</p>
+<p>Further commits can also be made to make tests pass, with a resulting git diagram:</p>
+<div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">-</span> <span class="n">B</span> <span class="o">-</span> <span class="k">C</span> <span class="p">(</span><span class="n">master</span><span class="p">)</span>
+    <span class="err">\</span>
+     <span class="n">D</span> <span class="o">-</span> <span class="n">DA</span> <span class="o">-</span> <span class="n">DB</span> <span class="p">(</span><span class="n">feature</span><span class="o">-</span><span class="n">d</span><span class="p">)</span>
+      <span class="err">\</span> 
+       <span class="n">E</span> <span class="o">-</span> <span class="n">EA</span> <span class="o">-</span> <span class="n">EB</span> <span class="c1">----</span>
+        <span class="err">\</span>              <span class="err">\</span>
+         <span class="n">F</span> <span class="o">-</span> <span class="n">FA</span> <span class="o">-</span> <span class="n">FB</span> <span class="o">-</span> <span class="n">EF1</span> <span class="o">-</span> <span class="n">EF2</span> <span class="p">(</span><span class="n">integration</span><span class="o">-</span><span class="n">e</span><span class="o">-</span><span class="n">f</span><span class="p">)</span>
+                              <span class="o">^</span>
+                             <span class="n">HEAD</span>
+</pre></div>
+
+
+<p>Once the <code>integration-e-f</code> branch is polished and passing tests, we can re-label it as <code>feature-f</code> and push
+the new commits to the remote. To re-label <code>integration-e-f</code> as <code>feature-f</code>, assuming we're at the tip of
+the <code>integration-e-f</code> branch (where we left off above):</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">branch</span> <span class="o">-</span><span class="n">D</span> <span class="n">feature</span><span class="o">-</span><span class="n">f</span>
+<span class="n">git</span> <span class="n">checkout</span> <span class="o">-</span><span class="n">b</span> <span class="n">feature</span><span class="o">-</span><span class="n">f</span>
+</pre></div>
+
+
+<p>and push the new commits to the remote's <code>feature-f</code> branch, before you merge in the pull request (<code>feature-f</code>
+into <code>feature-e</code>):</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">push</span> <span class="n">origin</span> <span class="n">feature</span><span class="o">-</span><span class="n">f</span>
+</pre></div>
+
+
+<p>Now you are ready to merge pull request 3 (F into E).</p>
+<h2>Rinse and Repeat</h2>
+<p>Rinse and repeat for pull requests 2 and 1.</p>
+<p>For Pull Request 2, we start by creating a new <code>integration-d-e-f</code> branch from the tip of the
+<code>integration-e-f</code> branch, like so:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">checkout</span> <span class="n">integration</span><span class="o">-</span><span class="n">d</span><span class="o">-</span><span class="n">e</span>
+<span class="n">git</span> <span class="n">checkout</span> <span class="o">-</span><span class="n">b</span> <span class="n">integration</span><span class="o">-</span><span class="n">d</span><span class="o">-</span><span class="n">e</span><span class="o">-</span><span class="n">f</span>
+</pre></div>
+
+
+<p>and use the same approach of merging in the <code>feature-d</code> branch with an explicit merge commit:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">merge</span> <span class="c1">--no-ff feature-d</span>
+</pre></div>
+
+
+<p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
+and you should now have a git commit history like this:</p>
+<div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">-</span> <span class="n">B</span> <span class="o">-</span> <span class="k">C</span> <span class="p">(</span><span class="n">master</span><span class="p">)</span>
+    <span class="err">\</span>
+     <span class="n">D</span> <span class="o">-</span> <span class="n">DA</span> <span class="o">-</span> <span class="n">DB</span> <span class="c1">----------------</span>
+      <span class="err">\</span>                          <span class="err">\</span>
+       <span class="n">E</span> <span class="o">-</span> <span class="n">EA</span> <span class="o">-</span> <span class="n">EB</span> <span class="c1">----           \</span>
+        <span class="err">\</span>              <span class="err">\</span>           <span class="err">\</span>
+         <span class="n">F</span> <span class="o">-</span> <span class="n">FA</span> <span class="o">-</span> <span class="n">FB</span> <span class="o">-</span> <span class="n">EF1</span> <span class="o">-</span> <span class="n">EF2</span> <span class="o">-</span> <span class="n">DEF1</span> <span class="o">-</span> <span class="n">DEF2</span> <span class="p">(</span><span class="n">integration</span><span class="o">-</span><span class="n">d</span><span class="o">-</span><span class="n">e</span><span class="o">-</span><span class="n">f</span><span class="p">)</span>
+                                            <span class="o">^</span>
+                                           <span class="n">HEAD</span>
+</pre></div>
+
+
+<p>Now re-label the <code>integration-d-e-f</code> branch as <code>feature-e</code>:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">branch</span> <span class="o">-</span><span class="n">D</span> <span class="n">feature</span><span class="o">-</span><span class="n">e</span> <span class="o">&amp;&amp;</span> <span class="n">git</span> <span class="n">checkout</span> <span class="o">-</span><span class="n">b</span> <span class="n">feature</span><span class="o">-</span><span class="n">e</span>
+</pre></div>
+
+
+<p>Finally, push all new commits to the remote, including the new merge
+commit, which will make sure the pull request can be merged without
+any conflicts:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">push</span> <span class="n">origin</span> <span class="n">feature</span><span class="o">-</span><span class="n">e</span>
+</pre></div>
+
+
+<p>Now PR 2 (E into D) can be merged.</p>
+<h2>Final Merge into Master</h2>
+<p>The last and final PR, D into master, will merge all combined feature
+branches into the master branch. We start with a <code>feature-d</code> branch
+that has several commits related to feature D, then several commits
+from merging the <code>feature-e</code> branch in (pull request 2, E into D),
+and the <code>feature-e</code> branch also had <code>feature-f</code> merged into it.</p>
+<div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">-</span> <span class="n">B</span> <span class="o">-</span> <span class="k">C</span> <span class="p">(</span><span class="n">master</span><span class="p">)</span>
+     <span class="err">\</span>
+      <span class="n">D</span> <span class="o">-</span> <span class="n">D2</span> <span class="o">-</span> <span class="n">DEF1</span> <span class="o">-</span> <span class="n">DEF2</span> <span class="p">(</span><span class="n">feature</span><span class="o">-</span><span class="n">d</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Now we will create one more commit on the <code>feature-d</code> branch that is
+merging <code>master</code> into <code>feature-d</code>, which will help the merge happen
+smoothly for pull request 1 (D into master).</p>
+<p>But first we switch to an integration branch, in case things don't go
+smoothly and we want to throw away the merge commit:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">branch</span> <span class="n">integration</span><span class="o">-</span><span class="n">def</span><span class="o">-</span><span class="n">master</span>
+</pre></div>
+
+
+<p>Create an explicit merge commit to merge <code>master</code> into <code>integration-def-master</code>:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">merge</span> <span class="c1">--no-ff master</span>
+</pre></div>
+
+
+<p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
+and you should now have a git commit history like this:</p>
+<div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">-</span> <span class="n">B</span> <span class="o">-</span> <span class="k">C</span> <span class="p">(</span><span class="n">master</span><span class="p">)</span>
+     <span class="err">\</span>   <span class="err">\</span><span class="c1">---------------------</span>
+      <span class="err">\</span>                        <span class="err">\</span>
+       <span class="n">D</span> <span class="o">-</span> <span class="n">D2</span> <span class="o">-</span> <span class="n">DEF1</span> <span class="o">-</span> <span class="n">DEF2</span> <span class="o">-</span> <span class="n">DEF3</span> <span class="p">(</span><span class="n">integration</span><span class="o">-</span><span class="n">def</span><span class="o">-</span><span class="n">master</span><span class="p">)</span>
+</pre></div>
+
+
+<p>where commit <code>DEF3</code> is the merge commit created with the <code>--no-ff</code> command.</p>
+<p>The merge commit will resolve any conflicts. When you're satisfied with the
+merge commit, you can switch out the <code>integration-def-master</code> branch with the
+<code>feature-d</code> branch like so:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">branch</span> <span class="o">-</span><span class="n">D</span> <span class="n">feature</span><span class="o">-</span><span class="n">d</span>
+<span class="n">git</span> <span class="n">checkout</span> <span class="o">-</span><span class="n">b</span> <span class="n">feature</span><span class="o">-</span><span class="n">d</span>
+</pre></div>
+
+
+<p>Now you can push the merge commit to the remote:</p>
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">push</span> <span class="n">origin</span> <span class="n">feature</span><span class="o">-</span><span class="n">d</span>
+</pre></div>
+
+
+<p>and you're now ready to merge your (conflict-free) pull request!</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Git Workflows, Part 2: Crafting Commits
             </b></h1>
         
@@ -318,7 +805,7 @@ and creating additional confusion and work for all of your collaborators.</p>
 git add (patch mode) and git add (interactive mode).</p>
 <h3>git add patch mode</h3>
 <p>How to use:</p>
-<div class="highlight"><pre><span></span>git add -p &lt;name-of-file&gt;
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="k">add</span> <span class="o">-</span><span class="n">p</span> <span class="o">&lt;</span><span class="n">name</span><span class="o">-</span><span class="k">of</span><span class="o">-</span><span class="n">file</span><span class="o">&gt;</span>
 </pre></div>
 
 
@@ -331,31 +818,31 @@ to a single file that should be logically separated into
 different steps. (For example, changing the <code>import</code> statements
 versus changing the name of a variable throughout a file).</p>
 <p>For example, suppose we have the following changes to a file named <code>doit.sh</code>:</p>
-<div class="highlight"><pre><span></span>$ git diff doit.sh
-diff --git a/doit.sh b/doit.sh
-index 3b938a1..6c1aec8 <span class="m">100644</span>
---- a/doit.sh
-+++ b/doit.sh
-@@ -1,6 +1,6 @@
- <span class="c1">#!/bin/bash</span>
- <span class="c1">#</span>
--# This script lists the <span class="m">40</span> largest files in the git repo <span class="nb">history</span>
-+# This script lists the <span class="m">50</span> largest files in the git repo <span class="nb">history</span>
+<div class="highlight"><pre><span></span>$ <span class="nv">git</span> <span class="nv">diff</span> <span class="nv">doit</span>.<span class="nv">sh</span>
+<span class="nv">diff</span> <span class="o">--</span><span class="nv">git</span> <span class="nv">a</span><span class="o">/</span><span class="nv">doit</span>.<span class="nv">sh</span> <span class="nv">b</span><span class="o">/</span><span class="nv">doit</span>.<span class="nv">sh</span>
+<span class="nv">index</span> <span class="mi">3</span><span class="nv">b938a1</span>..<span class="mi">6</span><span class="nv">c1aec8</span> <span class="mi">100644</span>
+<span class="o">---</span> <span class="nv">a</span><span class="o">/</span><span class="nv">doit</span>.<span class="nv">sh</span>
+<span class="o">+++</span> <span class="nv">b</span><span class="o">/</span><span class="nv">doit</span>.<span class="nv">sh</span>
+@@ <span class="o">-</span><span class="mi">1</span>,<span class="mi">6</span> <span class="o">+</span><span class="mi">1</span>,<span class="mi">6</span> @@
+ #<span class="o">!/</span><span class="nv">bin</span><span class="o">/</span><span class="nv">bash</span>
+ #
+<span class="o">-</span># <span class="nv">This</span> <span class="nv">script</span> <span class="nv">lists</span> <span class="nv">the</span> <span class="mi">40</span> <span class="nv">largest</span> <span class="nv">files</span> <span class="nv">in</span> <span class="nv">the</span> <span class="nv">git</span> <span class="nv">repo</span> <span class="nv">history</span>
+<span class="o">+</span># <span class="nv">This</span> <span class="nv">script</span> <span class="nv">lists</span> <span class="nv">the</span> <span class="mi">50</span> <span class="nv">largest</span> <span class="nv">files</span> <span class="nv">in</span> <span class="nv">the</span> <span class="nv">git</span> <span class="nv">repo</span> <span class="nv">history</span>
 
- $ git rev-list --all --objects <span class="p">|</span> <span class="se">\</span>
-      sed -n <span class="k">$(</span>git rev-list --objects --all <span class="p">|</span> <span class="se">\</span>
-@@ -9,9 +9,9 @@ $ git rev-list --all --objects <span class="p">|</span> <span class="se">\</span>
-      grep blob <span class="p">|</span> <span class="se">\</span>
-      sort -n -k <span class="m">3</span> <span class="p">|</span> <span class="se">\</span>
-      <span class="se">\</span>
--     tail -n40 <span class="p">|</span> <span class="se">\</span>
-+     tail -n50 <span class="p">|</span> <span class="se">\</span>
-      <span class="se">\</span>
-      <span class="k">while</span> <span class="nb">read</span> <span class="nb">hash</span> <span class="nb">type</span> size<span class="p">;</span> <span class="k">do</span>
-           <span class="nb">echo</span> -n <span class="s2">&quot;-e s/</span><span class="nv">$hash</span><span class="s2">/</span><span class="nv">$size</span><span class="s2">/p &quot;</span><span class="p">;</span>
-      <span class="k">done)</span> <span class="p">|</span> <span class="se">\</span>
--     sort -n -r -k1
-+     sort -nru -k1
+ $ <span class="nv">git</span> <span class="nv">rev</span><span class="o">-</span><span class="nv">list</span> <span class="o">--</span><span class="nv">all</span> <span class="o">--</span><span class="nv">objects</span> <span class="o">|</span> \
+      <span class="nv">sed</span> <span class="o">-</span><span class="nv">n</span> $<span class="ss">(</span><span class="nv">git</span> <span class="nv">rev</span><span class="o">-</span><span class="nv">list</span> <span class="o">--</span><span class="nv">objects</span> <span class="o">--</span><span class="nv">all</span> <span class="o">|</span> \
+@@ <span class="o">-</span><span class="mi">9</span>,<span class="mi">9</span> <span class="o">+</span><span class="mi">9</span>,<span class="mi">9</span> @@ $ <span class="nv">git</span> <span class="nv">rev</span><span class="o">-</span><span class="nv">list</span> <span class="o">--</span><span class="nv">all</span> <span class="o">--</span><span class="nv">objects</span> <span class="o">|</span> \
+      <span class="nv">grep</span> <span class="nv">blob</span> <span class="o">|</span> \
+      <span class="nv">sort</span> <span class="o">-</span><span class="nv">n</span> <span class="o">-</span><span class="nv">k</span> <span class="mi">3</span> <span class="o">|</span> \
+      \
+<span class="o">-</span>     <span class="nv">tail</span> <span class="o">-</span><span class="nv">n40</span> <span class="o">|</span> \
+<span class="o">+</span>     <span class="nv">tail</span> <span class="o">-</span><span class="nv">n50</span> <span class="o">|</span> \
+      \
+      <span class="k">while</span> <span class="nv">read</span> <span class="nv">hash</span> <span class="nv">type</span> <span class="nv">size</span><span class="c1">; do</span>
+           <span class="nv">echo</span> <span class="o">-</span><span class="nv">n</span> <span class="s2">&quot;</span><span class="s">-e s/$hash/$size/p </span><span class="s2">&quot;</span><span class="c1">;</span>
+      <span class="nv">done</span><span class="ss">)</span> <span class="o">|</span> \
+<span class="o">-</span>     <span class="nv">sort</span> <span class="o">-</span><span class="nv">n</span> <span class="o">-</span><span class="nv">r</span> <span class="o">-</span><span class="nv">k1</span>
+<span class="o">+</span>     <span class="nv">sort</span> <span class="o">-</span><span class="nv">nru</span> <span class="o">-</span><span class="nv">k1</span>
 </pre></div>
 
 
@@ -363,54 +850,54 @@ index 3b938a1..6c1aec8 <span class="m">100644</span>
 We can split these changes into two commits using <code>git add -p doit.sh</code>,
 which will walk through each change in the file and ask if we want to
 stage it:</p>
-<div class="highlight"><pre><span></span>$ git add -p doit.sh
-diff --git a/doit.sh b/doit.sh
-index 3b938a1..6c1aec8 <span class="m">100644</span>
---- a/doit.sh
-+++ b/doit.sh
-@@ -1,6 +1,6 @@
- <span class="c1">#!/bin/bash</span>
- <span class="c1">#</span>
--# This script lists the <span class="m">40</span> largest files in the git repo <span class="nb">history</span>
-+# This script lists the <span class="m">50</span> largest files in the git repo <span class="nb">history</span>
+<div class="highlight"><pre><span></span>$ <span class="nv">git</span> <span class="nv">add</span> <span class="o">-</span><span class="nv">p</span> <span class="nv">doit</span>.<span class="nv">sh</span>
+<span class="nv">diff</span> <span class="o">--</span><span class="nv">git</span> <span class="nv">a</span><span class="o">/</span><span class="nv">doit</span>.<span class="nv">sh</span> <span class="nv">b</span><span class="o">/</span><span class="nv">doit</span>.<span class="nv">sh</span>
+<span class="nv">index</span> <span class="mi">3</span><span class="nv">b938a1</span>..<span class="mi">6</span><span class="nv">c1aec8</span> <span class="mi">100644</span>
+<span class="o">---</span> <span class="nv">a</span><span class="o">/</span><span class="nv">doit</span>.<span class="nv">sh</span>
+<span class="o">+++</span> <span class="nv">b</span><span class="o">/</span><span class="nv">doit</span>.<span class="nv">sh</span>
+@@ <span class="o">-</span><span class="mi">1</span>,<span class="mi">6</span> <span class="o">+</span><span class="mi">1</span>,<span class="mi">6</span> @@
+ #<span class="o">!/</span><span class="nv">bin</span><span class="o">/</span><span class="nv">bash</span>
+ #
+<span class="o">-</span># <span class="nv">This</span> <span class="nv">script</span> <span class="nv">lists</span> <span class="nv">the</span> <span class="mi">40</span> <span class="nv">largest</span> <span class="nv">files</span> <span class="nv">in</span> <span class="nv">the</span> <span class="nv">git</span> <span class="nv">repo</span> <span class="nv">history</span>
+<span class="o">+</span># <span class="nv">This</span> <span class="nv">script</span> <span class="nv">lists</span> <span class="nv">the</span> <span class="mi">50</span> <span class="nv">largest</span> <span class="nv">files</span> <span class="nv">in</span> <span class="nv">the</span> <span class="nv">git</span> <span class="nv">repo</span> <span class="nv">history</span>
 
- $ git rev-list --all --objects <span class="p">|</span> <span class="se">\</span>
-      sed -n <span class="k">$(</span>git rev-list --objects --all <span class="p">|</span> <span class="se">\</span>
-Stage this hunk <span class="o">[</span>y,n,q,a,d,j,J,g,/,e,?<span class="o">]</span>? y
+ $ <span class="nv">git</span> <span class="nv">rev</span><span class="o">-</span><span class="nv">list</span> <span class="o">--</span><span class="nv">all</span> <span class="o">--</span><span class="nv">objects</span> <span class="o">|</span> \
+      <span class="nv">sed</span> <span class="o">-</span><span class="nv">n</span> $<span class="ss">(</span><span class="nv">git</span> <span class="nv">rev</span><span class="o">-</span><span class="nv">list</span> <span class="o">--</span><span class="nv">objects</span> <span class="o">--</span><span class="nv">all</span> <span class="o">|</span> \
+<span class="nv">Stage</span> <span class="nv">this</span> <span class="nv">hunk</span> [<span class="nv">y</span>,<span class="nv">n</span>,<span class="nv">q</span>,<span class="nv">a</span>,<span class="nv">d</span>,<span class="nv">j</span>,<span class="nv">J</span>,<span class="nv">g</span>,<span class="o">/</span>,<span class="nv">e</span>,?]? <span class="nv">y</span>
 
-@@ -9,9 +9,9 @@ $ git rev-list --all --objects <span class="p">|</span> <span class="se">\</span>
-      grep blob <span class="p">|</span> <span class="se">\</span>
-      sort -n -k <span class="m">3</span> <span class="p">|</span> <span class="se">\</span>
-      <span class="se">\</span>
--     tail -n40 <span class="p">|</span> <span class="se">\</span>
-+     tail -n50 <span class="p">|</span> <span class="se">\</span>
-      <span class="se">\</span>
-      <span class="k">while</span> <span class="nb">read</span> <span class="nb">hash</span> <span class="nb">type</span> size<span class="p">;</span> <span class="k">do</span>
-Stage this hunk <span class="o">[</span>y,n,q,a,d,j,J,g,/,e,?<span class="o">]</span>? y
+@@ <span class="o">-</span><span class="mi">9</span>,<span class="mi">9</span> <span class="o">+</span><span class="mi">9</span>,<span class="mi">9</span> @@ $ <span class="nv">git</span> <span class="nv">rev</span><span class="o">-</span><span class="nv">list</span> <span class="o">--</span><span class="nv">all</span> <span class="o">--</span><span class="nv">objects</span> <span class="o">|</span> \
+      <span class="nv">grep</span> <span class="nv">blob</span> <span class="o">|</span> \
+      <span class="nv">sort</span> <span class="o">-</span><span class="nv">n</span> <span class="o">-</span><span class="nv">k</span> <span class="mi">3</span> <span class="o">|</span> \
+      \
+<span class="o">-</span>     <span class="nv">tail</span> <span class="o">-</span><span class="nv">n40</span> <span class="o">|</span> \
+<span class="o">+</span>     <span class="nv">tail</span> <span class="o">-</span><span class="nv">n50</span> <span class="o">|</span> \
+      \
+      <span class="k">while</span> <span class="nv">read</span> <span class="nv">hash</span> <span class="nv">type</span> <span class="nv">size</span><span class="c1">; do</span>
+<span class="nv">Stage</span> <span class="nv">this</span> <span class="nv">hunk</span> [<span class="nv">y</span>,<span class="nv">n</span>,<span class="nv">q</span>,<span class="nv">a</span>,<span class="nv">d</span>,<span class="nv">j</span>,<span class="nv">J</span>,<span class="nv">g</span>,<span class="o">/</span>,<span class="nv">e</span>,?]? <span class="nv">y</span>
 
-@@ -14,14 +14,14 @@        <span class="nb">echo</span> -n <span class="s2">&quot;-e s/</span><span class="nv">$hash</span><span class="s2">/</span><span class="nv">$size</span><span class="s2">/p &quot;</span><span class="p">;</span>
-      <span class="k">done)</span> <span class="p">|</span> <span class="se">\</span>
--     sort -n -r -k1
-+     sort -nru -k1
-Stage this hunk <span class="o">[</span>y,n,q,a,d,j,J,g,/,e,?<span class="o">]</span>? n
+@@ <span class="o">-</span><span class="mi">14</span>,<span class="mi">14</span> <span class="o">+</span><span class="mi">14</span>,<span class="mi">14</span> @@        <span class="nv">echo</span> <span class="o">-</span><span class="nv">n</span> <span class="s2">&quot;</span><span class="s">-e s/$hash/$size/p </span><span class="s2">&quot;</span><span class="c1">;</span>
+      <span class="nv">done</span><span class="ss">)</span> <span class="o">|</span> \
+<span class="o">-</span>     <span class="nv">sort</span> <span class="o">-</span><span class="nv">n</span> <span class="o">-</span><span class="nv">r</span> <span class="o">-</span><span class="nv">k1</span>
+<span class="o">+</span>     <span class="nv">sort</span> <span class="o">-</span><span class="nv">nru</span> <span class="o">-</span><span class="nv">k1</span>
+<span class="nv">Stage</span> <span class="nv">this</span> <span class="nv">hunk</span> [<span class="nv">y</span>,<span class="nv">n</span>,<span class="nv">q</span>,<span class="nv">a</span>,<span class="nv">d</span>,<span class="nv">j</span>,<span class="nv">J</span>,<span class="nv">g</span>,<span class="o">/</span>,<span class="nv">e</span>,?]? <span class="nv">n</span>
 </pre></div>
 
 
 <p>Now the two related changes are staged, and the unrelated change is not staged.
 This is reflected in <code>git status</code>:</p>
-<div class="highlight"><pre><span></span>$ git status
-On branch master
-Your branch is ahead of <span class="s1">&#39;gh/master&#39;</span> by <span class="m">2</span> commits.
-  <span class="o">(</span>use <span class="s2">&quot;git push&quot;</span> to publish your <span class="nb">local</span> commits<span class="o">)</span>
+<div class="highlight"><pre><span></span>$ <span class="nv">git</span> <span class="nv">status</span>
+<span class="nv">On</span> <span class="nv">branch</span> <span class="nv">master</span>
+<span class="nv">Your</span> <span class="nv">branch</span> <span class="nv">is</span> <span class="nv">ahead</span> <span class="nv">of</span> <span class="s1">&#39;</span><span class="s">gh/master</span><span class="s1">&#39;</span> <span class="nv">by</span> <span class="mi">2</span> <span class="nv">commits</span>.
+  <span class="ss">(</span><span class="nv">use</span> <span class="s2">&quot;</span><span class="s">git push</span><span class="s2">&quot;</span> <span class="nv">to</span> <span class="nv">publish</span> <span class="nv">your</span> <span class="nv">local</span> <span class="nv">commits</span><span class="ss">)</span>
 
-Changes to be committed:
-  <span class="o">(</span>use <span class="s2">&quot;git restore --staged &lt;file&gt;...&quot;</span> to unstage<span class="o">)</span>
-    modified:   doit.sh
+<span class="nv">Changes</span> <span class="nv">to</span> <span class="nv">be</span> <span class="nv">committed</span>:
+  <span class="ss">(</span><span class="nv">use</span> <span class="s2">&quot;</span><span class="s">git restore --staged &lt;file&gt;...</span><span class="s2">&quot;</span> <span class="nv">to</span> <span class="nv">unstage</span><span class="ss">)</span>
+    <span class="nv">modified</span>:   <span class="nv">doit</span>.<span class="nv">sh</span>
 
-Changes not staged <span class="k">for</span> commit:
-  <span class="o">(</span>use <span class="s2">&quot;git add &lt;file&gt;...&quot;</span> to update what will be committed<span class="o">)</span>
-  <span class="o">(</span>use <span class="s2">&quot;git restore &lt;file&gt;...&quot;</span> to discard changes in working directory<span class="o">)</span>
-    modified:   doit.sh
+<span class="nv">Changes</span> <span class="nv">not</span> <span class="nv">staged</span> <span class="k">for</span> <span class="nv">commit</span>:
+  <span class="ss">(</span><span class="nv">use</span> <span class="s2">&quot;</span><span class="s">git add &lt;file&gt;...</span><span class="s2">&quot;</span> <span class="nv">to</span> <span class="nv">update</span> <span class="nv">what</span> <span class="nv">will</span> <span class="nv">be</span> <span class="nv">committed</span><span class="ss">)</span>
+  <span class="ss">(</span><span class="nv">use</span> <span class="s2">&quot;</span><span class="s">git restore &lt;file&gt;...</span><span class="s2">&quot;</span> <span class="nv">to</span> <span class="nv">discard</span> <span class="nv">changes</span> <span class="nv">in</span> <span class="nv">working</span> <span class="nv">directory</span><span class="ss">)</span>
+    <span class="nv">modified</span>:   <span class="nv">doit</span>.<span class="nv">sh</span>
 </pre></div>
 
 
@@ -424,7 +911,7 @@ you can always examine what changes different commits made with <code>git diff</
 with <code>git cherry-pick</code> or modify/combine them with <code>git rebase</code>.</p>
 <h3>git add editor mode</h3>
 <p>How to use:</p>
-<div class="highlight"><pre><span></span>git add -e &lt;name-of-file&gt;
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="k">add</span> <span class="o">-</span><span class="n">e</span> <span class="o">&lt;</span><span class="n">name</span><span class="o">-</span><span class="k">of</span><span class="o">-</span><span class="n">file</span><span class="o">&gt;</span>
 </pre></div>
 
 
@@ -435,7 +922,7 @@ to stage or not using the text editor.</p>
 <p>A sidebar:</p>
 <p>If you have not yet set the text editor that git uses, you should
 do that now. Modify your git configuration with this command:</p>
-<div class="highlight"><pre><span></span>git config --global core.editor vim
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">config</span> <span class="c1">--global core.editor vim</span>
 </pre></div>
 
 
@@ -510,7 +997,7 @@ in the rebase. To include it, add <code>~1</code> to the start commit. (For exam
 <h4>rebasing a range of commits</h4>
 <p>To rebase from the start commit hash to the end commit hash, and include the start commit
 in the rebase, the rebase command is:</p>
-<div class="highlight"><pre><span></span>git rebase -i START_COMMIT_HASH~1 END_COMMIT_HASH
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">rebase</span> <span class="o">-</span><span class="n">i</span> <span class="n">START_COMMIT_HASH</span><span class="o">~</span><span class="mi">1</span> <span class="n">END_COMMIT_HASH</span>
 </pre></div>
 
 
@@ -519,7 +1006,7 @@ and the new pile of commits to retain the same branch name.</p>
 <h4>rebasing onto another branch</h4>
 <p>To rebase a range of commits onto a different branch (for example, onto a <code>master</code> branch
 that has the latest changes from the remote), use the <code>--onto</code> flag:</p>
-<div class="highlight"><pre><span></span>git rebase -i START_COMMIT_HASH END_COMMIT_HASH --onto TARGET_BRANCH
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">rebase</span> <span class="o">-</span><span class="n">i</span> <span class="n">START_COMMIT_HASH</span> <span class="n">END_COMMIT_HASH</span> <span class="c1">--onto TARGET_BRANCH</span>
 </pre></div>
 
 
@@ -532,7 +1019,7 @@ commits.</p>
 <p>If you want the old branch label to move to the new pile of commits, it requires a bit of branch
 housekeeping - you have to delete the old branch, then create a new branch from where
 HEAD is (the end of the rebase), then check out that branch.</p>
-<div class="highlight"><pre><span></span>git branch -D &lt;branchname&gt; &amp;&amp; git checkout -b &lt;branchname&gt;
+<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">branch</span> <span class="o">-</span><span class="n">D</span> <span class="o">&lt;</span><span class="n">branchname</span><span class="o">&gt;</span> <span class="o">&amp;&amp;</span> <span class="n">git</span> <span class="n">checkout</span> <span class="o">-</span><span class="n">b</span> <span class="o">&lt;</span><span class="n">branchname</span><span class="o">&gt;</span>
 </pre></div>
 
 
@@ -663,7 +1150,7 @@ into a small number of larger commits, all carrying related changes.</p></div>
 <h2>The Best One Letter Alias Ever</h2>
 <p>Start supercharging how you use git by creating a one-letter alias.</p>
 <p>Add this to your <code>~/.bashrc</code> file:</p>
-<div class="highlight"><pre><span></span>alias g=&quot;git&quot;
+<div class="highlight"><pre><span></span><span class="k">alias</span> <span class="k">g</span><span class="o">=</span><span class="ss">&quot;git&quot;</span>
 </pre></div>
 
 
@@ -718,8 +1205,8 @@ defined in a section beginning with alias.</p>
 <code>git lg1</code> is the most compact, while <code>git lg3</code> is the most comfortable to read, as far as vertical whitespace.
 Same with the <code>-specific</code> commands.</p>
 <p>This is one more nice short log command:</p>
-<div class="highlight"><pre><span></span>    # View abbreviated SHA, description, and history graph of the latest 20 commits
-    l = log --pretty=oneline -n 20 --graph --abbrev-commit
+<div class="highlight"><pre><span></span>    <span class="o">#</span> <span class="k">View</span> <span class="n">abbreviated</span> <span class="n">SHA</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="k">and</span> <span class="n">history</span> <span class="n">graph</span> <span class="k">of</span> <span class="n">the</span> <span class="n">latest</span> <span class="mi">20</span> <span class="n">commits</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">log</span> <span class="c1">--pretty=oneline -n 20 --graph --abbrev-commit</span>
 </pre></div>
 
 
@@ -743,32 +1230,32 @@ $ g lg1
 
 <h2>Status Utils</h2>
 <p>The git status command is one of my most frequently used commands, so I made a few shortcuts:</p>
-<div class="highlight"><pre><span></span>    # View the current working tree status using the short format
-    s = status -s
-    ss = status
+<div class="highlight"><pre><span></span>    <span class="o">#</span> <span class="k">View</span> <span class="n">the</span> <span class="k">current</span> <span class="n">working</span> <span class="n">tree</span> <span class="n">status</span> <span class="k">using</span> <span class="n">the</span> <span class="n">short</span> <span class="n">format</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">status</span> <span class="o">-</span><span class="n">s</span>
+    <span class="n">ss</span> <span class="o">=</span> <span class="n">status</span>
 </pre></div>
 
 
 <p>This makes checking the short or long status of a git repo easy:</p>
-<div class="highlight"><pre><span></span>$ g s
-AM pelican/content/git-workflows-1-config.md
-AM pelican/content/git-workflows-2-teams.md
+<div class="highlight"><pre><span></span>$ <span class="nv">g</span> <span class="nv">s</span>
+<span class="nv">AM</span> <span class="nv">pelican</span><span class="o">/</span><span class="nv">content</span><span class="o">/</span><span class="nv">git</span><span class="o">-</span><span class="nv">workflows</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="nv">config</span>.<span class="nv">md</span>
+<span class="nv">AM</span> <span class="nv">pelican</span><span class="o">/</span><span class="nv">content</span><span class="o">/</span><span class="nv">git</span><span class="o">-</span><span class="nv">workflows</span><span class="o">-</span><span class="mi">2</span><span class="o">-</span><span class="nv">teams</span>.<span class="nv">md</span>
 
-$ g ss
-On branch <span class="nb">source</span>
-Your branch is ahead of <span class="s1">&#39;gh/source&#39;</span> by <span class="m">1</span> commit.
-  <span class="o">(</span>use <span class="s2">&quot;git push&quot;</span> to publish your <span class="nb">local</span> commits<span class="o">)</span>
+$ <span class="nv">g</span> <span class="nv">ss</span>
+<span class="nv">On</span> <span class="nv">branch</span> <span class="nv">source</span>
+<span class="nv">Your</span> <span class="nv">branch</span> <span class="nv">is</span> <span class="nv">ahead</span> <span class="nv">of</span> <span class="s1">&#39;</span><span class="s">gh/source</span><span class="s1">&#39;</span> <span class="nv">by</span> <span class="mi">1</span> <span class="nv">commit</span>.
+  <span class="ss">(</span><span class="nv">use</span> <span class="s2">&quot;</span><span class="s">git push</span><span class="s2">&quot;</span> <span class="nv">to</span> <span class="nv">publish</span> <span class="nv">your</span> <span class="nv">local</span> <span class="nv">commits</span><span class="ss">)</span>
 
-Changes to be committed:
-  <span class="o">(</span>use <span class="s2">&quot;git restore --staged &lt;file&gt;...&quot;</span> to unstage<span class="o">)</span>
-    new file:   pelican/content/git-workflows-1-config.md
-    new file:   pelican/content/git-workflows-2-teams.md
+<span class="nv">Changes</span> <span class="nv">to</span> <span class="nv">be</span> <span class="nv">committed</span>:
+  <span class="ss">(</span><span class="nv">use</span> <span class="s2">&quot;</span><span class="s">git restore --staged &lt;file&gt;...</span><span class="s2">&quot;</span> <span class="nv">to</span> <span class="nv">unstage</span><span class="ss">)</span>
+    <span class="nv">new</span> <span class="nv">file</span>:   <span class="nv">pelican</span><span class="o">/</span><span class="nv">content</span><span class="o">/</span><span class="nv">git</span><span class="o">-</span><span class="nv">workflows</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="nv">config</span>.<span class="nv">md</span>
+    <span class="nv">new</span> <span class="nv">file</span>:   <span class="nv">pelican</span><span class="o">/</span><span class="nv">content</span><span class="o">/</span><span class="nv">git</span><span class="o">-</span><span class="nv">workflows</span><span class="o">-</span><span class="mi">2</span><span class="o">-</span><span class="nv">teams</span>.<span class="nv">md</span>
 
-Changes not staged <span class="k">for</span> commit:
-  <span class="o">(</span>use <span class="s2">&quot;git add &lt;file&gt;...&quot;</span> to update what will be committed<span class="o">)</span>
-  <span class="o">(</span>use <span class="s2">&quot;git restore &lt;file&gt;...&quot;</span> to discard changes in working directory<span class="o">)</span>
-    modified:   pelican/content/git-workflows-1-config.md
-    modified:   pelican/content/git-workflows-2-teams.md
+<span class="nv">Changes</span> <span class="nv">not</span> <span class="nv">staged</span> <span class="k">for</span> <span class="nv">commit</span>:
+  <span class="ss">(</span><span class="nv">use</span> <span class="s2">&quot;</span><span class="s">git add &lt;file&gt;...</span><span class="s2">&quot;</span> <span class="nv">to</span> <span class="nv">update</span> <span class="nv">what</span> <span class="nv">will</span> <span class="nv">be</span> <span class="nv">committed</span><span class="ss">)</span>
+  <span class="ss">(</span><span class="nv">use</span> <span class="s2">&quot;</span><span class="s">git restore &lt;file&gt;...</span><span class="s2">&quot;</span> <span class="nv">to</span> <span class="nv">discard</span> <span class="nv">changes</span> <span class="nv">in</span> <span class="nv">working</span> <span class="nv">directory</span><span class="ss">)</span>
+    <span class="nv">modified</span>:   <span class="nv">pelican</span><span class="o">/</span><span class="nv">content</span><span class="o">/</span><span class="nv">git</span><span class="o">-</span><span class="nv">workflows</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="nv">config</span>.<span class="nv">md</span>
+    <span class="nv">modified</span>:   <span class="nv">pelican</span><span class="o">/</span><span class="nv">content</span><span class="o">/</span><span class="nv">git</span><span class="o">-</span><span class="nv">workflows</span><span class="o">-</span><span class="mi">2</span><span class="o">-</span><span class="nv">teams</span>.<span class="nv">md</span>
 </pre></div>
 
 
@@ -777,19 +1264,19 @@ Changes not staged <span class="k">for</span> commit:
 change anything or try to merge anything (unlike a <code>git pull</code> command).</p>
 <p>The most useful fetch command (<code>git fetch --all</code>) is aliased to <code>g f</code> with the following
 bit in the aliases section of the <code>~/.gitconfig</code> file:</p>
-<div class="highlight"><pre><span></span>    f = fetch --all
+<div class="highlight"><pre><span></span>    <span class="n">f</span> <span class="o">=</span> <span class="k">fetch</span> <span class="c1">--all</span>
 </pre></div>
 
 
 <h2>Branch Utils</h2>
 <p>The only command I might use more than the status command are branch commands,
 so here are several branch aliases:</p>
-<div class="highlight"><pre><span></span>    b = branch -v
-    bv = branch -v
-    bb = branch -v
+<div class="highlight"><pre><span></span>    <span class="n">b</span> <span class="o">=</span> <span class="n">branch</span> <span class="o">-</span><span class="n">v</span>
+    <span class="n">bv</span> <span class="o">=</span> <span class="n">branch</span> <span class="o">-</span><span class="n">v</span>
+    <span class="n">bb</span> <span class="o">=</span> <span class="n">branch</span> <span class="o">-</span><span class="n">v</span>
 
-    ba = branch -a
-    bb = branch -v -a
+    <span class="n">ba</span> <span class="o">=</span> <span class="n">branch</span> <span class="o">-</span><span class="n">a</span>
+    <span class="n">bb</span> <span class="o">=</span> <span class="n">branch</span> <span class="o">-</span><span class="n">v</span> <span class="o">-</span><span class="n">a</span>
 </pre></div>
 
 
@@ -820,9 +1307,9 @@ inconvenient to have to first create the branch with <code>git branch &lt;branch
 and then check it out with <code>git checkout &lt;branch-name&gt;</code>.</p>
 <p>To resolve this you can define a <code>git go</code> alias that creates the branch and
 then switches to that branch:</p>
-<div class="highlight"><pre><span></span>    # Switch to a branch, creating it
-    # from the current branch if necessary
-    go = &quot;!f() { git checkout -b \&quot;$1\&quot; 2&gt; /dev/null || git checkout \&quot;$1\&quot;; }; f&quot;
+<div class="highlight"><pre><span></span>    # <span class="nv">Switch</span> <span class="nv">to</span> <span class="nv">a</span> <span class="nv">branch</span>, <span class="nv">creating</span> <span class="nv">it</span>
+    # <span class="nv">from</span> <span class="nv">the</span> <span class="nv">current</span> <span class="nv">branch</span> <span class="k">if</span> <span class="nv">necessary</span>
+    <span class="nv">go</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="s">!f() { git checkout -b \</span><span class="s2">&quot;</span><span class="mh">$1</span>\<span class="s2">&quot;</span><span class="s"> 2&gt; /dev/null || git checkout \</span><span class="s2">&quot;</span><span class="mh">$1</span>\<span class="s2">&quot;</span><span class="s">; }; f</span><span class="s2">&quot;</span>
 </pre></div>
 
 
@@ -830,9 +1317,9 @@ then switches to that branch:</p>
 <h2>Remote Utils</h2>
 <p>Another useful git command is the remote command, so here are a few
 remote aliases:</p>
-<div class="highlight"><pre><span></span>    r = remote -v
-    rv = remote -v
-    ra = remote -v
+<div class="highlight"><pre><span></span>    <span class="n">r</span> <span class="o">=</span> <span class="n">remote</span> <span class="o">-</span><span class="n">v</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="n">remote</span> <span class="o">-</span><span class="n">v</span>
+    <span class="n">ra</span> <span class="o">=</span> <span class="n">remote</span> <span class="o">-</span><span class="n">v</span>
 </pre></div>
 
 
@@ -844,24 +1331,24 @@ but this can be aliased to <code>cdiff</code>, so that you can use <code>git dif
 unstaged changes and <code>git cdiff</code> to see staged changes.</p>
 <p>Even better, you can define the alias <code>g cd</code> to run <code>git cdiff</code>...!</p>
 <p>Here's the relevant bit in the aliases section:</p>
-<div class="highlight"><pre><span></span>    cdiff = diff --cached
-    cd = diff --cached
+<div class="highlight"><pre><span></span>    <span class="n">cdiff</span> <span class="o">=</span> <span class="n">diff</span> <span class="c1">--cached</span>
+    <span class="n">cd</span> <span class="o">=</span> <span class="n">diff</span> <span class="c1">--cached</span>
 </pre></div>
 
 
 <h3>Committing All Changes</h3>
-<div class="highlight"><pre><span></span>    # Commit all changes
-    ca = !git add -A &amp;&amp; git commit -av
+<div class="highlight"><pre><span></span>    <span class="o">#</span> <span class="k">Commit</span> <span class="k">all</span> <span class="n">changes</span>
+    <span class="n">ca</span> <span class="o">=</span> <span class="o">!</span><span class="n">git</span> <span class="k">add</span> <span class="o">-</span><span class="n">A</span> <span class="o">&amp;&amp;</span> <span class="n">git</span> <span class="k">commit</span> <span class="o">-</span><span class="n">av</span>
 </pre></div>
 
 
 <h3>Fixing Commits</h3>
 <p>Some common operations for repairing commit history before pushing:</p>
-<div class="highlight"><pre><span></span>    # Amend the currently staged files to the latest commit
-    amend = commit --amend --reuse-message=HEAD
+<div class="highlight"><pre><span></span>    <span class="o">#</span> <span class="n">Amend</span> <span class="n">the</span> <span class="n">currently</span> <span class="n">staged</span> <span class="n">files</span> <span class="k">to</span> <span class="n">the</span> <span class="n">latest</span> <span class="k">commit</span>
+    <span class="n">amend</span> <span class="o">=</span> <span class="k">commit</span> <span class="c1">--amend --reuse-message=HEAD</span>
 
-    # Oops
-    fix = commit --amend --reuse-message=HEAD --edit
+    <span class="o">#</span> <span class="n">Oops</span>
+    <span class="n">fix</span> <span class="o">=</span> <span class="k">commit</span> <span class="c1">--amend --reuse-message=HEAD --edit</span>
 </pre></div>
 
 
@@ -869,35 +1356,35 @@ unstaged changes and <code>git cdiff</code> to see staged changes.</p>
 <p>There are a few other actions that are useful to add to the aliases section
 of the <code>~/.gitconfig</code>:</p>
 <h3>Rebasing shortcuts</h3>
-<div class="highlight"><pre><span></span>    # Interactive rebase with the given number of latest commits
-    reb = &quot;!r() { git rebase -i HEAD~$1; }; r&quot;
+<div class="highlight"><pre><span></span>    <span class="o">#</span> <span class="n">Interactive</span> <span class="n">rebase</span> <span class="k">with</span> <span class="n">the</span> <span class="n">given</span> <span class="nb">number</span> <span class="k">of</span> <span class="n">latest</span> <span class="n">commits</span>
+    <span class="n">reb</span> <span class="o">=</span> <span class="ss">&quot;!r() { git rebase -i HEAD~$1; }; r&quot;</span>
 </pre></div>
 
 
 <h3>Diff shortcuts</h3>
-<div class="highlight"><pre><span></span>    # Show the diff between the latest commit and the current state
-    d = !&quot;git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat&quot;
+<div class="highlight"><pre><span></span>    # <span class="k">Show</span> <span class="nv">the</span> <span class="nv">diff</span> <span class="nv">between</span> <span class="nv">the</span> <span class="nv">latest</span> <span class="nv">commit</span> <span class="nv">and</span> <span class="nv">the</span> <span class="nv">current</span> <span class="nv">state</span>
+    <span class="nv">d</span> <span class="o">=</span> <span class="o">!</span><span class="s2">&quot;</span><span class="s">git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat</span><span class="s2">&quot;</span>
 
-    # `git di $number` shows the diff between the state `$number` revisions ago and the current state
-    di = !&quot;d() { git diff --patch-with-stat HEAD~$1; }; git diff-index --quiet HEAD -- || clear; d&quot;
+    # `<span class="nv">git</span> <span class="nv">di</span> $<span class="nv">number</span>` <span class="nv">shows</span> <span class="nv">the</span> <span class="nv">diff</span> <span class="nv">between</span> <span class="nv">the</span> <span class="nv">state</span> `$<span class="nv">number</span>` <span class="nv">revisions</span> <span class="nv">ago</span> <span class="nv">and</span> <span class="nv">the</span> <span class="nv">current</span> <span class="nv">state</span>
+    <span class="nv">di</span> <span class="o">=</span> <span class="o">!</span><span class="s2">&quot;</span><span class="s">d() { git diff --patch-with-stat HEAD~$1; }; git diff-index --quiet HEAD -- || clear; d</span><span class="s2">&quot;</span>
 </pre></div>
 
 
 <h3>Pull shortcuts</h3>
-<div class="highlight"><pre><span></span>    p = &quot;!f() { git pull $1 $2; }; f&quot;
+<div class="highlight"><pre><span></span>    <span class="n">p</span> <span class="o">=</span> <span class="ss">&quot;!f() { git pull $1 $2; }; f&quot;</span>
 </pre></div>
 
 
 <h3>Clone shortcuts</h3>
-<div class="highlight"><pre><span></span>    # Clone a repository including all submodules
-    c = clone --recursive
+<div class="highlight"><pre><span></span>    <span class="o">#</span> <span class="n">Clone</span> <span class="n">a</span> <span class="n">repository</span> <span class="k">including</span> <span class="k">all</span> <span class="n">submodules</span>
+    <span class="k">c</span> <span class="o">=</span> <span class="n">clone</span> <span class="c1">--recursive</span>
 </pre></div>
 
 
 <h3>Contributor shortcuts</h3>
 <p>This last one is convenient for getting a summary of contributors:</p>
-<div class="highlight"><pre><span></span>    # List contributors with number of commits
-    contributors = shortlog --summary --numbered
+<div class="highlight"><pre><span></span>    <span class="o">#</span> <span class="n">List</span> <span class="n">contributors</span> <span class="k">with</span> <span class="nb">number</span> <span class="k">of</span> <span class="n">commits</span>
+    <span class="n">contributors</span> <span class="o">=</span> <span class="n">shortlog</span> <span class="c1">--summary --numbered</span>
 </pre></div>
 
 
@@ -923,26 +1410,26 @@ $ g contributors
 
 <p>I have some other stuff I've collected, many of them from
 <a href="https://github.com/mathiasbynens/dotfiles">https://github.com/mathiasbynens/dotfiles</a>:</p>
-<div class="highlight"><pre><span></span>    # Use custom `.gitignore` and `.gitattributes`
-    excludesfile = ~/.gitignore
-    attributesfile = ~/.gitattributes
+<div class="highlight"><pre><span></span>    # <span class="nv">Use</span> <span class="nv">custom</span> `.<span class="nv">gitignore</span>` <span class="nv">and</span> `.<span class="nv">gitattributes</span>`
+    <span class="nv">excludesfile</span> <span class="o">=</span> <span class="o">~/</span>.<span class="nv">gitignore</span>
+    <span class="nv">attributesfile</span> <span class="o">=</span> <span class="o">~/</span>.<span class="nv">gitattributes</span>
 
-    # Treat spaces before tabs and all kinds of trailing whitespace as an error
-    # [default] trailing-space: looks for spaces at the end of a line
-    # [default] space-before-tab: looks for spaces before tabs at the beginning of a line
-    whitespace = space-before-tab,-indent-with-non-tab,trailing-space
+    # <span class="nv">Treat</span> <span class="nv">spaces</span> <span class="nv">before</span> <span class="nv">tabs</span> <span class="nv">and</span> <span class="nv">all</span> <span class="nv">kinds</span> <span class="nv">of</span> <span class="nv">trailing</span> <span class="nv">whitespace</span> <span class="nv">as</span> <span class="nv">an</span> <span class="nv">error</span>
+    # [<span class="nv">default</span>] <span class="nv">trailing</span><span class="o">-</span><span class="nv">space</span>: <span class="nv">looks</span> <span class="k">for</span> <span class="nv">spaces</span> <span class="nv">at</span> <span class="nv">the</span> <span class="k">end</span> <span class="nv">of</span> <span class="nv">a</span> <span class="nv">line</span>
+    # [<span class="nv">default</span>] <span class="nv">space</span><span class="o">-</span><span class="nv">before</span><span class="o">-</span><span class="nv">tab</span>: <span class="nv">looks</span> <span class="k">for</span> <span class="nv">spaces</span> <span class="nv">before</span> <span class="nv">tabs</span> <span class="nv">at</span> <span class="nv">the</span> <span class="nv">beginning</span> <span class="nv">of</span> <span class="nv">a</span> <span class="nv">line</span>
+    <span class="nv">whitespace</span> <span class="o">=</span> <span class="nv">space</span><span class="o">-</span><span class="nv">before</span><span class="o">-</span><span class="nv">tab</span>,<span class="o">-</span><span class="nv">indent</span><span class="o">-</span><span class="nv">with</span><span class="o">-</span><span class="nv">non</span><span class="o">-</span><span class="nv">tab</span>,<span class="nv">trailing</span><span class="o">-</span><span class="nv">space</span>
 
-    # Make `git rebase` safer on macOS
-    # More info: &lt;http://www.git-tower.com/blog/make-git-rebase-safe-on-osx/&gt;
-    ###trustctime = false
+    # <span class="nv">Make</span> `<span class="nv">git</span> <span class="nv">rebase</span>` <span class="nv">safer</span> <span class="nv">on</span> <span class="nv">macOS</span>
+    # <span class="nv">More</span> <span class="nv">info</span>: <span class="o">&lt;</span><span class="nv">http</span>:<span class="o">//</span><span class="nv">www</span>.<span class="nv">git</span><span class="o">-</span><span class="nv">tower</span>.<span class="nv">com</span><span class="o">/</span><span class="nv">blog</span><span class="o">/</span><span class="nv">make</span><span class="o">-</span><span class="nv">git</span><span class="o">-</span><span class="nv">rebase</span><span class="o">-</span><span class="nv">safe</span><span class="o">-</span><span class="nv">on</span><span class="o">-</span><span class="nv">osx</span><span class="o">/&gt;</span>
+    ###<span class="nv">trustctime</span> <span class="o">=</span> <span class="nv">false</span>
 
-    # Prevent showing files whose names contain non-ASCII symbols as unversioned.
-    # http://michael-kuehnel.de/git/2014/11/21/git-mac-osx-and-german-umlaute.html
-    precomposeunicode = false
+    # <span class="nv">Prevent</span> <span class="nv">showing</span> <span class="nv">files</span> <span class="nv">whose</span> <span class="nv">names</span> <span class="nv">contain</span> <span class="nv">non</span><span class="o">-</span><span class="nv">ASCII</span> <span class="nv">symbols</span> <span class="nv">as</span> <span class="nv">unversioned</span>.
+    # <span class="nv">http</span>:<span class="o">//</span><span class="nv">michael</span><span class="o">-</span><span class="nv">kuehnel</span>.<span class="nv">de</span><span class="o">/</span><span class="nv">git</span><span class="o">/</span><span class="mi">2014</span><span class="o">/</span><span class="mi">11</span><span class="o">/</span><span class="mi">21</span><span class="o">/</span><span class="nv">git</span><span class="o">-</span><span class="nv">mac</span><span class="o">-</span><span class="nv">osx</span><span class="o">-</span><span class="nv">and</span><span class="o">-</span><span class="nv">german</span><span class="o">-</span><span class="nv">umlaute</span>.<span class="nv">html</span>
+    <span class="nv">precomposeunicode</span> <span class="o">=</span> <span class="nv">false</span>
 
-    # Speed up commands involving untracked files such as `git status`.
-    # https://git-scm.com/docs/git-update-index#_untracked_cache
-    untrackedCache = true
+    # <span class="nv">Speed</span> <span class="nv">up</span> <span class="nv">commands</span> <span class="nv">involving</span> <span class="nv">untracked</span> <span class="nv">files</span> <span class="nv">such</span> <span class="nv">as</span> `<span class="nv">git</span> <span class="nv">status</span>`.
+    # <span class="nv">https</span>:<span class="o">//</span><span class="nv">git</span><span class="o">-</span><span class="nv">scm</span>.<span class="nv">com</span><span class="o">/</span><span class="nv">docs</span><span class="o">/</span><span class="nv">git</span><span class="o">-</span><span class="nv">update</span><span class="o">-</span><span class="nv">index</span>#<span class="nv">_untracked_cache</span>
+    <span class="nv">untrackedCache</span> <span class="o">=</span> <span class="nv">true</span>
 </pre></div>
 
 
@@ -1036,225 +1523,6 @@ and you'll find yourself using a lot fewer keystrokes!</p></div>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Mocking AWS in Unit Tests
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-09-23T09:00:00-07:00" pubdate>Monday 09/23/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/mocking-aws-in-unit-tests.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2>Table of Contents</h2>
-<ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#a-simple-example-mocking-api-responses">A Simple Example: Mocking API Responses</a><ul>
-<li><a href="#the-genuine-aws-call">The Genuine AWS Call</a></li>
-<li><a href="#the-mocked-aws-call">The Mocked AWS Call</a></li>
-</ul>
-</li>
-</ul>
-<h2>Overview</h2>
-<p>This post covers a technique for mocking AWS in unit tests so that you can test functionality that normally
-requires API calls and handling responses, by mocking those responses instead of making actual API calls.</p>
-<h2>A Simple Example: Mocking API Responses</h2>
-<h3>The Genuine AWS Call</h3>
-<p>Let's start with an example of an AWS API call. Here's how our program will be structured:
-start with a driver <code>lister.py</code> that creates an AWS secrets manager client and defines a 
-function to list secrets using the secrets manager client, then a test for it in <code>test_lister.py</code>
-that mocks the AWS call.</p>
-<p>This example is simple and uses just one function, <code>list_secrets()</code>,
-which returns a JSON response that looks something like this:</p>
-<div class="highlight"><pre><span></span>{
-  &quot;SecretList&quot;: [
-    {
-      &quot;ARN&quot;: &quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret1-abc123&quot;,
-      &quot;Name&quot;: &quot;prefix/es_source_ip&quot;,
-      &quot;LastChangedDate&quot;: &quot;2019-09-23 17:29:16.267000-07:00&quot;,
-      &quot;LastAccessedDate&quot;: &quot;2019-09-23 17:00:00-07:00&quot;,
-      &quot;SecretVersionsToStages&quot;: {
-        &quot;658c3b41-0806-48b9-b05d-ea7dc2dbf237&quot;: [
-          &quot;AWSCURRENT&quot;
-        ],
-        &quot;f37ccfe2-16e0-4305-a250-ef89d2c47ece&quot;: [
-          &quot;AWSPREVIOUS&quot;
-        ]
-      }
-    },
-    {
-      &quot;ARN&quot;: &quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret2-def789&quot;,
-      &quot;Name&quot;: &quot;prefix/secret2&quot;,
-      &quot;LastChangedDate&quot;: &quot;2019-09-22 17:05:01.431000-07:00&quot;,
-      &quot;LastAccessedDate&quot;: &quot;2019-09-22 17:00:00-07:00&quot;,
-      &quot;SecretVersionsToStages&quot;: {
-        &quot;95AE5F8B-34E7-4EDF-A672-9E3AF1A4732E&quot;: [
-          &quot;AWSCURRENT&quot;
-        ],
-        &quot;F29E224A-BC03-4780-B64E-EA666B99D952&quot;: [
-          &quot;AWSPREVIOUS&quot;
-        ]
-      }
-    }
-  ]
-}
-</pre></div>
-
-
-<p>Using the secrets manager API:</p>
-<p><strong><code>lister.py</code></strong>:</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">boto3</span>
-
-<span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">print_secret_names</span><span class="p">():</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span><span class="p">()</span>
-    <span class="k">for</span> <span class="n">secret</span> <span class="ow">in</span> <span class="n">s</span><span class="p">[</span><span class="s1">&#39;SecretList&#39;</span><span class="p">]:</span>
-        <span class="k">if</span> <span class="s1">&#39;Name&#39;</span> <span class="ow">in</span> <span class="n">secret</span> <span class="ow">and</span> <span class="s1">&#39;LastAccessedDate&#39;</span> <span class="ow">in</span> <span class="n">secret</span><span class="p">:</span>
-            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Secret Name: {secret[&#39;Name&#39;]} (last accessed: {secret[&#39;LastAccessedDate&#39;]})&quot;</span><span class="p">)</span>
-
-<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="n">print_secret_names</span><span class="p">()</span>
-</pre></div>
-
-
-<p>If we run this file, we'll see a list of secrets in the real secrets manager -
-that is, the secrets manager that is linked to the boto credentials in <code>~/.aws</code>,
-so the secrets we see are the actual secrets in the secret manager:</p>
-<div class="highlight"><pre><span></span>$ python lister.py
-Secret Name: prefix/secret1 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">17</span>:00:00-07:00<span class="o">)</span>
-Secret Name: prefix/secret2 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">17</span>:00:00-07:00<span class="o">)</span>
-Secret Name: prefix/secret3 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">17</span>:00:00-07:00<span class="o">)</span>
-</pre></div>
-
-
-<h3>The Mocked AWS Call</h3>
-<p>It is important to only mock the functionality we need.
-We should mock the returned JSON, but only the <code>Name</code>
-and <code>LastAccessedDate</code> fields.</p>
-<p>To mock the call to <code>list_secrets()</code>, we start by importing
-<code>mock</code> from <code>unittest</code>. Then we import the file that has the
-function we want to test. We also import any other modules
-we need.</p>
-<p>Next, we are mocking a call to a method of an object,
-which we can do by creating a context via <code>with mock.patch()</code>
-(and passing it a string with the name of the object we want
-to mock, or patch).</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">unittest</span>
-<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
-<span class="kn">import</span> <span class="nn">lister</span>
-<span class="kn">import</span> <span class="nn">datetime</span>
-
-<span class="k">class</span> <span class="nc">TestMo</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mo.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
-            <span class="o">...</span>
-            <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span> <span class="o">...</span> <span class="p">)</span>
-            <span class="o">...</span>
-</pre></div>
-
-
-<p>Any calls made to <code>sm_client</code> in the <code>mo</code> module will be mocked
-using the <code>mock.MagicMock</code> object that we define in the context,
-so we craft the response we want before we call the method we 
-want to test (which in turn will call <code>sm_client.list_secrets()</code>).</p>
-<p>The full version of the test looks like this:</p>
-<p><strong><code>test_lister.py</code></strong>:</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">unittest</span>
-<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
-<span class="kn">import</span> <span class="nn">lister</span>
-<span class="kn">import</span> <span class="nn">datetime</span>
-
-<span class="k">class</span> <span class="nc">TestLister</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;lister.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
-            <span class="n">return_json</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;SecretList&quot;</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="p">{</span>
-                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret1&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
-                    <span class="p">},</span>
-                    <span class="p">{</span>
-                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret2&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
-                    <span class="p">}</span>
-                <span class="p">]</span>
-            <span class="p">}</span>
-            <span class="n">sm</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">return_json</span><span class="p">)</span>
-            <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
-
-<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
-</pre></div>
-
-
-<p>When the test file is run via Python, we see the fake secrets:</p>
-<div class="highlight"><pre><span></span>$ python test_lister.py
-Secret Name: fakesecret1 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">20</span>:31:49.186874<span class="o">)</span>
-Secret Name: fakesecret2 <span class="o">(</span>last accessed: <span class="m">2019</span>-09-23 <span class="m">20</span>:31:49.186880<span class="o">)</span>
-.
-----------------------------------------------------------------------
-Ran <span class="m">1</span> <span class="nb">test</span> in <span class="m">0</span>.000s
-
-OK
-</pre></div></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/pytest.html">pytest</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/tests.html">tests</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/aws.html">aws</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1278,6 +1546,19 @@ OK
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>December 2019</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/git-workflows-part-3-refactoring-large-pull-requests-and-commits.html">Git Workflows, Part 3: Refactoring Large Pull Requests and Commits</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

@@ -102,6 +102,650 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Enigma Cipher Implementation: Part 4: Combinatorics
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-03-22T19:00:00-07:00" pubdate>Wednesday 03/22/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/enigma.html">Enigma</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/enigma-cipher-implementation-part-4-combinatorics.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>In this, the fourth article in a series on implementing the Enigma cipher in Java,
+we use some big number libraries to explore the combinatorics of the Enigma encryption scheme
+and better understand the Enigma's strengths and weaknesses. </p>
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#keyspace">The Key Space</a></li>
+<li><a href="#switchboard">The Switchboard</a><ul>
+<li><a href="#onecable">One Cable</a></li>
+<li><a href="#morecables">More Cables</a></li>
+<li><a href="#manycables">Many Cables</a></li>
+<li><a href="#dupes">Accounting for Duplicates</a></li>
+<li><a href="#finalswitchboard">Final Combination Count for Switchboard</a></li>
+</ul>
+</li>
+<li><a href="#rotors">The Rotors</a><ul>
+<li><a href="#finalrotors">Final Combination Count for Rotors</a></li>
+</ul>
+</li>
+<li><a href="#reflector">The Reflector</a><ul>
+<li><a href="#finalreflector">Final Combination Count for Reflector</a></li>
+</ul>
+</li>
+<li><a href="#finalcount">Final Enigma Combination Count</a><ul>
+<li><a href="#javabigint">Java BigInteger Combinations Program</a></li>
+</ul>
+</li>
+<li><a href="#sources">Sources</a></li>
+</ul>
+<p><a name="keyspace"></a></p>
+<h2>The Key Space</h2>
+<p>Basically, what the Enigma did was to encrypt each character of a message one at a time, using a different, unique key for each character. 
+One key corresponded to one particular scrambled version of the alphabet (one possible set of substitutions). 
+The huge number of possible initial settings for the machine - the rotors, wiring, and reflector - meant that finding the very first key was extremely difficult. 
+Furthermore, as the operator entered additional characters into the Enigma, the machine would rotate the rotor wheels, 
+sequentially stepping through the space of possible keys in a totally random but deterministic way. 
+Any operator with a matching Enigma machine and matching settings could replicate this "random walk" through the key space.</p>
+<p>What we will do below is look at each component of the Enigma and determine the total number of 
+unique settings for each component. A single machine setting corresponds to a single key, 
+so the total number of possible settings of the machine yields the total number of possible keys for the Enigma.</p>
+<p><a name="switchboard"></a></p>
+<h2>The Switchboard</h2>
+<p>The switchboard at the front of the Enigma consisted of a set of plugs, one for each letter, connected by wires.
+The operator would connect pairs of wires to swap pairs of letters. If the letters A and K were connected, 
+any A signal entering the keyboard would become a K signal leaving the keyboard, 
+and any K signal entering the keyboard would become an A signal leaving the keyboard.
+Letters could not be connected to themselves, and a wire could only connect two letters together.</p>
+<p>From these constraints, we can get the total number of cable configurations on the front of the machine.
+For a machine with <span class="math">\(S\)</span> symbols (typically 26) and <span class="math">\(N\)</span> patch cables, the total number of configurations is:</p>
+<div class="math">$$
+C_{sw} = \dfrac{ S! }{ N! \times (S - 2N)! \times 2^N }
+$$</div>
+<p>Let's break down where those terms are coming from.</p>
+<p><a name="onecable"></a></p>
+<h3>One Cable</h3>
+<p>Let's consider a single cable connecting two letters. </p>
+<p>There are S (or, 26) places to plug in the left end, and S places to plug in the right end, for a total of <span class="math">\(S^2\)</span> combinations.
+But no cable can connect to itself, so there are actually <span class="math">\(S (S-1)\)</span> possible combinations. 
+Furthermore, each plug is symmetric (if A connects to B, then B connects to A), so half of the plug combinations are simply mirror images of the other half.</p>
+<p>For a single plug, we start from a total of <span class="math">\(26 \times 26 = 676\)</span> possible configurations.
+Ruling out any combinations that connect letters to themselves eliminates 26 possibilities (A connects to A, B connects to B, etc.)
+for a total of <span class="math">\(26 \times 25 = 650\)</span> possible configurations.
+But half of those configurations are mirror images of the other half (if we connect A to B, by implication we connect B to A),
+so our number of choices is actually half that, or <span class="math">\(\frac{26 \times 25}{2} = 350\)</span>.</p>
+<p><a name="morecables"></a></p>
+<h3>More Cables</h3>
+<p>If we plug in a second cable, there are now 2 choices occupied by the first letter, 
+so there are <span class="math">\(S-2\)</span> possible places to plug in the left end,
+and <span class="math">\(S-3\)</span> possible places to plug in the right end,
+but each having half duplicate solutions, since the wires are two-way,
+for a total of <span class="math">\(\frac{(S-2)(S-3)}{2 \times 2}\)</span> combinations.</p>
+<p><a name="manycables"></a></p>
+<h3>Many Cables</h3>
+<p>Once <span class="math">\(N\)</span> wires have been plugged in, there are <span class="math">\(S - 2N\)</span> spaces remaining, and <span class="math">\(2N\)</span> spaces occupied by plug ends. 
+That is, we are reducing the number of choices by 2 letters with each wire placed.</p>
+<p>Taking the product of these numbers explains part of the expression given above: </p>
+<div class="math">$$
+S \times (S-1) \times (S-2) \times \dots \times (S - 2N + 1) = \dfrac{ S! }{ (S - 2N) ! }
+$$</div>
+<p><a name="dupes"></a></p>
+<h3>Accounting for Duplicates</h3>
+<p>But where did the <span class="math">\(2^N\)</span> and <span class="math">\(N!\)</span> terms come from? They come from the fact that many choices of wiring configurations are duplicates.</p>
+<p>Dividing by <span class="math">\(2^N\)</span> comes from the fact that the wires are doubled up: if A connects to B, B connects to A.
+This means that when we choose our pair and connect A to B using a wire, we also connect B to A. 
+Even though it looks like two choices, it is only one!</p>
+<p>Meanwhile, the <span class="math">\(N!\)</span> term accounts for the fact that order is not important when we select pairs and place wires -
+making the choice to connect A to B and then making the choice to connect C to D 
+is entirely equivalent to connecting C to D, then connecting A to B.
+This means that <span class="math">\(N!\)</span> of the <span class="math">\(S!\)</span> possible solutions are duplicate configurations 
+with the same connections chosen in a different order.</p>
+<p><a name="moreinteresting"></a></p>
+<h3>Switchboard Combinations</h3>
+<p>Here's how the number of possible combinations that result when we plug in various numbers of wires in: </p>
+<div class="highlight"><pre><span></span><span class="n">S</span> <span class="o">=</span> <span class="mi">2</span>       <span class="n">N</span> <span class="o">=</span> <span class="mi">1</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">1</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">325</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">2</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">44</span><span class="p">,</span><span class="mi">850</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">3</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span><span class="mi">453</span><span class="p">,</span><span class="mi">450</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">4</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">164</span><span class="p">,</span><span class="mi">038</span><span class="p">,</span><span class="mi">875</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">5</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span><span class="mi">019</span><span class="p">,</span><span class="mi">589</span><span class="p">,</span><span class="mi">575</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">6</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="mi">391</span><span class="p">,</span><span class="mi">791</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">7</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">305</span><span class="p">,</span><span class="mi">093</span><span class="p">,</span><span class="mi">289</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">8</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span><span class="mi">767</span><span class="p">,</span><span class="mi">019</span><span class="p">,</span><span class="mi">638</span><span class="p">,</span><span class="mi">375</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">9</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">53</span><span class="p">,</span><span class="mi">835</span><span class="p">,</span><span class="mi">098</span><span class="p">,</span><span class="mi">191</span><span class="p">,</span><span class="mi">875</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">10</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">150</span><span class="p">,</span><span class="mi">738</span><span class="p">,</span><span class="mi">274</span><span class="p">,</span><span class="mi">937</span><span class="p">,</span><span class="mi">250</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">11</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">205</span><span class="p">,</span><span class="mi">552</span><span class="p">,</span><span class="mi">193</span><span class="p">,</span><span class="mi">096</span><span class="p">,</span><span class="mi">250</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">12</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">102</span><span class="p">,</span><span class="mi">776</span><span class="p">,</span><span class="mi">096</span><span class="p">,</span><span class="mi">548</span><span class="p">,</span><span class="mi">125</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">13</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">7</span><span class="p">,</span><span class="mi">905</span><span class="p">,</span><span class="mi">853</span><span class="p">,</span><span class="mi">580</span><span class="p">,</span><span class="mi">625</span>
+</pre></div>
+
+
+<p>Notice the bump in the shape of the distribution, meaning the use of 11 wires is much more secure than the use of 13 wires.
+Let's explore that.</p>
+<h3>More Interesting Observations About the Switchboard</h3>
+<p>Notice how the switchboard expression is <em>not</em> proportional to <span class="math">\(N\)</span>,
+it is inversely proportional to two different terms, each changing differently
+as <span class="math">\(N\)</span> changes.</p>
+<p>We are looking at the denominator of this expression:</p>
+<div class="math">$$
+C_{sw} = \dfrac{ S! }{ N! \times (S - 2N)! \times 2^N }
+$$</div>
+<p>The term <span class="math">\(N!\)</span> on the bottom will increase as <span class="math">\(N\)</span> increases, thereby decreasing the total number of possible keys <span class="math">\(C_{sw}\)</span>.
+However, the term <span class="math">\((S - 2N)!\)</span> will decrease as <span class="math">\(N\)</span> increases, thereby increasing the total number of possible keys <span class="math">\(C_{sw}\)</span>.
+The tradeoff can be visualized just by printing it out - here are the total number of combinations that are possible
+for an alphabet of <span class="math">\(S = 26\)</span> symbols, using <span class="math">\(N = 1 \dots 13\)</span> wires:</p>
+<p>This pattern holds for other alphabet sizes. Here's a 52-character alphabet:</p>
+<div class="highlight"><pre><span></span><span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">1</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">326</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">2</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">812</span><span class="p">,</span><span class="mi">175</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">3</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">305</span><span class="p">,</span><span class="mi">377</span><span class="p">,</span><span class="mi">800</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">4</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">79</span><span class="p">,</span><span class="mi">016</span><span class="p">,</span><span class="mi">505</span><span class="p">,</span><span class="mi">750</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">5</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">14</span><span class="p">,</span><span class="mi">949</span><span class="p">,</span><span class="mi">922</span><span class="p">,</span><span class="mi">887</span><span class="p">,</span><span class="mi">900</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">6</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span><span class="mi">145</span><span class="p">,</span><span class="mi">313</span><span class="p">,</span><span class="mi">934</span><span class="p">,</span><span class="mi">413</span><span class="p">,</span><span class="mi">650</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">7</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">239</span><span class="p">,</span><span class="mi">049</span><span class="p">,</span><span class="mi">266</span><span class="p">,</span><span class="mi">977</span><span class="p">,</span><span class="mi">521</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">8</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">21</span><span class="p">,</span><span class="mi">006</span><span class="p">,</span><span class="mi">454</span><span class="p">,</span><span class="mi">335</span><span class="p">,</span><span class="mi">649</span><span class="p">,</span><span class="mi">657</span><span class="p">,</span><span class="mi">875</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">9</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">470</span><span class="p">,</span><span class="mi">451</span><span class="p">,</span><span class="mi">803</span><span class="p">,</span><span class="mi">495</span><span class="p">,</span><span class="mi">476</span><span class="p">,</span><span class="mi">051</span><span class="p">,</span><span class="mi">250</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">10</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">82</span><span class="p">,</span><span class="mi">492</span><span class="p">,</span><span class="mi">346</span><span class="p">,</span><span class="mi">176</span><span class="p">,</span><span class="mi">096</span><span class="p">,</span><span class="mi">206</span><span class="p">,</span><span class="mi">475</span><span class="p">,</span><span class="mi">125</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">11</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span><span class="mi">719</span><span class="p">,</span><span class="mi">654</span><span class="p">,</span><span class="mi">882</span><span class="p">,</span><span class="mi">122</span><span class="p">,</span><span class="mi">156</span><span class="p">,</span><span class="mi">219</span><span class="p">,</span><span class="mi">242</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">12</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">134</span><span class="p">,</span><span class="mi">837</span><span class="p">,</span><span class="mi">489</span><span class="p">,</span><span class="mi">476</span><span class="p">,</span><span class="mi">928</span><span class="p">,</span><span class="mi">162</span><span class="p">,</span><span class="mi">947</span><span class="p">,</span><span class="mi">522</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">13</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span><span class="mi">920</span><span class="p">,</span><span class="mi">659</span><span class="p">,</span><span class="mi">309</span><span class="p">,</span><span class="mi">406</span><span class="p">,</span><span class="mi">065</span><span class="p">,</span><span class="mi">045</span><span class="p">,</span><span class="mi">704</span><span class="p">,</span><span class="mi">885</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">14</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">91</span><span class="p">,</span><span class="mi">015</span><span class="p">,</span><span class="mi">305</span><span class="p">,</span><span class="mi">396</span><span class="p">,</span><span class="mi">926</span><span class="p">,</span><span class="mi">509</span><span class="p">,</span><span class="mi">989</span><span class="p">,</span><span class="mi">577</span><span class="p">,</span><span class="mi">687</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">15</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">674</span><span class="p">,</span><span class="mi">681</span><span class="p">,</span><span class="mi">619</span><span class="p">,</span><span class="mi">303</span><span class="p">,</span><span class="mi">447</span><span class="p">,</span><span class="mi">783</span><span class="p">,</span><span class="mi">808</span><span class="p">,</span><span class="mi">229</span><span class="p">,</span><span class="mi">450</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">16</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span><span class="mi">178</span><span class="p">,</span><span class="mi">215</span><span class="p">,</span><span class="mi">878</span><span class="p">,</span><span class="mi">693</span><span class="p">,</span><span class="mi">527</span><span class="p">,</span><span class="mi">378</span><span class="p">,</span><span class="mi">731</span><span class="p">,</span><span class="mi">312</span><span class="p">,</span><span class="mi">684</span><span class="p">,</span><span class="mi">375</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">17</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">270</span><span class="p">,</span><span class="mi">227</span><span class="p">,</span><span class="mi">118</span><span class="p">,</span><span class="mi">644</span><span class="p">,</span><span class="mi">221</span><span class="p">,</span><span class="mi">776</span><span class="p">,</span><span class="mi">585</span><span class="p">,</span><span class="mi">820</span><span class="p">,</span><span class="mi">553</span><span class="p">,</span><span class="mi">531</span><span class="p">,</span><span class="mi">250</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">18</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span><span class="mi">296</span><span class="p">,</span><span class="mi">930</span><span class="p">,</span><span class="mi">508</span><span class="p">,</span><span class="mi">475</span><span class="p">,</span><span class="mi">885</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">979</span><span class="p">,</span><span class="mi">474</span><span class="p">,</span><span class="mi">705</span><span class="p">,</span><span class="mi">015</span><span class="p">,</span><span class="mi">625</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">19</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">14</span><span class="p">,</span><span class="mi">506</span><span class="p">,</span><span class="mi">929</span><span class="p">,</span><span class="mi">527</span><span class="p">,</span><span class="mi">216</span><span class="p">,</span><span class="mi">116</span><span class="p">,</span><span class="mi">427</span><span class="p">,</span><span class="mi">238</span><span class="p">,</span><span class="mi">787</span><span class="p">,</span><span class="mi">610</span><span class="p">,</span><span class="mi">625</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">20</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">66</span><span class="p">,</span><span class="mi">006</span><span class="p">,</span><span class="mi">529</span><span class="p">,</span><span class="mi">348</span><span class="p">,</span><span class="mi">833</span><span class="p">,</span><span class="mi">329</span><span class="p">,</span><span class="mi">743</span><span class="p">,</span><span class="mi">936</span><span class="p">,</span><span class="mi">483</span><span class="p">,</span><span class="mi">628</span><span class="p">,</span><span class="mi">343</span><span class="p">,</span><span class="mi">750</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">21</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">207</span><span class="p">,</span><span class="mi">449</span><span class="p">,</span><span class="mi">092</span><span class="p">,</span><span class="mi">239</span><span class="p">,</span><span class="mi">190</span><span class="p">,</span><span class="mi">464</span><span class="p">,</span><span class="mi">909</span><span class="p">,</span><span class="mi">514</span><span class="p">,</span><span class="mi">662</span><span class="p">,</span><span class="mi">831</span><span class="p">,</span><span class="mi">937</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">22</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">424</span><span class="p">,</span><span class="mi">327</span><span class="p">,</span><span class="mi">688</span><span class="p">,</span><span class="mi">671</span><span class="p">,</span><span class="mi">071</span><span class="p">,</span><span class="mi">405</span><span class="p">,</span><span class="mi">496</span><span class="p">,</span><span class="mi">734</span><span class="p">,</span><span class="mi">537</span><span class="p">,</span><span class="mi">610</span><span class="p">,</span><span class="mi">781</span><span class="p">,</span><span class="mi">250</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">23</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">516</span><span class="p">,</span><span class="mi">572</span><span class="p">,</span><span class="mi">838</span><span class="p">,</span><span class="mi">382</span><span class="p">,</span><span class="mi">173</span><span class="p">,</span><span class="mi">884</span><span class="p">,</span><span class="mi">952</span><span class="p">,</span><span class="mi">546</span><span class="p">,</span><span class="mi">393</span><span class="p">,</span><span class="mi">613</span><span class="p">,</span><span class="mi">125</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">24</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">322</span><span class="p">,</span><span class="mi">858</span><span class="p">,</span><span class="mi">023</span><span class="p">,</span><span class="mi">988</span><span class="p">,</span><span class="mi">858</span><span class="p">,</span><span class="mi">678</span><span class="p">,</span><span class="mi">095</span><span class="p">,</span><span class="mi">341</span><span class="p">,</span><span class="mi">496</span><span class="p">,</span><span class="mi">008</span><span class="p">,</span><span class="mi">203</span><span class="p">,</span><span class="mi">125</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">25</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">77</span><span class="p">,</span><span class="mi">485</span><span class="p">,</span><span class="mi">925</span><span class="p">,</span><span class="mi">757</span><span class="p">,</span><span class="mi">326</span><span class="p">,</span><span class="mi">082</span><span class="p">,</span><span class="mi">742</span><span class="p">,</span><span class="mi">881</span><span class="p">,</span><span class="mi">959</span><span class="p">,</span><span class="mi">041</span><span class="p">,</span><span class="mi">968</span><span class="p">,</span><span class="mi">750</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">52</span>      <span class="n">N</span> <span class="o">=</span> <span class="mi">26</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span><span class="mi">980</span><span class="p">,</span><span class="mi">227</span><span class="p">,</span><span class="mi">913</span><span class="p">,</span><span class="mi">743</span><span class="p">,</span><span class="mi">310</span><span class="p">,</span><span class="mi">874</span><span class="p">,</span><span class="mi">726</span><span class="p">,</span><span class="mi">229</span><span class="p">,</span><span class="mi">193</span><span class="p">,</span><span class="mi">921</span><span class="p">,</span><span class="mi">875</span>
+</pre></div>
+
+
+<p>For a 52-symbol alphabet the optimum number of pairs is 23 keys.</p>
+<p>Okay, here we go with an alphabet of 100 characters:</p>
+<div class="highlight"><pre><span></span><span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">1</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span><span class="mi">950</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">2</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">11</span><span class="p">,</span><span class="mi">763</span><span class="p">,</span><span class="mi">675</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">3</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">17</span><span class="p">,</span><span class="mi">880</span><span class="p">,</span><span class="mi">786</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">4</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">19</span><span class="p">,</span><span class="mi">539</span><span class="p">,</span><span class="mi">228</span><span class="p">,</span><span class="mi">901</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">5</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span><span class="mi">358</span><span class="p">,</span><span class="mi">242</span><span class="p">,</span><span class="mi">436</span><span class="p">,</span><span class="mi">335</span><span class="p">,</span><span class="mi">800</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">6</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span><span class="mi">919</span><span class="p">,</span><span class="mi">126</span><span class="p">,</span><span class="mi">826</span><span class="p">,</span><span class="mi">254</span><span class="p">,</span><span class="mi">146</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">7</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span><span class="mi">971</span><span class="p">,</span><span class="mi">202</span><span class="p">,</span><span class="mi">498</span><span class="p">,</span><span class="mi">700</span><span class="p">,</span><span class="mi">124</span><span class="p">,</span><span class="mi">686</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">8</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span><span class="mi">728</span><span class="p">,</span><span class="mi">093</span><span class="p">,</span><span class="mi">141</span><span class="p">,</span><span class="mi">593</span><span class="p">,</span><span class="mi">619</span><span class="p">,</span><span class="mi">465</span><span class="p">,</span><span class="mi">916</span><span class="p">,</span><span class="mi">250</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">9</span>       <span class="k">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">056</span><span class="p">,</span><span class="mi">681</span><span class="p">,</span><span class="mi">410</span><span class="p">,</span><span class="mi">177</span><span class="p">,</span><span class="mi">261</span><span class="p">,</span><span class="mi">939</span><span class="p">,</span><span class="mi">798</span><span class="p">,</span><span class="mi">227</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">10</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">350</span><span class="p">,</span><span class="mi">923</span><span class="p">,</span><span class="mi">896</span><span class="p">,</span><span class="mi">319</span><span class="p">,</span><span class="mi">868</span><span class="p">,</span><span class="mi">690</span><span class="p">,</span><span class="mi">206</span><span class="p">,</span><span class="mi">991</span><span class="p">,</span><span class="mi">352</span><span class="p">,</span><span class="mi">750</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">11</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span><span class="mi">810</span><span class="p">,</span><span class="mi">864</span><span class="p">,</span><span class="mi">760</span><span class="p">,</span><span class="mi">980</span><span class="p">,</span><span class="mi">460</span><span class="p">,</span><span class="mi">095</span><span class="p">,</span><span class="mi">826</span><span class="p">,</span><span class="mi">606</span><span class="p">,</span><span class="mi">790</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">12</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span><span class="mi">227</span><span class="p">,</span><span class="mi">918</span><span class="p">,</span><span class="mi">906</span><span class="p">,</span><span class="mi">435</span><span class="p">,</span><span class="mi">360</span><span class="p">,</span><span class="mi">138</span><span class="p">,</span><span class="mi">980</span><span class="p">,</span><span class="mi">608</span><span class="p">,</span><span class="mi">349</span><span class="p">,</span><span class="mi">197</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">13</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span><span class="mi">530</span><span class="p">,</span><span class="mi">736</span><span class="p">,</span><span class="mi">067</span><span class="p">,</span><span class="mi">949</span><span class="p">,</span><span class="mi">290</span><span class="p">,</span><span class="mi">492</span><span class="p">,</span><span class="mi">007</span><span class="p">,</span><span class="mi">287</span><span class="p">,</span><span class="mi">215</span><span class="p">,</span><span class="mi">016</span><span class="p">,</span><span class="mi">375</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">14</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">067</span><span class="p">,</span><span class="mi">037</span><span class="p">,</span><span class="mi">008</span><span class="p">,</span><span class="mi">537</span><span class="p">,</span><span class="mi">930</span><span class="p">,</span><span class="mi">972</span><span class="p">,</span><span class="mi">779</span><span class="p">,</span><span class="mi">405</span><span class="p">,</span><span class="mi">911</span><span class="p">,</span><span class="mi">982</span><span class="p">,</span><span class="mi">802</span><span class="p">,</span><span class="mi">062</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">15</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">181</span><span class="p">,</span><span class="mi">823</span><span class="p">,</span><span class="mi">106</span><span class="p">,</span><span class="mi">254</span><span class="p">,</span><span class="mi">863</span><span class="p">,</span><span class="mi">437</span><span class="p">,</span><span class="mi">761</span><span class="p">,</span><span class="mi">610</span><span class="p">,</span><span class="mi">767</span><span class="p">,</span><span class="mi">401</span><span class="p">,</span><span class="mi">869</span><span class="p">,</span><span class="mi">471</span><span class="p">,</span><span class="mi">450</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">16</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">27</span><span class="p">,</span><span class="mi">443</span><span class="p">,</span><span class="mi">925</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="mi">343</span><span class="p">,</span><span class="mi">450</span><span class="p">,</span><span class="mi">137</span><span class="p">,</span><span class="mi">143</span><span class="p">,</span><span class="mi">125</span><span class="p">,</span><span class="mi">204</span><span class="p">,</span><span class="mi">719</span><span class="p">,</span><span class="mi">673</span><span class="p">,</span><span class="mi">346</span><span class="p">,</span><span class="mi">984</span><span class="p">,</span><span class="mi">375</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">17</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span><span class="mi">677</span><span class="p">,</span><span class="mi">485</span><span class="p">,</span><span class="mi">963</span><span class="p">,</span><span class="mi">446</span><span class="p">,</span><span class="mi">022</span><span class="p">,</span><span class="mi">318</span><span class="p">,</span><span class="mi">377</span><span class="p">,</span><span class="mi">178</span><span class="p">,</span><span class="mi">777</span><span class="p">,</span><span class="mi">432</span><span class="p">,</span><span class="mi">436</span><span class="p">,</span><span class="mi">228</span><span class="p">,</span><span class="mi">495</span><span class="p">,</span><span class="mi">906</span><span class="p">,</span><span class="mi">250</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">18</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">438</span><span class="p">,</span><span class="mi">233</span><span class="p">,</span><span class="mi">743</span><span class="p">,</span><span class="mi">977</span><span class="p">,</span><span class="mi">317</span><span class="p">,</span><span class="mi">659</span><span class="p">,</span><span class="mi">606</span><span class="p">,</span><span class="mi">613</span><span class="p">,</span><span class="mi">804</span><span class="p">,</span><span class="mi">310</span><span class="p">,</span><span class="mi">698</span><span class="p">,</span><span class="mi">650</span><span class="p">,</span><span class="mi">562</span><span class="p">,</span><span class="mi">428</span><span class="p">,</span><span class="mi">828</span><span class="p">,</span><span class="mi">125</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">19</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">46</span><span class="p">,</span><span class="mi">498</span><span class="p">,</span><span class="mi">906</span><span class="p">,</span><span class="mi">729</span><span class="p">,</span><span class="mi">382</span><span class="p">,</span><span class="mi">757</span><span class="p">,</span><span class="mi">987</span><span class="p">,</span><span class="mi">733</span><span class="p">,</span><span class="mi">338</span><span class="p">,</span><span class="mi">394</span><span class="p">,</span><span class="mi">229</span><span class="p">,</span><span class="mi">919</span><span class="p">,</span><span class="mi">975</span><span class="p">,</span><span class="mi">466</span><span class="p">,</span><span class="mi">132</span><span class="p">,</span><span class="mi">500</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">20</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span><span class="mi">396</span><span class="p">,</span><span class="mi">471</span><span class="p">,</span><span class="mi">631</span><span class="p">,</span><span class="mi">263</span><span class="p">,</span><span class="mi">139</span><span class="p">,</span><span class="mi">767</span><span class="p">,</span><span class="mi">740</span><span class="p">,</span><span class="mi">187</span><span class="p">,</span><span class="mi">145</span><span class="p">,</span><span class="mi">174</span><span class="p">,</span><span class="mi">438</span><span class="p">,</span><span class="mi">933</span><span class="p">,</span><span class="mi">680</span><span class="p">,</span><span class="mi">322</span><span class="p">,</span><span class="mi">827</span><span class="p">,</span><span class="mi">875</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">21</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">370</span><span class="p">,</span><span class="mi">559</span><span class="p">,</span><span class="mi">751</span><span class="p">,</span><span class="mi">777</span><span class="p">,</span><span class="mi">893</span><span class="p">,</span><span class="mi">208</span><span class="p">,</span><span class="mi">995</span><span class="p">,</span><span class="mi">244</span><span class="p">,</span><span class="mi">345</span><span class="p">,</span><span class="mi">093</span><span class="p">,</span><span class="mi">274</span><span class="p">,</span><span class="mi">138</span><span class="p">,</span><span class="mi">695</span><span class="p">,</span><span class="mi">912</span><span class="p">,</span><span class="mi">924</span><span class="p">,</span><span class="mi">063</span><span class="p">,</span><span class="mi">750</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">22</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">27</span><span class="p">,</span><span class="mi">842</span><span class="p">,</span><span class="mi">512</span><span class="p">,</span><span class="mi">258</span><span class="p">,</span><span class="mi">584</span><span class="p">,</span><span class="mi">430</span><span class="p">,</span><span class="mi">657</span><span class="p">,</span><span class="mi">688</span><span class="p">,</span><span class="mi">131</span><span class="p">,</span><span class="mi">929</span><span class="p">,</span><span class="mi">053</span><span class="p">,</span><span class="mi">734</span><span class="p">,</span><span class="mi">148</span><span class="p">,</span><span class="mi">379</span><span class="p">,</span><span class="mi">275</span><span class="p">,</span><span class="mi">612</span><span class="p">,</span><span class="mi">608</span><span class="p">,</span><span class="mi">125</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">23</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">864</span><span class="p">,</span><span class="mi">237</span><span class="p">,</span><span class="mi">777</span><span class="p">,</span><span class="mi">313</span><span class="p">,</span><span class="mi">914</span><span class="p">,</span><span class="mi">052</span><span class="p">,</span><span class="mi">732</span><span class="p">,</span><span class="mi">161</span><span class="p">,</span><span class="mi">876</span><span class="p">,</span><span class="mi">988</span><span class="p">,</span><span class="mi">815</span><span class="p">,</span><span class="mi">242</span><span class="p">,</span><span class="mi">978</span><span class="p">,</span><span class="mi">438</span><span class="p">,</span><span class="mi">454</span><span class="p">,</span><span class="mi">061</span><span class="p">,</span><span class="mi">587</span><span class="p">,</span><span class="mi">500</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">24</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">111</span><span class="p">,</span><span class="mi">155</span><span class="p">,</span><span class="mi">177</span><span class="p">,</span><span class="mi">472</span><span class="p">,</span><span class="mi">342</span><span class="p">,</span><span class="mi">125</span><span class="p">,</span><span class="mi">394</span><span class="p">,</span><span class="mi">155</span><span class="p">,</span><span class="mi">151</span><span class="p">,</span><span class="mi">915</span><span class="p">,</span><span class="mi">458</span><span class="p">,</span><span class="mi">108</span><span class="p">,</span><span class="mi">862</span><span class="p">,</span><span class="mi">589</span><span class="p">,</span><span class="mi">392</span><span class="p">,</span><span class="mi">823</span><span class="p">,</span><span class="mi">422</span><span class="p">,</span><span class="mi">154</span><span class="p">,</span><span class="mi">687</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">25</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span><span class="mi">895</span><span class="p">,</span><span class="mi">670</span><span class="p">,</span><span class="mi">613</span><span class="p">,</span><span class="mi">133</span><span class="p">,</span><span class="mi">026</span><span class="p">,</span><span class="mi">330</span><span class="p">,</span><span class="mi">905</span><span class="p">,</span><span class="mi">989</span><span class="p">,</span><span class="mi">257</span><span class="p">,</span><span class="mi">595</span><span class="p">,</span><span class="mi">898</span><span class="p">,</span><span class="mi">094</span><span class="p">,</span><span class="mi">071</span><span class="p">,</span><span class="mi">741</span><span class="p">,</span><span class="mi">395</span><span class="p">,</span><span class="mi">354</span><span class="p">,</span><span class="mi">311</span><span class="p">,</span><span class="mi">084</span><span class="p">,</span><span class="mi">625</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">26</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">277</span><span class="p">,</span><span class="mi">776</span><span class="p">,</span><span class="mi">788</span><span class="p">,</span><span class="mi">503</span><span class="p">,</span><span class="mi">382</span><span class="p">,</span><span class="mi">971</span><span class="p">,</span><span class="mi">359</span><span class="p">,</span><span class="mi">993</span><span class="p">,</span><span class="mi">724</span><span class="p">,</span><span class="mi">636</span><span class="p">,</span><span class="mi">729</span><span class="p">,</span><span class="mi">814</span><span class="p">,</span><span class="mi">047</span><span class="p">,</span><span class="mi">610</span><span class="p">,</span><span class="mi">892</span><span class="p">,</span><span class="mi">665</span><span class="p">,</span><span class="mi">731</span><span class="p">,</span><span class="mi">964</span><span class="p">,</span><span class="mi">564</span><span class="p">,</span><span class="mi">062</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">27</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">11</span><span class="p">,</span><span class="mi">604</span><span class="p">,</span><span class="mi">896</span><span class="p">,</span><span class="mi">941</span><span class="p">,</span><span class="mi">919</span><span class="p">,</span><span class="mi">110</span><span class="p">,</span><span class="mi">803</span><span class="p">,</span><span class="mi">484</span><span class="p">,</span><span class="mi">182</span><span class="p">,</span><span class="mi">273</span><span class="p">,</span><span class="mi">712</span><span class="p">,</span><span class="mi">267</span><span class="p">,</span><span class="mi">786</span><span class="p">,</span><span class="mi">877</span><span class="p">,</span><span class="mi">966</span><span class="p">,</span><span class="mi">182</span><span class="p">,</span><span class="mi">479</span><span class="p">,</span><span class="mi">468</span><span class="p">,</span><span class="mi">741</span><span class="p">,</span><span class="mi">787</span><span class="p">,</span><span class="mi">500</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">28</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">428</span><span class="p">,</span><span class="mi">966</span><span class="p">,</span><span class="mi">726</span><span class="p">,</span><span class="mi">245</span><span class="p">,</span><span class="mi">938</span><span class="p">,</span><span class="mi">560</span><span class="p">,</span><span class="mi">057</span><span class="p">,</span><span class="mi">361</span><span class="p">,</span><span class="mi">737</span><span class="p">,</span><span class="mi">617</span><span class="p">,</span><span class="mi">578</span><span class="p">,</span><span class="mi">469</span><span class="p">,</span><span class="mi">979</span><span class="p">,</span><span class="mi">239</span><span class="p">,</span><span class="mi">107</span><span class="p">,</span><span class="mi">102</span><span class="p">,</span><span class="mi">366</span><span class="p">,</span><span class="mi">076</span><span class="p">,</span><span class="mi">705</span><span class="p">,</span><span class="mi">359</span><span class="p">,</span><span class="mi">375</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">29</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">13</span><span class="p">,</span><span class="mi">993</span><span class="p">,</span><span class="mi">190</span><span class="p">,</span><span class="mi">449</span><span class="p">,</span><span class="mi">264</span><span class="p">,</span><span class="mi">064</span><span class="p">,</span><span class="mi">752</span><span class="p">,</span><span class="mi">216</span><span class="p">,</span><span class="mi">007</span><span class="p">,</span><span class="mi">027</span><span class="p">,</span><span class="mi">111</span><span class="p">,</span><span class="mi">352</span><span class="p">,</span><span class="mi">848</span><span class="p">,</span><span class="mi">288</span><span class="p">,</span><span class="mi">282</span><span class="p">,</span><span class="mi">597</span><span class="p">,</span><span class="mi">201</span><span class="p">,</span><span class="mi">320</span><span class="p">,</span><span class="mi">984</span><span class="p">,</span><span class="mi">940</span><span class="p">,</span><span class="mi">343</span><span class="p">,</span><span class="mi">750</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">30</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">401</span><span class="p">,</span><span class="mi">604</span><span class="p">,</span><span class="mi">565</span><span class="p">,</span><span class="mi">893</span><span class="p">,</span><span class="mi">878</span><span class="p">,</span><span class="mi">658</span><span class="p">,</span><span class="mi">388</span><span class="p">,</span><span class="mi">599</span><span class="p">,</span><span class="mi">401</span><span class="p">,</span><span class="mi">678</span><span class="p">,</span><span class="mi">095</span><span class="p">,</span><span class="mi">826</span><span class="p">,</span><span class="mi">745</span><span class="p">,</span><span class="mi">873</span><span class="p">,</span><span class="mi">710</span><span class="p">,</span><span class="mi">539</span><span class="p">,</span><span class="mi">677</span><span class="p">,</span><span class="mi">912</span><span class="p">,</span><span class="mi">267</span><span class="p">,</span><span class="mi">787</span><span class="p">,</span><span class="mi">865</span><span class="p">,</span><span class="mi">625</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">31</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span><span class="mi">104</span><span class="p">,</span><span class="mi">889</span><span class="p">,</span><span class="mi">077</span><span class="p">,</span><span class="mi">329</span><span class="p">,</span><span class="mi">850</span><span class="p">,</span><span class="mi">114</span><span class="p">,</span><span class="mi">293</span><span class="p">,</span><span class="mi">791</span><span class="p">,</span><span class="mi">397</span><span class="p">,</span><span class="mi">061</span><span class="p">,</span><span class="mi">765</span><span class="p">,</span><span class="mi">963</span><span class="p">,</span><span class="mi">283</span><span class="p">,</span><span class="mi">274</span><span class="p">,</span><span class="mi">007</span><span class="p">,</span><span class="mi">127</span><span class="p">,</span><span class="mi">379</span><span class="p">,</span><span class="mi">728</span><span class="p">,</span><span class="mi">028</span><span class="p">,</span><span class="mi">210</span><span class="p">,</span><span class="mi">812</span><span class="p">,</span><span class="mi">500</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">32</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">221</span><span class="p">,</span><span class="mi">991</span><span class="p">,</span><span class="mi">781</span><span class="p">,</span><span class="mi">917</span><span class="p">,</span><span class="mi">590</span><span class="p">,</span><span class="mi">144</span><span class="p">,</span><span class="mi">698</span><span class="p">,</span><span class="mi">391</span><span class="p">,</span><span class="mi">729</span><span class="p">,</span><span class="mi">754</span><span class="p">,</span><span class="mi">200</span><span class="p">,</span><span class="mi">671</span><span class="p">,</span><span class="mi">005</span><span class="p">,</span><span class="mi">879</span><span class="p">,</span><span class="mi">425</span><span class="p">,</span><span class="mi">844</span><span class="p">,</span><span class="mi">079</span><span class="p">,</span><span class="mi">623</span><span class="p">,</span><span class="mi">400</span><span class="p">,</span><span class="mi">119</span><span class="p">,</span><span class="mi">756</span><span class="p">,</span><span class="mi">287</span><span class="p">,</span><span class="mi">109</span><span class="p">,</span><span class="mi">375</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">33</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span><span class="mi">238</span><span class="p">,</span><span class="mi">024</span><span class="p">,</span><span class="mi">927</span><span class="p">,</span><span class="mi">517</span><span class="p">,</span><span class="mi">630</span><span class="p">,</span><span class="mi">035</span><span class="p">,</span><span class="mi">151</span><span class="p">,</span><span class="mi">114</span><span class="p">,</span><span class="mi">840</span><span class="p">,</span><span class="mi">762</span><span class="p">,</span><span class="mi">012</span><span class="p">,</span><span class="mi">810</span><span class="p">,</span><span class="mi">112</span><span class="p">,</span><span class="mi">243</span><span class="p">,</span><span class="mi">584</span><span class="p">,</span><span class="mi">296</span><span class="p">,</span><span class="mi">065</span><span class="p">,</span><span class="mi">537</span><span class="p">,</span><span class="mi">638</span><span class="p">,</span><span class="mi">649</span><span class="p">,</span><span class="mi">892</span><span class="p">,</span><span class="mi">753</span><span class="p">,</span><span class="mi">906</span><span class="p">,</span><span class="mi">250</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">34</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">69</span><span class="p">,</span><span class="mi">927</span><span class="p">,</span><span class="mi">411</span><span class="p">,</span><span class="mi">304</span><span class="p">,</span><span class="mi">040</span><span class="p">,</span><span class="mi">895</span><span class="p">,</span><span class="mi">579</span><span class="p">,</span><span class="mi">993</span><span class="p">,</span><span class="mi">394</span><span class="p">,</span><span class="mi">872</span><span class="p">,</span><span class="mi">573</span><span class="p">,</span><span class="mi">211</span><span class="p">,</span><span class="mi">366</span><span class="p">,</span><span class="mi">852</span><span class="p">,</span><span class="mi">019</span><span class="p">,</span><span class="mi">140</span><span class="p">,</span><span class="mi">885</span><span class="p">,</span><span class="mi">081</span><span class="p">,</span><span class="mi">371</span><span class="p">,</span><span class="mi">037</span><span class="p">,</span><span class="mi">723</span><span class="p">,</span><span class="mi">230</span><span class="p">,</span><span class="mi">439</span><span class="p">,</span><span class="mi">453</span><span class="p">,</span><span class="mi">125</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">35</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">990</span><span class="p">,</span><span class="mi">971</span><span class="p">,</span><span class="mi">314</span><span class="p">,</span><span class="mi">480</span><span class="p">,</span><span class="mi">122</span><span class="p">,</span><span class="mi">405</span><span class="p">,</span><span class="mi">933</span><span class="p">,</span><span class="mi">620</span><span class="p">,</span><span class="mi">681</span><span class="p">,</span><span class="mi">622</span><span class="p">,</span><span class="mi">751</span><span class="p">,</span><span class="mi">795</span><span class="p">,</span><span class="mi">370</span><span class="p">,</span><span class="mi">245</span><span class="p">,</span><span class="mi">756</span><span class="p">,</span><span class="mi">967</span><span class="p">,</span><span class="mi">971</span><span class="p">,</span><span class="mi">438</span><span class="p">,</span><span class="mi">858</span><span class="p">,</span><span class="mi">134</span><span class="p">,</span><span class="mi">592</span><span class="p">,</span><span class="mi">065</span><span class="p">,</span><span class="mi">656</span><span class="p">,</span><span class="mi">250</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">36</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">11</span><span class="p">,</span><span class="mi">974</span><span class="p">,</span><span class="mi">236</span><span class="p">,</span><span class="mi">716</span><span class="p">,</span><span class="mi">634</span><span class="p">,</span><span class="mi">812</span><span class="p">,</span><span class="mi">405</span><span class="p">,</span><span class="mi">031</span><span class="p">,</span><span class="mi">249</span><span class="p">,</span><span class="mi">902</span><span class="p">,</span><span class="mi">941</span><span class="p">,</span><span class="mi">584</span><span class="p">,</span><span class="mi">194</span><span class="p">,</span><span class="mi">057</span><span class="p">,</span><span class="mi">136</span><span class="p">,</span><span class="mi">230</span><span class="p">,</span><span class="mi">029</span><span class="p">,</span><span class="mi">654</span><span class="p">,</span><span class="mi">886</span><span class="p">,</span><span class="mi">202</span><span class="p">,</span><span class="mi">459</span><span class="p">,</span><span class="mi">654</span><span class="p">,</span><span class="mi">126</span><span class="p">,</span><span class="mi">679</span><span class="p">,</span><span class="mi">687</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">37</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">122</span><span class="p">,</span><span class="mi">331</span><span class="p">,</span><span class="mi">391</span><span class="p">,</span><span class="mi">321</span><span class="p">,</span><span class="mi">296</span><span class="p">,</span><span class="mi">191</span><span class="p">,</span><span class="mi">597</span><span class="p">,</span><span class="mi">346</span><span class="p">,</span><span class="mi">282</span><span class="p">,</span><span class="mi">792</span><span class="p">,</span><span class="mi">214</span><span class="p">,</span><span class="mi">022</span><span class="p">,</span><span class="mi">306</span><span class="p">,</span><span class="mi">853</span><span class="p">,</span><span class="mi">986</span><span class="p">,</span><span class="mi">350</span><span class="p">,</span><span class="mi">032</span><span class="p">,</span><span class="mi">690</span><span class="p">,</span><span class="mi">459</span><span class="p">,</span><span class="mi">041</span><span class="p">,</span><span class="mi">344</span><span class="p">,</span><span class="mi">574</span><span class="p">,</span><span class="mi">591</span><span class="p">,</span><span class="mi">484</span><span class="p">,</span><span class="mi">375</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">38</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">046</span><span class="p">,</span><span class="mi">255</span><span class="p">,</span><span class="mi">320</span><span class="p">,</span><span class="mi">511</span><span class="p">,</span><span class="mi">085</span><span class="p">,</span><span class="mi">849</span><span class="p">,</span><span class="mi">187</span><span class="p">,</span><span class="mi">830</span><span class="p">,</span><span class="mi">050</span><span class="p">,</span><span class="mi">196</span><span class="p">,</span><span class="mi">567</span><span class="p">,</span><span class="mi">296</span><span class="p">,</span><span class="mi">045</span><span class="p">,</span><span class="mi">461</span><span class="p">,</span><span class="mi">725</span><span class="p">,</span><span class="mi">362</span><span class="p">,</span><span class="mi">121</span><span class="p">,</span><span class="mi">694</span><span class="p">,</span><span class="mi">715</span><span class="p">,</span><span class="mi">485</span><span class="p">,</span><span class="mi">183</span><span class="p">,</span><span class="mi">861</span><span class="p">,</span><span class="mi">637</span><span class="p">,</span><span class="mi">695</span><span class="p">,</span><span class="mi">312</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">39</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">7</span><span class="p">,</span><span class="mi">404</span><span class="p">,</span><span class="mi">268</span><span class="p">,</span><span class="mi">422</span><span class="p">,</span><span class="mi">078</span><span class="p">,</span><span class="mi">453</span><span class="p">,</span><span class="mi">701</span><span class="p">,</span><span class="mi">944</span><span class="p">,</span><span class="mi">643</span><span class="p">,</span><span class="mi">432</span><span class="p">,</span><span class="mi">160</span><span class="p">,</span><span class="mi">322</span><span class="p">,</span><span class="mi">402</span><span class="p">,</span><span class="mi">783</span><span class="p">,</span><span class="mi">267</span><span class="p">,</span><span class="mi">594</span><span class="p">,</span><span class="mi">870</span><span class="p">,</span><span class="mi">399</span><span class="p">,</span><span class="mi">685</span><span class="p">,</span><span class="mi">678</span><span class="p">,</span><span class="mi">818</span><span class="p">,</span><span class="mi">224</span><span class="p">,</span><span class="mi">251</span><span class="p">,</span><span class="mi">589</span><span class="p">,</span><span class="mi">843</span><span class="p">,</span><span class="mi">750</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">40</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span><span class="mi">759</span><span class="p">,</span><span class="mi">650</span><span class="p">,</span><span class="mi">137</span><span class="p">,</span><span class="mi">503</span><span class="p">,</span><span class="mi">070</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">730</span><span class="p">,</span><span class="mi">315</span><span class="p">,</span><span class="mi">820</span><span class="p">,</span><span class="mi">725</span><span class="p">,</span><span class="mi">861</span><span class="p">,</span><span class="mi">876</span><span class="p">,</span><span class="mi">073</span><span class="p">,</span><span class="mi">370</span><span class="p">,</span><span class="mi">360</span><span class="p">,</span><span class="mi">376</span><span class="p">,</span><span class="mi">558</span><span class="p">,</span><span class="mi">184</span><span class="p">,</span><span class="mi">795</span><span class="p">,</span><span class="mi">175</span><span class="p">,</span><span class="mi">245</span><span class="p">,</span><span class="mi">052</span><span class="p">,</span><span class="mi">931</span><span class="p">,</span><span class="mi">347</span><span class="p">,</span><span class="mi">656</span><span class="p">,</span><span class="mi">250</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">41</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">198</span><span class="p">,</span><span class="mi">154</span><span class="p">,</span><span class="mi">476</span><span class="p">,</span><span class="mi">246</span><span class="p">,</span><span class="mi">965</span><span class="p">,</span><span class="mi">446</span><span class="p">,</span><span class="mi">938</span><span class="p">,</span><span class="mi">018</span><span class="p">,</span><span class="mi">536</span><span class="p">,</span><span class="mi">730</span><span class="p">,</span><span class="mi">193</span><span class="p">,</span><span class="mi">018</span><span class="p">,</span><span class="mi">450</span><span class="p">,</span><span class="mi">096</span><span class="p">,</span><span class="mi">106</span><span class="p">,</span><span class="mi">548</span><span class="p">,</span><span class="mi">086</span><span class="p">,</span><span class="mi">489</span><span class="p">,</span><span class="mi">149</span><span class="p">,</span><span class="mi">050</span><span class="p">,</span><span class="mi">812</span><span class="p">,</span><span class="mi">111</span><span class="p">,</span><span class="mi">220</span><span class="p">,</span><span class="mi">901</span><span class="p">,</span><span class="mi">367</span><span class="p">,</span><span class="mi">187</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">42</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">721</span><span class="p">,</span><span class="mi">848</span><span class="p">,</span><span class="mi">449</span><span class="p">,</span><span class="mi">185</span><span class="p">,</span><span class="mi">374</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">131</span><span class="p">,</span><span class="mi">353</span><span class="p">,</span><span class="mi">240</span><span class="p">,</span><span class="mi">945</span><span class="p">,</span><span class="mi">703</span><span class="p">,</span><span class="mi">138</span><span class="p">,</span><span class="mi">639</span><span class="p">,</span><span class="mi">635</span><span class="p">,</span><span class="mi">816</span><span class="p">,</span><span class="mi">710</span><span class="p">,</span><span class="mi">886</span><span class="p">,</span><span class="mi">496</span><span class="p">,</span><span class="mi">185</span><span class="p">,</span><span class="mi">827</span><span class="p">,</span><span class="mi">958</span><span class="p">,</span><span class="mi">405</span><span class="p">,</span><span class="mi">161</span><span class="p">,</span><span class="mi">854</span><span class="p">,</span><span class="mi">980</span><span class="p">,</span><span class="mi">468</span><span class="p">,</span><span class="mi">750</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">43</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span><span class="mi">014</span><span class="p">,</span><span class="mi">460</span><span class="p">,</span><span class="mi">788</span><span class="p">,</span><span class="mi">424</span><span class="p">,</span><span class="mi">299</span><span class="p">,</span><span class="mi">892</span><span class="p">,</span><span class="mi">459</span><span class="p">,</span><span class="mi">590</span><span class="p">,</span><span class="mi">439</span><span class="p">,</span><span class="mi">848</span><span class="p">,</span><span class="mi">473</span><span class="p">,</span><span class="mi">875</span><span class="p">,</span><span class="mi">273</span><span class="p">,</span><span class="mi">402</span><span class="p">,</span><span class="mi">279</span><span class="p">,</span><span class="mi">193</span><span class="p">,</span><span class="mi">171</span><span class="p">,</span><span class="mi">617</span><span class="p">,</span><span class="mi">262</span><span class="p">,</span><span class="mi">775</span><span class="p">,</span><span class="mi">697</span><span class="p">,</span><span class="mi">874</span><span class="p">,</span><span class="mi">870</span><span class="p">,</span><span class="mi">292</span><span class="p">,</span><span class="mi">968</span><span class="p">,</span><span class="mi">750</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">44</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span><span class="mi">166</span><span class="p">,</span><span class="mi">271</span><span class="p">,</span><span class="mi">176</span><span class="p">,</span><span class="mi">059</span><span class="p">,</span><span class="mi">347</span><span class="p">,</span><span class="mi">504</span><span class="p">,</span><span class="mi">859</span><span class="p">,</span><span class="mi">607</span><span class="p">,</span><span class="mi">500</span><span class="p">,</span><span class="mi">595</span><span class="p">,</span><span class="mi">707</span><span class="p">,</span><span class="mi">332</span><span class="p">,</span><span class="mi">951</span><span class="p">,</span><span class="mi">809</span><span class="p">,</span><span class="mi">259</span><span class="p">,</span><span class="mi">240</span><span class="p">,</span><span class="mi">423</span><span class="p">,</span><span class="mi">117</span><span class="p">,</span><span class="mi">520</span><span class="p">,</span><span class="mi">740</span><span class="p">,</span><span class="mi">647</span><span class="p">,</span><span class="mi">877</span><span class="p">,</span><span class="mi">572</span><span class="p">,</span><span class="mi">651</span><span class="p">,</span><span class="mi">367</span><span class="p">,</span><span class="mi">187</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">45</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span><span class="mi">110</span><span class="p">,</span><span class="mi">531</span><span class="p">,</span><span class="mi">058</span><span class="p">,</span><span class="mi">220</span><span class="p">,</span><span class="mi">376</span><span class="p">,</span><span class="mi">340</span><span class="p">,</span><span class="mi">460</span><span class="p">,</span><span class="mi">757</span><span class="p">,</span><span class="mi">667</span><span class="p">,</span><span class="mi">540</span><span class="p">,</span><span class="mi">370</span><span class="p">,</span><span class="mi">754</span><span class="p">,</span><span class="mi">995</span><span class="p">,</span><span class="mi">986</span><span class="p">,</span><span class="mi">913</span><span class="p">,</span><span class="mi">552</span><span class="p">,</span><span class="mi">620</span><span class="p">,</span><span class="mi">572</span><span class="p">,</span><span class="mi">363</span><span class="p">,</span><span class="mi">752</span><span class="p">,</span><span class="mi">950</span><span class="p">,</span><span class="mi">220</span><span class="p">,</span><span class="mi">439</span><span class="p">,</span><span class="mi">888</span><span class="p">,</span><span class="mi">671</span><span class="p">,</span><span class="mi">875</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">46</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span><span class="mi">977</span><span class="p">,</span><span class="mi">693</span><span class="p">,</span><span class="mi">426</span><span class="p">,</span><span class="mi">519</span><span class="p">,</span><span class="mi">933</span><span class="p">,</span><span class="mi">376</span><span class="p">,</span><span class="mi">537</span><span class="p">,</span><span class="mi">697</span><span class="p">,</span><span class="mi">718</span><span class="p">,</span><span class="mi">246</span><span class="p">,</span><span class="mi">014</span><span class="p">,</span><span class="mi">869</span><span class="p">,</span><span class="mi">017</span><span class="p">,</span><span class="mi">813</span><span class="p">,</span><span class="mi">284</span><span class="p">,</span><span class="mi">997</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">820</span><span class="p">,</span><span class="mi">790</span><span class="p">,</span><span class="mi">627</span><span class="p">,</span><span class="mi">886</span><span class="p">,</span><span class="mi">085</span><span class="p">,</span><span class="mi">212</span><span class="p">,</span><span class="mi">934</span><span class="p">,</span><span class="mi">570</span><span class="p">,</span><span class="mi">312</span><span class="p">,</span><span class="mi">500</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">47</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span><span class="mi">561</span><span class="p">,</span><span class="mi">179</span><span class="p">,</span><span class="mi">062</span><span class="p">,</span><span class="mi">607</span><span class="p">,</span><span class="mi">619</span><span class="p">,</span><span class="mi">883</span><span class="p">,</span><span class="mi">894</span><span class="p">,</span><span class="mi">798</span><span class="p">,</span><span class="mi">640</span><span class="p">,</span><span class="mi">657</span><span class="p">,</span><span class="mi">200</span><span class="p">,</span><span class="mi">347</span><span class="p">,</span><span class="mi">499</span><span class="p">,</span><span class="mi">973</span><span class="p">,</span><span class="mi">871</span><span class="p">,</span><span class="mi">913</span><span class="p">,</span><span class="mi">183</span><span class="p">,</span><span class="mi">127</span><span class="p">,</span><span class="mi">279</span><span class="p">,</span><span class="mi">522</span><span class="p">,</span><span class="mi">995</span><span class="p">,</span><span class="mi">965</span><span class="p">,</span><span class="mi">658</span><span class="p">,</span><span class="mi">769</span><span class="p">,</span><span class="mi">531</span><span class="p">,</span><span class="mi">250</span><span class="p">,</span><span class="mi">000</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">48</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="mi">112</span><span class="p">,</span><span class="mi">868</span><span class="p">,</span><span class="mi">457</span><span class="p">,</span><span class="mi">064</span><span class="p">,</span><span class="mi">881</span><span class="p">,</span><span class="mi">213</span><span class="p">,</span><span class="mi">717</span><span class="p">,</span><span class="mi">124</span><span class="p">,</span><span class="mi">575</span><span class="p">,</span><span class="mi">205</span><span class="p">,</span><span class="mi">375</span><span class="p">,</span><span class="mi">108</span><span class="p">,</span><span class="mi">593</span><span class="p">,</span><span class="mi">741</span><span class="p">,</span><span class="mi">834</span><span class="p">,</span><span class="mi">972</span><span class="p">,</span><span class="mi">869</span><span class="p">,</span><span class="mi">727</span><span class="p">,</span><span class="mi">274</span><span class="p">,</span><span class="mi">850</span><span class="p">,</span><span class="mi">936</span><span class="p">,</span><span class="mi">239</span><span class="p">,</span><span class="mi">268</span><span class="p">,</span><span class="mi">365</span><span class="p">,</span><span class="mi">478</span><span class="p">,</span><span class="mi">515</span><span class="p">,</span><span class="mi">625</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">49</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">136</span><span class="p">,</span><span class="mi">269</span><span class="p">,</span><span class="mi">606</span><span class="p">,</span><span class="mi">987</span><span class="p">,</span><span class="mi">536</span><span class="p">,</span><span class="mi">475</span><span class="p">,</span><span class="mi">149</span><span class="p">,</span><span class="mi">035</span><span class="p">,</span><span class="mi">662</span><span class="p">,</span><span class="mi">270</span><span class="p">,</span><span class="mi">045</span><span class="p">,</span><span class="mi">931</span><span class="p">,</span><span class="mi">664</span><span class="p">,</span><span class="mi">539</span><span class="p">,</span><span class="mi">816</span><span class="p">,</span><span class="mi">527</span><span class="p">,</span><span class="mi">290</span><span class="p">,</span><span class="mi">170</span><span class="p">,</span><span class="mi">686</span><span class="p">,</span><span class="mi">716</span><span class="p">,</span><span class="mi">441</span><span class="p">,</span><span class="mi">172</span><span class="p">,</span><span class="mi">155</span><span class="p">,</span><span class="mi">310</span><span class="p">,</span><span class="mi">058</span><span class="p">,</span><span class="mi">593</span><span class="p">,</span><span class="mi">750</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">100</span>     <span class="n">N</span> <span class="o">=</span> <span class="mi">50</span>      <span class="k">C</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span><span class="mi">725</span><span class="p">,</span><span class="mi">392</span><span class="p">,</span><span class="mi">139</span><span class="p">,</span><span class="mi">750</span><span class="p">,</span><span class="mi">729</span><span class="p">,</span><span class="mi">502</span><span class="p">,</span><span class="mi">980</span><span class="p">,</span><span class="mi">713</span><span class="p">,</span><span class="mi">245</span><span class="p">,</span><span class="mi">400</span><span class="p">,</span><span class="mi">918</span><span class="p">,</span><span class="mi">633</span><span class="p">,</span><span class="mi">290</span><span class="p">,</span><span class="mi">796</span><span class="p">,</span><span class="mi">330</span><span class="p">,</span><span class="mi">545</span><span class="p">,</span><span class="mi">803</span><span class="p">,</span><span class="mi">413</span><span class="p">,</span><span class="mi">734</span><span class="p">,</span><span class="mi">328</span><span class="p">,</span><span class="mi">823</span><span class="p">,</span><span class="mi">443</span><span class="p">,</span><span class="mi">106</span><span class="p">,</span><span class="mi">201</span><span class="p">,</span><span class="mi">171</span><span class="p">,</span><span class="mi">875</span>
+</pre></div>
+
+
+<p>Optimum number of pairs? 45.</p>
+<p><a name="finalswitchboard"></a></p>
+<h3>Final Combination Count Switchboard</h3>
+<p>For a switchboard with holes for each of <span class="math">\(S\)</span> symbols, with <span class="math">\(N\)</span> unique pairs of letters chosen from among the symbols to be swapped by the switchboard,
+the number of possible combinations of ciphers with <span class="math">\(N\)</span> wires is:</p>
+<div class="math">$$
+C_{sw} = \dfrac{ S! }{ N! \times (S - 2N)! \times 2^N }
+$$</div>
+<p><a name="rotors"></a></p>
+<h2>The Rotors</h2>
+<p>Typical Enigma machines had three rotors, with each rotor implementing a different scrambled alphabet.
+Assuming there are P possible rotors to choose from, the number of choices
+when selecting R rotors from P possible rotors is given by:</p>
+<div class="math">$$
+C_{rot} = \dfrac{P!}{(P-R)!}
+$$</div>
+<p>If the rotors are known, <span class="math">\(P\)</span> and <span class="math">\(R\)</span> are small numbers like 8 and 3, 
+yielding a modest number of possible rotor combinations (336).
+If the number of rotors is unknown, however, P becomes the set of all possible rotors
+(the set of all possible alphabet scrambles), which is S!. Then we take the factorial of this number,</p>
+<div class="math">$$
+C_{rot} = \frac{(S!)!}{(S!-R)!}
+$$</div>
+<p>Note that the numerator <span class="math">\((S!)!\)</span> is a double factorial. <a href="http://www.wolframalpha.com/input/?i=(26!)!">Here's how Wolfram Alpha describes 26 double-factorial (26!)!</a></p>
+<div class="math">$$
+10^{10^{28}}
+$$</div>
+<p>This can also be written as <span class="math">\(403291461126605635584000000!\)</span>.
+This is a number with 10^28 digits. That's <em>probably</em> the biggest number you've ever seen in your life. 
+The denominator is also pretty big, though. For small values of R, this is approximately <span class="math">\((S!)^R\)</span>.
+For a 26-character alphabet with 3 rotors, that is approximately</p>
+<div class="math">$$
+(403,291,461,126,605,635,584,000,000)^3 
+$$</div>
+<p>or</p>
+<div class="math">$$
+65,592,937,459,144,468,297,405,473,968,303,761,468,794,234,820,105,359,750,856,704,000,000,000,000,000,000
+$$</div>
+<p>which is a key space with more keys than there are <a href="https://en.wikipedia.org/wiki/Eddington_number">protons in the universe (the Eddington number)</a>.</p>
+<p>In addition, each wheel had notches at different locations. The notches change the path the Enigma takes through the key space. 
+For <span class="math">\(R\)</span> rotors containing <span class="math">\(S\)</span> symbols, the total combinations increases by a factor of <span class="math">\({S}^{R-1}\)</span>.
+If each wheel has <span class="math">\(M\)</span> notches, that factor is <span class="math">\({(MS)}^{R-1}\)</span>.
+(The <span class="math">\(R-1\)</span> comes from the fact that the location of the notch on the last wheel has no effect.)</p>
+<p><a name="finalrotors"></a></p>
+<h3>Final Combination Count for Rotors</h3>
+<p>The total number of combinations for <span class="math">\(R\)</span> rotors with <span class="math">\(S\)</span> symbols and <span class="math">\(M\)</span> notches (which advance the neighboring left wheel by one), 
+chosen from among <span class="math">\(P\)</span> possible choices of rotors, is given by:</p>
+<div class="math">$$
+C_{rot} = S^{R-1} \dfrac{P!}{(P-R)!}
+$$</div>
+<p><strong>NOTE:</strong> For a very large set of possible rotors <span class="math">\(P\)</span>, (<span class="math">\(P &gt;&gt; R\)</span>), </p>
+<div class="math">$$
+\dfrac{P!}{(P-R)!} \approx P^R
+$$</div>
+<p>so it follows that </p>
+<div class="math">$$
+C_{rot} \approx S^{R-1} P^R \qquad P &gt;&gt; R
+$$</div>
+<p>(For example, if <span class="math">\(P = S!\)</span>, the set of all possible rotors.)</p>
+<p><a name="reflector"></a></p>
+<h2>Reflector</h2>
+<p>Like the switchboard on the front of the Enigma, the reflector connected pairs of letters.
+It could only be changed by swapping it out like a rotor, so there were a small number of mechanically produced reflectors
+chosen from the set of all possible reflectors.</p>
+<p>If a reflector pairs all letters with another letter, it makes <span class="math">\(N = \frac{S}{2}\)</span> possible pairs. 
+Using the analysis we performed above for the switchboard, and plugging that in, and using <span class="math">\(0!=1\)</span>:</p>
+<div class="math">$$
+C_{rfl} = \dfrac{ S! }{ (\frac{S}{2})! \times (S - 2(\frac{S}{2}))! \times 2^S } = \dfrac{S!}{(\frac{S}{2})! 2^S}
+$$</div>
+<p>For the 26 characters in the English alphabet, that's:</p>
+<div class="math">$$
+C_{rfl} = \frac{26!}{13! * 2^26 } = 965,070,017
+$$</div>
+<p>This is the total number of <em>possible</em> reflectors. (Curiously enough, the number of possible keys goes down as N goes from 11 to 12 and 12 to 13, 
+making the switchboard on the front, which swapped 10 pairs of letters, more secure than the rotor, which swapped 13 pairs of letters.</p>
+<p>However, like the rotors, there were a finite number of reflectors in use.
+Supposing there were Q reflectors in use, that would make for Q possible sets of the 13 letter pairings.
+Since the reflectors did not rotate, this would lead to only 1 possible reflector position, meaning a choice from among
+Q reflectors only multiplied the number of possible combinations by Q.</p>
+<p><a name="finalreflector"></a></p>
+<h3>Final Combination Count for Reflector</h3>
+<p>Here is the final expression for the total number of combinations resulting from all possible rotors:</p>
+<div class="math">$$ 
+C_{rfl} = \dfrac{S!}{(\frac{S}{2})! 2^S} 
+$$</div>
+<p>and here is the final expression for the total number of combinations if there is 1 rotor chosen from among <span class="math">\(Q\)</span> rotors:</p>
+<div class="math">$$
+C_{rfl} = Q
+$$</div>
+<p><a name="finalcount"></a></p>
+<h2>Final Enigma Combination Count</h2>
+<p>Putting all of this together results in the following monstrosity of an expression for the Enigma's <em>complete</em> key space:</p>
+<div class="math">$$
+C_{enigma-full} = 
+\left( \dfrac{S!}{N! (S-2N)! 2^N} \right) 
+\left( \dfrac{(S!)!}{(S!-R)!} \right) 
+\left( \dfrac{ S! }{ \left( \dfrac{S}{2} \right)! 2^S } \right)
+$$</div>
+<p>Note that this assumes the attacker has no idea which rotors or reflectors are actually used. If instead the attacker has knowledge that <span class="math">\(R\)</span> rotors out of <span class="math">\(P\)</span> possible rotors 
+and 1 reflector out of <span class="math">\(Q\)</span> possible reflectors are being used, this key space reduces to:</p>
+<div class="math">$$
+C_{enigma-small} = \left( \dfrac{S!}{N! (S-2N)! 2^N} \right) \left( S^{R-1} \dfrac{P!}{(P-R)!} \right) Q
+$$</div>
+<p>When you evaluate the above expressions for the following values of <span class="math">\(N\)</span>, <span class="math">\(P\)</span>, <span class="math">\(Q\)</span>, <span class="math">\(R\)</span>, and <span class="math">\(S\)</span>, 
+here are the actual numbers you get:</p>
+<div class="highlight"><pre><span></span><span class="n">N</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span> <span class="o">//</span> <span class="nb">number</span> <span class="k">of</span> <span class="n">switchboard</span> <span class="n">wires</span>
+<span class="n">P</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>  <span class="o">//</span> <span class="nb">number</span> <span class="k">of</span> <span class="n">possible</span> <span class="n">rotors</span>
+<span class="n">Q</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>  <span class="o">//</span> <span class="nb">number</span> <span class="k">of</span> <span class="n">possible</span> <span class="n">reflectors</span>
+<span class="n">R</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>  <span class="o">//</span> <span class="nb">number</span> <span class="k">of</span> <span class="n">rotors</span>
+<span class="n">S</span> <span class="o">=</span> <span class="mi">26</span><span class="p">;</span> <span class="o">//</span> <span class="nb">number</span> <span class="k">of</span> <span class="n">symbols</span>
+</pre></div>
+
+
+<p>For the case of utilizing the <span class="math">\(P\)</span> known rotors and <span class="math">\(Q\)</span> known reflectors, the key space is:</p>
+<div class="math">$$
+C_{enigma-small} = 537,293,436,636,253,096,800,000
+$$</div>
+<p>For the completely unknown case of all possible rotors and reflectors, the key space increases to an astronomical number:</p>
+<div class="math">$$
+C_{enigma-full} = 422,732,921,460,335,478,939,047,043,039,799,222,455,533,136,281,221,092,624,796,865,514,111,348,059,884,989,972,480,000,000,000,000,000,000,000,000
+$$</div>
+<p>There are plenty of additional big numbers related to the Enigma, and more math around the weaknesses in the system and how it was cracked.
+There is also yet more math around how Alan Turing managed to crack the German Navy's Enigma cipher, which utilized various protective steps like bigram replacement
+that made cracking via frequency analysis much more difficult.</p>
+<p>But that's enough for one post!</p>
+<p>Below you can find a Java program that uses the BigInteger class, part of the Java API, to perform calculations with extremely large numbers.</p>
+<p><a name="javabigint"></a></p>
+<h3>Java BigInteger Program</h3>
+<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.math.BigInteger</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.text.*</span><span class="o">;</span>
+
+<span class="cm">/** Cryptanalysis of the Enigma Machine.</span>
+<span class="cm"> *</span>
+<span class="cm"> * This program uses combinatorics and big integers</span>
+<span class="cm"> * to analyze the cryptographic strength of the Enigma machine.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Author: Charles Reid</span>
+<span class="cm"> * Date: March 2017</span>
+<span class="cm"> */</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Combos</span> <span class="o">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span> 
+
+        <span class="c1">// This involves a double factorial. PREPARE YOUR CPU</span>
+        <span class="kt">boolean</span> <span class="n">doBig</span> <span class="o">=</span> <span class="kc">true</span><span class="o">;</span>
+
+
+
+        <span class="c1">/////////////////////////////////</span>
+        <span class="c1">// Git Ready</span>
+
+        <span class="n">DecimalFormat</span> <span class="n">formatter</span> <span class="o">=</span> <span class="k">new</span> <span class="n">DecimalFormat</span><span class="o">(</span><span class="s">&quot;#,###&quot;</span><span class="o">);</span>
+
+        <span class="n">BigInteger</span> <span class="n">small_combos</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BigInteger</span><span class="o">(</span><span class="s">&quot;1&quot;</span><span class="o">);</span>
+        <span class="n">BigInteger</span> <span class="n">big_combos</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BigInteger</span><span class="o">(</span><span class="s">&quot;1&quot;</span><span class="o">);</span>
+
+        <span class="c1">/// Useful temp variable </span>
+        <span class="n">BigInteger</span> <span class="n">next</span><span class="o">;</span>
+
+
+
+        <span class="c1">/////////////////////////////////</span>
+        <span class="c1">// Constants</span>
+
+        <span class="kt">int</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">10</span><span class="o">;</span> <span class="c1">// number of switchboard wires</span>
+        <span class="kt">int</span> <span class="n">P</span> <span class="o">=</span> <span class="mi">5</span><span class="o">;</span>  <span class="c1">// number of possible rotors</span>
+        <span class="kt">int</span> <span class="n">Q</span> <span class="o">=</span> <span class="mi">5</span><span class="o">;</span>  <span class="c1">// number of possible reflectors</span>
+        <span class="kt">int</span> <span class="n">R</span> <span class="o">=</span> <span class="mi">3</span><span class="o">;</span>  <span class="c1">// number of rotors</span>
+        <span class="kt">int</span> <span class="n">S</span> <span class="o">=</span> <span class="mi">26</span><span class="o">;</span> <span class="c1">// number of symbols</span>
+
+
+
+
+        <span class="c1">/////////////////////////////////</span>
+        <span class="c1">// Plugboard combinations</span>
+
+        <span class="n">BigInteger</span> <span class="n">plugboard</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BigInteger</span><span class="o">(</span><span class="s">&quot;1&quot;</span><span class="o">);</span>
+
+        <span class="c1">// S!/(S-2N)!</span>
+        <span class="n">BigInteger</span> <span class="n">num</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="n">S</span><span class="o">;</span> <span class="n">i</span><span class="o">&gt;(</span><span class="n">S</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">N</span><span class="o">);</span> <span class="n">i</span><span class="o">--)</span> <span class="o">{</span>
+            <span class="n">next</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">i</span><span class="o">);</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="n">num</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">next</span><span class="o">);</span>
+        <span class="o">}</span>
+
+        <span class="c1">// divided by 2^N</span>
+        <span class="n">BigInteger</span> <span class="n">pdenom</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
+        <span class="n">pdenom</span> <span class="o">=</span> <span class="n">pdenom</span><span class="o">.</span><span class="na">pow</span><span class="o">(</span><span class="n">N</span><span class="o">);</span>
+
+        <span class="c1">// divided by N!</span>
+        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="n">N</span><span class="o">;</span> <span class="n">j</span><span class="o">&gt;</span><span class="mi">1</span><span class="o">;</span> <span class="n">j</span><span class="o">--)</span> <span class="o">{</span> 
+            <span class="n">next</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">j</span><span class="o">);</span>
+            <span class="n">pdenom</span> <span class="o">=</span> <span class="n">pdenom</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">next</span><span class="o">);</span>
+        <span class="o">}</span>
+
+        <span class="n">plugboard</span> <span class="o">=</span> <span class="n">num</span><span class="o">.</span><span class="na">divide</span><span class="o">(</span><span class="n">pdenom</span><span class="o">);</span>
+
+
+
+        <span class="c1">/////////////////////////////////</span>
+        <span class="c1">// Rotor combinations</span>
+
+        <span class="n">BigInteger</span> <span class="n">small_rotors</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BigInteger</span><span class="o">(</span><span class="s">&quot;1&quot;</span><span class="o">);</span>
+        <span class="n">BigInteger</span> <span class="n">big_rotors</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BigInteger</span><span class="o">(</span><span class="s">&quot;1&quot;</span><span class="o">);</span>
+
+        <span class="c1">// -----------------</span>
+        <span class="c1">// Small case:</span>
+        <span class="c1">// R rotors selected from P possible known rotors</span>
+
+        <span class="c1">// Rotor wheel combinations</span>
+        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="n">P</span><span class="o">;</span> <span class="n">j</span><span class="o">&gt;(</span><span class="n">P</span><span class="o">-</span><span class="n">R</span><span class="o">);</span> <span class="n">j</span><span class="o">--)</span> <span class="o">{</span> 
+            <span class="n">next</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">j</span><span class="o">);</span>
+            <span class="n">small_rotors</span> <span class="o">=</span> <span class="n">small_rotors</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">next</span><span class="o">);</span>
+        <span class="o">}</span>
+
+        <span class="c1">// Rotor wheel notch positions (assume 1 per wheel). </span>
+        <span class="c1">// Ignore left-most wheel.</span>
+        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">k</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">k</span><span class="o">&lt;(</span><span class="n">R</span><span class="o">-</span><span class="mi">1</span><span class="o">);</span> <span class="n">k</span><span class="o">++</span> <span class="o">)</span> <span class="o">{</span>
+            <span class="n">next</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">S</span><span class="o">);</span>
+            <span class="n">small_rotors</span> <span class="o">=</span> <span class="n">small_rotors</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">next</span><span class="o">);</span>
+        <span class="o">}</span>
+
+        <span class="c1">// Rotor wheel starting positions</span>
+        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">k</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">k</span><span class="o">&lt;</span><span class="n">R</span><span class="o">;</span> <span class="n">k</span><span class="o">++</span> <span class="o">)</span> <span class="o">{</span>
+            <span class="n">next</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">S</span><span class="o">);</span>
+            <span class="n">small_rotors</span> <span class="o">=</span> <span class="n">small_rotors</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">next</span><span class="o">);</span>
+        <span class="o">}</span>
+
+        <span class="c1">// -----------------</span>
+        <span class="c1">// Big case:</span>
+        <span class="c1">// R rotors selected from S! possible rotors</span>
+
+        <span class="k">if</span><span class="o">(</span><span class="n">doBig</span><span class="o">)</span> <span class="o">{</span> 
+            <span class="n">BigInteger</span> <span class="n">s_rm1</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">S</span><span class="o">).</span><span class="na">pow</span><span class="o">(</span><span class="n">R</span><span class="o">-</span><span class="mi">1</span><span class="o">);</span>
+            <span class="n">BigInteger</span> <span class="n">sfact_r</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
+            <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="n">S</span><span class="o">;</span> <span class="n">j</span><span class="o">&gt;=</span><span class="mi">1</span><span class="o">;</span> <span class="n">j</span><span class="o">--)</span> <span class="o">{</span> 
+                <span class="n">next</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">j</span><span class="o">);</span>
+                <span class="n">sfact_r</span> <span class="o">=</span> <span class="n">sfact_r</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">next</span><span class="o">);</span>
+            <span class="o">}</span>
+            <span class="n">sfact_r</span> <span class="o">=</span> <span class="n">sfact_r</span><span class="o">.</span><span class="na">pow</span><span class="o">(</span><span class="n">R</span><span class="o">);</span>
+            <span class="n">big_rotors</span> <span class="o">=</span> <span class="n">s_rm1</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">sfact_r</span><span class="o">);</span>
+        <span class="o">}</span>
+
+        <span class="c1">/////////////////////////////////</span>
+        <span class="c1">// Reflector combinations</span>
+
+        <span class="n">BigInteger</span> <span class="n">small_reflector</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">Q</span><span class="o">);</span>
+        <span class="n">BigInteger</span> <span class="n">big_reflector</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BigInteger</span><span class="o">(</span><span class="s">&quot;1&quot;</span><span class="o">);</span>
+
+        <span class="c1">// (S!)/((S/2)!)</span>
+        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="n">S</span><span class="o">;</span> <span class="n">j</span><span class="o">&gt;(</span><span class="n">S</span><span class="o">/</span><span class="mi">2</span><span class="o">);</span> <span class="n">j</span><span class="o">--)</span> <span class="o">{</span>
+            <span class="n">next</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="n">j</span><span class="o">);</span>
+            <span class="n">big_reflector</span> <span class="o">=</span> <span class="n">big_reflector</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">next</span><span class="o">);</span>
+        <span class="o">}</span>
+
+        <span class="c1">// divided by 2^N</span>
+        <span class="n">BigInteger</span> <span class="n">rfldenom</span> <span class="o">=</span> <span class="n">BigInteger</span><span class="o">.</span><span class="na">valueOf</span><span class="o">(</span><span class="mi">2</span><span class="o">);</span>
+        <span class="n">rfldenom</span> <span class="o">=</span> <span class="n">rfldenom</span><span class="o">.</span><span class="na">pow</span><span class="o">(</span><span class="n">N</span><span class="o">);</span>
+
+        <span class="k">if</span><span class="o">(</span><span class="n">doBig</span><span class="o">)</span> <span class="o">{</span> 
+            <span class="n">big_reflector</span> <span class="o">=</span> <span class="n">big_reflector</span><span class="o">.</span><span class="na">divide</span><span class="o">(</span><span class="n">rfldenom</span><span class="o">);</span>
+        <span class="o">}</span>
+
+
+
+        <span class="c1">/////////////////////////////////</span>
+        <span class="c1">// Final combinations</span>
+
+        <span class="n">small_combos</span> <span class="o">=</span> <span class="n">small_combos</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">plugboard</span><span class="o">);</span>
+        <span class="n">small_combos</span> <span class="o">=</span> <span class="n">small_combos</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">small_rotors</span><span class="o">);</span>
+        <span class="n">small_combos</span> <span class="o">=</span> <span class="n">small_combos</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">small_reflector</span><span class="o">);</span>
+
+        <span class="k">if</span><span class="o">(</span><span class="n">doBig</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">big_combos</span> <span class="o">=</span> <span class="n">big_combos</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">plugboard</span><span class="o">);</span>
+            <span class="n">big_combos</span> <span class="o">=</span> <span class="n">big_combos</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">big_rotors</span><span class="o">);</span>
+            <span class="n">big_combos</span> <span class="o">=</span> <span class="n">big_combos</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="n">big_reflector</span><span class="o">);</span>
+        <span class="o">}</span>
+
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Final number of (small) Enigma combinations: &quot;</span><span class="o">);</span>
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">formatter</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="n">small_combos</span><span class="o">));</span>
+
+        <span class="k">if</span><span class="o">(</span><span class="n">doBig</span><span class="o">)</span> <span class="o">{</span> 
+            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Final number of (big) Enigma combinations: &quot;</span><span class="o">);</span>
+            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">formatter</span><span class="o">.</span><span class="na">format</span><span class="o">(</span><span class="n">big_combos</span><span class="o">));</span>
+        <span class="o">}</span>
+
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+
+
+<p>Output of the program:</p>
+<div class="highlight"><pre><span></span><span class="k">Final</span> <span class="nb">number</span> <span class="k">of</span> <span class="p">(</span><span class="n">small</span><span class="p">)</span> <span class="n">Enigma</span> <span class="n">combinations</span><span class="p">:</span>
+<span class="mi">537</span><span class="p">,</span><span class="mi">293</span><span class="p">,</span><span class="mi">436</span><span class="p">,</span><span class="mi">636</span><span class="p">,</span><span class="mi">253</span><span class="p">,</span><span class="mi">096</span><span class="p">,</span><span class="mi">800</span><span class="p">,</span><span class="mi">000</span>
+<span class="k">Final</span> <span class="nb">number</span> <span class="k">of</span> <span class="p">(</span><span class="n">big</span><span class="p">)</span> <span class="n">Enigma</span> <span class="n">combinations</span><span class="p">:</span>
+<span class="mi">422</span><span class="p">,</span><span class="mi">732</span><span class="p">,</span><span class="mi">921</span><span class="p">,</span><span class="mi">460</span><span class="p">,</span><span class="mi">335</span><span class="p">,</span><span class="mi">478</span><span class="p">,</span><span class="mi">939</span><span class="p">,</span><span class="mi">047</span><span class="p">,</span><span class="mi">043</span><span class="p">,</span><span class="mi">039</span><span class="p">,</span><span class="mi">799</span><span class="p">,</span><span class="mi">222</span><span class="p">,</span><span class="mi">455</span><span class="p">,</span><span class="mi">533</span><span class="p">,</span><span class="mi">136</span><span class="p">,</span><span class="mi">281</span><span class="p">,</span><span class="mi">221</span><span class="p">,</span><span class="mi">092</span><span class="p">,</span><span class="mi">624</span><span class="p">,</span><span class="mi">796</span><span class="p">,</span><span class="mi">865</span><span class="p">,</span><span class="mi">514</span><span class="p">,</span><span class="mi">111</span><span class="p">,</span><span class="mi">348</span><span class="p">,</span><span class="mi">059</span><span class="p">,</span><span class="mi">884</span><span class="p">,</span><span class="mi">989</span><span class="p">,</span><span class="mi">972</span><span class="p">,</span><span class="mi">480</span><span class="p">,</span><span class="mi">000</span><span class="p">,</span><span class="mi">000</span><span class="p">,</span><span class="mi">000</span><span class="p">,</span><span class="mi">000</span><span class="p">,</span><span class="mi">000</span><span class="p">,</span><span class="mi">000</span><span class="p">,</span><span class="mi">000</span><span class="p">,</span><span class="mi">000</span>
+</pre></div>
+
+
+<p><a name="sources"></a></p>
+<h2>Sources</h2>
+<ol>
+<li>
+<p>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</p>
+</li>
+<li>
+<p>"BigInteger". Oracle Corporation. Copyright 1993-2016, Publication date unknown. Accessed 22 March 2017.
+&lt;<a href="https://docs.oracle.com/javase/8/docs/api/java/math/BigInteger.html">https://docs.oracle.com/javase/8/docs/api/java/math/BigInteger.html</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/ciphers.html">ciphers</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/enigma.html">enigma</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/encryption.html">encryption</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Enigma Cipher Implementation: Part 3: Enigma in Java Without Objects
             </b></h1>
         
@@ -145,45 +789,45 @@ than would have resulted if we had implicitly chosen a noun-centric approach,
 divided the entire Enigma encryption process into its component nouns like rotor wheels and reflectors,
 and implemented each as an object.</p>
 <p>Here was the pseudocode:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
+<div class="highlight"><pre><span></span><span class="nv">define</span> <span class="nv">plaintext</span> <span class="nv">message</span>
+<span class="nv">define</span> <span class="nv">normal</span> <span class="nv">alphabet</span> <span class="nv">and</span> <span class="nv">scrambled</span> <span class="nv">alphabets</span>
+<span class="nv">define</span> <span class="nv">list</span> <span class="nv">of</span> <span class="nv">switchboard</span> <span class="nv">swap</span> <span class="nv">pairs</span>
+<span class="nv">define</span> <span class="nv">list</span> <span class="nv">of</span> <span class="nv">reflector</span> <span class="nv">swap</span> <span class="nv">pairs</span>
+<span class="k">for</span> <span class="nv">each</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">plaintext</span> <span class="nv">message</span>:
 
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
+    # <span class="nv">Apply</span> <span class="nv">switchboard</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">switchboard</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
 
-    # Apply forward rotor transformation
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
+    # <span class="nv">Apply</span> <span class="nv">forward</span> <span class="nv">rotor</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+        <span class="nv">replace</span> <span class="nv">character</span> <span class="nv">with</span> <span class="nv">new</span> <span class="nv">character</span> 
 
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
+    # <span class="nv">Apply</span> <span class="nv">reflector</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">reflector</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
 
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
+    # <span class="nv">Apply</span> <span class="nv">reverse</span> <span class="nv">rotor</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">input</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+        <span class="nv">replace</span> <span class="nv">character</span> <span class="nv">with</span> <span class="nv">new</span> <span class="nv">character</span> 
 
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
+    # <span class="nv">Apply</span> <span class="nv">switchboard</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">switchboard</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
 
-    concatenate transformed input character to ciphertext message 
+    <span class="nv">concatenate</span> <span class="nv">transformed</span> <span class="nv">input</span> <span class="nv">character</span> <span class="nv">to</span> <span class="nv">ciphertext</span> <span class="nv">message</span> 
 
-    # Increment rotor wheels
-    for each rotor/scrambled alphabet, left to right:
-        get index of left notch in left alphabet
-        get index of right notch in right alphabet
-        if left index equals right index:
-            cycle left alphabet forward 1 character
-    cycle right-most alphabet forward 1 character
+    # <span class="nv">Increment</span> <span class="nv">rotor</span> <span class="nv">wheels</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">rotor</span><span class="o">/</span><span class="nv">scrambled</span> <span class="nv">alphabet</span>, <span class="nv">left</span> <span class="nv">to</span> <span class="nv">right</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">left</span> <span class="nv">notch</span> <span class="nv">in</span> <span class="nv">left</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">right</span> <span class="nv">notch</span> <span class="nv">in</span> <span class="nv">right</span> <span class="nv">alphabet</span>
+        <span class="k">if</span> <span class="nv">left</span> <span class="nv">index</span> <span class="nv">equals</span> <span class="nv">right</span> <span class="nv">index</span>:
+            <span class="nv">cycle</span> <span class="nv">left</span> <span class="nv">alphabet</span> <span class="nv">forward</span> <span class="mi">1</span> <span class="nv">character</span>
+    <span class="nv">cycle</span> <span class="nv">right</span><span class="o">-</span><span class="nv">most</span> <span class="nv">alphabet</span> <span class="nv">forward</span> <span class="mi">1</span> <span class="nv">character</span>
 </pre></div>
 
 
@@ -545,10 +1189,10 @@ It is also an excellent system to better understand some of the design decisions
 From the Part 1 post, which covered more about how Enigma works, we have built up a basic understanding of what each step does.
 In this post we discuss how to implement this functionality.</p>
 <p>The basic idea is to start with a plaintext input (typed by the operator) and apply a rotating cripher to encrypt it, resulting in a ciphertext output:</p>
-<div class="highlight"><pre><span></span>                _________
-               |         |
-PLAINTEXT ---&gt; | ENIGMA  | ----&gt; CIPHERTEXT
-               |_________|
+<div class="highlight"><pre><span></span>                <span class="n">_________</span>
+               <span class="o">|</span>         <span class="o">|</span>
+<span class="n">PLAINTEXT</span> <span class="c1">---&gt; | ENIGMA  | ----&gt; CIPHERTEXT</span>
+               <span class="o">|</span><span class="n">_________</span><span class="o">|</span>
 </pre></div>
 
 
@@ -588,9 +1232,9 @@ and thinking through the actions involved in order to best utilize simple, built
 <p>This is equivalent to matching up two strings. To make things slightly more concrete, let's look at Rotor I, nicknamed Royal
 (due to the location of its notch at the letter R), implemented the scrambled alphabet "EKMFLGDQVZNTOWYHXUSPAIBRCJ".
 With an offset of 0, this would therefore implement the following shift:</p>
-<div class="highlight"><pre><span></span>ABCDEFGHIJKLMNOPQRSTUVWXYZ
-||||||||||||||||||||||||||
-EKMFLGDQVZNTOWYHXUSPAIBRCJ
+<div class="highlight"><pre><span></span><span class="n">ABCDEFGHIJKLMNOPQRSTUVWXYZ</span>
+<span class="o">||||||||||||||||||||||||||</span>
+<span class="n">EKMFLGDQVZNTOWYHXUSPAIBRCJ</span>
 </pre></div>
 
 
@@ -601,9 +1245,9 @@ we can perform a two-step operation:
 2. Get the corresponding character at that index in the scrambled alphabet <code>EKMFLG...</code>.</p>
 <p>We will also need to perform the reverse operation when we return the signal back through the machine from the reflector.
 In that case, we're actually performing the opposite lookup, for the same wheel:</p>
-<div class="highlight"><pre><span></span>EKMFLGDQVZNTOWYHXUSPAIBRCJ
-||||||||||||||||||||||||||
-ABCDEFGHIJKLMNOPQRSTUVWXYZ
+<div class="highlight"><pre><span></span><span class="n">EKMFLGDQVZNTOWYHXUSPAIBRCJ</span>
+<span class="o">||||||||||||||||||||||||||</span>
+<span class="n">ABCDEFGHIJKLMNOPQRSTUVWXYZ</span>
 </pre></div>
 
 
@@ -622,17 +1266,17 @@ Objects provide a natural way of representing things with an internal state,
 or information specific to that entity and required for its operation.</p>
 <p>For this reason, it may seem at first blush that the Engima <em>requires</em> an object-oriented implementation.
 However, we can continue with our verb-centric thinking, and examine how the operations change when the wheels are rotated.</p>
-<div class="highlight"><pre><span></span>After 2 rotations:
+<div class="highlight"><pre><span></span><span class="k">After</span> <span class="mi">2</span> <span class="n">rotations</span><span class="p">:</span>
 
-ABCDEFGHIJKLMNOPQRSTUVWXYZAB
-  ||||||||||||||||||||||||||
-  EKMFLGDQVZNTOWYHXUSPAIBRCJ
+<span class="n">ABCDEFGHIJKLMNOPQRSTUVWXYZAB</span>
+  <span class="o">||||||||||||||||||||||||||</span>
+  <span class="n">EKMFLGDQVZNTOWYHXUSPAIBRCJ</span>
 
-After 4 rotations:
+<span class="k">After</span> <span class="mi">4</span> <span class="n">rotations</span><span class="p">:</span>
 
-ABCDEFGHIJKLMNOPQRSTUVWXYZABCD
-    ||||||||||||||||||||||||||
-    EKMFLGDQVZNTOWYHXUSPAIBRCJ
+<span class="n">ABCDEFGHIJKLMNOPQRSTUVWXYZABCD</span>
+    <span class="o">||||||||||||||||||||||||||</span>
+    <span class="n">EKMFLGDQVZNTOWYHXUSPAIBRCJ</span>
 </pre></div>
 
 
@@ -641,65 +1285,65 @@ we are just rotating each scrambled alphabet by one character.
 Again, this is a trivial operation that is probably built in for string types. </p>
 <h3>Rotor Pseudocode</h3>
 <p>Putting all of this together, here's pseudocode for a single forward transformation by an Engima rotor: </p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabet 
-for each character in plaintext message:
-    get index of input character in normal alphabet
-    get new character at that index in scrambled alphabet
-    concatenate transformed character to ciphertext message 
+<div class="highlight"><pre><span></span><span class="nv">define</span> <span class="nv">plaintext</span> <span class="nv">message</span>
+<span class="nv">define</span> <span class="nv">normal</span> <span class="nv">alphabet</span> <span class="nv">and</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span> 
+<span class="k">for</span> <span class="nv">each</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">plaintext</span> <span class="nv">message</span>:
+    <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">input</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+    <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+    <span class="nv">concatenate</span> <span class="nv">transformed</span> <span class="nv">character</span> <span class="nv">to</span> <span class="nv">ciphertext</span> <span class="nv">message</span> 
 </pre></div>
 
 
 <p>Because the Enigma has multiple rotors, we also want pseudocode for multiple rotors:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-    concatenate transformed character to ciphertext message 
+<div class="highlight"><pre><span></span><span class="nv">define</span> <span class="nv">plaintext</span> <span class="nv">message</span>
+<span class="nv">define</span> <span class="nv">normal</span> <span class="nv">alphabet</span> <span class="nv">and</span> <span class="nv">scrambled</span> <span class="nv">alphabets</span>
+<span class="k">for</span> <span class="nv">each</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">plaintext</span> <span class="nv">message</span>:
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+        <span class="nv">replace</span> <span class="nv">character</span> <span class="nv">with</span> <span class="nv">new</span> <span class="nv">character</span> 
+    <span class="nv">concatenate</span> <span class="nv">transformed</span> <span class="nv">character</span> <span class="nv">to</span> <span class="nv">ciphertext</span> <span class="nv">message</span> 
 </pre></div>
 
 
 <p>Likewise, to apply multiple rotations in reverse, we just swap the alphabets out:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
-    for each scrambled alphabet:
-        get index of character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-    concatenate transformed character to ciphertext message 
+<div class="highlight"><pre><span></span><span class="nv">define</span> <span class="nv">plaintext</span> <span class="nv">message</span>
+<span class="nv">define</span> <span class="nv">normal</span> <span class="nv">alphabet</span> <span class="nv">and</span> <span class="nv">scrambled</span> <span class="nv">alphabets</span>
+<span class="k">for</span> <span class="nv">each</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">plaintext</span> <span class="nv">message</span>:
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+        <span class="nv">replace</span> <span class="nv">character</span> <span class="nv">with</span> <span class="nv">new</span> <span class="nv">character</span> 
+    <span class="nv">concatenate</span> <span class="nv">transformed</span> <span class="nv">character</span> <span class="nv">to</span> <span class="nv">ciphertext</span> <span class="nv">message</span> 
 </pre></div>
 
 
 <h3>A More Complete Enigma Pseudocode</h3>
 <p>To combine these operations, or add additional operations, we just add them before concatenating the final transformed character to the ciphertext message.
 Thus, a more complete pseudocode would include other steps:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
+<div class="highlight"><pre><span></span><span class="nv">define</span> <span class="nv">plaintext</span> <span class="nv">message</span>
+<span class="nv">define</span> <span class="nv">normal</span> <span class="nv">alphabet</span> <span class="nv">and</span> <span class="nv">scrambled</span> <span class="nv">alphabets</span>
+<span class="k">for</span> <span class="nv">each</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">plaintext</span> <span class="nv">message</span>:
 
-    # Apply switchboard transformation
+    # <span class="nv">Apply</span> <span class="nv">switchboard</span> <span class="nv">transformation</span>
 
-    # Apply forward rotor transformation
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
+    # <span class="nv">Apply</span> <span class="nv">forward</span> <span class="nv">rotor</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+        <span class="nv">replace</span> <span class="nv">character</span> <span class="nv">with</span> <span class="nv">new</span> <span class="nv">character</span> 
 
-    # Apply reflector transformation
+    # <span class="nv">Apply</span> <span class="nv">reflector</span> <span class="nv">transformation</span>
 
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
+    # <span class="nv">Apply</span> <span class="nv">reverse</span> <span class="nv">rotor</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">input</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+        <span class="nv">replace</span> <span class="nv">character</span> <span class="nv">with</span> <span class="nv">new</span> <span class="nv">character</span> 
 
-    # Apply switchboard transformation
+    # <span class="nv">Apply</span> <span class="nv">switchboard</span> <span class="nv">transformation</span>
 
-    concatenate transformed character to ciphertext message 
+    <span class="nv">concatenate</span> <span class="nv">transformed</span> <span class="nv">character</span> <span class="nv">to</span> <span class="nv">ciphertext</span> <span class="nv">message</span> 
 </pre></div>
 
 
@@ -711,12 +1355,12 @@ it is even simpler than the operation performed by the rotor wheels.
 We have pairs of letters, and we are simply looking for one letter in a pair, and swapping it out with the other letter in the pair.
 In the case of the switchboard, Enigma operators utilized 7-10 wires to connect pairs of letters; the remaining letters were unchanged.
 So the switchboard step is very simple:</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define list of switchboard swap pairs
-for each character in message:
-    for each pair in swap pairs:
-        if character in swap pair, swap its value
-    add character to ciphertext
+<div class="highlight"><pre><span></span><span class="nv">define</span> <span class="nv">plaintext</span> <span class="nv">message</span>
+<span class="nv">define</span> <span class="nv">list</span> <span class="nv">of</span> <span class="nv">switchboard</span> <span class="nv">swap</span> <span class="nv">pairs</span>
+<span class="k">for</span> <span class="nv">each</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">message</span>:
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
+    <span class="nv">add</span> <span class="nv">character</span> <span class="nv">to</span> <span class="nv">ciphertext</span>
 </pre></div>
 
 
@@ -725,12 +1369,12 @@ for each character in message:
 <h2>The Reflector</h2>
 <p>The reflector pseudocode looks identical to the switchboard pseudocode,
 except the reflector defines pairings for all 13 posible letter pairs, instead of only 7-10.</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define list of reflector swap pairs
-for each character in message:
-    for each pair in swap pairs:
-        if character in swap pair, swap its value
-    add character to ciphertext
+<div class="highlight"><pre><span></span><span class="nv">define</span> <span class="nv">plaintext</span> <span class="nv">message</span>
+<span class="nv">define</span> <span class="nv">list</span> <span class="nv">of</span> <span class="nv">reflector</span> <span class="nv">swap</span> <span class="nv">pairs</span>
+<span class="k">for</span> <span class="nv">each</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">message</span>:
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
+    <span class="nv">add</span> <span class="nv">character</span> <span class="nv">to</span> <span class="nv">ciphertext</span>
 </pre></div>
 
 
@@ -738,39 +1382,39 @@ for each character in message:
 <h2>Nearing a Complete Enigma Pseudocode</h2>
 <p>Almost there. We have one more thing going on - those rotor wheels are moving.
 Add the "increment rotor wheels" verb, and define that below.</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
+<div class="highlight"><pre><span></span><span class="nv">define</span> <span class="nv">plaintext</span> <span class="nv">message</span>
+<span class="nv">define</span> <span class="nv">normal</span> <span class="nv">alphabet</span> <span class="nv">and</span> <span class="nv">scrambled</span> <span class="nv">alphabets</span>
+<span class="nv">define</span> <span class="nv">list</span> <span class="nv">of</span> <span class="nv">switchboard</span> <span class="nv">swap</span> <span class="nv">pairs</span>
+<span class="nv">define</span> <span class="nv">list</span> <span class="nv">of</span> <span class="nv">reflector</span> <span class="nv">swap</span> <span class="nv">pairs</span>
+<span class="k">for</span> <span class="nv">each</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">plaintext</span> <span class="nv">message</span>:
 
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
+    # <span class="nv">Apply</span> <span class="nv">switchboard</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">switchboard</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
 
-    # Apply forward rotor transformation
-    for each rotor/scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
+    # <span class="nv">Apply</span> <span class="nv">forward</span> <span class="nv">rotor</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">rotor</span><span class="o">/</span><span class="nv">scrambled</span> <span class="nv">alphabet</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+        <span class="nv">replace</span> <span class="nv">character</span> <span class="nv">with</span> <span class="nv">new</span> <span class="nv">character</span> 
 
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
+    # <span class="nv">Apply</span> <span class="nv">reflector</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">reflector</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
 
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
+    # <span class="nv">Apply</span> <span class="nv">reverse</span> <span class="nv">rotor</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">input</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+        <span class="nv">replace</span> <span class="nv">character</span> <span class="nv">with</span> <span class="nv">new</span> <span class="nv">character</span> 
 
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
+    # <span class="nv">Apply</span> <span class="nv">switchboard</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">switchboard</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
 
-    concatenate transformed input character to ciphertext message 
+    <span class="nv">concatenate</span> <span class="nv">transformed</span> <span class="nv">input</span> <span class="nv">character</span> <span class="nv">to</span> <span class="nv">ciphertext</span> <span class="nv">message</span> 
 
-    increment rotor wheels
+    <span class="nv">increment</span> <span class="nv">rotor</span> <span class="nv">wheels</span>
 </pre></div>
 
 
@@ -786,58 +1430,58 @@ and advance it forward by 1 letter. It was this mechanism that kept the machine
 constantly skipping through the space of possible keys, mapping each character to each other character,
 with one distinct key (alphabet scramble) used per letter of the message.</p>
 <p>To increment the wheels in pseudocode:</p>
-<div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">increment</span> <span class="nx">rotors</span>:
-    <span class="kt">for</span> <span class="nx">each</span> <span class="nx">rotor</span><span class="o">/</span><span class="nx">scrambled</span> <span class="nx">alphabet</span><span class="p">,</span> <span class="nx">left</span> <span class="nx">to</span> <span class="nx">right</span>:
-        <span class="kt">get</span> <span class="nx">index</span> <span class="nx">of</span> <span class="nx">left</span> <span class="nx">notch</span> <span class="k">in</span> <span class="nx">left</span> <span class="nx">alphabet</span>
-        <span class="nx">get</span> <span class="nx">index</span> <span class="nx">of</span> <span class="nx">right</span> <span class="nx">notch</span> <span class="k">in</span> <span class="nx">right</span> <span class="nx">alphabet</span>
-        <span class="k">if</span> <span class="nx">left</span> <span class="nx">index</span> <span class="nx">equals</span> <span class="nx">right</span> <span class="nx">index</span>:
-            <span class="kt">cycle</span> <span class="nx">left</span> <span class="nx">alphabet</span> <span class="nx">forward</span> <span class="mi">1</span> <span class="nx">character</span>
-    <span class="nx">cycle</span> <span class="nx">right</span><span class="o">-</span><span class="nx">most</span> <span class="nx">alphabet</span> <span class="nx">forward</span> <span class="mi">1</span> <span class="nx">character</span>
+<div class="highlight"><pre><span></span><span class="nv">function</span> <span class="nv">increment</span> <span class="nv">rotors</span>:
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">rotor</span><span class="o">/</span><span class="nv">scrambled</span> <span class="nv">alphabet</span>, <span class="nv">left</span> <span class="nv">to</span> <span class="nv">right</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">left</span> <span class="nv">notch</span> <span class="nv">in</span> <span class="nv">left</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">right</span> <span class="nv">notch</span> <span class="nv">in</span> <span class="nv">right</span> <span class="nv">alphabet</span>
+        <span class="k">if</span> <span class="nv">left</span> <span class="nv">index</span> <span class="nv">equals</span> <span class="nv">right</span> <span class="nv">index</span>:
+            <span class="nv">cycle</span> <span class="nv">left</span> <span class="nv">alphabet</span> <span class="nv">forward</span> <span class="mi">1</span> <span class="nv">character</span>
+    <span class="nv">cycle</span> <span class="nv">right</span><span class="o">-</span><span class="nv">most</span> <span class="nv">alphabet</span> <span class="nv">forward</span> <span class="mi">1</span> <span class="nv">character</span>
 </pre></div>
 
 
 <h2>Enigma Pseudocode</h2>
 <p>Almost there. We have one more thing going on - those rotor wheels are moving.
 Add the "increment rotor wheels" verb, and define that below.</p>
-<div class="highlight"><pre><span></span>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
+<div class="highlight"><pre><span></span><span class="nv">define</span> <span class="nv">plaintext</span> <span class="nv">message</span>
+<span class="nv">define</span> <span class="nv">normal</span> <span class="nv">alphabet</span> <span class="nv">and</span> <span class="nv">scrambled</span> <span class="nv">alphabets</span>
+<span class="nv">define</span> <span class="nv">list</span> <span class="nv">of</span> <span class="nv">switchboard</span> <span class="nv">swap</span> <span class="nv">pairs</span>
+<span class="nv">define</span> <span class="nv">list</span> <span class="nv">of</span> <span class="nv">reflector</span> <span class="nv">swap</span> <span class="nv">pairs</span>
+<span class="k">for</span> <span class="nv">each</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">plaintext</span> <span class="nv">message</span>:
 
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
+    # <span class="nv">Apply</span> <span class="nv">switchboard</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">switchboard</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
 
-    # Apply forward rotor transformation
-    for each rotor/scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
+    # <span class="nv">Apply</span> <span class="nv">forward</span> <span class="nv">rotor</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">rotor</span><span class="o">/</span><span class="nv">scrambled</span> <span class="nv">alphabet</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+        <span class="nv">replace</span> <span class="nv">character</span> <span class="nv">with</span> <span class="nv">new</span> <span class="nv">character</span> 
 
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
+    # <span class="nv">Apply</span> <span class="nv">reflector</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">reflector</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
 
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
+    # <span class="nv">Apply</span> <span class="nv">reverse</span> <span class="nv">rotor</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">input</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">scrambled</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">new</span> <span class="nv">character</span> <span class="nv">at</span> <span class="nv">that</span> <span class="nv">index</span> <span class="nv">in</span> <span class="nv">normal</span> <span class="nv">alphabet</span>
+        <span class="nv">replace</span> <span class="nv">character</span> <span class="nv">with</span> <span class="nv">new</span> <span class="nv">character</span> 
 
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
+    # <span class="nv">Apply</span> <span class="nv">switchboard</span> <span class="nv">transformation</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">pair</span> <span class="nv">in</span> <span class="nv">switchboard</span> <span class="nv">swap</span> <span class="nv">pairs</span>:
+        <span class="k">if</span> <span class="nv">character</span> <span class="nv">in</span> <span class="nv">swap</span> <span class="nv">pair</span>, <span class="nv">swap</span> <span class="nv">its</span> <span class="nv">value</span>
 
-    concatenate transformed input character to ciphertext message 
+    <span class="nv">concatenate</span> <span class="nv">transformed</span> <span class="nv">input</span> <span class="nv">character</span> <span class="nv">to</span> <span class="nv">ciphertext</span> <span class="nv">message</span> 
 
-    # Increment rotor wheels
-    for each rotor/scrambled alphabet, left to right:
-        get index of left notch in left alphabet
-        get index of right notch in right alphabet
-        if left index equals right index:
-            cycle left alphabet forward 1 character
-    cycle right-most alphabet forward 1 character
+    # <span class="nv">Increment</span> <span class="nv">rotor</span> <span class="nv">wheels</span>
+    <span class="k">for</span> <span class="nv">each</span> <span class="nv">rotor</span><span class="o">/</span><span class="nv">scrambled</span> <span class="nv">alphabet</span>, <span class="nv">left</span> <span class="nv">to</span> <span class="nv">right</span>:
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">left</span> <span class="nv">notch</span> <span class="nv">in</span> <span class="nv">left</span> <span class="nv">alphabet</span>
+        <span class="nv">get</span> <span class="nv">index</span> <span class="nv">of</span> <span class="nv">right</span> <span class="nv">notch</span> <span class="nv">in</span> <span class="nv">right</span> <span class="nv">alphabet</span>
+        <span class="k">if</span> <span class="nv">left</span> <span class="nv">index</span> <span class="nv">equals</span> <span class="nv">right</span> <span class="nv">index</span>:
+            <span class="nv">cycle</span> <span class="nv">left</span> <span class="nv">alphabet</span> <span class="nv">forward</span> <span class="mi">1</span> <span class="nv">character</span>
+    <span class="nv">cycle</span> <span class="nv">right</span><span class="o">-</span><span class="nv">most</span> <span class="nv">alphabet</span> <span class="nv">forward</span> <span class="mi">1</span> <span class="nv">character</span>
 </pre></div>
 
 
@@ -871,235 +1515,6 @@ for each character in plaintext message:
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Enigma Cipher Implementation: Part 1: How It Works
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-03-21T20:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/enigma.html">Enigma</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/enigma-cipher-implementation-part-1-how-it-works.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is the first of several posts that will walk through an implementation of the Enigma cipher in code.</p>
-<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
-detailed, accurate information entirely free of graduate level mathematics, 
-and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
-<p>There is also a Wikipedia article offering detailed information about the mathematical cryptanalysis of the Enigma,
-and covering some of the strengths and weaknesses of the machine: <a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">Cryptanalysis of the Enigma</a>.</p>
-<h2>Background</h2>
-<p>The Enigma machine was a device used by the German military to encrypt communications during World War II.
-The machine was essentially a large electronic circuit implementing a black-box encrypt/decrypt function.
-By design, the circuitry of the machine could be used for both encryption and decryption. </p>
-<p>The Enigma played an important role in the development of the first electronic computer. 
-Alan Turing led a team at Bletchley Park, in England, that constructed machines that could crack the Enigma code.
-This led to the development of the conceptual Turing machine and the creation of the first electronic computers.
-By narrowing the space of possible keys using Enigma's weaknesses, 
-these electronic computers could be used to explore the remaining key space.</p>
-<p>There were several variations of the Enigma. Each operated on the same basic principle:
-the operator entered a letter, which was transformed into a signal. 
-That signal was passed through several components of the Enigma machine,
-and underwent a series of linear transformations until its ciphertext was output.
-The encrypted output character would light up on a second keyboard, and the operator could transcribe the message.</p>
-<h2>Black Box Representation</h2>
-<p>The following diagram lays out the Enigma circuitry using black boxes. 
-The signal starts at the keyboard, where the operator types a letter.
-That letter is transformed into an electrical signal, which is sent through a series of components.
-First is the switchboard in the front, which swaps a few letter pairs.
-Next, the signal passes through three rotor wheels, each of which scrambles the alphabet.
-The signal is then passed into a reflector, which swaps every character with some other character.
-The reflector made the Enigma a symmetric machine. The signal was sent out of the reflector and passed through each rotor in reverse order.
-Finally, the signal passed through the switchboard at the front, and the resulting letter lit up, allowing the operator to transcribe the message.</p>
-<p><img alt="Image: Enigma Black Box Representation" src="/images/enigma_blackbox.jpg"></p>
-<h2>Components</h2>
-<p>There were three principal components of the machine: a <strong>switchboard</strong>, a set of <strong>rotor wheels</strong>, and a <strong>reflector</strong>.</p>
-<h3>Switchboard</h3>
-<p>When the operator entered a key on the input keyboard, the key pressed was transformed into a signal.
-On the front of the Enigma machine was a set of plugs, one for each letter. Operators would connect
-pairs of letters using plugs, which would swap letters. If an operator connected the A and K ports, 
-and typed "A" on the keyboard, the signal representing "A" would travel to the switchboard, 
-where it would be transformed into the signal representing "K". </p>
-<p>Typically the Enigma operators would only connect 7-10 pairs of letters, with the remaining 6-12 letters untransformed by the switchboard. 
-The switchboard led to a huge number of possible encryption schemes, and was the single component that made the Enigma diffficult to crack.
-Commercial versions of the Enigma, without the plugboard, were sold to banks and other entities in Germany, but without the plugboard,
-the key space was reduced dramatically, making these codes "easy" to crack.</p>
-<p><img alt="Enigma switchboard illustration" src="/images/enigma_switchboard.jpg"></p>
-<p>The image above illustrates how a switchboard would work for a simple 8-symbol alphabet "ABCDEFGH". 
-Only 3 of 4 pairings are made in this example. </p>
-<h3>Rotor Wheels</h3>
-<p>The rotor wheels were a set of interchangeable wheels that would perform a substitution cipher. 
-Each wheel corresponded to a particular alphabet in scrambled order (these rotors were not performing simple shift Caesar ciphers).
-Based on the order of the wheels, the signal, representing the letter the operator typed on the keyboard, 
-that came out of the switchboard would undergo three alphabet scrambles (also called affine ciphers).</p>
-<p>Because the wheels rotated with each keypress, the actual Affine cipher used by each wheel changed at each step.</p>
-<p>To complicate the way the rotors turned, the designer of the Enigma added clasps and notches to each rotor at different letters.
-When the notch of one rotor and the clasp of the rotor to the left matched, they would turn together. 
-The right-most wheel rotated once each key press, the center wheel rotated once every 26 key presses, and the left wheel rotated once every 676 key presses.
-Although these rates remained the same due to the number of notches, the exact locations of the notches dictated the timing of the rotations.
-The ordering of the wheels and their initial settings were therefore important to how the message was encrypted or decrypted.</p>
-<p>The German military distributed code books that contained daily settings for the Enigma machines, so that all Enigma operators had the same settings.
-These code books specified which wheels to load into the Enigma (three out of five possible rotors I II III IV and V), as well as the initial rotation to apply to each.</p>
-<p><img alt="Enigma rotor wheels illustration" src="/images/enigma_rotor.jpg"></p>
-<p>The image above shows how the rotor would work for the 8-character alphabet "ABCDEFGH".
-The wheel has a set arrangement of scrambled letters, but the scramble shifts each time the rotor is advanced.
-This allows 1 wheel to provide as many different scrambles as there are symbols in the alphabet.</p>
-<h3>Reflector</h3>
-<p>Having passed through the three rotor wheels, each scrambling the original character signal input by the operator into the keyboard, the signal then entered the reflector. 
-It did precisely what the name suggests - it reflected a signal back through the machine. 
-Its design was very similar to the switchboard in the front of the machine, except it created 13 pairs of letters, so that every letter was paired with some other letter.
-The reflector, like the rotor wheels, was removable and could be selected from a set. </p>
-<p>The reflector is a curious part of the Enigma design, because it represents an attempt at convenience, which led to a gaping security flaw that Bletchley Park was able to exploit. 
-The nature of the reflector is that it is symmetric: it pairs each letter with some other letter, and the pairings are mutual. 
-If the reflector turns every "P" into "H", it also turns every "H" into "P". 
-This symmetry gives the Enigma the property that you no longer need an "encrypt" or "decrypt" mode: if you take a plaintext message and run it through the Enigma machine once, you'll get the cipher text back. 
-If you run it through the Enigma machine twice, you'll get the same plaintext back. 
-This obviated the need for a switch on the Enigma, to go between "encrypt" and "decrypt" modes.</p>
-<p>However, this property also means that no letter can ever be encoded as itself - a property called derangement. 
-While the switch board at the front and the rotor wheel scrambles would sometimes encode a letter as itself 
-(for example, Rotor I encodes "S" as "S", Rotor II encodes "A" as "A" and "Q" as "Q", and Rotor III encodes "N" as "N"),
-the reflector would never do so. 
-Thus, despite an astronomical number of possible settings, and complicated machinery and circuitry, 
-no matter what the Enigma's settings, no letter would ever be encoded as itself.
-This property can be exploited to rule out the location of certain words or phrases at certain locations in the message,
-which is precisely how Bletchley Park attacked the Enigma cipher.</p>
-<p><img alt="Enigma reflector illustration" src="/images/enigma_reflector.jpg"></p>
-<p>The image above illustrates a reflector for the 8-symbol alphabet "ABCDEFGH".
-Each of the 4 possible pairings are made, so no letter will be encoded to itself by the reflector.</p>
-<p>Had the middle rotor wheels remained stationary, multiple wheels would have been redundant - 
-any arbitrary sequence of alphabet scrambles can be collapsed into a single scramble.
-However, the wheels were designed to rotate at various rates. Each time the wheels rotated,
-it changed the scramble provided by the wheel that had rotated. </p>
-<p>This means the Enigma worked by using a totally different scramble for each character in a message,
-with the scrambles constantly changing, each character, over and over. 
-Because the number of possible scrambles with a 26 character alphabet is <span class="math">\(26! = 403,291,461,126,605,635,584,000,000\)</span>,
-which is a trillion trillions.</p>
-<h2>The Enigma and Random Number Generators</h2>
-<p>By using a mechanical device with the same construction and the same common initial settings, 
-operators were able to generate random keys from an astronomical range of permutations, 
-but in a mechanically reproducible way. </p>
-<p>This makes Enigmas much like a random number generator, with the initial settings being the seed.
-If there are 32 or 64 bits used to store a number, that's 32 or 64 bits of randomness. 
-Large numbers of combinations indeed.</p>
-<h2>Sources</h2>
-<ol>
-<li>
-<p>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</p>
-</li>
-<li>
-<p>Copeland, B.J. "Alan Turing". Encyclopedia Britannica, Inc. Published 23 February 2016. Accessed 18 March 2017.</p>
-</li>
-<li>
-<p>"Cryptanalysis of the Enigma". Wikipedia: The Free Encyclopedia. Wikimedia Foundation, Inc. Edited 11 January 2017. Accessed 18 March 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma</a>&gt;</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ciphers.html">ciphers</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/enigma.html">enigma</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/encryption.html">encryption</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1108,7 +1523,13 @@ Large numbers of combinations indeed.</p>
 
             <a class="next" href="https://charlesreid1.github.io/index21.html">&larr; Newer</a>
 
+            &nbsp;
+            &nbsp;
+            &nbsp;
+            &nbsp;
+            &nbsp;
 
+            <a class="prev" href="https://charlesreid1.github.io/index23.html">Older &rarr;</a>
         
           <br />
         </div>
@@ -1123,6 +1544,19 @@ Large numbers of combinations indeed.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>December 2019</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/git-workflows-part-3-refactoring-large-pull-requests-and-commits.html">Git Workflows, Part 3: Refactoring Large Pull Requests and Commits</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
