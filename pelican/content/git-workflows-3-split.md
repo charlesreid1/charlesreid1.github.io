@@ -1,21 +1,22 @@
 Title: Git Workflows, Part 3: Refactoring Large Pull Requests and Commits
-Date: 2019-11-21 20:00
+Date: 2019-12-08 15:00
 Category: Git
 Tags: git, rebase, cherry-pick, branching, version control
-Status: draft
 
 # Table of Contents
 
 * [Summary](#summary)
 * [Managing Complexity](#managing-complexity)
 * [Refactoring Large Branches](#refactoring-large-branches)
-    * [Converting Set of Commits to Unstaged Changes](#converting-set-of-commits-to-unstaged-changes)
-        * [git format\-patch](#git-format-patch)
-        * [cherry\-pick and unstage](#cherry-pick-and-unstage)
-        * [soft reset and commit](#soft-reset-and-commit
-
-* Refactoring Large Pull Requests
-* Refactoring Large Commits
+  * [Converting Set of Commits to Unstaged Changes](#converting-set-of-commits-to-unstaged-changes)
+    * [git format\-patch](#git-format-patch)
+    * [cherry\-pick and unstage](#cherry-pick-and-unstage)
+    * [soft reset and commit](#soft-reset-and-commit)
+* [Refactoring Large Pull Requests](#refactoring-large-pull-requests)
+  * [Chaining Pull Requests](#chaining-pull-requests)
+  * [Preparing to Merge a Large Pull Request](#preparing-to-merge-a-large-pull-request)
+  * [Rinse and Repeat](#rinse-and-repeat)
+  * [Final Merge into Master](#final-merge-into-master)
 
 # Summary
 
@@ -322,12 +323,12 @@ A - B - C (master)
          F - FA - FB (feature-f)
 ```
 
-## Preparing to Merge Pull Requests
+## Preparing to Merge a Large Pull Request
 
-All pull requests are approved and ready to merge. Now what?
+All of your pull requests are approved and ready to merge. Now what?
 
-Pull requests will need to be merged in reverse order (PR 3 is merged first, then PR 2, then PR 1).
-To test that things go smoothly with the first pull request (`feature-f` into `feature-e`), we should
+Pull requests will need to be merged in reverse order (last PR is merged first - f into e, e into d, d into
+master).  To test that things go smoothly with the first pull request (`feature-f` into `feature-e`), we should
 create a local E-F integration branch.
 
 The local integration branch will have new commits if changes are needed to resolve merge conflicts or fix
@@ -389,19 +390,23 @@ into `feature-e`):
 git push origin feature-f
 ```
 
-Now you are ready to merge pull request 3.
+Now you are ready to merge pull request 3 (F into E).
 
 ## Rinse and Repeat
 
 Rinse and repeat for pull requests 2 and 1.
 
-To summarize the steps for Pull Request 2: create a new `integration-d-e-f` branch from the tip of the
-`integration-e-f` branch, and use the same approach of merging in the `feature-d` branch with an explicit
-merge commit:
+For Pull Request 2, we start by creating a new `integration-d-e-f` branch from the tip of the
+`integration-e-f` branch, like so:
 
 ```
 git checkout integration-d-e
 git checkout -b integration-d-e-f
+```
+
+and use the same approach of merging in the `feature-d` branch with an explicit merge commit:
+
+```
 git merge --no-ff feature-d
 ```
 
@@ -421,31 +426,80 @@ A - B - C (master)
                                            HEAD
 ```
 
-Now re-label the `integration-d-e-f` branch as `feature-e`, and push all the new commits
-to the remote to make the merge of `feature-e` into `feature-d` go smoothly:
+Now re-label the `integration-d-e-f` branch as `feature-e`:
 
 ```
-git branch -D feature-e
-git checkout -b feature-e
+git branch -D feature-e && git checkout -b feature-e
+```
+
+Finally, push all new commits to the remote, including the new merge
+commit, which will make sure the pull request can be merged without
+any conflicts:
+
+```
 git push origin feature-e
 ```
 
+Now PR 2 (E into D) can be merged.
 
+## Final Merge into Master
 
+The last and final PR, D into master, will merge all combined feature
+branches into the master branch. We start with a `feature-d` branch
+that has several commits related to feature D, then several commits
+from merging the `feature-e` branch in (pull request 2, E into D),
+and the `feature-e` branch also had `feature-f` merged into it.
 
+```
+A - B - C (master)
+     \
+      D - D2 - DEF1 - DEF2 (feature-d)
+```
 
+Now we will create one more commit on the `feature-d` branch that is
+merging `master` into `feature-d`, which will help the merge happen
+smoothly for pull request 1 (D into master).
 
+But first we switch to an integration branch, in case things don't go
+smoothly and we want to throw away the merge commit:
 
+```
+git branch integration-def-master
+```
 
+Create an explicit merge commit to merge `master` into `integration-def-master`:
 
+```
+git merge --no-ff master
+```
 
+Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
+and you should now have a git commit history like this:
 
-# Refactoring Large Commits
+```
+A - B - C (master)
+     \   \---------------------
+      \                        \
+       D - D2 - DEF1 - DEF2 - DEF3 (integration-def-master)
+```
 
+where commit `DEF3` is the merge commit created with the `--no-ff` command.
 
+The merge commit will resolve any conflicts. When you're satisfied with the
+merge commit, you can switch out the `integration-def-master` branch with the
+`feature-d` branch like so:
 
+```
+git branch -D feature-d
+git checkout -b feature-d
+```
 
+Now you can push the merge commit to the remote:
 
+```
+git push origin feature-d
+```
 
+and you're now ready to merge your (conflict-free) pull request!
 
 
