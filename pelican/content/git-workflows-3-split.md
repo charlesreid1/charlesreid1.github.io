@@ -58,7 +58,7 @@ refactor tests to be cleaner, or to use context manager foobar, or etc.
 To illustrate: suppose you are on a branch called `feature` (created off of `master`) that consists of
 three sets of changes, DEF:
 
-```plain
+```text
 A - B - C (master)
     \
      D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
@@ -93,7 +93,7 @@ of changes in each new commit.
 We are trying to untangle a set of unrelated changes into separate commits that group related
 changes together. For the example, we want to convert this:
 
-```plain
+```text
 A - B - C (master)
     \
      D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
@@ -101,7 +101,7 @@ A - B - C (master)
 
 to this:
 
-```plain
+```text
 A - B - C (master)
     \
      D - E - F (feature)
@@ -114,13 +114,13 @@ so that the changes in commits D, E, and F are simpler, more limited in scope, a
 To create a set of patches, one per commit, to edit them or apply them in various orders,
 you can use `git format-patch` with a commit range:
 
-```
+```text
 git format-patch D1..E3
 ```
 
 This will create a series of patches like 
 
-```plain
+```text
 patches/0001-the-D1-commit-message.patch
 patches/0001-the-E1-commit-message.patch
 patches/0001-the-D2-commit-message.patch
@@ -137,7 +137,7 @@ changes in line numbers happening out of order may confuse the program applying 
 
 Start by creating a branch from the desired commit (commit `B` in the diagram above):
 
-```
+```text
 git checkout B
 ```
 
@@ -145,7 +145,7 @@ git checkout B
 with commit B). Now create a branch that will start from that commit (we'll start with our branch
 for feature D here):
 
-```
+```text
 git checkout -b feature-d
 ```
 
@@ -153,7 +153,7 @@ Now apply patches to the new branch, which will start from commit `B`.
 
 To apply a patch, use `patch -p1`:
 
-```plain
+```text
 patch -p1 < 0001-the-D1-commit-message.patch
 ```
 
@@ -168,7 +168,7 @@ commit.
 As patches are applied, particular changes can be staged and commits can be crafted. Use 
 the `--edit` or `--patch` flags of `git add`:
 
-```
+```text
 git add --edit <filename>
 git add --patch <filename>
 ```
@@ -178,7 +178,7 @@ This allows selective filtering of particular edits into the next commit, so tha
 
 Once you are ready, just run
 
-```plain
+```text
 git commit
 ```
 
@@ -188,7 +188,7 @@ and ignore the crafting you've done.)
 As you create a commit or a set of commits specific to changeset D, you can work on a D branch.
 When you finish all commits related to D, you can start a new branch with
 
-```
+```text
 git checkout feature-e
 ```
 
@@ -213,14 +213,14 @@ The disadvantages of this approach include:
 An alternative to the above workflow is to use `git cherry-pick` to apply the changes from particular
 commits, but to leave those changes unstaged using the `--no-commit` or `-n` flag:
 
-```plain
+```text
 git cherry-pick --no-commit <commit-hash>
 git cherry-pick -n <commit-hash>
 ```
 
 Alternatively, a range of commits can be used instead:
 
-```
+```text
 git cherry-pick -n <commit-hash-start>..<commit-hash-end>
 ```
 
@@ -236,7 +236,7 @@ the changes that each commit made. This is precisely what a _soft reset_ will do
 
 For the git commit history
 
-```
+```text
 A - B - C (master)
     \
      D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
@@ -244,7 +244,7 @@ A - B - C (master)
 
 Run the command
 
-```
+```text
 git reset --soft B
 ```
 
@@ -254,13 +254,13 @@ staged changes (as though they had been `git add`-ed).
 
 The changes will be staged, but changes to files can be unstaged using
 
-```
+```text
 git restore --staged <filename>
 ```
 
 Now add changes selectively using the `--edit` or `--patch` flags
 
-```
+```text
 git add --edit <filename>
 git add --patch <filename>
 ```
@@ -270,7 +270,7 @@ If desired, those changes can be unstaged, and then re-staged using `git add --e
 
 When done, run 
 
-```
+```text
 git commit
 ```
 
@@ -280,7 +280,7 @@ with no arguments to commit the changes you made.
 
 The approaches above can be useful for refactoring branches. The end result will look something like this:
 
-```
+```text
 A - B - C (master)
     \
      D (feature-d)
@@ -313,7 +313,7 @@ from prior branches (D), resulting in messy and hard-to-review pull requests.)
 Pull requests are reviewed and discussed, and new commits will probably be added to fix things or incorporate
 feedback:
 
-```
+```text
 A - B - C (master)
     \
      D - DA - DB (feature-d)
@@ -338,19 +338,19 @@ they are part of the pull request, making the merge into `feature-e` go smoothly
 To create a throwaway E-F integration branch, we start by creating a test integration branch from the tip of the
 `feature-f` branch, and we will merge branch `feature-e` into branch `feature-f`.
 
-```
+```text
 git checkout feature-f
 ```
 
 Now we create a local E-F integration branch:
 
-```
+```text
 git checkout -b integration-e-f
 ```
 
 Now we merge `feature-e` into `integration-e-f`, which is the same as `feature-f`:
 
-```
+```text
 git merge --no-ff feature-e
 ```
 
@@ -362,7 +362,7 @@ merge commit.
 
 Further commits can also be made to make tests pass, with a resulting git diagram:
 
-```
+```text
 A - B - C (master)
     \
      D - DA - DB (feature-d)
@@ -378,7 +378,7 @@ Once the `integration-e-f` branch is polished and passing tests, we can re-label
 the new commits to the remote. To re-label `integration-e-f` as `feature-f`, assuming we're at the tip of
 the `integration-e-f` branch (where we left off above):
 
-```
+```text
 git branch -D feature-f
 git checkout -b feature-f
 ```
@@ -386,7 +386,7 @@ git checkout -b feature-f
 and push the new commits to the remote's `feature-f` branch, before you merge in the pull request (`feature-f`
 into `feature-e`):
 
-```
+```text
 git push origin feature-f
 ```
 
@@ -399,14 +399,14 @@ Rinse and repeat for pull requests 2 and 1.
 For Pull Request 2, we start by creating a new `integration-d-e-f` branch from the tip of the
 `integration-e-f` branch, like so:
 
-```
+```text
 git checkout integration-d-e
 git checkout -b integration-d-e-f
 ```
 
 and use the same approach of merging in the `feature-d` branch with an explicit merge commit:
 
-```
+```text
 git merge --no-ff feature-d
 ```
 
@@ -414,7 +414,7 @@ Work out any merge conflicts that result, and add any additional changes needed 
 and you should now have a git commit history like this:
 
 
-```
+```text
 A - B - C (master)
     \
      D - DA - DB ----------------
@@ -428,7 +428,7 @@ A - B - C (master)
 
 Now re-label the `integration-d-e-f` branch as `feature-e`:
 
-```
+```text
 git branch -D feature-e && git checkout -b feature-e
 ```
 
@@ -436,7 +436,7 @@ Finally, push all new commits to the remote, including the new merge
 commit, which will make sure the pull request can be merged without
 any conflicts:
 
-```
+```text
 git push origin feature-e
 ```
 
@@ -450,7 +450,7 @@ that has several commits related to feature D, then several commits
 from merging the `feature-e` branch in (pull request 2, E into D),
 and the `feature-e` branch also had `feature-f` merged into it.
 
-```
+```text
 A - B - C (master)
      \
       D - D2 - DEF1 - DEF2 (feature-d)
@@ -463,20 +463,20 @@ smoothly for pull request 1 (D into master).
 But first we switch to an integration branch, in case things don't go
 smoothly and we want to throw away the merge commit:
 
-```
+```text
 git branch integration-def-master
 ```
 
 Create an explicit merge commit to merge `master` into `integration-def-master`:
 
-```
+```text
 git merge --no-ff master
 ```
 
 Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
 and you should now have a git commit history like this:
 
-```
+```text
 A - B - C (master)
      \   \---------------------
       \                        \
@@ -489,17 +489,15 @@ The merge commit will resolve any conflicts. When you're satisfied with the
 merge commit, you can switch out the `integration-def-master` branch with the
 `feature-d` branch like so:
 
-```
+```text
 git branch -D feature-d
 git checkout -b feature-d
 ```
 
 Now you can push the merge commit to the remote:
 
-```
+```text
 git push origin feature-d
 ```
 
 and you're now ready to merge your (conflict-free) pull request!
-
-
