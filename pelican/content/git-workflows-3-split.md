@@ -8,15 +8,15 @@ Tags: git, rebase, cherry-pick, branching, version control
 * [Summary](#summary)
 * [Managing Complexity](#managing-complexity)
 * [Refactoring Large Branches](#refactoring-large-branches)
-  * [Converting Set of Commits to Unstaged Changes](#converting-set-of-commits-to-unstaged-changes)
-    * [git format\-patch](#git-format-patch)
-    * [cherry\-pick and unstage](#cherry-pick-and-unstage)
-    * [soft reset and commit](#soft-reset-and-commit)
+    * [Converting Set of Commits to Unstaged Changes](#converting-set-of-commits-to-unstaged-changes)
+        * [git format\-patch](#git-format-patch)
+        * [cherry\-pick and unstage](#cherry-pick-and-unstage)
+        * [soft reset and commit](#soft-reset-and-commit)
 * [Refactoring Large Pull Requests](#refactoring-large-pull-requests)
-  * [Chaining Pull Requests](#chaining-pull-requests)
-  * [Preparing to Merge a Large Pull Request](#preparing-to-merge-a-large-pull-request)
-  * [Rinse and Repeat](#rinse-and-repeat)
-  * [Final Merge into Master](#final-merge-into-master)
+    * [Chaining Pull Requests](#chaining-pull-requests)
+    * [Preparing to Merge a Large Pull Request](#preparing-to-merge-a-large-pull-request)
+    * [Rinse and Repeat](#rinse-and-repeat)
+    * [Final Merge into Master](#final-merge-into-master)
 
 # Summary
 
