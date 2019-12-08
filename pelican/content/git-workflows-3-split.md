@@ -88,7 +88,7 @@ split commit using `git add -e` and using the editor to select which changes to 
 from the commit. As each commit is created, branches can be created that are linked to the group
 of changes in each new commit.
 
-## Converting Set of Commits to Unstaged Changes
+## Converting a Set of Commits to Unstaged Changes
 
 We are trying to untangle a set of unrelated changes into separate commits that group related
 changes together. For the example, we want to convert this:
@@ -108,6 +108,10 @@ A - B - C (master)
 ```
 
 so that the changes in commits D, E, and F are simpler, more limited in scope, and easier to review.
+
+We cover three strategies for turning a sequence of commits like `D1-E1-...-E3` into a set of unstaged
+changes. Then, particular changes can be selectively added to commits using `git add -e` (`--edit`) or
+`git add -p` (`--patch`).
 
 ### git format-patch
 
