@@ -27,14 +27,6 @@ Tags: git, rebase, cherry-pick, branching, version control
     * Apply patches or cherry-picks to the feature branch
     * Use `git add --patch` or `git add --edit` to selectively split out changes into separate commits
 
-* If a commit gets too large, you can rebase your branch, and mark that particular commit
-  to be edited (`git rebase HASH_OF_COMMIT~1`). 
-    * The rebase will replay that commit, and stage the changes, but will not 
-      commit them, allowing you to edit the commit.
-    * Use `git add --patch` or `git add --edit` to selectively split out changes
-    * Remember you can also perform the same procedure on the resulting commits,
-      further splitting each commit into sub-commits.
-
 This post contains many common patterns applied to different workflows.
 
 # Managing Complexity

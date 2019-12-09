@@ -104,18 +104,20 @@ If a feature branch is created off of the master branch, and some time passes,
 the feature branch base commit may grow far out of sync with the master branch.
 (Note that `master` indicates the primary branch.)
 
-This leaves the developer of the feature branch a few choices:
+This leaves the developer of the feature branch (which is out of sync with master) with a few choices:
 
 * **rebase** - continue to rebase all commits on the feature branch from the
-  original feature branch base commit onto the head commit of the master branch.
+  (old) original feature branch base commit onto the (new) head commit of the master 
+  branch.
     * Pros: clean history, easy for one-branch-one-developer workflow
     * Cons: requires continual force-pushes, requires coordination between developers
       to prevent squashing others' work, not scalable, some people hate this method
 
 * **merge** - occasionally merge work from the master branch into the feature branch.
     * Pros: simple to understand, simple to carry out, low cognitive load
-    * Cons: clutters PR review by mixing feature changes with merged changes, clutters the
-      commit history
+    * Cons: any changes added to the branch via the merge commit will show up in the PR
+      as new code, cluttering PR reviews by mixing features with merged changes; can also
+      make the commit history messy and harder to understand.
 
 * **branch** - by making heavy use of throwaway branches and integration branches,
   it is easier to test out how the integration of a feature branch based on an old
@@ -157,7 +159,7 @@ remote to discard its version of the branch and use the version of the
 branch that you are pushing.
 
 We will cover more about force pushing - when to do it, when not to, and
-why some people hate it - in part 3 of this post. For now, we will only say
+why some people hate it - in a later post. For now, we will only say
 that you should not force push often, since you can risk deleting others' work
 and creating additional confusion and work for all of your collaborators.
 
@@ -232,7 +234,11 @@ index 3b938a1..6c1aec8 100644
 +     sort -nru -k1
 ```
 
-There are two related changes and one unrelated change, respectively.
+There are two related changes and one unrelated change, respectively:
+the two related changes are the change to the comment and the change
+to the `tail` command; the unrelated change is adding the `-u` flag
+to the `sort` command.
+
 We can split these changes into two commits using `git add -p doit.sh`,
 which will walk through each change in the file and ask if we want to
 stage it:
