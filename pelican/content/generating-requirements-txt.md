@@ -1,4 +1,4 @@
-title: Automatically Generating requirements.txt for Python Projects
+Title: Automatically Generating requirements.txt for Python Projects
 Date: 2019-12-12 12:12
 Category: Python
 Tags: python, pip, version control, make, makefile
@@ -18,7 +18,7 @@ make requirements.txt
 **All of this code comes from the Human Cell Atlas [data-store](https://github.com/HumanCellAtlas/data-store)
 project!**
 
-## creating a requirements.txt.in file
+## Creating a requirements.txt.in file
 
 Start by creating a `requirements.txt.in`, which should look like a normal `requirements.txt` file,
 listing software packages for pip to install (and optionally version information - but version information
