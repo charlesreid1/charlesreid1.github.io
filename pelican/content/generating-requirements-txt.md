@@ -2,7 +2,6 @@ Title: Automatically Generating requirements.txt for Python Projects
 Date: 2019-12-12 12:12
 Category: Python
 Tags: python, pip, version control, make, makefile
-status: draft
 
 ## Summary
 
