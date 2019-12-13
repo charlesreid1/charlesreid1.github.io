@@ -4,13 +4,27 @@ Category: Python
 Tags: python, pip, version control, make, makefile
 status: draft
 
+## Summary
 
-Quick post to demonstrate a way to automatically generate a `requirements.txt` file for your
-Python project.
+A quick post to demonstrate a way to automatically generate a `requirements.txt` file for your Python project.
+
+By the end of this post, you'll be able to do this to refresh and update the versions of all the software your
+project depends on:
+
+```
+make requirements.txt
+```
+
+**All of this code comes from the Human Cell Atlas [data-store](https://github.com/HumanCellAtlas/data-store)
+project!**
+
+## creating a requirements.txt.in file
 
 Start by creating a `requirements.txt.in`, which should look like a normal `requirements.txt` file,
 listing software packages for pip to install (and optionally version information - but version information
 does not _need_ to be specified).
+
+This file is a looser set of specifications of software versions.
 
 Example `requirements.txt.in`:
 
@@ -20,13 +34,61 @@ pandas > 0.22
 sphinx
 ```
 
+## Converting requirements.txt.in to requirements.txt
+
 Next, we use the `requirements.txt.in` file to install the latest versions of each software package (and all
 dependent software packages) into a virtual environment.
 
 From that virtual environment, we can use `pip freeze` to output the names of each software package installed in
 the virtual environment, along with its exact version. This can be used to make a `requirements.txt` file.
 
-Performing the above steps requires multiple steps, but we have a nice Makefile rule that can be dropped into
+The manual steps are
+
+```
+virtualenv -p $(which python3) venv
+venv/bin/pip install -r requirements.txt
+venv/bin/pip install -r requirements.txt.in
+venv/bin/pip freeze >> requirements.txt
+rm -fr venv
+```
+
+Using pip freeze means the resulting `results.txt` contains detailed version numbers:
+
+```
+alabaster==0.7.12
+Babel==2.7.0
+certifi==2019.11.28
+chardet==3.0.4
+docutils==0.15.2
+idna==2.8
+imagesize==1.1.0
+Jinja2==2.10.3
+MarkupSafe==1.1.1
+numpy==1.17.4
+packaging==19.2
+pandas==0.25.3
+Pygments==2.5.2
+pyparsing==2.4.5
+python-dateutil==2.8.1
+pytz==2019.3
+requests==2.22.0
+six==1.13.0
+snowballstemmer==2.0.0
+Sphinx==2.2.2
+sphinxcontrib-applehelp==1.0.1
+sphinxcontrib-devhelp==1.0.1
+sphinxcontrib-htmlhelp==1.0.2
+sphinxcontrib-jsmath==1.0.1
+sphinxcontrib-qthelp==1.0.2
+sphinxcontrib-serializinghtml==1.1.3
+urllib3==1.25.7
+```
+
+This is automated with a make rule next.
+
+## Automating the step with a make rule
+
+We have a nice Makefile rule that can be dropped into
 any Makefile that allows users to run
 
 ```
@@ -49,7 +111,7 @@ requirements.txt: %.txt : %.txt.in
 	rm -rf .$<-env
 ```
 
-Summary:
+Summary of the make rule:
 
 * The first two lines create a virtual environment at `.requirements-env/`
 
@@ -62,6 +124,22 @@ Summary:
 * The `pip freeze` command is used to create a `requirements.txt` file from the current virtual
   environment
 
-Extending to requirements, requirements-dev, requirements-docs
+## Refreshing requirements
 
-What problem does this solve?
+To update the requirements, update the `requirements.txt` with these manual steps:
+
+```
+refresh_all_requirements:
+    @cat /dev/null > requirements.txt
+	@if [ $$(uname -s) == "Darwin" ]; then sleep 1; fi  # this is require because Darwin HFS+ only has second-resolution for timestamps.
+	@touch requirements.txt.in
+	@$(MAKE) requirements.txt
+```
+
+Now `requirements.txt` can be updated with
+
+```
+make refresh_all_requirements
+```
+
+This can be done periodically, and the new `requirements.txt` updated in the version control system.
