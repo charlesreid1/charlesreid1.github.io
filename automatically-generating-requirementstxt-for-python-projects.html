@@ -77,29 +77,11 @@
 
 <div class="container">
 
-    <div class="v50"></div>
-
-    <div class="row">
-        <div class="col-md-12 col-centered" style="text-align: center;">
-            <div class="cosmojumbo">
-                <h1 class="jumbojumbo">Tag: make</h1>
-            </div>
-        </div>
-    </div>
-
-    <div class="v50"></div>
-
-    <div>
-
-
-
-<hr/ >
-
 <header>
 <div class="row">
-    <div class="col-md-12">
 
-        <!-- only the header is centered. -->
+
+    <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
                 Automatically Generating requirements.txt for Python Projects
@@ -119,13 +101,16 @@
         </div>
 
     </div>
+
 </div>
 </header>
 
-<div class="v20"></div>
+
+<div class="v50"></div>
+
 
 <div class="row">
-    <div class="col-md-8 col-centered" style="text-align: left;">
+    <div class="col-md-12" style="text-align: left;">
 
         <div class="entry-content"><h2>Summary</h2>
 <p>A quick post to demonstrate a way to automatically generate a <code>requirements.txt</code> file for your Python project.</p>
@@ -140,24 +125,124 @@ project!</strong></p>
 <h2>Creating a requirements.txt.in file</h2>
 <p>Start by creating a <code>requirements.txt.in</code>, which should look like a normal <code>requirements.txt</code> file,
 listing software packages for pip to install (and optionally version information - but version information
-does not <em>need</em> to …</p></div>
-        <br />
-        <br />
-        <footer>
-            <a rel="full-article" href="https://charlesreid1.github.io/automatically-generating-requirementstxt-for-python-projects.html">Read On &crarr;</a>
-        </footer>
+does not <em>need</em> to be specified).</p>
+<p>This file is a looser set of specifications of software versions.</p>
+<p>Example <code>requirements.txt.in</code>:</p>
+<div class="highlight"><pre><span></span>numpy
+pandas &gt; 0.22
+sphinx
+</pre></div>
+
+
+<h2>Converting requirements.txt.in to requirements.txt</h2>
+<p>Next, we use the <code>requirements.txt.in</code> file to install the latest versions of each software package (and all
+dependent software packages) into a virtual environment.</p>
+<p>From that virtual environment, we can use <code>pip freeze</code> to output the names of each software package installed in
+the virtual environment, along with its exact version. This can be used to make a <code>requirements.txt</code> file.</p>
+<p>The manual steps are</p>
+<div class="highlight"><pre><span></span>virtualenv -p $(which python3) venv
+venv/bin/pip install -r requirements.txt
+venv/bin/pip install -r requirements.txt.in
+venv/bin/pip freeze &gt;&gt; requirements.txt
+rm -fr venv
+</pre></div>
+
+
+<p>Using pip freeze means the resulting <code>results.txt</code> contains detailed version numbers:</p>
+<div class="highlight"><pre><span></span>alabaster==0.7.12
+Babel==2.7.0
+certifi==2019.11.28
+chardet==3.0.4
+docutils==0.15.2
+idna==2.8
+imagesize==1.1.0
+Jinja2==2.10.3
+MarkupSafe==1.1.1
+numpy==1.17.4
+packaging==19.2
+pandas==0.25.3
+Pygments==2.5.2
+pyparsing==2.4.5
+python-dateutil==2.8.1
+pytz==2019.3
+requests==2.22.0
+six==1.13.0
+snowballstemmer==2.0.0
+Sphinx==2.2.2
+sphinxcontrib-applehelp==1.0.1
+sphinxcontrib-devhelp==1.0.1
+sphinxcontrib-htmlhelp==1.0.2
+sphinxcontrib-jsmath==1.0.1
+sphinxcontrib-qthelp==1.0.2
+sphinxcontrib-serializinghtml==1.1.3
+urllib3==1.25.7
+</pre></div>
+
+
+<p>This is automated with a make rule next.</p>
+<h2>Automating the step with a make rule</h2>
+<p>We have a nice Makefile rule that can be dropped into
+any Makefile that allows users to run</p>
+<div class="highlight"><pre><span></span>make requirements.txt
+</pre></div>
+
+
+<p>and it will use <code>requirements.txt.in</code>, perform the above steps, and output an updated <code>requirements.txt</code> with the
+latest compatible versions of software.</p>
+<p>Here is the Makefile rule:</p>
+<div class="highlight"><pre><span></span><span class="nf">requirements.txt</span><span class="o">:</span> %.<span class="n">txt</span> : %.<span class="n">txt</span>.<span class="n">in</span>
+    <span class="o">[</span> ! -e .requirements-env <span class="o">]</span> <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span>
+    virtualenv -p <span class="k">$(</span>shell which python3<span class="k">)</span> .$&lt;-env
+    .$&lt;-env/bin/pip install -r <span class="nv">$@</span>
+    .$&lt;-env/bin/pip install -r $&lt;
+    <span class="nb">echo</span> <span class="s2">&quot;# You should not edit this file directly.  Instead, you should edit </span>$<span class="s2">&lt;.&quot;</span> &gt;<span class="p">|</span> <span class="nv">$@</span>
+    .$&lt;-env/bin/pip freeze &gt;&gt; <span class="nv">$@</span>
+    rm -rf .$&lt;-env
+</pre></div>
+
+
+<p>Summary of the make rule:</p>
+<ul>
+<li>
+<p>The first two lines create a virtual environment at <code>.requirements-env/</code></p>
+</li>
+<li>
+<p>The next two lines run <code>pip install</code>, first on <code>requirements.txt</code> (the existing version), then
+  <code>requirements.txt.in</code> (which installs/updates any software packages in <code>requirements.txt.in</code>)</p>
+</li>
+<li>
+<p>A comment is added to the top of the <code>requirements.txt</code> file to help give users a hint about
+  where to update software requirements.</p>
+</li>
+<li>
+<p>The <code>pip freeze</code> command is used to create a <code>requirements.txt</code> file from the current virtual
+  environment</p>
+</li>
+</ul>
+<h2>Refreshing requirements</h2>
+<p>To update the requirements, update the <code>requirements.txt</code> with these manual steps:</p>
+<div class="highlight"><pre><span></span><span class="nf">refresh_all_requirements</span><span class="o">:</span>
+    @cat /dev/null &gt; requirements.txt
+    @if <span class="o">[</span> <span class="nv">$$</span><span class="o">(</span>uname -s<span class="o">)</span> <span class="o">==</span> <span class="s2">&quot;Darwin&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> sleep <span class="m">1</span><span class="p">;</span> <span class="k">fi</span>  <span class="c1"># this is require because Darwin HFS+ only has second-resolution for timestamps.</span>
+    @touch requirements.txt.in
+    @<span class="k">$(</span>MAKE<span class="k">)</span> requirements.txt
+</pre></div>
+
+
+<p>Now <code>requirements.txt</code> can be updated with</p>
+<div class="highlight"><pre><span></span>make refresh_all_requirements
+</pre></div>
+
+
+<p>This can be done periodically, and the new <code>requirements.txt</code> updated in the version control system.</p></div>
 
     </div>
 </div>
 
-
-
 <div class="v20"></div>
 
-
-
 <div class="row">
-    <div class="col-md-8 col-centered" style="text-align: left;">
+    <div class="col-md-12" style="text-align: left;">
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
@@ -177,114 +262,7 @@ does not <em>need</em> to …</p></div>
 </div>
 
 
-
 <div class="v200"></div>
-
-
-<hr/ >
-
-<header>
-<div class="row">
-    <div class="col-md-12">
-
-        <!-- only the header is centered. -->
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Better Timing of Guava Traveling Salesperson Problem Code: Timing Scripts
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-04-01T09:00:00-07:00" pubdate>Saturday 04/01/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/java.html">Java</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-</div>
-</header>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-8 col-centered" style="text-align: left;">
-
-        <div class="entry-content"><ul>
-<li><a href="#better-timing-thecode">Before We Begin: The Code</a></li>
-<li><a href="#better-timing-timing">Timing Scripts</a></li>
-<li><a href="#better-timing-before-u-time">Before You Time: Developing Your Algorithm</a></li>
-<li><a href="#better-timing-timing-journey">Beginning Your Timing Journey</a></li>
-<li><a href="#better-timing-mouse-cookie">Statistical Timing, a.k.a., If You Give A Mouse A Cookie</a></li>
-<li><a href="#better-timing-hierarchical">Hierarchical Timing Strategy</a></li>
-<li><a href="#better-timing-single">Single Problem/Program/Binary</a></li>
-<li><a href="#better-timing-multiple">Multiple Problem/Program/Binary</a></li>
-<li><a href="#better-timing-statistical">Statistical Averaging</a></li>
-<li><a href="#better-timing-results">Results</a></li>
-<li><a href="#better-timing-summary">Summary</a></li>
-</ul>
-<p><a name="better-timing-thecode"></a></p>
-<h2>Before We Begin: The Code</h2>
-<p>Note that all of the code discussed/shown in this post is available from the 
-traveling salesperson problem repository on <a href="https://git.charlesreid1.com/charlesreid1/tsp">git.charlesreid1.com</a>.
-The <code>guava/</code> directory contains the guava solution to the traveling salesperson problem,
-along with the timing scripts discussed below, and several example output files.</p>
-<p><a name="better-timing-intro"></a></p>
-<h2>Introduction</h2>
-<p>Timing a piece …</p></div>
-        <br />
-        <br />
-        <footer>
-            <a rel="full-article" href="https://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html">Read On &crarr;</a>
-        </footer>
-
-    </div>
-</div>
-
-
-
-<div class="v20"></div>
-
-
-
-<div class="row">
-    <div class="col-md-8 col-centered" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/command-line.html">command line</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/guava.html">guava</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graph.html">graph</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/tsp.html">TSP</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/make.html">make</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/awk.html">awk</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/performance.html">performance</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-
-<div class="v200"></div>
-
-
-
-    </div>
 
 </div>
 
