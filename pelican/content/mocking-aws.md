@@ -10,6 +10,9 @@ Tags: python, pytest, tests, aws, mock, mocking
     * [The Genuine AWS Call](#the-genuine-aws-call)
     * [The Mocked AWS Call](#the-mocked-aws-call)
 
+<br />
+<br />
+
 ## Overview
 
 This post covers a technique for mocking AWS in unit tests so that you can test functionality that normally
