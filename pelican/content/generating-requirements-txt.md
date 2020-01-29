@@ -1,11 +1,25 @@
-Title: Automatically Generating requirements.txt for Python Projects
+title: Automatically Generating Up-To-Date requirements.txt for Python Projects
 Date: 2019-12-12 12:12
 Category: Python
 Tags: python, pip, version control, make, makefile
 
 ## Summary
 
-A quick post to demonstrate a way to automatically generate a `requirements.txt` file for your Python project.
+In this post, we cover a pattern for automatically generating a `requirements.txt` file that has the latest
+compatible versions of required software, and that specifies the full and exact version of each package to
+make the Python environment reproducible.
+
+This will turn a requirements input file (called `requirements.txt.in` for example) that looks like
+
+```
+numpy
+```
+
+into a requirements file that specifies the exact version of `numpy` and all dependencies, like
+
+```
+numpy==1.18.1
+```
 
 By the end of this post, you'll be able to do this to refresh and update the versions of all the software your
 project depends on:
@@ -17,7 +31,28 @@ make requirements.txt
 **All of this code comes from the Human Cell Atlas [data-store](https://github.com/HumanCellAtlas/data-store)
 project!**
 
-## Creating a requirements.txt.in file
+## What is requirements.txt?
+
+When developing a Python project, the `requirements.txt` file is a plain text file that contains a list of
+Python software packages that need to be installed for the current Python software package to work. The software
+can be installed using the command
+
+```
+pip install -r requirements.txt
+```
+
+For example, if a package `foobar` has `import numpy` at the top of a Python file in the project, the `numpy` package
+must be installed before importing `foobar`. In this case, the `requirements.txt` could just contain
+
+```
+numpy
+```
+
+or it could specify a particular version of numpy, or a minimum version of numpy:
+
+```
+numpy >= 1.10
+```
 
 Start by creating a `requirements.txt.in`, which should look like a normal `requirements.txt` file,
 listing software packages for pip to install (and optionally version information - but version information
