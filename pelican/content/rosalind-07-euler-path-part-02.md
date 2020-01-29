@@ -371,20 +371,19 @@ versus directed graphs.
 
 # Algorithm Building Blocks
 
-Algorithm to find Eulerian paths/cycles consists
-of several steps using several algorithms.
+Algorithm to find Eulerian paths/cycles consists of several steps using several algorithms.
 
-Undirected graphs are the simpler case
-
-Directed graphs are more complicated
+Undirected graphs are the simpler case; directed graphs are more complicated.
 
 ## Depth First Search
 
-Performing a DFS on a directed graph
+To perform a DFS on a directed graph, implement two functions:
 
-Implementation as a function
+1. Write a DFS function that takes a graph as an input argument and that visits each node of the
+   graph in a depth-first search.
 
-Using a visit callback function
+2. Write a visitation function that takes a node as an input argument and that performs some action
+   on the node. This visitation function is called by the DFS function on each node that it visits.
 
 ## Kosaraju's Algorithm: Connected Components
 
@@ -392,38 +391,25 @@ On an undirected graph, can use Fleury's Algorithm
 to follow edges (classify edges as bridge or non-bridge,
 then leave bridges for last).
 
-On a directed graph, have twice the amount of work:
-not just checking that all vertices are reachable
-from a given vertex, also checking that all vertices
+On a directed graph, we have twice the amount of work:
+we are not just checking that all vertices are reachable
+from a given vertex, we are also checking that all vertices
 can also reach that vertex.
 
-# Finding the Eulerian Path or Cycle
+# To Be Continued...
 
-We will start with the slightly simpler case of
-showing how to find the Euler cycle (which has no
-start or end vertices), then show how finding the
-Euler path is a special case of finding the Euler 
-cycle.
+In the next part of this post, we will start with the slightly simpler case of finding an Euler cycle
+(which has no start or end vertices). Then we will show how finding the Euler path is actually a special
+case of finding the Euler cycle.
 
-## Hierholzer's Algorithm: Finding Euler Cycles
+First, we will use [Hierholzer's
+Algorithm](https://charlesreid1.com/wiki/Graphs/Euler_Circuit#Directed_Graphs:_Hierholzer.27s_Algorithm)
+to find Euler cycles (this is the simpler case). Order does not matter because it is a cycle;
+Hierholzer's algorithm is used to find the Euler cycle.
 
-Start with the simplest case: finding Euler cycle
+Next, we will modify the above algorithm to find Euler paths. This requires keeping track of
+the start and end candidate nodes. We verify only one each; we complete the cycle by adding an edge.
+Once we find the cycle, we remove the edge. Finally, we rearrange the cycle to have the correct
+start and end nodes.
 
-Order does not matter because it is a cycle
-
-Hierholzer's algorithm for finding 
-
-## Hierholzer's Algorithm: Finding Euler Paths
-
-Modification of above algorithm:
-keep track of which nodes are the start
-and end candidates. Verify only one each.
-Complete the cycle by adding an edge.
-Find the cycle. Remove the edge.
-Rearrange the cycle to start/end correctly.
-
-# Final Code
-
-
-
-
+Stay tuned for Part 3...
