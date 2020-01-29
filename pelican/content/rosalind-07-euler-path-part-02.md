@@ -2,7 +2,6 @@ Title: Graphs for Bioinformatics, Part 2: Finding Eulerian Paths
 Date: 2019-05-07 16:00
 Category: Computational Biology
 Tags: go, golang, rosalind, computational biology, bioinformatics, euler, recursion, backtracking, graphs, algorithms, hamiltonian, eulerian
-Status: draft
 
 # Table of Contents
 
