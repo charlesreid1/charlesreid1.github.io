@@ -102,6 +102,540 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Mad Combinatoric Castles
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-07-25T18:00:00-07:00" pubdate>Tuesday 07/25/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/mad-combinatoric-castles.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h1>Table of Contents</h1>
+<ul>
+<li><a href="#castles-problem">Overview: The Problem</a></li>
+<li><a href="#polyominoes">Polyominoes</a><ul>
+<li><a href="#castle-rules">Castle Rules for Polynominoes</a></li>
+</ul>
+</li>
+<li><a href="#castles-enumerate">Don't Generate - Enumerate!</a></li>
+</ul>
+<p><a name="castles-problem"></a></p>
+<h1>Overview: The Problem</h1>
+<p>In an earlier post, I mentioned <a href="https://charlesreid1.com/wiki/Project_Euler">my efforts on Project Euler problems</a>
+and the wide variety of problems there that can offer some profound mathematical insights.</p>
+<p>Given that the first post covered Project Euler problem 1, I thought it would be nice
+if the next problem cranked up the difficulty factor by an order of magnitude.
+<a href="https://projecteuler.net/problem=502">Project Euler Problem 502</a> is a very hairy combinatorics problem that required me to learn about 
+a wide variety of combinatorial enumeration techniques.</p>
+<p>Let's start with the problem statement.</p>
+<h2>Building Castles</h2>
+<p>Problem 502 is about building castles. The problem gives an <span class="math">\(M \times N\)</span> rectangular grid,
+and asks us to count how many "castles" can be built on the rectangular grid, given its maximum
+height. </p>
+<p>Here is how the game works:</p>
+<p>First, start by defining a block as a rectangle of height 1, and an integer-valued length.
+A castle is a configuation of stacked blocks.</p>
+<p>For a game grid of size <span class="math">\(M \times N\)</span>, we can construct castles according to
+the following rules:</p>
+<ul>
+<li>Blocks can be placed on top of other blocks, but no sticking out past edge</li>
+<li>All blocks aligned to grid</li>
+<li>Two neighboring blocks must have 1 unit of space between them</li>
+<li>Maximum achieved height of castle is EXACTLY M</li>
+<li>Castle is made from even number of blocks</li>
+</ul>
+<p>Here is an example W = 8, H = 5 castle given in more compact notation:</p>
+<div class="highlight"><pre><span></span>  #   # 
+  #   ##
+ ## # ##
+##### ##
+########
+</pre></div>
+
+
+<p>We can also build more complicated castles, like this 10 by 100 castle:</p>
+<div class="highlight"><pre><span></span>X       X      XX    X     XX   XX X X                          X XX          XX   XX  X     X   XXX
+X       X      XX    X     XX X XX X X     X     X             XX XX          XX   XX  X     X   XXX
+X      XX      XX    X     XX X XXXX X     X     X             XX XX          XX   XX  X     X   XXX
+X      XX      XX    X     XX X XXXX X     X     X XXX         XX XX          XX X XX  X     X   XXX
+X      XX     XXX    X     XX X XXXX X  X  X     X XXX X X     XX XX          XX X XX  X  X  X   XXX
+X      XX  X  XXX  X X     XXXX XXXX X  XX X    XX XXX X X   X XX XX          XX XXXX  X XX XX  XXXX
+X  XX  XX  X  XXX  X X     XXXX XXXX XX XX XX XXXX XXX X XXX X XX XX    X     XX XXXXX X XX XX XXXXX
+X  XX  XXX X  XXX  X X   X XXXX XXXX XX XX XX XXXX XXXXX XXX XXXX XX  X X     XX XXXXX X XX XXXXXXXX
+X XXXXXXXX X XXXXXXX X XXXXXXXX XXXXXXX XX XX XXXXXXXXXXXXXX XXXX XX XX X  XX XX XXXXXXXXXX XXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+</pre></div>
+
+
+<p>Our objective in this problem is to enumerate all possible castles. Let <span class="math">\(F(x,y)\)</span> denote the number of 
+unique castles with a width of x and a height of exactly y. The problem gives use the trivial number
+<span class="math">\(F(4,2) = 10\)</span>. The problem also gives <span class="math">\(F(13,10)\)</span> and <span class="math">\(F(10,13)\)</span>, both of which are absolutely enormous numbers.</p>
+<p>This should be your first giant red flag that manual enumeration through a traversal of combinatoric space 
+is absolutely, positively out of the question. We'll explain why in more detail below, but suffice to say,
+there is a combinatoric explosion that occurs for castles larger than 10, so castles with a width of 
+1 trillion are going to get STUPID big.</p>
+<p>Then we're given <span class="math">\(F(100,100)\)</span>, which is so enormous it has to be reported mod 1,000,000,007.</p>
+<p>Finally, the problem asks us the following whopper of a question:</p>
+<p>What is <span class="math">\(F(10^{12},100) + F(10^4, 10^4) + F(100,10^{12}) mod 1,000,000,007\)</span>? </p>
+<p>Whew.</p>
+<h2>The Scale of the Problem</h2>
+<p>For solving this problem it is important to take a step back and think through
+the size of the combinatoric space being searched, and what methods we have for 
+carving out that space.</p>
+<p>As already mentioned, the size of this problem - the actual number of 
+castles - is surely larger than the <a href="https://charlesreid1.com/wiki/Eddington_Number">Eddington numer</a>,
+the number of protons in the known universe. The numbers of combinations are 
+STUPID big. There's no way for the mind to fully wrap itself around the concept.</p>
+<p>The huge numbers involved means, we must have a closed-form expression for <span class="math">\(F(x,y)\)</span> that we can
+evaluate once to get each of the <span class="math">\(F(10^{12},100), F(10^4,10^4), F(100,10^{12})\)</span> required by the answer.
+Doing so much as counting to 1 trillion takes minutes on modern computers, so if you're doing anything else
+1 trillion times, you'll end up waiting a loooong time.</p>
+<h2>Generating Functions</h2>
+<p>As it turns out, there is indeed a combinatorial enumeration method that does
+not require explicitly finding or generating each permutation in order to count
+all permutations.  I have covered <a href="https://charlesreid1.com/wiki/Generating_Functions">generating
+functions</a> on the
+charlesreid1.com wiki.  The principal idea behind generating functions is the
+observation that we can rearrange the infinite series:</p>
+<div class="math">$$
+G(z) = 1 + z + z^2 + z^3 + \dots
+$$</div>
+<p>into the equation </p>
+<div class="math">$$
+G(z) = \dfrac{1}{1-z}
+$$</div>
+<p>This single identity leads to a whole family of solution techniques for generating functions.
+The basic idea is to start by writing the rules of your system (see above), 
+then write a generating function that varies with characteristic variables of the problem 
+(width and height in this case, possibly others),
+and last, combine the generating functions of different rules or objects into a single generating function.</p>
+<p><a name="polyominoes"></a></p>
+<h1>Overview of Polyominoes</h1>
+<p>Let us begin by considering a two-dimensional grid <span class="math">\(\pi\)</span> of points at positive integer coordinates,
+<span class="math">\(\pi = \mathbb{N} \times \mathbb{N}\)</span>. </p>
+<p>Let a polyomino denote a two-dimensional shape formed by connecting contiguous unit square tiles
+together, all of which align to the 2D grid of integers <span class="math">\(\pi\)</span>. </p>
+<p>(Granted, this definition sounds a bit pedantic, as we're just describing stackable squares,
+but we need to keep the definition general because there are many kinds of polyomonioes,
+and many rules that we can set for how we arrange them.)</p>
+<p>If you have played <a href="https://en.wikipedia.org/wiki/Tetris">Tetris</a> before, or 
+John Conway's <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Game of Life</a>, you will recognize
+polyominoes from those contexts.</p>
+<p>Now, we set up our generating function in terms of characteristics of the problem.</p>
+<p>It is very important to note that, while most of the rules are fairly straightforward to translate into
+a polyomonio type of framework, Rule 6 is not. In fact, it is probably Rule 6 that makes Problem 502
+so challenging. Were it not for Rule 6, this would be a nearly-trivial problem.</p>
+<p>Let's review our castle construction rules and translate them into polyomino equivalents.</p>
+<p><a name="castle-rules"></a></p>
+<h2>Castle Rules for Polyominoes</h2>
+<h3>Generating Function Variables</h3>
+<p>We want to construct a multivariate ordinary generating function for our castles, since we have 
+several variables we want to change, and get back a total count of castles.</p>
+<p>The two most obvious variable choices for our generating function independent variables 
+are width <span class="math">\(x\)</span> and height <span class="math">\(y\)</span>. Surely, these must be in the final generating function.</p>
+<p>However, this still doesn't give us enough information about the construction process 
+from step to step. Imagine that we place the first block on row 1.</p>
+<p>Then we may place as many blocks as we would like along row 2, wherever we would like 
+(level 2 is the least restricted layer of the castle).</p>
+<p>Now, when we get to row 3, we are only allowed to keep building where there is already 
+an existing tower from the prior row. This means, we have to pass along information 
+from the prior row - where the bricks are located and how many - so that we know where
+the next level may build towers.</p>
+<p>This will remain an open question until we cover a few other representations of 
+Problem 502 and ways of modeling it. Then we will cover what additional
+variables our generating function might need.</p>
+<h3>Rule 1: No Overhangs</h3>
+<p>Rule 1 stipulates that blocks can be placed on top of
+other blocks as long as nothing sticks out past the end
+or hags out.</p>
+<p>This ensures that the resulting polyomino is column
+convex. Column convexity is the property that we can
+draw a vertical line through any column of the
+polyomino, and we only intersect the polyomino in two
+places. (No internal breaks.)</p>
+<p>This rule stipulates what kind of polyomino
+constructions are allowed.</p>
+<h3>Rule 2: Snap to Grid</h3>
+<p>This rule is just saying that the unit squares in the
+castle problem match the unit squares of polyominoes,
+ensuring the problems are interchangeable.</p>
+<h3>Rule 3: Neighbor Blocks Need Space</h3>
+<p>Rule 3 is crucial for being able to count blocks. If two
+side-by-side contiguous unit squares could be either one
+or two blocks, this would make the final count of
+solutions much, much, much, much, much bigger than it
+should be.</p>
+<h3>Rule 4: Bottom Row is One Block</h3>
+<p>This is more of an accounting-based rule, but we define
+our castle construction process such that it begins with
+a completed row. This means that the number of blocks
+that we add on top of that single block must be odd
+overall.</p>
+<h3>Rule 5: Maximum Height is Exactly H</h3>
+<p>As it turns out, the last two rules are the toughest -
+in a sense, because they are <strong>global</strong> conditions on
+the combinatoric solution that is being counted.  In
+other words, we will use generating functions to
+"construct" our combinatoric objects in a methodical
+way, and the challenge is on setting global conditions
+on the generating function's counted solutions.</p>
+<h3>Rule 6: Even Number of Blocks</h3>
+<p>Rule 6 is definitely what makes this problem difficult. </p>
+<p>Our approach is going to involve coming up with a 
+counting function - but this rule tells us that the
+counting function will need to have some way of
+accounting for the total number of blocks, and
+divide by or subtract a factor that accounts for
+castles with an odd number of blocks.</p>
+<p><a name="castles-enumerate"></a></p>
+<h2>Don't Generate - Enumerate!</h2>
+<p>We mentioned above that the number of possibilities
+here is huge, so this combinatorics problem falls 
+squarely in the realm of enumerating, not generating.</p>
+<p>That being said, and keeping in mind that the problem
+size blows up rapidly, it can still be useful to write
+an algorithm to generate castles for small values of
+width and height, to test formulas for these small
+values (and uncover corner cases!).</p>
+<p>See <a href="https://charlesreid1.com/wiki/Project_Euler/502">Project Euler/502</a>
+on the charlesreid1.com wiki for continued work on
+this problem. </p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/factors.html">factors</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sequences.html">sequences</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Project Euler Problem 1
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-07-22T09:00:00-07:00" pubdate>Saturday 07/22/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/project-euler-problem-1.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h1>Table of Contents</h1>
+<ul>
+<li><a href="#pe1-problem">Overview: The Problem</a></li>
+<li><a href="#pe1-why">Why This Problem?</a></li>
+<li><a href="#pe1-deeper">Going Deeper: An Example</a></li>
+</ul>
+<p><a name="pe1-problem"></a></p>
+<h1>Overview: The Problem</h1>
+<p>Project Euler is a website that provides mathematically-oriented programming problems.
+There are many (over 500) and they are a rich source of profound mathematical insights.</p>
+<p>I have been considering a writeup that goes deep into a particular problem,
+so why not do it with problem 1?</p>
+<p>Problem 1 of Project Euler asks:</p>
+<blockquote>
+Find the sum of all the multiples of 3 or 5 below 1000.
+</blockquote>
+
+<p>It is a pretty simple task - one of the first things covered in a decent programming course
+is the assortment of mathematical operators, including the modular operator and multiplication
+operator, useful here.</p>
+<p>This problem is also a familiar problem in another guise - any computer science student
+who has solved a variant of the fizz buzz problem will recognize this task 
+(in the fizz buzz problem, you print fizz every time a number is divisible by 3
+and buzz every time it is divisible by 5, etc.)</p>
+<p>It is a deceptively simple problem. In fact, it is so easy to solve with a computer
+that you almost lose a sense of what the manual process would look like.
+How might we perform this task by hand? </p>
+<p>Finally, it is an example of a problem in which we are trying to find 
+the number of outcomes of several classes of events, and some of the events
+are labeled with both classes. This means it will be important to learn and apply
+the Inclusion-Exclusion Principle. (Fortunately, this principle is fairly 
+straightforward to apply.)</p>
+<p>We will get to the algorithm to counting these factors by hand, and handling 
+more complicated constraints as well, but first I'll address why this problem - 
+this task - was deemed important enough to be the very first step that nearly 
+everyone takes on their epic (or... not so epic) Project Euler journey.</p>
+<p><a name="pe1-why"></a></p>
+<h1>Why This Problem?</h1>
+<p>The central task in this problem is to find multiples of a number <span class="math">\(k\)</span>,
+and count them. The task is simple enough (unlike later Project Euler questions,
+which can be downright <i>frightening</i> at times), but still requires 
+knowledge of loops, operators, and basic algorithm design. It's no litmus test
+for whether you can solve Problem 100, but it gets you started.</p>
+<p>The task at the heart of this problem - iterating through a list of multiples
+of a number - is at the heart of the Sieve of Eratosthenes algorithm, 
+which in turn is at the heart of applied number theory. While it may 
+not be the algorithm applied in practice, it is the first and most important
+algorithm number theorists learn.</p>
+<p>It's also a first lesson in the subtleties of Project Euler problems - 
+the eager but naive algorithm designer will count all multiples of 3,
+then all multiples of 5, forgetting that some repeat.</p>
+<p><img alt="Project Euler Fail" style="width: 150px;" src="/images/pe-fail.png" /></p>
+<p>Welcome to Project Euler.</p>
+<p><a name="pe1-deeper"></a></p>
+<h1>Going Deeper: An Example</h1>
+<p>It's true that this problem seems a bit boring on its face. But let's dive deeper. Suppose I asked you to find the number of multiples of the integers 3 and 4, but not the integer 5, below 2,001 - and to do so without explicitly enumerating them with a computer.</p>
+<p>To do this, we can express the problem in set notation. We have three sets, A, B, C, containing multiples of 3, 4, and 5, respectively. In set theory language, we wish to find </p>
+<div class="math">$$
+( A \bigcup B ) \backslash C
+$$</div>
+<p>We can start by counting the sets A and B, as well as accounting for <span class="math">\(A \bigcap B\)</span> (numbers that are multiples of both a and b).</p>
+<p>Next, we can count <span class="math">\(A \bigcap C\)</span> and <span class="math">\(B \bigcap C\)</span>, which are the multiples of a and b that we counted that we should not have because they are multiples of c. </p>
+<p>Finally, we cannot forget <span class="math">\(A \bigcap B \bigcap C\)</span> - numbers that have a, b, and c as multiples. This case is a bit tricky. Any item that is in <span class="math">\(A \bigcap B \bigcap C\)</span> has already been removed - twice. The first time was when it was removed because it was in <span class="math">\(A \bigcap C\)</span>, and the second time was when it was removed because it was in <span class="math">\(B \bigcap C\)</span>. Therefore, we must add each of these items back in, to account for the double-removal and ensure these items are only removed once.</p>
+<p>So we will add the items in <span class="math">\(A \bigcap B \bigcap C\)</span> back into the final set.</p>
+<p>Visually representing A, B, and C with a Venn diagram,</p>
+<p><img alt="Project Euler Problem 1 Venn Diagram" style="background-color: #ddd; width: 500px;" src="/images/pe-venn.png" /></p>
+<p>To get back to the problem at hand, we can compute the size of these sets using the floor function. For example, the cardinality of A is:</p>
+<div class="math">$$
+\mbox{card}(A) = \mbox{floor}\left( \frac{2001}{3} \right) = 667
+$$</div>
+<div class="math">$$
+\mbox{card}(B) = \mbox{floor}\left( \frac{2001}{4} \right) = 500
+$$</div>
+<p>Next, we subtract the duplicates (numbers with both A and B as factors):</p>
+<div class="math">$$
+\mbox{card}(A \bigcap B) = \mbox{floor}\left( \frac{2001}{3 \cdot 4} \right) = 166
+$$</div>
+<p>Now subtract integers that have both a and c as multiples, or b and c as multiples:</p>
+<div class="math">$$
+\mbox{card}(A \bigcap C) = \mbox{floor}\left( \frac{2001}{3 \cdot 5} \right) = 133
+$$</div>
+<div class="math">$$
+\mbox{card}(B \bigcap C) = \mbox{floor}\left( \frac{2001}{4 \cdot 5} \right) = 100
+$$</div>
+<p>And last but not least, those numbers with a, b, and c as factors were just removed twice, so we add them back in once:</p>
+<div class="math">$$
+\mbox{card}(A \bigcap B \bigcap C) = \mbox{floor}\left( \frac{2001}{3 \cdot 4 \cdot 5} \right) = 33
+$$</div>
+<p>This gives a total number of multiples M below N with a or b as a factor, but not c:</p>
+<div class="math">$$
+M = \mbox{floor}\left( \frac{N}{a} \right) + \mbox{floor}\left( \frac{N}{b} \right) 
+- \mbox{floor}\left( \frac{N}{ab} \right)
+- \mbox{floor}\left( \frac{N}{ac} \right) - \mbox{floor}\left( \frac{N}{bc} \right) 
++ \mbox{floor}\left( \frac{N}{abc} \right)
+$$</div>
+<p>in our specific case,</p>
+<div class="math">$$
+\begin{align}
+M &amp;=&amp; 667 + 500 - 166 - 133 - 100 + 33 \\
+M &amp;=&amp; 801
+\end{align}
+$$</div>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/factors.html">factors</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sequences.html">sequences</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Shortest Lattice Paths and Multiset Permutations
             </b></h1>
         
@@ -478,969 +1012,6 @@ $$</div>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Computing Square Roots: Part 2: Using Continued Fractions
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-07-14T20:00:00-07:00" pubdate>Friday 07/14/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/computing-square-roots-part-2-using-continued-fractions.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2>Table of Contents</h2>
-<ul>
-<li><a href="#cf-number-systems">Number Systems and Representations</a></li>
-<li><a href="#cf-cf">Continued Fraction Representations</a></li>
-<li><a href="#cf-convergents">Convergents of Continued Fractions</a></li>
-<li><a href="#cf-example-coeffs">Example: Continued Fraction Coefficients of <span class="math">\(\sqrt{14}\)</span></a></li>
-<li><a href="#cf-example-convergents">Example: Convergents of <span class="math">\(\sqrt{14}\)</span></a></li>
-<li><a href="#cf-sqrt-approx">Approximating Square Roots</a></li>
-</ul>
-<p><a name="cf-number-systems"></a></p>
-<h2>Continued Fractions</h2>
-<p>Let's start part 2 of our discussion of computing square roots by talking about 
-continued fractions. When we first learn mathematics, we learn to count in the 
-base 10 system: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9. We can construct representations of 
-all of the integers using these 10 digits, by arranging them in a different order.
-So, for example, saying 125 is equivalent to saying:</p>
-<div class="math">$$
-125 = 1 \times 10^2 + 2 \times 10^1 + 5 \times 10^0
-$$</div>
-<p>Later on in our mathematical lives, we learn that we can use other integers
-as our base, or <strong>radix</strong>, by expressing every integer as the sum of various 
-powers of that integer. For example, 125
-can be decomposed into powers of 2. In a base 2 system, we have only two symbols,
-0 and 1, so 125 can be represented as 1111101, which is equivalent to saying:</p>
-<div class="math">$$
-125 = 1 \times 2^6 + 1 \times 2^5 + 1 \times 2^4 + 1 \times 2^3 + 1 \times 2^2 + 1 \times 2
-$$</div>
-<p>Note that 1111101 is close to 1111111, which is <span class="math">\(2^7 = 128\)</span>.</p>
-<p>As Knuth points out in his <u>Art of Computer Programming</u>, Part II:</p>
-<blockquote>
-<i>"If our ancestors had invented arithmetic by counting with their two fists
-or their eight fingers, instead of their ten "digits," we would never have to 
-worry about writing binary-decimal conversion routines. (And we would perhaps
-never have learned as much about number systems.)
-</i>
-</blockquote>
-
-<p>This idea of an alternative radix to the traditional base 10 leads to entirely new 
-number systems with their own interesting properties. However, it goes even further - 
-as a high school student in 1955, Donald Knuth invented a number system with an
-imaginary, 4-symbol radix in base <span class="math">\(2i\)</span> (where <span class="math">\(i = \sqrt{-1}\)</span>), called 
-the <a href="https://en.wikipedia.org/wiki/Quater-imaginary_base">quater-imaginary base</a>.</p>
-<p>There are also number systems that use an irrational radix, such as 
-<a href="https://en.wikipedia.org/wiki/Golden_ratio_base">phinary</a>, which uses the golden ratio
-as its radix. Thus, the Golden Ratio <span class="math">\(\phi = \dfrac{1 + \sqrt{5}}{2}\)</span> becomes <span class="math">\(\phi = 1\)</span>,
-<span class="math">\(2 = \phi^1 + \phi^-2\)</span> becomes <span class="math">\(2 = 10.01\)</span>, <span class="math">\(5 = \phi^3 + \phi^{-1} + \phi^{-4}\)</span> 
-becomes <span class="math">\(5 = 1000.1001\)</span>, and so on. In the case of the irrational number <span class="math">\(\sqrt{5}\)</span>, 
-this number becomes a rational number in base <span class="math">\(\phi\)</span>: <span class="math">\(\sqrt{5} = \phi^2 + \phi^{-1}\)</span> 
-becomes <span class="math">\(\sqrt{5} = 10.1\)</span>.</p>
-<p>The single central idea behind these number systems is that the abstract 
-set of integers <span class="math">\(\mathbb{Z}\)</span> are being represented on an <a href="https://en.wikipedia.org/wiki/Ring_(algebra)">algebraic ring</a>,
-which is a fundamental mathematical object. Initially the idea of a ring
-may seem strange, but it creates the foundations of modern number theory.</p>
-<p><a name="cf-cf"></a></p>
-<h2>Continued Fraction Representations</h2>
-<p>(Note that while the next two sections will have a lot of "magic numbers," we will
-step through the procedure in the following sections, and it will be more clear
-where these numbers come from. There is also an excellent continued fractions calculator
-available online <a href="http://www.maths.surrey.ac.uk/hosted-sites/R.Knott/Fibonacci/cfCALC.html">here</a>.)</p>
-<p>We can use other kinds of mathematical objects to represent different numbers.
-Another technique is to use continued fractions to represent numbers.
-These are well-studied mathematical objects that date back to Euclid's <u>Elements</u>.
-The basic idea is to create a recursive expression that involves fractions nested
-beneath other fractions:</p>
-<div class="math">$$
-a_0+\cfrac{1}{a_1 +\cfrac{1}{a_2 +\cfrac{1}{
-      \begin{array}{@{}c@{}c@{}c@{}}
-        a_3 + {}\\ &amp;\ddots\\ &amp;&amp;{}+ \cfrac{1}{a_n}
-      \end{array}
-}}}
-$$</div>
-<p>For ease of writing, this is often written as:</p>
-<div class="math">$$
-a_0 + \dfrac{1}{a_1 +} \quad \dfrac{1}{a_2 +} \quad \dfrac{1}{a_3 + } \quad \dots \quad \dfrac{1}{a_{n-1} + } \quad \dfrac{1}{a_n}
-$$</div>
-<p>or, even shorter,</p>
-<div class="math">$$
-[a_0; a_1, a_2, a_3, \dots]
-$$</div>
-<p>These variables <span class="math">\(a_i\)</span> are called the <em>terms</em> of the continued fraction.
-Continued fractions can be used to represent rational numbers, in which case the continued fraction
-representation terminates after a finite number of terms. For example, <span class="math">\(\dfrac{125}{3} = [41; 1, 2]\)</span>, </p>
-<div class="math">$$
-\dfrac{125}{3} = 41 +\cfrac{1}{1 +\cfrac{1}{2}} 
-$$</div>
-<p>Continued fractions can also be used to represent irrational numbers, 
-in which case the continued fraction representation is a repeating pattern
-of variable length. For example, <span class="math">\(\sqrt{14} = [3; \overline{1,2,1,6}]\)</span>, where
-the line over the last digits indicates that the pattern repeats infinitely as
-<span class="math">\(1, 2, 1, 6, 1, 2, 1, 6, 1, 2, 1, 6, \dots\)</span>:</p>
-<div class="math">$$
-3 + \cfrac{1}{
-    1 + \cfrac{1}{
-        2+\cfrac{1}{
-            1+\cfrac{1}{
-                6+\cfrac{1}{
-                    \begin{array}{@{}c@{}c@{}c@{}}
-                        1 + {}\\ &amp;\ddots\\ &amp;&amp;{}
-                    \end{array}
-                }
-            }
-        }
-    }
-}
-$$</div>
-<p>A few useful properties of these patterns, for square roots, are:</p>
-<ul>
-<li>
-<p>First, the integer portion (3 in the case above) is the largest integer 
-    whose square is less than the number (14).</p>
-</li>
-<li>
-<p>Second, the sequence of integers that repeats is always palindromic,
-    and it always begins repeating once it reaches a value of <span class="math">\(2 a_0\)</span>.</p>
-</li>
-</ul>
-<p>Here are a few more square roots represented as continued fractions, to help illustrate
-the above properties:</p>
-<div class="math">$$
-\begin{array}
-_ \sqrt{19} &amp;=&amp; [4; \overline{2, 1, 3, 1, 2, 8}] \\
-\sqrt{115} &amp;=&amp; [10; \overline{1, 2, 1, 1, 1, 1, 1, 2, 1, 20}] \\
-\sqrt{988} &amp;=&amp; [31; \overline{2, 3, 4, 1, 20, 6, 1, 14, 1, 6, 20, 1, 4, 3, 2, 62}]
-\end{array}
-$$</div>
-<p>Next, we'll cover how to turn these terms <span class="math">\([a_0; a_1, a_2, \dots]\)</span> into rational
-numbers <span class="math">\(\frac{P}{Q}\)</span>. These fractions are called <em>convergents</em>.</p>
-<h2>Convergents</h2>
-<p>We will show an example of how to compute a continued fraction in the next section, 
-but we will cover one additional topic first. In order to be useful, we need some way
-to evaluate the continued fraction representation. One way to do this is to repeatedly
-compute common denominators, perform the fraction addition, and inert the result. 
-The fraction that results is equivalent to the continued fraction expression, but is 
-a rational number and therefore easier to evaluate. </p>
-<p>It turns out that this rational number is a very important quantity called the <strong>convergent</strong> 
-of <span class="math">\(\sqrt{n}\)</span>. However, it is cumbersome to perform the operation of de-rationalizing 
-the continued fraction. There is a useful shortcut that takes the form of a recurrence relation.</p>
-<p>The <span class="math">\(n^{th}\)</span> convergent is defined as the rational number that results when the continued fraction
-representation is carried out to <span class="math">\(n\)</span> terms, then expanded and simplified into a rational number.
-If a number like <span class="math">\(\sqrt{19}\)</span> has an infinite continued fraction representation, it means we can compute
-progressively more accurate rational approximations. </p>
-<p>For example, we know from the above that <span class="math">\(\sqrt{19} = [4; \overline{2,1,3,1,2,8}]\)</span>. Using this fact,
-we can use successive terms to write successive linear approximations:</p>
-<div class="math">$$
-\begin{array}
-_ \sqrt{19} &amp;\approx&amp; 4 \\
-\quad       &amp;\approx&amp; 4 + \frac{1}{2+0} \approx \frac{9}{2} \\
-\quad       &amp;\approx&amp; 4 + \cfrac{1}{2+\cfrac{1}{1}} \approx \frac{13}{3} \\
-\quad       &amp;\approx&amp; 4 + \cfrac{1}{2+\cfrac{1}{\cfrac{1}{3}}} \approx \frac{48}{11} \\
-\end{array}
-$$</div>
-<p>If we continue this sequence, we get a slew of approximations (there are also additional approximations between
-each of <em>these</em> terms...):</p>
-<div class="math">$$
-\begin{array}
-_ \sqrt{19} &amp;\approx&amp; \frac{61}{14} \\
-\quad       &amp;\approx&amp; \frac{170}{39} \\
-\quad       &amp;\approx&amp; \frac{1421}{326} \\
-\quad       &amp;\approx&amp; \frac{3012}{691} \\
-\quad       &amp;\approx&amp; \frac{4433}{1017} \\
-\sqrt{19}   &amp;\approx&amp; \frac{16311}{3742}
-\end{array}
-$$</div>
-<p>The numerator and denominator of the <span class="math">\(k^{th}\)</span> convergent are denoted <span class="math">\(P_k\)</span> and <span class="math">\(Q_k\)</span>, 
-respectively, and can be computed through the recurrence relation:</p>
-<div class="math">$$
-\dfrac{P_k}{Q_k} = \dfrac{a_k P_{k-1} + P_{k-2}}{a_k Q_{k-1} + Q_{k-2}}
-$$</div>
-<p>where the initial values are <span class="math">\(P_{-1} = 1, P_{-2} = 0, Q_{-1} = 0, Q_{-2} = 1\)</span>
-(making the first convergent equal to <span class="math">\(\frac{a_0}{1}\)</span>).
-This can be used to compute successive approximations.
-Note that on a computational platform, you will quickly reach the end 
-of your accuracy limit, so care must be taken for continued fraction
-sequences of longer than about 10 terms.</p>
-<p><a name="cf-example-coeffs"></a></p>
-<h2>Example: Continued Fraction Coefficients of <span class="math">\(\sqrt{14}\)</span></h2>
-<p>Let's walk through an example of how to compute the continued fraction 
-representation <span class="math">\([a_0; a_1, a_2, \dots, a_n]\)</span> for a square root,
-and how to compute the <span class="math">\(k^{th}\)</span> convergent.</p>
-<p>Begin with the square root of a given number. For variety, we will use <span class="math">\(\sqrt{14}\)</span>.
-We begin by computing the nearest integer to 14's square root. If we don't have a 
-square root routine, we can try integers by squaring them, and find the last integer
-that, when squared, is less than 14. This is <span class="math">\(a_0 = 3\)</span>. To interpret, <span class="math">\(a_0\)</span> is 
-the largest integer portion of our square root, with the residual portion 
-<span class="math">\(\sqrt{14}-3\)</span> the portion that will be represented by the continued fraction.</p>
-<p>Here's what we have:</p>
-<div class="math">$$
-\sqrt{14} = 3 + (\sqrt{14} - 3) \\
-$$</div>
-<p>We can drop the residual for an initial rational approximation of <span class="math">\(\sqrt{14} \approx 13\)</span>,
-but we can do better by going another step.</p>
-<p>We recognize that the residual, which we want write in the form <span class="math">\(\dfrac{1}{\mbox{something}}\)</span>,
-can be written as <span class="math">\(\dfrac{1}{\dfrac{1}{\sqrt{14}-3}}\)</span>: </p>
-<div class="math">$$
-\sqrt{14} = 3 + \dfrac{1}{ \frac{1}{\sqrt{14}-3} }
-$$</div>
-<p>Now examine the inverse residual term <span class="math">\(\dfrac{1}{\sqrt{14}-3}\)</span> for step 1,
-which we will call <span class="math">\(r_1\)</span>. 
-Repeat the procedure we performed above: find the nearest integer 
-portion to this quantity. In this case,</p>
-<div class="math">$$
-\dfrac{1}{r_1} = \dfrac{1}{\sqrt{14}-3} = 1.34833...
-$$</div>
-<p>Now split this into its integer portion, which becomes <span class="math">\(a_1\)</span>, 
-and its remaining fractional portion, .34833...:</p>
-<div class="math">$$
-a_1 = floor( \dfrac{1}{r_1} )
-$$</div>
-<p>and the new residual <span class="math">\(r\)</span> is written in terms of the old residual
-and the coefficent <span class="math">\(a_i\)</span>:</p>
-<div class="math">$$
-r_2 = \dfrac{1}{r_1} - a_1
-$$</div>
-<p>Generalizing, we get an iterative procedure to determine the 
-coefficients <span class="math">\(a_i\)</span>:</p>
-<div class="math">$$
-a_i = floor( \dfrac{1}{r_i} )
-$$</div>
-<p>followed by:</p>
-<div class="math">$$
-r_{i+1} = \dfrac{1}{r_i} - a_i
-$$</div>
-<p>where the initial values <span class="math">\(a_0, r_0\)</span> are computed as mentioned above,
-and the rest of the values in the sequence follow.</p>
-<p>Continuing for <span class="math">\(\sqrt{14}\)</span>, we get:</p>
-<div class="math">$$
-\begin{array}
-_ a_0 &amp;=&amp; 3 \\
-r_1 &amp;=&amp; \dfrac{1}{\sqrt{14}-3} = 1.348331 \\
-a_1 &amp;=&amp; 1 \\
-r_2 &amp;=&amp; \dfrac{1}{.348331} = 2.870829 \\
-a_2 &amp;=&amp; 2 \\
-r_3 &amp;=&amp; \dfrac{1}{0.870829} = 1.1483311 \\
-a_3 &amp;=&amp; 1 \\
-r_4 &amp;=&amp; \dfrac{1}{0.1483311} = 6.741676 \\
-a_4 &amp;=&amp; 6
-\end{array}
-$$</div>
-<p>It is at this point that we see <span class="math">\(2 a_0\)</span> and know that our (palindromic) 
-sequence will repeat. (When we evaluate the convergents, we will utilize
-the palindromic nature of this sequence.)</p>
-<p>Collecting these terms gives us the expected result: <span class="math">\(\sqrt{14} = [3; 1, 2, 1, 6]\)</span>.</p>
-<p>This gives us an algorithmic procedure for computing the 
-continued fraction representation <span class="math">\([a_0; a_1, a_2, a_n]\)</span> of a number -
-with the important caveat, as mentioned above, that some integers
-have sequences that are extremely long before they repeat, making it 
-impossible to find the full continued fraction representation 
-without arbitrary precision libraries.</p>
-<p>That being said, if you are only interested in the first 10 or so
-terms of the continued fraction representation, here is a 
-static Java method to compute them:</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** Find the (shorter than 10) continued fraction sequence for sqrt(n). </span>
-<span class="cm">     * This returns a list of integers, [a0, a1, a2, ...]</span>
-<span class="cm">     *</span>
-<span class="cm">     * @params n Number to compute the square root of.</span>
-<span class="cm">     */</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="nf">continuedFractionSqrt</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">if</span><span class="o">(</span><span class="n">isPerfectSquare</span><span class="o">(</span><span class="n">n</span><span class="o">))</span> <span class="o">{</span>
-            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalArgumentException</span><span class="o">(</span><span class="s">&quot;Error: n cannot be a perfect square.&quot;</span><span class="o">);</span>
-        <span class="o">}</span>
-        <span class="kt">int</span> <span class="n">niters</span> <span class="o">=</span> <span class="mi">10</span><span class="o">;</span> <span class="c1">// handbrake</span>
-
-        <span class="kt">int</span> <span class="n">ai</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="kt">double</span> <span class="n">val</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="kt">double</span> <span class="n">remainder</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">coeffs</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;();</span>
-
-        <span class="c1">// Fencepost</span>
-        <span class="n">remainder</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">Math</span><span class="o">.</span><span class="na">sqrt</span><span class="o">(</span><span class="n">n</span><span class="o">);</span>
-
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">niters</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">remainder</span><span class="o">;</span>
-            <span class="n">ai</span> <span class="o">=</span> <span class="n">floor</span><span class="o">(</span><span class="n">val</span><span class="o">);</span>
-            <span class="n">remainder</span> <span class="o">=</span> <span class="n">val</span> <span class="o">-</span> <span class="n">ai</span><span class="o">;</span>
-            <span class="n">coeffs</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">ai</span><span class="o">);</span>
-            <span class="k">if</span><span class="o">(</span><span class="n">coeffs</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">*</span><span class="n">coeffs</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
-                <span class="k">break</span><span class="o">;</span>
-            <span class="o">}</span>
-        <span class="o">}</span>
-        <span class="k">return</span> <span class="n">coeffs</span><span class="o">;</span>
-    <span class="o">}</span>
-
-    <span class="cm">/** Check if x is a perfect square. */</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">isPerfectSquare</span><span class="o">(</span><span class="kt">int</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span> 
-        <span class="kt">int</span> <span class="n">s</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)(</span><span class="n">Math</span><span class="o">.</span><span class="na">round</span><span class="o">(</span><span class="n">Math</span><span class="o">.</span><span class="na">sqrt</span><span class="o">(</span><span class="n">x</span><span class="o">)));</span>
-        <span class="k">return</span> <span class="n">x</span><span class="o">==(</span><span class="n">s</span><span class="o">*</span><span class="n">s</span><span class="o">);</span>
-    <span class="o">}</span>
-
-    <span class="cm">/** Find the floor of a double. */</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">floor</span><span class="o">(</span><span class="kt">double</span> <span class="n">j</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">return</span> <span class="o">(</span><span class="kt">int</span><span class="o">)(</span><span class="n">Math</span><span class="o">.</span><span class="na">floor</span><span class="o">(</span><span class="n">j</span><span class="o">));</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<p>Here is a short program that uses this routine to compute 
-the continued fraction representation of <span class="math">\(\sqrt{14}\)</span>:</p>
-<div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SquareRootCF</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;sqrt(14) = &quot;</span><span class="o">+</span><span class="n">Convergents</span><span class="o">.</span><span class="na">continuedFractionSqrt</span><span class="o">(</span><span class="mi">14</span><span class="o">));</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;sqrt(19) = &quot;</span><span class="o">+</span><span class="n">Convergents</span><span class="o">.</span><span class="na">continuedFractionSqrt</span><span class="o">(</span><span class="mi">19</span><span class="o">));</span>
-    <span class="o">}</span>
-<span class="o">}</span>
-</pre></div>
-
-
-<p>and the corresponding output:</p>
-<div class="highlight"><pre><span></span>$ javac SquareRootCF.java &amp;&amp; java SquareRootCF
-sqrt(14) = [3, 1, 2, 1, 6]
-sqrt(19) = [4, 2, 1, 3, 1, 2, 8]
-</pre></div>
-
-
-<p><a name="cf-example-convergents"></a></p>
-<h2>Example: Convergents of <span class="math">\(\sqrt{14}\)</span></h2>
-<p>We now turn to the task of computing the convergents of the continued fraction,
-which will yield successive rational numbers that are progressively better approximations
-to <span class="math">\(\sqrt{14}\)</span>. </p>
-<p>We start with the expression given above for the <span class="math">\(k^{th}\)</span> convergent: </p>
-<div class="math">$$
-\dfrac{P_k}{Q_k} = \dfrac{a_k P_{k-1} + P_{k-2}}{a_k Q_{k-1} + Q_{k-2}}
-$$</div>
-<p>with initial values <span class="math">\(P_{-1} = 1, P_{-2} = 0, Q_{-1} = 0, Q_{-2} = 1\)</span>. This yields 
-the first "real" convergent:</p>
-<div class="math">$$
-\dfrac{P_1}{Q_1} = \dfrac{a_0 + 0}{0 + 1} = 4
-$$</div>
-<p>Successive approximations will use the values <span class="math">\(P_1\)</span> and <span class="math">\(Q_1\)</span> to compute
-the next convergents.</p>
-<div class="math">$$
-\dfrac{P_2}{Q_2} = \dfrac{P_1 a_1 + P_0}{Q_1 a_1 + Q_0} = \frac{11}{3}
-$$</div>
-<p>Continuing in this fashion gives:</p>
-<div class="math">$$
-\begin{array}
-\quad \dfrac{P_2}{Q_2} &amp;=&amp; \dfrac{15}{4} \\
-\dfrac{P_3}{Q_3} &amp;=&amp; \dfrac{11}{3}
-\end{array}
-$$</div>
-<p>and so on. This recurrence relation is easy to code up. It starts with 
-the continued fraction coefficients for the given square root, 
-and computes successive values of P and Q. The number of terms computed
-is specified by the user. Once it reaches the end of the sequence of 
-continued fraction coefficients, it can start at the beginning again 
-(the sequence is palindromic). </p>
-<p>Finally, it returns the values of <span class="math">\(P_k\)</span> and <span class="math">\(Q_k\)</span>, and of the 
-successive convergents:</p>
-<div class="math">$$
-\begin{array}
-_ \sqrt{14} &amp;\approx&amp; 3 \\
-&amp;\approx&amp; 4 \\
-&amp;\approx&amp; 11/3 \\
-&amp;\approx&amp; 15/4 \\
-&amp;\approx&amp; 101/27 \\
-&amp;\approx&amp; 116/31 \\
-&amp;\approx&amp; 333/89 \\
-&amp;\approx&amp; 449/120 \\
-&amp;\approx&amp; 3027/809 \\
-&amp;\approx&amp; 3476/929 \\
-&amp;\approx&amp; 9979/2667 
-\end{array}
-$$</div>
-<p>Here is a static method in Java that will compute the convergents
-of a square root:</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** </span>
-<span class="cm">     * Compute the convergents (rational representation of</span>
-<span class="cm">     * continued fraction).</span>
-<span class="cm">     *</span>
-<span class="cm">     * This uses the recurrence relation:</span>
-<span class="cm">     *</span>
-<span class="cm">     * P_n     a_n P_n-1  + P_n-2</span>
-<span class="cm">     * ---- = -----------------</span>
-<span class="cm">     *  Q_n    a_n Q_n-1  + Q_n-2</span>
-<span class="cm">     */</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">long</span><span class="o">[]</span> <span class="nf">convergents</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">,</span> <span class="kt">int</span> <span class="n">nterms</span><span class="o">)</span> <span class="o">{</span>
-        <span class="kt">long</span><span class="o">[]</span> <span class="n">convergents</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">long</span><span class="o">[</span><span class="mi">2</span><span class="o">];</span>
-
-        <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">cfrepr</span> <span class="o">=</span> <span class="n">continuedFractionSqrt</span><span class="o">(</span><span class="n">n</span><span class="o">);</span>
-
-        <span class="c1">// Initial values for convergent recurrence relation</span>
-        <span class="kt">long</span> <span class="n">Pnm2</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="c1">// P_{n-2}</span>
-        <span class="kt">long</span> <span class="n">Pnm1</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span>
-        <span class="kt">long</span> <span class="n">Qnm2</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span>
-        <span class="kt">long</span> <span class="n">Qnm1</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="kt">long</span> <span class="n">P</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="kt">long</span> <span class="n">Q</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-
-        <span class="c1">// Term 0 is the constant value a0.</span>
-        <span class="kt">int</span> <span class="n">accessindex</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;=</span><span class="n">nterms</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span> 
-            <span class="kt">int</span> <span class="n">an</span> <span class="o">=</span> <span class="n">cfrepr</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">accessindex</span><span class="o">);</span>
-
-            <span class="n">P</span> <span class="o">=</span> <span class="n">an</span> <span class="o">*</span> <span class="n">Pnm1</span> <span class="o">+</span> <span class="n">Pnm2</span><span class="o">;</span>
-            <span class="n">Q</span> <span class="o">=</span> <span class="n">an</span> <span class="o">*</span> <span class="n">Qnm1</span> <span class="o">+</span> <span class="n">Qnm2</span><span class="o">;</span>
-
-            <span class="n">Pnm2</span> <span class="o">=</span> <span class="n">Pnm1</span><span class="o">;</span>
-            <span class="n">Pnm1</span> <span class="o">=</span> <span class="n">P</span><span class="o">;</span>
-
-            <span class="n">Qnm2</span> <span class="o">=</span> <span class="n">Qnm1</span><span class="o">;</span>
-            <span class="n">Qnm1</span> <span class="o">=</span> <span class="n">Q</span><span class="o">;</span>
-
-            <span class="k">if</span><span class="o">(</span><span class="n">accessindex</span><span class="o">+</span><span class="mi">1</span><span class="o">&gt;=</span><span class="n">cfrepr</span><span class="o">.</span><span class="na">size</span><span class="o">())</span> <span class="o">{</span> 
-                <span class="c1">// Ensure we keep repeating the sequence</span>
-                <span class="c1">// if the sequence has fewer terms than</span>
-                <span class="c1">// the user asks for.</span>
-                <span class="c1">// This allows us to get really good</span>
-                <span class="c1">// approximations for numbers.</span>
-                <span class="c1">// This only works because the sequence</span>
-                <span class="c1">// is palindromic.</span>
-                <span class="n">accessindex</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span>
-            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-                <span class="n">accessindex</span><span class="o">++;</span>
-            <span class="o">}</span>
-        <span class="o">}</span>
-
-        <span class="n">convergents</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">=</span> <span class="n">P</span><span class="o">;</span>
-        <span class="n">convergents</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">=</span> <span class="n">Q</span><span class="o">;</span>
-
-        <span class="k">return</span> <span class="n">convergents</span><span class="o">;</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<p>Here is a simple driver program that prints out several
-convergents for <span class="math">\(\sqrt{14}\)</span>:</p>
-<div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SquareRootCF</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;=</span><span class="mi">10</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-            <span class="kt">long</span><span class="o">[]</span> <span class="n">conv</span> <span class="o">=</span> <span class="n">Convergents</span><span class="o">.</span><span class="na">convergents</span><span class="o">(</span><span class="mi">14</span><span class="o">,</span><span class="n">i</span><span class="o">);</span>
-            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Convergent &quot;</span><span class="o">+</span><span class="n">i</span><span class="o">+</span><span class="s">&quot;: &quot;</span><span class="o">+</span><span class="n">conv</span><span class="o">[</span><span class="mi">0</span><span class="o">]+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">conv</span><span class="o">[</span><span class="mi">1</span><span class="o">]);</span>
-        <span class="o">}</span>
-    <span class="o">}</span>
-<span class="o">}</span>
-</pre></div>
-
-
-<p>and the corresponding console output:</p>
-<div class="highlight"><pre><span></span>$ javac SquareRootCF.java &amp;&amp; java SquareRootCF
-Convergent 1: 4/1
-Convergent 2: 11/3
-Convergent 3: 15/4
-Convergent 4: 101/27
-Convergent 5: 116/31
-Convergent 6: 333/89
-Convergent 7: 449/120
-Convergent 8: 3027/809
-Convergent 9: 3476/929
-Convergent 10: 9979/2667
-</pre></div>
-
-
-<p><a name="cf-sqrt-refs"></a></p>
-<h1>References</h1>
-<ol>
-<li>
-<p>Hardy, G. H. <u>A Course of Pure Mathematics.</u> 
-Cambridge University Press, Tenth Edition (1908-1967).</p>
-</li>
-<li>
-<p>Knuth, Donald. <u>The Art of Computer Programming, Volume 2: Seminumerical Algorithms.</u> 
-Addison-Wesley Publishing Company, Second Edition (1975).</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/number-theory.html">number theory</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/square-roots.html">square roots</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/numerical-methods.html">numerical methods</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/continued-fractions.html">continued fractions</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/irrational-numbers.html">irrational numbers</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Computing Square Roots: Part 1: Using Newton's Method
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-07-14T18:00:00-07:00" pubdate>Friday 07/14/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/computing-square-roots-part-1-using-newtons-method.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2>Table of Contents</h2>
-<ul>
-<li>
-<p><a href="#newton-roots">Newton's Method for Finding Roots of Equations</a></p>
-</li>
-<li>
-<p><a href="#newton-square-roots">Newton's Method for Finding Square Roots</a></p>
-</li>
-<li>
-<p><a href="#newton-program">Newton's Method for Finding Square Roots: Program</a></p>
-</li>
-<li>
-<p><a href="#newton-accuracy">Accuracy</a></p>
-</li>
-<li>
-<p><a href="#newton-speed">Speed</a></p>
-</li>
-<li>
-<p><a href="#newton-next">Next Steps</a></p>
-</li>
-<li>
-<p><a href="#newton-refs">References</a></p>
-</li>
-</ul>
-<p><a name="newton-roots"></a></p>
-<h2>Newton's Method for Finding Roots of Equations</h2>
-<p>Suppose we have a function <span class="math">\(f(x)\)</span> and we want to 
-compute values of <span class="math">\(x\)</span> for which <span class="math">\(f(x)=0\)</span>. These values 
-of <span class="math">\(x\)</span> are called the <strong>roots</strong> of <span class="math">\(f(x)\)</span>.</p>
-<p>We can compute the roots using Newton's Method,
-which utilizes the derivative of the function
-to iteratively compute the roots of the function.</p>
-<p>Newton's method begins with an initial guess.
-It evaluates the derivative of the fnction at the 
-initial guess, which gives the slope of the tangent line,
-and computes the root of the tangent line as the next
-approximation of the root of the function.</p>
-<p>This is based on the point-slope formula,</p>
-<div class="math">$$
-y - y_0 = m(x - x_0) 
-$$</div>
-<p>Now the left side becomes </p>
-<div class="math">$$
-f(x) - f(x_0) = f'(x_0)(x - x_0)
-$$</div>
-<p>and at the root, we know <span class="math">\(f(x)=0\)</span>, so rearranging this equation
-into an expression for the root <span class="math">\(x\)</span> gives: </p>
-<div class="math">$$
-x = x_0 - \dfrac{f(x_0)}{f'(x_0)}
-$$</div>
-<p>Now, this is the equation for the next approximation for the root.
-To turn this into an iterative procedure, we write this as</p>
-<div class="math">$$
-x_{i+1} = x_{i} - \dfrac{f(x_i)}{f'(x_i)}
-$$</div>
-<p>Newton's Method then allows us to evaluate the 
-above expression as many times as we would like
-to achive the desired accuracy. </p>
-<p>Two caveats with Newton's Method: </p>
-<ul>
-<li>The function must be relatively well-behaved; 
-    Newton's Method does not converge for functions with
-    large, high-order derivatives.</li>
-<li>The convergence of the method depends on the accuracy 
-    of the initial guess. If you can make a good guess, do it!</li>
-</ul>
-<p><a name="newton-square-roots"></a></p>
-<h2>Newton's Method for Finding Square Roots</h2>
-<p>Note that we can use the procedure and equation from above
-to compute the numerical value of a given function to an arbitrary
-degree of accuracy, so long as we have the derivative (and a program 
-that can keep track of arbitrary digits).</p>
-<p>Suppose we want to use Newton's Method to compute <span class="math">\(\sqrt{2}\)</span>.
-Then we can solve for the roots of the following function:</p>
-<div class="math">$$
-f(x) = x^2 - a
-$$</div>
-<p>for <span class="math">\(a = 2\)</span>.</p>
-<p>Note that the derivative of this function is computed using the power rule,
-which is trivial to implement, so we can also use this method to compute
-general <span class="math">\(n^{th}\)</span> roots of <span class="math">\(a\)</span>, by solving for roots of:</p>
-<div class="math">$$
-f(x) = x^n - a
-$$</div>
-<p>For a monomial with nonzero power, the derivative is always l<span class="math">\(f'(x) = n x^{n-1}\)</span>, 
-so in the square root case we have <span class="math">\(f'(x) = 2x\)</span>. Now we plug these two functions
-into the iterative formula for Newton's Method to get:</p>
-<div class="math">$$
-\begin{array}
-a x_{i+1} &amp;=&amp; x_{i} - \dfrac{f(x_n)}{f'(x_n)} \\
-x_{i+1} &amp;=&amp; x_{i} - \dfrac{x_i^2 - a}{2 x_i }
-\end{array}
-$$</div>
-<p><a name="newton-program"></a></p>
-<h2>Newton's Method for Finding Square Roots: Program</h2>
-<p>This can be implemented in a programming language to yield an iterative
-method for computing square roots. We can either specify a tolerance (better),
-or a number of iterations. Here is a static method for computing
-a square root using Newton's method. The user specifies the value of <span class="math">\(a\)</span>,
-the number they want to compute the square root of; <span class="math">\(x_0\)</span>, the initial guess;
-and a tolerance, which controls the number of decimal places of accuracy of the 
-final answer.</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** Compute a square root using Newton&#39;s Method, to a specified tolerance.</span>
-<span class="cm">     *</span>
-<span class="cm">     * @param a Compute the square root of a.</span>
-<span class="cm">     * @param x0 Initial guess.</span>
-<span class="cm">     * @param tol Tolerance (stopping criteria).</span>
-<span class="cm">     */</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">double</span> <span class="nf">nmsqrttol</span><span class="o">(</span><span class="kt">double</span> <span class="n">a</span><span class="o">,</span> <span class="kt">double</span> <span class="n">x0</span><span class="o">,</span> <span class="kt">double</span> <span class="n">tol</span><span class="o">)</span> <span class="o">{</span> 
-        <span class="kt">double</span> <span class="n">xi</span><span class="o">,</span> <span class="n">xip1</span><span class="o">,</span> <span class="n">err</span><span class="o">;</span>
-        <span class="n">xi</span> <span class="o">=</span> <span class="n">xip1</span> <span class="o">=</span> <span class="n">x0</span><span class="o">;</span>
-        <span class="n">err</span> <span class="o">=</span> <span class="n">x0</span><span class="o">;</span>
-        <span class="k">while</span><span class="o">(</span><span class="n">err</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="o">)</span> <span class="o">{</span> 
-            <span class="n">xip1</span> <span class="o">=</span> <span class="n">xi</span> <span class="o">-</span> <span class="o">(</span><span class="n">xi</span><span class="o">*</span><span class="n">xi</span><span class="o">-</span><span class="n">a</span><span class="o">)/(</span><span class="mi">2</span><span class="o">*</span><span class="n">xi</span><span class="o">);</span>
-            <span class="n">err</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span> <span class="n">xip1</span> <span class="o">-</span> <span class="n">xi</span> <span class="o">);</span>
-            <span class="n">xi</span> <span class="o">=</span> <span class="n">xip1</span><span class="o">;</span>
-        <span class="o">}</span>
-        <span class="k">return</span> <span class="n">xip1</span><span class="o">;</span>
-    <span class="o">}</span>
-</pre></div>
-
-
-<p>(There is no check for infinite loops because our function is a smooth
-polynomial and Newton's Method will always converge.) </p>
-<p>Here is sample output from a program that varies the tolerance and prints
-the corresponding value of the square root that was computed:</p>
-<div class="highlight"><pre><span></span>$ javac SquareRoot.java &amp;&amp; java SquareRoot
-Actual value sqrt(2) = 1.4142135623730951
-Testing Newton&#39;s Method, Specifying Tolerance:
-Tol         sqrt(2)
-0.1         1.4166666666666667
-0.01        1.4142156862745099
-0.001       1.4142135623746899
-0.0001      1.4142135623746899
-1e-05       1.4142135623746899
-1e-06       1.4142135623730951
-1e-07       1.4142135623730951
-1e-08       1.4142135623730951
-</pre></div>
-
-
-<p><a name="newton-accuracy"></a></p>
-<h2>Accuracy</h2>
-<p>Now that we've coded up Newton's Method, we can determine the number of accurate 
-digits. There are a couple of ways to do this, but I went with a string comparison 
-method. I start with a text file containing thousands of digits of the square root of 2,
-then I compute the square root of 2 using Newton's Method. The longest common substring
-gives me the number of accurate digits, plus "1.", so if I subtract 2 I get the 
-total number of accurate digits after the decimal place. </p>
-<div class="highlight"><pre><span></span>javac SquareRoot.java &amp;&amp; java SquareRoot
-Tolerance = 0.1     Number of accurate digits = 2
-Tolerance = 0.01        Number of accurate digits = 5
-Tolerance = 0.001       Number of accurate digits = 11
-Tolerance = 0.0001      Number of accurate digits = 11
-Tolerance = 1e-05       Number of accurate digits = 11
-Tolerance = 1e-06       Number of accurate digits = 15
-Tolerance = 1e-07       Number of accurate digits = 15
-Tolerance = 1e-08       Number of accurate digits = 15
-Tolerance = 1e-09       Number of accurate digits = 15
-Tolerance = 1e-10       Number of accurate digits = 15
-Tolerance = 1e-11       Number of accurate digits = 15
-Tolerance = 1e-12       Number of accurate digits = 15
-Tolerance = 1e-13       Number of accurate digits = 15
-Tolerance = 1e-14       Number of accurate digits = 15
-</pre></div>
-
-
-<p><a name="newton-speed"></a></p>
-<h2>Speed</h2>
-<p>It is also important to measure performance, in the form of speed. How fast is 
-Newton's Method relative to the built-in square root function in the math library?</p>
-<p>Turns out the performance of Newton's Method is much worse than the built-in math library's 
-square root function. The Newton's Method defined above is around 100 times slower. 
-Here are the results of a simple timing test, in which we compute the square root
-10 million times, timing how long it takes, and divide by the number of operations
-to yield the time per operation (or rather, as it is slightly easier to grasp, 
-the time per 1k operations);:</p>
-<div class="highlight"><pre><span></span>    <span class="c">/** Time Newton&#39;s Method.</span>
-<span class="c">     *</span>
-<span class="c">     * How long does it take to achieve 10 digits of accuracy? */</span>
-    <span class="nt">public</span> <span class="nt">static</span> <span class="nt">void</span> <span class="nt">testTime</span><span class="o">()</span> <span class="p">{</span> 
-
-        <span class="err">int</span> <span class="err">Nops</span><span class="p">;</span>
-        <span class="err">double</span> <span class="err">a</span><span class="p">;</span>
-        <span class="err">double</span> <span class="err">initialGuess</span><span class="p">;</span>
-        <span class="err">double</span> <span class="err">tol</span><span class="p">;</span>
-        <span class="err">double</span> <span class="err">time</span><span class="p">;</span>
-
-        <span class="err">Tim</span> <span class="err">tim</span><span class="p">;</span>
-
-        <span class="err">Nops</span> <span class="err">=</span> <span class="err">10000000</span><span class="p">;</span>
-        <span class="err">a</span> <span class="err">=</span> <span class="err">2</span><span class="p">;</span>
-        <span class="err">initialGuess</span> <span class="err">=</span> <span class="err">1</span><span class="p">;</span>
-        <span class="err">tol</span> <span class="err">=</span> <span class="err">1E-8</span><span class="p">;</span>
-        <span class="err">tim</span> <span class="err">=</span> <span class="err">new</span> <span class="err">Tim()</span><span class="p">;</span>
-        <span class="err">tim.tic()</span><span class="p">;</span>
-        <span class="err">for(int</span> <span class="err">i=0</span><span class="p">;</span> <span class="err">i&lt;Nops</span><span class="p">;</span> <span class="err">i++)</span> <span class="err">{</span> 
-            <span class="err">nmsqrttol(a,</span> <span class="err">initialGuess,</span> <span class="err">tol)</span><span class="p">;</span>
-        <span class="p">}</span>
-        <span class="nt">tim</span><span class="p">.</span><span class="nc">toc</span><span class="o">();</span>
-        <span class="nt">time</span> <span class="o">=</span> <span class="nt">1000</span><span class="o">*</span><span class="nt">tim</span><span class="p">.</span><span class="nc">elapsedms</span><span class="o">()/</span><span class="nt">Nops</span><span class="o">;</span>
-        <span class="nt">System</span><span class="p">.</span><span class="nc">out</span><span class="p">.</span><span class="nc">println</span><span class="o">(</span><span class="s2">&quot;Newton&#39;s Method Time (ms) per 1k operations: &quot;</span><span class="o">+</span><span class="nt">time</span><span class="o">);</span>
-
-
-        <span class="nt">Nops</span> <span class="o">=</span> <span class="nt">10000000</span><span class="o">;</span>
-        <span class="nt">a</span> <span class="o">=</span> <span class="nt">2</span><span class="o">;</span>
-        <span class="nt">tim</span> <span class="o">=</span> <span class="nt">new</span> <span class="nt">Tim</span><span class="o">();</span>
-        <span class="nt">tim</span><span class="p">.</span><span class="nc">tic</span><span class="o">();</span>
-        <span class="nt">for</span><span class="o">(</span><span class="nt">int</span> <span class="nt">i</span><span class="o">=</span><span class="nt">0</span><span class="o">;</span> <span class="nt">i</span><span class="o">&lt;</span><span class="nt">Nops</span><span class="o">;</span> <span class="nt">i</span><span class="o">++)</span> <span class="p">{</span> 
-            <span class="err">Math.sqrt(a)</span><span class="p">;</span>
-        <span class="p">}</span>
-        <span class="nt">tim</span><span class="p">.</span><span class="nc">toc</span><span class="o">();</span>
-        <span class="nt">time</span> <span class="o">=</span> <span class="nt">1000</span><span class="o">*</span><span class="nt">tim</span><span class="p">.</span><span class="nc">elapsedms</span><span class="o">()/</span><span class="nt">Nops</span><span class="o">;</span>
-        <span class="nt">System</span><span class="p">.</span><span class="nc">out</span><span class="p">.</span><span class="nc">println</span><span class="o">(</span><span class="s2">&quot;Math Library Time (ms) per 1k operations: &quot;</span><span class="o">+</span><span class="nt">time</span><span class="o">);</span>
-
-    <span class="err">}</span>
-</pre></div>
-
-
-<p>and the results:</p>
-<div class="highlight"><pre><span></span>javac SquareRoot.java &amp;&amp; java SquareRoot
-Newton&#39;s Method Time (ms) per 1k operations: 0.016
-Math Library Time (ms) per 1k operations: 3.0E-4
-</pre></div>
-
-
-<p>While the accuracy of Newton's Method for square roots may not be that great,
-it ain't bad, for 9 lines of code. </p>
-<p><a name="newton-next"></a></p>
-<h2>Next Steps</h2>
-<p>In a blog post to follow, we'll compare the speed and accuracy of square root computations using Newton's Method
-to an alternative approach involving the continued fraction representation of square roots. This particularly interesting
-technique can also be used to solve the Pell equation, a quadratic Diophantine equation of the form:</p>
-<div class="math">$$
-x^2 - D y^2 = 1
-$$</div>
-<p>But more on that in a future post...</p>
-<p><a name="newton-refs"></a></p>
-<h2>References</h2>
-<ol>
-<li>
-<p>Press, William et al. "Numerical Recipes in C." Cambridge Unviersity Press (2007).</p>
-</li>
-<li>
-<p>"SquareRoot.java". Charles Reid. git.charlesreid1.com.
-&lt;<a href="https://git.charlesreid1.com/cs/java/src/master/numerics/newtons-method">https://git.charlesreid1.com/cs/java/src/master/numerics/newtons-method</a>&gt;</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/number-theory.html">number theory</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/square-roots.html">square roots</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/numerical-methods.html">numerical methods</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/newtons-method.html">newtons method</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/irrational-numbers.html">irrational numbers</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1477,7 +1048,10 @@ $$</div>
             <h2>December 2019</h2>
 
             <p class="archive">
-            <a href="https://charlesreid1.github.io/automatically-generating-requirementstxt-for-python-projects.html">Automatically Generating requirements.txt for Python Projects</a>
+            <a href="https://charlesreid1.github.io/creating-mock-api-servers.html">Creating Mock API Servers</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/automatically-generating-up-to-date-requirementstxt-for-python-projects.html">Automatically Generating Up-To-Date requirements.txt for Python Projects</a>
             </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/git-workflows-part-3-refactoring-large-branches-and-pull-requests.html">Git Workflows, Part 3: Refactoring Large Branches and Pull Requests</a>
@@ -1533,6 +1107,9 @@ $$</div>
 
             <p class="archive">
             <a href="https://charlesreid1.github.io/deconvoluting-convolutional-neural-networks.html">Deconvoluting Convolutional Neural Networks</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-2-finding-eulerian-paths.html">Graphs for Bioinformatics, Part 2: Finding Eulerian Paths</a>
             </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Graphs for Bioinformatics, Part 1: de Bruijn Graphs, Hamiltonian Paths, and Eulerian Paths</a>
