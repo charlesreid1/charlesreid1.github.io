@@ -7,8 +7,6 @@ Tags: http, server, python, mock, mocking
 
 ## Mock API Server Class
 
-
-
 ```
 class MockFusilladeHandler(BaseHTTPRequestHandler):
     _server = None
