@@ -31,7 +31,7 @@ into a Makefile.
 This is useful for cases where terraform is being used to manage infrastructure.
 In the end you will be able to run a command like
 
-```
+```plain
 make plan-infra
 make deploy-infra
 ```
@@ -53,7 +53,7 @@ The post is divided into a few steps:
 This tutorial presumes you have a top level directory corresponding to a git repository.
 We will use the following directory structure for this example:
 
-```
+```plain
 my-project/
     Readme.md
     environment
@@ -71,7 +71,7 @@ In order to keep track of environment variables used in the terraform
 process, we use the file `envronment` in the top level project directory
 to keep all environment variable values under version control.
 
-```
+```bash
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
 export PROJECT_HOME="$(cd -P "$(dirname "$SOURCE")" && pwd)"
@@ -87,7 +87,7 @@ Optionally, a local environment file can contain environment variable values
 that are sensitive or should not be kept under version control, so add this
 to the bottom of the `environment` file too:
 
-```
+```bash
 if [[ -f "${PROJECT_HOME}/environment.local" ]]; then
     source "${PROJECT_HOME}/environment.local"
 fi
@@ -98,7 +98,7 @@ fi
 Start by creating the `plan-infra` and `deploy-infra` commands in your top-level
 Makefile. These commands will, in turn, call make commands defined in `infra/Makefile`:
 
-```
+```make
 plan-infra:
 	$(MAKE) -C infra plan-all
 
@@ -266,7 +266,7 @@ We can create one file per cloud provider. As an example, here is `s3.tf`:
 
 **`s3.tf`**:
 
-```
+```plain
 data "aws_caller_identity" "current" {}
 
 locals {
@@ -300,7 +300,7 @@ resource aws_s3_bucket dss_s3_bucket {
 Note that this requires several environment variables to be
 defined in `environment` and requires the operator to run:
 
-```
+```plain
 source environment
 ```
 
@@ -313,7 +313,7 @@ values.
 Start with a simple argument parser that just accepts a single argument,
 the component to make terraform files for:
 
-```
+```python
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("component")
 args = parser.parse_args()
@@ -323,7 +323,7 @@ Next, we define several terraform file templates using Python's
 bracket template syntax. Start with a template for defining a
 terraform variable:
 
-```
+```plain
 terraform_variable_template = """
 variable "{name}" {{
   default = "{val}"
@@ -333,7 +333,7 @@ variable "{name}" {{
 
 Next, define a template for the terraform backend buket:
 
-```
+```plain
 terraform_backend_template = """# Auto-generated during infra build process.
 # Please edit infra/build_deploy_config.py directly.
 terraform {{
@@ -349,7 +349,7 @@ terraform {{
 
 Next define terraform cloud providers:
 
-```
+```plain
 terraform_providers_template = """# Auto-generated during infra build process.
 # Please edit infra/build_deploy_config.py directly.
 provider aws {{
@@ -361,7 +361,7 @@ provider aws {{
 Provide a list of environment variables that should also be defined as
 terraform variables:
 
-```
+```plain
 env_vars_to_infra = [
     "ACM_CERTIFICATE_IDENTIFIER",
     "API_DOMAIN_NAME",
@@ -405,7 +405,7 @@ env_vars_to_infra = [
 Finally, substitute environment variable values into the templates, and write
 the templated content to the appropriate `*.tf` file. First, the backend:
 
-```
+```python
 # Write backend.tf
 with open(os.path.join(infra_root, args.component, "backend.tf"), "w") as fp:
     caller_info = boto3.client("sts").get_caller_identity()
@@ -425,7 +425,7 @@ with open(os.path.join(infra_root, args.component, "backend.tf"), "w") as fp:
 
 Next, the `variables.tf` for the component:
 
-```
+```python
 # Write variables.tf
 with open(os.path.join(infra_root, args.component, "variables.tf"), "w") as fp:
     fp.write("# Auto-generated during infra build process." + os.linesep)
@@ -437,7 +437,7 @@ with open(os.path.join(infra_root, args.component, "variables.tf"), "w") as fp:
 
 Finally, the cloud providers file `providers.tf`:
 
-```
+```python
 with open(os.path.join(infra_root, args.component, "providers.tf"), "w") as fp:
     fp.write(terraform_providers_template.format(
         aws_region=os.environ['AWS_DEFAULT_REGION'],
