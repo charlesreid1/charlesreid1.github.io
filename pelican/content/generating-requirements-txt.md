@@ -22,20 +22,20 @@ make the Python environment reproducible.
 
 This will turn a requirements input file (called `requirements.txt.in` for example) that looks like
 
-```
+```text
 numpy
 ```
 
 into a requirements file that specifies the exact version of `numpy` and all dependencies, like
 
-```
+```text
 numpy==1.18.1
 ```
 
 By the end of this post, you'll be able to do this to refresh and update the versions of all the software your
 project depends on:
 
-```
+```text
 make requirements.txt
 ```
 
@@ -48,20 +48,20 @@ When developing a Python project, the `requirements.txt` file is a plain text fi
 Python software packages that need to be installed for the current Python software package to work. The software
 can be installed using the command
 
-```
+```text
 pip install -r requirements.txt
 ```
 
 For example, if a package `foobar` has `import numpy` at the top of a Python file in the project, the `numpy` package
 must be installed before importing `foobar`. In this case, the `requirements.txt` could just contain
 
-```
+```text
 numpy
 ```
 
 or it could specify a particular version of numpy, or a minimum version of numpy:
 
-```
+```text
 numpy >= 1.10
 ```
 
@@ -73,7 +73,7 @@ This file is a looser set of specifications of software versions.
 
 Example `requirements.txt.in`:
 
-```
+```text
 numpy
 pandas > 0.22
 sphinx
@@ -89,7 +89,7 @@ the virtual environment, along with its exact version. This can be used to make 
 
 The manual steps are
 
-```
+```text
 virtualenv -p $(which python3) venv
 venv/bin/pip install -r requirements.txt
 venv/bin/pip install -r requirements.txt.in
@@ -99,7 +99,7 @@ rm -fr venv
 
 Using pip freeze means the resulting `results.txt` contains detailed version numbers:
 
-```
+```text
 alabaster==0.7.12
 Babel==2.7.0
 certifi==2019.11.28
@@ -136,7 +136,7 @@ This is automated with a make rule next.
 We have a nice Makefile rule that can be dropped into
 any Makefile that allows users to run
 
-```
+```text
 make requirements.txt
 ```
 
@@ -173,7 +173,7 @@ Summary of the make rule:
 
 To update the requirements, update the `requirements.txt` with these manual steps:
 
-```
+```make
 refresh_all_requirements:
     @cat /dev/null > requirements.txt
 	@if [ $$(uname -s) == "Darwin" ]; then sleep 1; fi  # this is require because Darwin HFS+ only has second-resolution for timestamps.
@@ -183,7 +183,7 @@ refresh_all_requirements:
 
 Now `requirements.txt` can be updated with
 
-```
+```text
 make refresh_all_requirements
 ```
 
