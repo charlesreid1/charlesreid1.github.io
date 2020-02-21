@@ -456,7 +456,7 @@ environment variables into them, creating a new version of them with up-to-date 
 The plan step (`make plan-infra`) calls the `build_deploy_config.py` script (detailed above)
 to regenerate the terraform files when environment variables are changed.
 
-```
+```text
 make plan-infra
 ```
 
@@ -487,13 +487,13 @@ If you need to rename infra, use the following workflow:
 
 2.  Destroy the old infra with the old names using:
     
-    ```
+    ```text
     make -C infra COMPONENT=buckets destroy
     ```
 
     Or destroy all infra with the `destroy-all` command:
 
-    ``` 
+    ```text
     make -C infra destroy-all
     ```
 
@@ -501,13 +501,13 @@ If you need to rename infra, use the following workflow:
 
 4.  Plan the new infra with
 
-    ```
+    ```text
     make plan-infra
     ```
 
 5.  Deploy the new infra with
 
-    ```
+    ```text
     make deploy-infra
     ```
 
@@ -518,13 +518,13 @@ Makefile, and all infrastructure components can be deleted with the `delete-all`
 
 To delete a particular component:
 
-```
+```text
 make -C infra COMPONENT=buckets destroy
 ```
 
 To destroy all infra:
 
-```
+```text
 make -C infra destroy-all
 ```
 
