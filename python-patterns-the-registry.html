@@ -166,11 +166,9 @@ It should also extend the <code>type</code> class, since it is itself a class ty
     <span class="n">REGISTRY</span> <span class="o">=</span> <span class="p">{}</span>
 
     <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="c1"># instantiate a new type corresponding to the type of class being defined</span>
+        <span class="c1"># this is currently RegisterBase but in child classes will be the child class</span>
         <span class="n">new_cls</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">            Here the name of the class is used as key but it could be any class</span>
-<span class="sd">            parameter.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">REGISTRY</span><span class="p">[</span><span class="n">new_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_cls</span>
         <span class="k">return</span> <span class="n">new_cls</span>
 
@@ -180,7 +178,8 @@ It should also extend the <code>type</code> class, since it is itself a class ty
 </pre></div>
 
 
-<p>Three things to note:</p>
+<p>The design here is subtle, but the details are important to understand how it works.</p>
+<p>A few important things to note, progressing from top to bottom:</p>
 <ul>
 <li>
 <p>The <code>REGISTRY</code> variable is defined outside the scope of any class methods, meaning it is a
@@ -194,10 +193,18 @@ It should also extend the <code>type</code> class, since it is itself a class ty
   are defined, not when they are instantiated.</p>
 </li>
 <li>
-<p>We define a <code>get_registry</code> method to return a copy of the registry; this must be decorated with
-  a <code>@classmethod</code> decorator (not a <code>@staticmethod</code> decorator) so that it has access to the registry,
-  which is a class instance variable.</p>
+<p>In the constructor, we store a reference to the current class using this line:</p>
 </li>
+</ul>
+<p><code>new_cls = type.__new__(cls, name, bases, attrs)</code></p>
+<p>This creates a new class, but of type <code>type</code> (confusing, but basically it means we store
+  a reference to this <em><strong>type</strong></em> of object, not just a reference to a particular object).</p>
+<p>It is important to note that once we use the registry, the value that is returned is callable,
+  and will create an object corresponding to that type.</p>
+<ul>
+<li>We define a <code>get_registry</code> method to return a copy of the registry; this must be decorated with
+  a <code>@classmethod</code> decorator (not a <code>@staticmethod</code> decorator) so that it has access to the registry,
+  which is a class instance variable.</li>
 </ul>
 <p><strong>BONUS NOTE:</strong> From prior experience, we have found it easiest to ignore the case of the
 label (uppercase, lowercase, CamelCase, etc) and convert all class names to lowercase in the
@@ -224,6 +231,7 @@ defined.</p>
 </pre></div>
 
 
+<p>We skip defining constructor behavior, as the call order is what's important.</p>
 <h2>Seeing it in action</h2>
 <p>Now we can see the process of adding subclasses to the registry in action.</p>
 <p>Start by checking the registry before we have created any subclasses:</p>

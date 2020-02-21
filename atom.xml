@@ -81,11 +81,9 @@ It should also extend the &lt;code&gt;type&lt;/code&gt; class, since it is itsel
     &lt;span class="n"&gt;REGISTRY&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
 
     &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="fm"&gt;__new__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;cls&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;bases&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;attrs&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+        &lt;span class="c1"&gt;# instantiate a new type corresponding to the type of class being defined&lt;/span&gt;
+        &lt;span class="c1"&gt;# this is currently RegisterBase but in child classes will be the child class&lt;/span&gt;
         &lt;span class="n"&gt;new_cls&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;type&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="fm"&gt;__new__&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;cls&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;name&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;bases&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;attrs&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-        &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
-&lt;span class="sd"&gt;            Here the name of the class is used as key but it could be any class&lt;/span&gt;
-&lt;span class="sd"&gt;            parameter.&lt;/span&gt;
-&lt;span class="sd"&gt;        &amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
         &lt;span class="bp"&gt;cls&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;REGISTRY&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;new_cls&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="vm"&gt;__name__&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;new_cls&lt;/span&gt;
         &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;new_cls&lt;/span&gt;
 
@@ -95,7 +93,8 @@ It should also extend the &lt;code&gt;type&lt;/code&gt; class, since it is itsel
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;p&gt;Three things to note:&lt;/p&gt;
+&lt;p&gt;The design here is subtle, but the details are important to understand how it works.&lt;/p&gt;
+&lt;p&gt;A few important things to note, progressing from top to bottom:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
 &lt;p&gt;The &lt;code&gt;REGISTRY&lt;/code&gt; variable is defined outside the scope of any class methods, meaning it is a
@@ -109,10 +108,18 @@ It should also extend the &lt;code&gt;type&lt;/code&gt; class, since it is itsel
   are defined, not when they are instantiated.&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;We define a &lt;code&gt;get_registry&lt;/code&gt; method to return a copy of the registry; this must be decorated with
-  a &lt;code&gt;@classmethod&lt;/code&gt; decorator (not a &lt;code&gt;@staticmethod&lt;/code&gt; decorator) so that it has access to the registry,
-  which is a class instance variable.&lt;/p&gt;
+&lt;p&gt;In the constructor, we store a reference to the current class using this line:&lt;/p&gt;
 &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;new_cls = type.__new__(cls, name, bases, attrs)&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;This creates a new class, but of type &lt;code&gt;type&lt;/code&gt; (confusing, but basically it means we store
+  a reference to this &lt;em&gt;&lt;strong&gt;type&lt;/strong&gt;&lt;/em&gt; of object, not just a reference to a particular object).&lt;/p&gt;
+&lt;p&gt;It is important to note that once we use the registry, the value that is returned is callable,
+  and will create an object corresponding to that type.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;We define a &lt;code&gt;get_registry&lt;/code&gt; method to return a copy of the registry; this must be decorated with
+  a &lt;code&gt;@classmethod&lt;/code&gt; decorator (not a &lt;code&gt;@staticmethod&lt;/code&gt; decorator) so that it has access to the registry,
+  which is a class instance variable.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;&lt;strong&gt;BONUS NOTE:&lt;/strong&gt; From prior experience, we have found it easiest to ignore the case of the
 label (uppercase, lowercase, CamelCase, etc) and convert all class names to lowercase in the
@@ -139,6 +146,7 @@ defined.&lt;/p&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
+&lt;p&gt;We skip defining constructor behavior, as the call order is what's important.&lt;/p&gt;
 &lt;h2&gt;Seeing it in action&lt;/h2&gt;
 &lt;p&gt;Now we can see the process of adding subclasses to the registry in action.&lt;/p&gt;
 &lt;p&gt;Start by checking the registry before we have created any subclasses:&lt;/p&gt;
