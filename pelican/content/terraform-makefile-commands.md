@@ -483,33 +483,33 @@ control and tag it as the current deployed infra. This will make it easier to de
 
 If you need to rename infra, use the following workflow:
 
-1. Source the old `environment` file
+1.  Source the old `environment` file
 
-2. Destroy the old infra with the old names using:
-   
-   ```
-   make -C infra COMPONENT=buckets destroy
-   ```
+2.  Destroy the old infra with the old names using:
+    
+    ```
+    make -C infra COMPONENT=buckets destroy
+    ```
 
-   Or destroy all infra with the `destroy-all` command:
+    Or destroy all infra with the `destroy-all` command:
 
-   ``` 
-   make -C infra destroy-all
-   ```
+    ``` 
+    make -C infra destroy-all
+    ```
 
-3. Update the environment file with the new names, and source the new `environment` file
+3.  Update the environment file with the new names, and source the new `environment` file
 
-4. Plan the new infra with
+4.  Plan the new infra with
 
-   ```
-   make plan-infra
-   ```
+    ```
+    make plan-infra
+    ```
 
-5. Deploy the new infra with
+5.  Deploy the new infra with
 
-   ```
-   make deploy-infra
-   ```
+    ```
+    make deploy-infra
+    ```
 
 ## Destroy
 
