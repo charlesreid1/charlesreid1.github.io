@@ -6,6 +6,24 @@ Status: draft
 
 # Table of Contents
 
+* [Summary](#summary)
+* [Step 0: Directory and File Layout](#step-0-directory-and-file-layout)
+    * [Environment Variables](#environment-variables)
+* [Step 1: Top Level Makefile](#step-1-top-level-makefile)
+* [Step 2: Infra Level Makefile](#step-2-infra-level-makefile)
+    * [Fake Targets](#fake-targets)
+    * [Commands for Single Components](#commands-for-single-components)
+    * [Commands for All Components](#commands-for-all-components)
+    * [Variables](#variables)
+    * [Final Makefile](#final-makefile)
+* [Step 3: Writing Terraform Components](#step-3-writing-terraform-components)
+* [Step 4: Initializing Terraform Components](#step-4-initializing-terraform-components)
+* [Workflow](#workflow)
+    * [Plan](#plan)
+    * [Deploy](#deploy)
+    * [Update](#update)
+    * [Destroy](#destroy)
+
 # Summary
 
 This blog post covers a useful pattern for incorporating terraform commands

@@ -3,6 +3,23 @@ Date: 2020-02-20 22:22
 Category: Computer Science
 Tags: python, programming, patterns, design patterns, registry, computer science
 
+# Table of Contents
+
+* [Overview](#overview)
+* [What is the Registry Pattern?](#what-is-the-registry-pattern)
+    * [The Registry Base Type](#the-registry-base-type)
+    * [The Base Registered Class](#the-base-registered-class)
+    * [Extending the Base Registered Class](#extending-the-base-registered-class)
+    * [Seeing it in action](#seeing-it-in-action)
+* [Examples](#examples)
+    * [Example: Search Engine](#example-search-engine)
+        * [Registry Subclasses](#registry-subclasses)
+        * [Doctype Registry Base Type](#doctype-registry-base-type)
+        * [Base Registered Doctype Class](#base-registered-doctype-class)
+        * [Derived Registered Doctype Class](#derived-registered-doctype-class)
+        * [Using the Registry](#using-the-registry)
+* [Further Modifications](#further-modifications)
+* [Summary](#summary)
 
 # Overview
 
