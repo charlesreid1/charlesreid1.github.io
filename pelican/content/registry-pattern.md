@@ -62,11 +62,9 @@ class RegistryBase(type):
     REGISTRY = {}
 
     def __new__(cls, name, bases, attrs):
+        # instantiate a new type corresponding to the type of class being defined
+        # this is currently RegisterBase but in child classes will be the child class
         new_cls = type.__new__(cls, name, bases, attrs)
-        """
-            Here the name of the class is used as key but it could be any class
-            parameter.
-        """
         cls.REGISTRY[new_cls.__name__] = new_cls
         return new_cls
 
@@ -75,7 +73,9 @@ class RegistryBase(type):
         return dict(cls.REGISTRY)
 ```
 
-Three things to note:
+The design here is subtle, but the details are important to understand how it works.
+
+A few important things to note, progressing from top to bottom:
 
 - The `REGISTRY` variable is defined outside the scope of any class methods, meaning it is a
   shared instance variable (a variable that is shared across all instances of `RegistryBase`);
@@ -85,6 +85,18 @@ Three things to note:
   the class is defined, while `__init__` is run when the classs is instantiated. This ensures
   that any subclasses that inherit from `RegistryBase` add themselves to the registry when they
   are defined, not when they are instantiated.
+
+- In the constructor, we store a reference to the current class using this line:
+
+  ```
+  new_cls = type.__new__(cls, name, bases, attrs)
+  ```
+   
+  This creates a new class, but of type `type` (confusing, but basically it means we store
+  a reference to this _**type**_ of object, not just a reference to a particular object).
+
+  It is important to note that once we use the registry, the value that is returned is callable,
+  and will create an object corresponding to that type.
 
 - We define a `get_registry` method to return a copy of the registry; this must be decorated with
   a `@classmethod` decorator (not a `@staticmethod` decorator) so that it has access to the registry,
@@ -122,6 +134,8 @@ class ExtendedRegisteredClass(BaseRegisteredClass):
     def __init__(self, *args, **kwargs):
         pass
 ```
+
+We skip defining constructor behavior, as the call order is what's important.
 
 
 ## Seeing it in action
