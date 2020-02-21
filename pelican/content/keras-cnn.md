@@ -340,7 +340,7 @@ train_datagen = ImageDataGenerator(
 
 This can then be used to generate test image data:
 
-```
+```python
 train_generator = train_datagen.flow_from_directory(
     'train',
     target_size=(img_width, img_height),
