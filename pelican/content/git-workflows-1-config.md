@@ -271,7 +271,7 @@ Even better, you can define the alias `g cd` to run `git cdiff`...!
 
 Here's the relevant bit in the aliases section:
 
-```
+```text
     cdiff = diff --cached
     cd = diff --cached
 ```
@@ -325,7 +325,7 @@ of the `~/.gitconfig`:
 
 ### Clone shortcuts
 
-```
+```text
     # Clone a repository including all submodules
     c = clone --recursive
 ```
@@ -341,7 +341,7 @@ This last one is convenient for getting a summary of contributors:
 
 An example for <https://github.com/aws/chalice>:
 
-```
+```text
 $ cd chalice/
 $ g contributors
   1053  James Saryerwinnie
@@ -443,13 +443,13 @@ This makes some Github-related URLs easier and shorter to type:
 
 Now, instead of
 
-```
+```text
 $ git clone git@github.com:org-name/repo-name
 ```
 
 you can do the much simpler
 
-```
+```text
 $ g c gh://org-name/repo-name
 ```
 
