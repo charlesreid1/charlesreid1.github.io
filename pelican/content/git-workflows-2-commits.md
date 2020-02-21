@@ -311,7 +311,7 @@ with `git cherry-pick` or modify/combine them with `git rebase`.
 
 How to use:
 
-```
+```text
 git add -e <name-of-file>
 ```
 
@@ -325,13 +325,13 @@ A sidebar:
 If you have not yet set the text editor that git uses, you should
 do that now. Modify your git configuration with this command:
 
-```
+```text
 git config --global core.editor vim
 ```
 
 Alternatively, put the following in your `~/.gitconfig`:
 
-```
+```text
 [core]
     editor = vim
 ```
@@ -413,7 +413,7 @@ in the rebase. To include it, add `~1` to the start commit. (For example,
 To rebase from the start commit hash to the end commit hash, and include the start commit
 in the rebase, the rebase command is:
 
-```
+```text
 git rebase -i START_COMMIT_HASH~1 END_COMMIT_HASH
 ```
 
@@ -425,7 +425,7 @@ and the new pile of commits to retain the same branch name.
 To rebase a range of commits onto a different branch (for example, onto a `master` branch
 that has the latest changes from the remote), use the `--onto` flag:
 
-```
+```text
 git rebase -i START_COMMIT_HASH END_COMMIT_HASH --onto TARGET_BRANCH
 ```
 
@@ -441,7 +441,7 @@ If you want the old branch label to move to the new pile of commits, it requires
 housekeeping - you have to delete the old branch, then create a new branch from where
 HEAD is (the end of the rebase), then check out that branch.
 
-```
+```text
 git branch -D <branchname> && git checkout -b <branchname>
 ```
 
