@@ -178,24 +178,24 @@ We will use the following directory structure for this example:</p>
 <p>In order to keep track of environment variables used in the terraform
 process, we use the file <code>envronment</code> in the top level project directory
 to keep all environment variable values under version control.</p>
-<div class="highlight"><pre><span></span>SOURCE=&quot;<span class="cp">${</span><span class="n">BASH_SOURCE</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="cp">}</span>&quot;
-while [ -h &quot;<span class="nv">$SOURCE</span>&quot; ] ; do SOURCE=&quot;$(readlink &quot;<span class="nv">$SOURCE</span>&quot;)&quot;; done
-export PROJECT_HOME=&quot;$(cd -P &quot;$(dirname &quot;<span class="nv">$SOURCE</span>&quot;)&quot; <span class="err">&amp;&amp;</span> pwd)&quot;
+<div class="highlight"><pre><span></span><span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">while</span> <span class="o">[</span> -h <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span> <span class="o">]</span> <span class="p">;</span> <span class="k">do</span> <span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>readlink <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="p">;</span> <span class="k">done</span>
+<span class="nb">export</span> <span class="nv">PROJECT_HOME</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">cd</span> -P <span class="s2">&quot;</span><span class="k">$(</span>dirname <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span><span class="s2">&quot;</span>
 
-set -a
-PROJECT_DEPLOYMENT_STAGE=dev
-AWS_DEFAULT_OUTPUT=json
-AWS_DEFAULT_REGION=us-east-1
-set +a
+<span class="nb">set</span> -a
+<span class="nv">PROJECT_DEPLOYMENT_STAGE</span><span class="o">=</span>dev
+<span class="nv">AWS_DEFAULT_OUTPUT</span><span class="o">=</span>json
+<span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span>us-east-1
+<span class="nb">set</span> +a
 </pre></div>
 
 
 <p>Optionally, a local environment file can contain environment variable values
 that are sensitive or should not be kept under version control, so add this
 to the bottom of the <code>environment</code> file too:</p>
-<div class="highlight"><pre><span></span>if [[ -f &quot;<span class="cp">${</span><span class="n">PROJECT_HOME</span><span class="cp">}</span>/environment.local&quot; ]]; then
-    source &quot;<span class="cp">${</span><span class="n">PROJECT_HOME</span><span class="cp">}</span>/environment.local&quot;
-fi
+<div class="highlight"><pre><span></span><span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">source</span> <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span>
+<span class="k">fi</span>
 </pre></div>
 
 
@@ -392,9 +392,9 @@ our component that are populated with the correct environment variable
 values.</p>
 <p>Start with a simple argument parser that just accepts a single argument,
 the component to make terraform files for:</p>
-<div class="highlight"><pre><span></span><span class="err">parser = argparse.ArgumentParser(description=__doc__)</span>
-<span class="err">parser.add_argument(&quot;component&quot;)</span>
-<span class="err">args = parser.parse_args()</span>
+<div class="highlight"><pre><span></span><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;component&quot;</span><span class="p">)</span>
+<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
 </pre></div>
 
 
@@ -479,41 +479,41 @@ terraform variables:</p>
 
 <p>Finally, substitute environment variable values into the templates, and write
 the templated content to the appropriate <code>*.tf</code> file. First, the backend:</p>
-<div class="highlight"><pre><span></span><span class="err"># Write backend.tf</span>
-<span class="err">with open(os.path.join(infra_root, args.component, &quot;backend.tf&quot;), &quot;w&quot;) as fp:</span>
-<span class="err">    caller_info = boto3.client(&quot;sts&quot;).get_caller_identity()</span>
-<span class="err">    if os.environ.get(&#39;AWS_PROFILE&#39;):</span>
-<span class="err">        profile = os.environ[&#39;AWS_PROFILE&#39;]</span>
-<span class="err">        profile_setting = f&#39;profile = &quot;{profile}&quot;&#39;</span>
-<span class="err">    else:</span>
-<span class="err">        profile_setting = &#39;&#39;</span>
-<span class="err">    fp.write(terraform_backend_template.format(</span>
-<span class="err">        bucket=os.environ[&#39;DSS_TERRAFORM_BACKEND_BUCKET_TEMPLATE&#39;].format(account_id=caller_info[&#39;Account&#39;]),</span>
-<span class="err">        comp=args.component,</span>
-<span class="err">        stage=os.environ[&#39;DSS_DEPLOYMENT_STAGE&#39;],</span>
-<span class="err">        region=os.environ[&#39;AWS_DEFAULT_REGION&#39;],</span>
-<span class="err">        profile_setting=profile_setting,</span>
-<span class="err">    ))</span>
+<div class="highlight"><pre><span></span><span class="c1"># Write backend.tf</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;backend.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">caller_info</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;sts&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get_caller_identity</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">):</span>
+        <span class="n">profile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">]</span>
+        <span class="n">profile_setting</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;profile = &quot;</span><span class="si">{profile}</span><span class="s1">&quot;&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">profile_setting</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_backend_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">bucket</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DSS_TERRAFORM_BACKEND_BUCKET_TEMPLATE&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">account_id</span><span class="o">=</span><span class="n">caller_info</span><span class="p">[</span><span class="s1">&#39;Account&#39;</span><span class="p">]),</span>
+        <span class="n">comp</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span>
+        <span class="n">stage</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DSS_DEPLOYMENT_STAGE&#39;</span><span class="p">],</span>
+        <span class="n">region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
+        <span class="n">profile_setting</span><span class="o">=</span><span class="n">profile_setting</span><span class="p">,</span>
+    <span class="p">))</span>
 </pre></div>
 
 
 <p>Next, the <code>variables.tf</code> for the component:</p>
-<div class="highlight"><pre><span></span><span class="err">#</span><span class="w"> </span><span class="k">Write</span><span class="w"> </span><span class="n">variables</span><span class="p">.</span><span class="n">tf</span><span class="w"></span>
-<span class="k">with</span><span class="w"> </span><span class="k">open</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="k">path</span><span class="p">.</span><span class="k">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span><span class="w"> </span><span class="n">args</span><span class="p">.</span><span class="n">component</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;variables.tf&quot;</span><span class="p">),</span><span class="w"> </span><span class="ss">&quot;w&quot;</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nl">fp</span><span class="p">:</span><span class="w"></span>
-<span class="w">    </span><span class="n">fp</span><span class="p">.</span><span class="k">write</span><span class="p">(</span><span class="ss">&quot;# Auto-generated during infra build process.&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">os</span><span class="p">.</span><span class="n">linesep</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="n">fp</span><span class="p">.</span><span class="k">write</span><span class="p">(</span><span class="ss">&quot;# Please edit infra/build_deploy_config.py directly.&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">os</span><span class="p">.</span><span class="n">linesep</span><span class="p">)</span><span class="w"></span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nl">env_vars_to_infra</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">os</span><span class="p">.</span><span class="n">environ</span><span class="o">[</span><span class="n">key</span><span class="o">]</span><span class="w"></span>
-<span class="w">        </span><span class="n">fp</span><span class="p">.</span><span class="k">write</span><span class="p">(</span><span class="n">terraform_variable_template</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="o">=</span><span class="n">val</span><span class="p">))</span><span class="w"></span>
+<div class="highlight"><pre><span></span><span class="c1"># Write variables.tf</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;variables.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Auto-generated during infra build process.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Please edit infra/build_deploy_config.py directly.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">env_vars_to_infra</span><span class="p">:</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_variable_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">val</span><span class="p">))</span>
 </pre></div>
 
 
 <p>Finally, the cloud providers file <code>providers.tf</code>:</p>
-<div class="highlight"><pre><span></span><span class="err">with open(os.path.join(infra_root, args.component, &quot;providers.tf&quot;), &quot;w&quot;) as fp:</span>
-<span class="err">    fp.write(terraform_providers_template.format(</span>
-<span class="err">        aws_region=os.environ[&#39;AWS_DEFAULT_REGION&#39;],</span>
-<span class="err">        gcp_project_id=GCP_PROJECT_ID,</span>
-<span class="err">    ))</span>
+<div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;providers.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_providers_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">aws_region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
+        <span class="n">gcp_project_id</span><span class="o">=</span><span class="n">GCP_PROJECT_ID</span><span class="p">,</span>
+    <span class="p">))</span>
 </pre></div>
 
 
