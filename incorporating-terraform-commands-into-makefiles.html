@@ -143,8 +143,8 @@
 into a Makefile.</p>
 <p>This is useful for cases where terraform is being used to manage infrastructure.
 In the end you will be able to run a command like</p>
-<div class="highlight"><pre><span></span><span class="err">make plan-infra</span>
-<span class="err">make deploy-infra</span>
+<div class="highlight"><pre><span></span>make plan-infra
+make deploy-infra
 </pre></div>
 
 
@@ -162,15 +162,15 @@ terraformed cloud infrastructure.</p>
 <h1>Step 0: Directory and File Layout</h1>
 <p>This tutorial presumes you have a top level directory corresponding to a git repository.
 We will use the following directory structure for this example:</p>
-<div class="highlight"><pre><span></span><span class="err">my-project/</span>
-<span class="err">    Readme.md</span>
-<span class="err">    environment</span>
-<span class="err">    Makefile</span>
-<span class="err">    infra/</span>
-<span class="err">        Makefile</span>
-<span class="err">        component-1/</span>
-<span class="err">            variables.tf</span>
-<span class="err">            main.tf</span>
+<div class="highlight"><pre><span></span>my-project/
+    Readme.md
+    environment
+    Makefile
+    infra/
+        Makefile
+        component-1/
+            variables.tf
+            main.tf
 </pre></div>
 
 
@@ -353,14 +353,14 @@ files for creating and managing the buckets.</p>
 <div class="highlight"><pre><span></span>data &quot;aws_caller_identity&quot; &quot;current&quot; {}
 
 locals {
-  common_tags = &quot;<span class="cp">${</span><span class="nb">map</span><span class="p">(</span>
-    <span class="s2">&quot;project&quot;</span>   <span class="p">,</span> <span class="s2">&quot;${var.PROJECT_INFRA_TAG_PROJECT</span><span class="cp">}</span>&quot;,
-    &quot;env&quot;       , &quot;<span class="cp">${</span><span class="n">var</span><span class="o">.</span><span class="n">PROJECT_DEPLOYMENT_STAGE</span><span class="cp">}</span>&quot;,
-    &quot;service&quot;   , &quot;<span class="cp">${</span><span class="n">var</span><span class="o">.</span><span class="n">PROJECT_INFRA_TAG_SERVICE</span><span class="cp">}</span>&quot;
+  common_tags = &quot;${map(
+    &quot;project&quot;   , &quot;${var.PROJECT_INFRA_TAG_PROJECT}&quot;,
+    &quot;env&quot;       , &quot;${var.PROJECT_DEPLOYMENT_STAGE}&quot;,
+    &quot;service&quot;   , &quot;${var.PROJECT_INFRA_TAG_SERVICE}&quot;
   )}&quot;
-  aws_tags = &quot;<span class="cp">${</span><span class="nb">map</span><span class="p">(</span>
-  <span class="s2">&quot;Name&quot;</span>      <span class="p">,</span> <span class="s2">&quot;${var.PROJECT_INFRA_TAG_SERVICE</span><span class="cp">}</span>-s3-storage&quot;,
-  &quot;owner&quot;     , &quot;<span class="cp">${</span><span class="n">var</span><span class="o">.</span><span class="n">PROJECT_INFRA_TAG_OWNER</span><span class="cp">}</span>&quot;,
+  aws_tags = &quot;${map(
+  &quot;Name&quot;      , &quot;${var.PROJECT_INFRA_TAG_SERVICE}-s3-storage&quot;,
+  &quot;owner&quot;     , &quot;${var.PROJECT_INFRA_TAG_OWNER}&quot;,
   &quot;managedBy&quot; , &quot;terraform&quot;
   )}&quot;
 }
@@ -382,7 +382,7 @@ resource aws_s3_bucket dss_s3_bucket {
 
 <p>Note that this requires several environment variables to be
 defined in <code>environment</code> and requires the operator to run:</p>
-<div class="highlight"><pre><span></span><span class="err">source environment</span>
+<div class="highlight"><pre><span></span>source environment
 </pre></div>
 
 
@@ -401,79 +401,79 @@ the component to make terraform files for:</p>
 <p>Next, we define several terraform file templates using Python's
 bracket template syntax. Start with a template for defining a
 terraform variable:</p>
-<div class="highlight"><pre><span></span><span class="err">terraform_variable_template = &quot;&quot;&quot;</span>
-<span class="err">variable &quot;{name}&quot; {{</span>
-<span class="err">  default = &quot;{val}&quot;</span>
-<span class="err">}}</span>
-<span class="err">&quot;&quot;&quot;</span>
+<div class="highlight"><pre><span></span>terraform_variable_template = &quot;&quot;&quot;
+variable &quot;{name}&quot; {{
+  default = &quot;{val}&quot;
+}}
+&quot;&quot;&quot;
 </pre></div>
 
 
 <p>Next, define a template for the terraform backend buket:</p>
-<div class="highlight"><pre><span></span><span class="err">terraform_backend_template = &quot;&quot;&quot;# Auto-generated during infra build process.</span>
-<span class="err"># Please edit infra/build_deploy_config.py directly.</span>
-<span class="err">terraform {{</span>
-<span class="err">  backend &quot;s3&quot; {{</span>
-<span class="err">    bucket = &quot;{bucket}&quot;</span>
-<span class="err">    key = &quot;{comp}-{stage}.tfstate&quot;</span>
-<span class="err">    region = &quot;{region}&quot;</span>
-<span class="err">    {profile_setting}</span>
-<span class="err">  }}</span>
-<span class="err">}}</span>
-<span class="err">&quot;&quot;&quot;</span>
+<div class="highlight"><pre><span></span>terraform_backend_template = &quot;&quot;&quot;# Auto-generated during infra build process.
+# Please edit infra/build_deploy_config.py directly.
+terraform {{
+  backend &quot;s3&quot; {{
+    bucket = &quot;{bucket}&quot;
+    key = &quot;{comp}-{stage}.tfstate&quot;
+    region = &quot;{region}&quot;
+    {profile_setting}
+  }}
+}}
+&quot;&quot;&quot;
 </pre></div>
 
 
 <p>Next define terraform cloud providers:</p>
-<div class="highlight"><pre><span></span><span class="err">terraform_providers_template = &quot;&quot;&quot;# Auto-generated during infra build process.</span>
-<span class="err"># Please edit infra/build_deploy_config.py directly.</span>
-<span class="err">provider aws {{</span>
-<span class="err">  region = &quot;{aws_region}&quot;</span>
-<span class="err">}}</span>
-<span class="err">&quot;&quot;&quot;</span>
+<div class="highlight"><pre><span></span>terraform_providers_template = &quot;&quot;&quot;# Auto-generated during infra build process.
+# Please edit infra/build_deploy_config.py directly.
+provider aws {{
+  region = &quot;{aws_region}&quot;
+}}
+&quot;&quot;&quot;
 </pre></div>
 
 
 <p>Provide a list of environment variables that should also be defined as
 terraform variables:</p>
-<div class="highlight"><pre><span></span><span class="err">env_vars_to_infra = [</span>
-<span class="err">    &quot;ACM_CERTIFICATE_IDENTIFIER&quot;,</span>
-<span class="err">    &quot;API_DOMAIN_NAME&quot;,</span>
-<span class="err">    &quot;AWS_DEFAULT_REGION&quot;,</span>
-<span class="err">    &quot;DSS_BLOB_TTL_DAYS&quot;,</span>
-<span class="err">    &quot;DSS_CHECKOUT_BUCKET_OBJECT_VIEWERS&quot;,</span>
-<span class="err">    &quot;DSS_DEPLOYMENT_STAGE&quot;,</span>
-<span class="err">    &quot;DSS_ES_DOMAIN&quot;,</span>
-<span class="err">    &quot;DSS_ES_DOMAIN_INDEX_LOGS_ENABLED&quot;,</span>
-<span class="err">    &quot;DSS_ES_INSTANCE_COUNT&quot;,</span>
-<span class="err">    &quot;DSS_ES_INSTANCE_TYPE&quot;,</span>
-<span class="err">    &quot;DSS_ES_VOLUME_SIZE&quot;,</span>
-<span class="err">    &quot;DSS_GCP_SERVICE_ACCOUNT_NAME&quot;,</span>
-<span class="err">    &quot;DSS_GS_BUCKET&quot;,</span>
-<span class="err">    &quot;DSS_GS_BUCKET_TEST&quot;,</span>
-<span class="err">    &quot;DSS_GS_BUCKET_TEST_FIXTURES&quot;,</span>
-<span class="err">    &quot;DSS_GS_CHECKOUT_BUCKET&quot;,</span>
-<span class="err">    &quot;DSS_GS_CHECKOUT_BUCKET_TEST&quot;,</span>
-<span class="err">    &quot;DSS_GS_CHECKOUT_BUCKET_TEST_USER&quot;,</span>
-<span class="err">    &quot;DSS_INFRA_TAG_OWNER&quot;,</span>
-<span class="err">    &quot;DSS_INFRA_TAG_PROJECT&quot;,</span>
-<span class="err">    &quot;DSS_INFRA_TAG_SERVICE&quot;,</span>
-<span class="err">    &quot;DSS_S3_BUCKET&quot;,</span>
-<span class="err">    &quot;DSS_S3_BUCKET_TEST&quot;,</span>
-<span class="err">    &quot;DSS_S3_BUCKET_TEST_FIXTURES&quot;,</span>
-<span class="err">    &quot;DSS_S3_CHECKOUT_BUCKET&quot;,</span>
-<span class="err">    &quot;DSS_S3_CHECKOUT_BUCKET_TEST&quot;,</span>
-<span class="err">    &quot;DSS_S3_CHECKOUT_BUCKET_TEST_USER&quot;,</span>
-<span class="err">    &quot;DSS_S3_CHECKOUT_BUCKET_UNWRITABLE&quot;,</span>
-<span class="err">    &quot;DSS_FLASHFLOOD_BUCKET&quot;,</span>
-<span class="err">    &quot;DSS_FLASHFLOOD_BUCKET_INTEGRATION&quot;,</span>
-<span class="err">    &quot;DSS_FLASHFLOOD_BUCKET_PROD&quot;,</span>
-<span class="err">    &quot;DSS_FLASHFLOOD_BUCKET_STAGING&quot;,</span>
-<span class="err">    &quot;DSS_SECRETS_STORE&quot;,</span>
-<span class="err">    &quot;DSS_ZONE_NAME&quot;,</span>
-<span class="err">    &quot;ES_ALLOWED_SOURCE_IP_SECRETS_NAME&quot;,</span>
-<span class="err">    &quot;GCP_DEFAULT_REGION&quot;,</span>
-<span class="err">]</span>
+<div class="highlight"><pre><span></span><span class="nv">env_vars_to_infra</span> <span class="o">=</span> <span class="o">[</span>
+    <span class="s2">&quot;ACM_CERTIFICATE_IDENTIFIER&quot;</span>,
+    <span class="s2">&quot;API_DOMAIN_NAME&quot;</span>,
+    <span class="s2">&quot;AWS_DEFAULT_REGION&quot;</span>,
+    <span class="s2">&quot;DSS_BLOB_TTL_DAYS&quot;</span>,
+    <span class="s2">&quot;DSS_CHECKOUT_BUCKET_OBJECT_VIEWERS&quot;</span>,
+    <span class="s2">&quot;DSS_DEPLOYMENT_STAGE&quot;</span>,
+    <span class="s2">&quot;DSS_ES_DOMAIN&quot;</span>,
+    <span class="s2">&quot;DSS_ES_DOMAIN_INDEX_LOGS_ENABLED&quot;</span>,
+    <span class="s2">&quot;DSS_ES_INSTANCE_COUNT&quot;</span>,
+    <span class="s2">&quot;DSS_ES_INSTANCE_TYPE&quot;</span>,
+    <span class="s2">&quot;DSS_ES_VOLUME_SIZE&quot;</span>,
+    <span class="s2">&quot;DSS_GCP_SERVICE_ACCOUNT_NAME&quot;</span>,
+    <span class="s2">&quot;DSS_GS_BUCKET&quot;</span>,
+    <span class="s2">&quot;DSS_GS_BUCKET_TEST&quot;</span>,
+    <span class="s2">&quot;DSS_GS_BUCKET_TEST_FIXTURES&quot;</span>,
+    <span class="s2">&quot;DSS_GS_CHECKOUT_BUCKET&quot;</span>,
+    <span class="s2">&quot;DSS_GS_CHECKOUT_BUCKET_TEST&quot;</span>,
+    <span class="s2">&quot;DSS_GS_CHECKOUT_BUCKET_TEST_USER&quot;</span>,
+    <span class="s2">&quot;DSS_INFRA_TAG_OWNER&quot;</span>,
+    <span class="s2">&quot;DSS_INFRA_TAG_PROJECT&quot;</span>,
+    <span class="s2">&quot;DSS_INFRA_TAG_SERVICE&quot;</span>,
+    <span class="s2">&quot;DSS_S3_BUCKET&quot;</span>,
+    <span class="s2">&quot;DSS_S3_BUCKET_TEST&quot;</span>,
+    <span class="s2">&quot;DSS_S3_BUCKET_TEST_FIXTURES&quot;</span>,
+    <span class="s2">&quot;DSS_S3_CHECKOUT_BUCKET&quot;</span>,
+    <span class="s2">&quot;DSS_S3_CHECKOUT_BUCKET_TEST&quot;</span>,
+    <span class="s2">&quot;DSS_S3_CHECKOUT_BUCKET_TEST_USER&quot;</span>,
+    <span class="s2">&quot;DSS_S3_CHECKOUT_BUCKET_UNWRITABLE&quot;</span>,
+    <span class="s2">&quot;DSS_FLASHFLOOD_BUCKET&quot;</span>,
+    <span class="s2">&quot;DSS_FLASHFLOOD_BUCKET_INTEGRATION&quot;</span>,
+    <span class="s2">&quot;DSS_FLASHFLOOD_BUCKET_PROD&quot;</span>,
+    <span class="s2">&quot;DSS_FLASHFLOOD_BUCKET_STAGING&quot;</span>,
+    <span class="s2">&quot;DSS_SECRETS_STORE&quot;</span>,
+    <span class="s2">&quot;DSS_ZONE_NAME&quot;</span>,
+    <span class="s2">&quot;ES_ALLOWED_SOURCE_IP_SECRETS_NAME&quot;</span>,
+    <span class="s2">&quot;GCP_DEFAULT_REGION&quot;</span>,
+<span class="o">]</span>
 </pre></div>
 
 
