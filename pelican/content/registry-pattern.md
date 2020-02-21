@@ -1,6 +1,6 @@
 Title: Python Patterns: The Registry
 Date: 2020-02-20 22:22
-Category: Computer Science
+Category: Python
 Tags: python, programming, patterns, design patterns, registry, computer science
 
 # Table of Contents
