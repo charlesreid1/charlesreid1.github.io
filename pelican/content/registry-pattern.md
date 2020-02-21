@@ -56,7 +56,7 @@ method.
 This is the base class; any class we want registered should inherit from this class.
 It should also extend the `type` class, since it is itself a class type:
 
-```
+```python
 class RegistryBase(type):
 
     REGISTRY = {}
@@ -94,7 +94,7 @@ Three things to note:
 label (uppercase, lowercase, CamelCase, etc) and convert all class names to lowercase in the
 registry:
 
-```
+```python
         cls.REGISTRY[new_cls.__name__.lower()] = new_cls
 ```
 
@@ -104,7 +104,7 @@ registry:
 Now we can define a base class that will extend the `RegistryBase` class. However, because `RegistryBase`
 is a `type` class, we shouldn't extend it directly - we should use it as a _metaclass_.
 
-```
+```python
 class BaseRegisteredClass(metaclass=RegistryBase):
     pass
 ```
@@ -117,7 +117,7 @@ defined.
 
 The next step is to use the base registered class to start creating interesting classes:
 
-```
+```python
 class ExtendedRegisteredClass(BaseRegisteredClass):
     def __init__(self, *args, **kwargs):
         pass
@@ -130,14 +130,14 @@ Now we can see the process of adding subclasses to the registry in action.
 
 Start by checking the registry before we have created any subclasses:
 
-```
+```text
 >>> print(RegistryHolder.REGISTRY)
 ['BaseRegisteredClass']
 ```
 
 Next, define the extended registered class:
 
-```
+```text
 >>> class ExtendedRegisteredClass(BaseRegisteredClass):
 ...     def __init__(self, *args, **kwargs):
 ...         pass
@@ -147,7 +147,7 @@ Remember, we add the new class to the registry in the `__new__` method, not the
 `__init__` method, so we don't even need to instantiate an `ExtendedRegisteredClass`
 object for it to be added to the registry. Check the registry again:
 
-```
+```text
 >>> print(RegistryHolder.REGISTRY)
 ['BaseRegisteredClass', 'ExtendedRegisteredClass']
 ```
@@ -197,7 +197,7 @@ as per the [`__new__` documentation](https://docs.python.org/3/reference/datamod
 the `__new__` method takes the class (in our case, a class of type `type`) as the first argument `cls`,
 and it should return a new object instance (which, again, is an instance of type `type`).
 
-```
+```python
 class DoctypeRegistryBase(type):
 
     DOCTYPE_REGISTRY = {}
@@ -221,7 +221,7 @@ as opposed to a normal class).  All document types are required to define three 
 from individual documents; and displaying a given document type when it is a search result. We
 define these virtual methods on the base registered doctype class.
 
-```
+```python
 class BaseRegisteredDoctypeClass(metaclass=DoctypeRegistryBase):
 
     def add_update_delete(self, *args, **kwargs):
@@ -257,7 +257,7 @@ what documents to add, update, or delete from the search index.
 (Also note, these methods are defined as static methods because they are called once for each
 doctype class, but this does not necessarily need to be the case.)
 
-```
+```python
 class GithubIssueDoctype(BaseRegisteredDoctypeClass):
 
     @staticmethod
@@ -304,7 +304,7 @@ detail in our method and API calls).
 
 As before, we make these methods static.
 
-```
+```python
 class GoogleDocsDoctype(BaseRegisteredDoctypeClass):
 
     @staticmethod
@@ -349,8 +349,8 @@ In this case, we have a `Search` class that defines high-level operations (such 
 all documents indexed by this search engine") and in turn calls the corresponding method for each doctype
 that has been registered.
 
-```
-class Search:
+```python
+class Search(object):
 
     def add_update_delete_all(self, *args, **kwargs):
 
@@ -384,8 +384,8 @@ and use them later.
 Here's an example `Search` class that would instantiate one of each subclass in the constructor, to be used
 in later methods:
 
-```
-class Search:
+```python
+class Search(object):
 
     def __init__(self, *args, **kwargs):
 

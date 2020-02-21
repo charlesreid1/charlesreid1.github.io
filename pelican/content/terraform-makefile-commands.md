@@ -31,7 +31,7 @@ into a Makefile.
 This is useful for cases where terraform is being used to manage infrastructure.
 In the end you will be able to run a command like
 
-```plain
+```text
 make plan-infra
 make deploy-infra
 ```
@@ -53,7 +53,7 @@ The post is divided into a few steps:
 This tutorial presumes you have a top level directory corresponding to a git repository.
 We will use the following directory structure for this example:
 
-```plain
+```text
 my-project/
     Readme.md
     environment
@@ -266,7 +266,7 @@ We can create one file per cloud provider. As an example, here is `s3.tf`:
 
 **`s3.tf`**:
 
-```plain
+```text
 data "aws_caller_identity" "current" {}
 
 locals {
@@ -300,7 +300,7 @@ resource aws_s3_bucket dss_s3_bucket {
 Note that this requires several environment variables to be
 defined in `environment` and requires the operator to run:
 
-```plain
+```text
 source environment
 ```
 
@@ -323,7 +323,7 @@ Next, we define several terraform file templates using Python's
 bracket template syntax. Start with a template for defining a
 terraform variable:
 
-```plain
+```text
 terraform_variable_template = """
 variable "{name}" {{
   default = "{val}"
@@ -333,7 +333,7 @@ variable "{name}" {{
 
 Next, define a template for the terraform backend buket:
 
-```plain
+```text
 terraform_backend_template = """# Auto-generated during infra build process.
 # Please edit infra/build_deploy_config.py directly.
 terraform {{
@@ -349,7 +349,7 @@ terraform {{
 
 Next define terraform cloud providers:
 
-```plain
+```text
 terraform_providers_template = """# Auto-generated during infra build process.
 # Please edit infra/build_deploy_config.py directly.
 provider aws {{
@@ -361,7 +361,7 @@ provider aws {{
 Provide a list of environment variables that should also be defined as
 terraform variables:
 
-```plain
+```bash
 env_vars_to_infra = [
     "ACM_CERTIFICATE_IDENTIFIER",
     "API_DOMAIN_NAME",
