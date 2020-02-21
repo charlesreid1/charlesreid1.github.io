@@ -268,17 +268,17 @@ Here is a high-level sketch of what the Github issue document type class might l
 starting with the add/update/delete method, which boils down to some set operations to determine
 what documents to add, update, or delete from the search index.
 
-(Also note, these methods are defined as static methods because they are called once for each
+(Also note, these methods are defined as class methods because they are called once for each
 doctype class, but this does not necessarily need to be the case.)
 
 ```python
 class GithubIssueDoctype(BaseRegisteredDoctypeClass):
 
-    @staticmethod
-    def add_update_delete(self, *args, **kwargs):
+    @classmethod
+    def add_update_delete(cls, *args, **kwargs):
         # Get set of indexed document IDs
         indexed_docs = set()
-        results = run_search_index_query(doctype = self.__name__.lower())
+        results = run_search_index_query(doctype = cls.__name__.lower())
         for result in results:
             indexed_docs.add(result.id)
 
@@ -302,12 +302,12 @@ class GithubIssueDoctype(BaseRegisteredDoctypeClass):
         for delete_id in delete_ids:
             delete_document_in_index(delete_id)
 
-    @staticmethod
-    def get_schema(self, *args, **kwargs):
+    @classmethod
+    def get_schema(cls, *args, **kwargs):
         ...
 
-    @staticmethod
-    def render_search_result(self, *args, **kwargs):
+    @classmethod
+    def render_search_result(cls, *args, **kwargs):
         ...
 ```
 
@@ -316,16 +316,16 @@ specific to Google Drive documents (note that while the sketch of this method lo
 Github doctype above, the implementation will look more and more different as we include more and more
 detail in our method and API calls).
 
-As before, we make these methods static.
+As before, we make these methods class methods.
 
 ```python
 class GoogleDocsDoctype(BaseRegisteredDoctypeClass):
 
-    @staticmethod
-    def add_update_delete(self, *args, **kwargs):
+    @classmethod
+    def add_update_delete(cls, *args, **kwargs):
         # Get set of indexed document IDs
         indexed_dcos = set()
-        results = run_search_index_query(doctype = self.__name__.lower())
+        results = run_search_index_query(doctype = cls.__name__.lower())
         for result in results:
             indexed_docs.add(result.id)
 
@@ -347,12 +347,12 @@ class GoogleDocsDoctype(BaseRegisteredDoctypeClass):
         for delete_id in delete_ids:
             delete_document_in_index(delete_id)
 
-    @staticmethod
-    def get_schema(self, *args, **kwargs):
+    @classmethod
+    def get_schema(cls, *args, **kwargs):
         ...
 
-    @staticmethod
-    def render_search_result(self, *args, **kwargs):
+    @classmethod
+    def render_search_result(cls, *args, **kwargs):
         ...
 ```
 
@@ -374,10 +374,10 @@ class Search(object):
             # Get a handle to the doctype class
             doctype_class = DoctypeRegistryBase.DOCTYPE_REGISTRY[doctype_name]
 
-            # Call the static method add_update_delete on the doctype class
+            # Call the class method add_update_delete on the doctype class
             doctype_class.add_update_delete(*args, **kwargs)
 
-            # Note: if these methods were not static, we would need to create an instance first
+            # Note: if we need to create an instance first
             # doctype_instance = doctype_class()
             # doctype_instance.add_update_delete(*args, **kwargs)
 ```
@@ -425,7 +425,7 @@ class Search(object):
             doctype_instance.add_update_delete(*args, **kwargs)
 ```
 
-(Note that this would work best if we removed the `@staticmethod` decorators from the doctype classes
+(Note that this would work best if we removed the `@classmethod` decorators from the doctype classes
 defined above.)
 
 # Summary
