@@ -2,7 +2,6 @@ Title: Incorporating Terraform Commands into Makefiles
 Date: 2020-02-15 12:00
 Category: Terraform
 Tags: terraform, makefile, make, python
-Status: draft
 
 # Table of Contents
 
