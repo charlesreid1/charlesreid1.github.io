@@ -320,6 +320,8 @@ The following script will automatically generate terraform files for
 our component that are populated with the correct environment variable
 values.
 
+It is called `build_deploy_config.py`.
+
 Start with a simple argument parser that just accepts a single argument,
 the component to make terraform files for:
 
@@ -439,12 +441,90 @@ with open(os.path.join(infra_root, args.component, "providers.tf"), "w") as fp:
     ))
 ```
 
+
 # Workflow
+
+We now have a top-level Makefile that wraps the plan and apply commands directly,
+and we have an infra-level Makefile with additional commands for managing infrastructure
+(plan, apply, destroy).
 
 ## Plan
 
+The terraform plan step assembles the various templated terraform files and substitutes
+environment variables into them, creating a new version of them with up-to-date values.
+
+The plan step (`make plan-infra`) calls the `build_deploy_config.py` script (detailed above)
+to regenerate the terraform files when environment variables are changed.
+
+```
+make plan-infra
+```
+
+This script will iterate over each cloud infrastructure component in `infra/`, use terraform
+to plan the changes it would make to cloud resources, and print a summary of those changes
+to the screen.
+
+**The `make plan-infra` command does not change any cloud infra.**
+
 ## Deploy
+
+The terraform deploy step makes the changes summarized in the `make plan-infra` step. This
+command automates the terraform commands, but still requires interactive "yes" responses
+to commands.
 
 ## Update
 
+Using the `make plan-infra` command will remake the terraform files using environment variable
+values, and will display any changes that will be made to cloud infra. This includes updates to
+existing infrastructure.
+
+When you finish deploying infrastructure, store the version of your `environment` file in version
+control and tag it as the current deployed infra. This will make it easier to delete infra later.
+
+If you need to rename infra, use the following workflow:
+
+1. Source the old `environment` file
+
+2. Destroy the old infra with the old names using:
+   
+   ```
+   make -C infra COMPONENT=buckets destroy
+   ```
+
+   Or destroy all infra with the `destroy-all` command:
+
+   ``` 
+   make -C infra destroy-all
+   ```
+
+3. Update the environment file with the new names, and source the new `environment` file
+
+4. Plan the new infra with
+
+   ```
+   make plan-infra
+   ```
+
+5. Deploy the new infra with
+
+   ```
+   make deploy-infra
+   ```
+
 ## Destroy
+
+As seen above, infrastructure components can be deleted with the `delete` command in the infra
+Makefile, and all infrastructure components can be deleted with the `delete-all` command.
+
+To delete a particular component:
+
+```
+make -C infra COMPONENT=buckets destroy
+```
+
+To destroy all infra:
+
+```
+make -C infra destroy-all
+```
+
