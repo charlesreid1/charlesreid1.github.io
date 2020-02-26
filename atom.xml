@@ -1,5 +1,157 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>charlesreid1</title><link href="https://charlesreid1.github.io/" rel="alternate"></link><link href="https://charlesreid1.github.io/atom.xml" rel="self"></link><id>https://charlesreid1.github.io/</id><updated>2020-02-22T13:00:00-08:00</updated><entry><title>Confuse-A-Constructor: When Class A's Constructor Returns Objects of Type B</title><link href="https://charlesreid1.github.io/confuse-a-constructor-when-class-as-constructor-returns-objects-of-type-b.html" rel="alternate"></link><published>2020-02-22T13:00:00-08:00</published><updated>2020-02-22T13:00:00-08:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2020-02-22:/confuse-a-constructor-when-class-as-constructor-returns-objects-of-type-b.html</id><summary type="html">&lt;h2&gt;Table of Contents&lt;/h2&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>charlesreid1</title><link href="https://charlesreid1.github.io/" rel="alternate"></link><link href="https://charlesreid1.github.io/atom.xml" rel="self"></link><id>https://charlesreid1.github.io/</id><updated>2020-02-25T16:00:00-08:00</updated><entry><title>Python: From Args to Kwargs</title><link href="https://charlesreid1.github.io/python-from-args-to-kwargs.html" rel="alternate"></link><published>2020-02-25T16:00:00-08:00</published><updated>2020-02-25T16:00:00-08:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2020-02-25:/python-from-args-to-kwargs.html</id><summary type="html">&lt;h2&gt;Table of Contents&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="#overview"&gt;Overview&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#the-easy-way-locals"&gt;The Easy Way: locals()&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#when-locals-wont-work-getting-a-method-signature-programmatically"&gt;When locals() Won't Work: Getting a Method Signature Programmatically&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#args-to-kwargs-parameter-extraction-from-decorator"&gt;Args to Kwargs: Parameter Extraction from Decorator&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;Overview&lt;/h2&gt;
+&lt;p&gt;In this short blog post, we talk about how and when you can take a method signature
+that defines input positional arguments by name, like this:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;def foo(arg1, arg2, arg3):
+    pass
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;and write code that will return a dictionary containing a keyword arguments-like structure:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&amp;gt;&amp;gt;&amp;gt; foo(&amp;#39;red&amp;#39;, &amp;#39;blue&amp;#39;, &amp;#39;green&amp;#39;)
+{
+    &amp;#39;arg1&amp;#39;: &amp;#39;red&amp;#39;,
+    &amp;#39;arg2&amp;#39;: &amp;#39;blue&amp;#39;,
+    &amp;#39;arg3&amp;#39;: &amp;#39;green&amp;#39;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;We will cover an example of writing a decorator that utilizes input arguments from both
+the decorator and from the …&lt;/p&gt;</summary><content type="html">&lt;h2&gt;Table of Contents&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="#overview"&gt;Overview&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#the-easy-way-locals"&gt;The Easy Way: locals()&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#when-locals-wont-work-getting-a-method-signature-programmatically"&gt;When locals() Won't Work: Getting a Method Signature Programmatically&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#args-to-kwargs-parameter-extraction-from-decorator"&gt;Args to Kwargs: Parameter Extraction from Decorator&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;Overview&lt;/h2&gt;
+&lt;p&gt;In this short blog post, we talk about how and when you can take a method signature
+that defines input positional arguments by name, like this:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;def foo(arg1, arg2, arg3):
+    pass
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;and write code that will return a dictionary containing a keyword arguments-like structure:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&amp;gt;&amp;gt;&amp;gt; foo(&amp;#39;red&amp;#39;, &amp;#39;blue&amp;#39;, &amp;#39;green&amp;#39;)
+{
+    &amp;#39;arg1&amp;#39;: &amp;#39;red&amp;#39;,
+    &amp;#39;arg2&amp;#39;: &amp;#39;blue&amp;#39;,
+    &amp;#39;arg3&amp;#39;: &amp;#39;green&amp;#39;
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;We will cover an example of writing a decorator that utilizes input arguments from both
+the decorator and from the function it wraps, and how to keep all of that information
+straight.&lt;/p&gt;
+&lt;h2&gt;The Easy Way: &lt;code&gt;locals()&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;We'll start with the easiest possible wyay to turn args into kwargs: &lt;code&gt;locals()&lt;/code&gt;. The &lt;code&gt;locals()&lt;/code&gt;
+function is one of the built-in methods provided by Python:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&amp;gt;&amp;gt;&amp;gt; print(help(locals))
+
+Help on built-in function locals in module builtins:
+
+locals()
+    Return a dictionary containing the current scope&amp;#39;s local variables.
+
+    NOTE: Whether or not updates to this dictionary will affect name lookups in
+    the local scope and vice-versa is *implementation dependent* and not
+    covered by any backwards compatibility guarantees.
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;This is a straightforward way to get a dictionary of input argument names mapping to
+the values provided by the user:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&amp;gt;&amp;gt;&amp;gt; def foo(arg1, arg2, arg3):
+...     print(locals())
+...
+&amp;gt;&amp;gt;&amp;gt; foo(&amp;#39;asdf&amp;#39;, &amp;#39;qwerty&amp;#39;, &amp;#39;oioioioi&amp;#39;)
+{&amp;#39;arg3&amp;#39;: &amp;#39;oioioioi&amp;#39;, &amp;#39;arg2&amp;#39;: &amp;#39;qwerty&amp;#39;, &amp;#39;arg1&amp;#39;: &amp;#39;asdf&amp;#39;}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;When &lt;code&gt;locals()&lt;/code&gt; Won't Work: Getting a Method Signature Programmatically&lt;/h2&gt;
+&lt;p&gt;Sometimes, &lt;code&gt;locals()&lt;/code&gt; won't get you what you need - like when you're decorating a function,
+and you don't have the original method signature.&lt;/p&gt;
+&lt;p&gt;In that case, you can still use a function handle and get the original positional argument
+names from the function signature.&lt;/p&gt;
+&lt;p&gt;In Python, the signature of a method can be obtained using the &lt;code&gt;inspect&lt;/code&gt; module's
+&lt;code&gt;signature()&lt;/code&gt; method, which can be passed a function:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&amp;gt;&amp;gt;&amp;gt; import inspect
+&amp;gt;&amp;gt;&amp;gt; def foo(arg1, arg2, arg3):
+...      pass
+...
+&amp;gt;&amp;gt;&amp;gt; print(inspect.signature(foo))
+(arg1, arg2, arg3)
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;The &lt;code&gt;_parameters&lt;/code&gt; attribute of the signature will yield an ordered list of parameters in the
+method signature, which is equivalent to the variable names that are used in the method
+definition (&lt;code&gt;arg1&lt;/code&gt;, &lt;code&gt;arg2&lt;/code&gt;, and &lt;code&gt;arg3&lt;/code&gt; in the example &lt;code&gt;foo()&lt;/code&gt; function above):&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&amp;gt;&amp;gt;&amp;gt; print(list(inspect.signature(foo)._parameters))
+[&amp;#39;arg1&amp;#39;, &amp;#39;arg2&amp;#39;, &amp;#39;arg3&amp;#39;]
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h2&gt;Args to Kwargs: Parameter Extraction from Decorator&lt;/h2&gt;
+&lt;p&gt;We can use this to get the original variable names from a function handle, even if we don't
+have its original method signature (i.e., if we're a decorator and are just passed the function).&lt;/p&gt;
+&lt;p&gt;Here is an example of a decorator that extracts positional arguments from the function it
+decorates (and prints them out!):&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;inspect&lt;/span&gt;
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;real_decorator&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="nd"&gt;@functools&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;wraps&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;wrapper&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;**&lt;/span&gt;&lt;span class="n"&gt;kwargs&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+
+        &lt;span class="c1"&gt;# This is where the interesting stuff starts!&lt;/span&gt;
+        &lt;span class="c1"&gt;# We have a handle to a function that we&amp;#39;re&lt;/span&gt;
+        &lt;span class="c1"&gt;# decorating, but we don&amp;#39;t have its original&lt;/span&gt;
+        &lt;span class="c1"&gt;# method signature.&lt;/span&gt;
+        &lt;span class="c1"&gt;# No sweat. Turn positional args into augmented&lt;/span&gt;
+        &lt;span class="c1"&gt;# kwargs!&lt;/span&gt;
+        &lt;span class="n"&gt;func_kwargs&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{}&lt;/span&gt;
+        &lt;span class="n"&gt;sig&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;inspect&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;signature&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;wrapper&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;p&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="nb"&gt;enumerate&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;list&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;sig&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;_parameters&lt;/span&gt;&lt;span class="p"&gt;)):&lt;/span&gt;
+            &lt;span class="k"&gt;try&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+                &lt;span class="n"&gt;func_kwargs&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;p&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+            &lt;span class="k"&gt;except&lt;/span&gt; &lt;span class="ne"&gt;IndexError&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+                &lt;span class="c1"&gt;# Unspecified positional argument&lt;/span&gt;
+                &lt;span class="c1"&gt;# (using default value)&lt;/span&gt;
+                &lt;span class="k"&gt;pass&lt;/span&gt;
+
+        &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;wrapper extracted the following params: &lt;/span&gt;&lt;span class="si"&gt;{func_kwargs}&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;**&lt;/span&gt;&lt;span class="n"&gt;kwargs&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;wrapper&lt;/span&gt;
+
+&lt;span class="c1"&gt;# don&amp;#39;t forget to top it off&lt;/span&gt;
+&lt;span class="c1"&gt;# by decorating a simple function&lt;/span&gt;
+&lt;span class="c1"&gt;# and calling it if script is run&lt;/span&gt;
+&lt;span class="nd"&gt;@real_decorator&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;foo&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;arg1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;arg2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;arg3&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;hello world!&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="k"&gt;if&lt;/span&gt;  &lt;span class="vm"&gt;__name__&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;__main__&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;foo&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;asdf&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;qwerty&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;wioioioio&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;And when run, the result is:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;$ py five.py
+wrapper extracted the following params: {&amp;#39;arg1&amp;#39;: &amp;#39;asdf&amp;#39;, &amp;#39;arg2&amp;#39;: &amp;#39;qwerty&amp;#39;, &amp;#39;arg3&amp;#39;: &amp;#39;wioioioio&amp;#39;}
+hello world!
+&lt;/pre&gt;&lt;/div&gt;</content><category term="Python"></category><category term="python"></category><category term="programming"></category><category term="arguments"></category><category term="functions"></category><category term="methods"></category><category term="parameters"></category></entry><entry><title>Confuse-A-Constructor: When Class A's Constructor Returns Objects of Type B</title><link href="https://charlesreid1.github.io/confuse-a-constructor-when-class-as-constructor-returns-objects-of-type-b.html" rel="alternate"></link><published>2020-02-22T13:00:00-08:00</published><updated>2020-02-22T13:00:00-08:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2020-02-22:/confuse-a-constructor-when-class-as-constructor-returns-objects-of-type-b.html</id><summary type="html">&lt;h2&gt;Table of Contents&lt;/h2&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;a href="#confuse-a-constructor"&gt;Confuse-A-Constructor&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#what-is-the-constructor"&gt;What is the constructor?&lt;/a&gt;&lt;/li&gt;
