@@ -3,7 +3,8 @@
 from __future__ import unicode_literals
 import re, os
 
-SITEURL = 'https://charlesreid1.github.io'
+#SITEURL = 'https://charlesreid1.github.io'
+SITEURL = 'http://localhost:8000'
 AUTHOR = u'charlesreid1'
 SITENAME = u'charlesreid1'
 
@@ -21,6 +22,24 @@ PLUGINS = ['render_math']
 
 # Don't try to turn HTML files into pages
 #READERS = {'html': None}
+
+
+MARKDOWN = {
+    'extension_configs': {
+        # See options here:
+        # https://python-markdown.github.io/extensions/toc/
+        'markdown.extensions.toc': {
+            'title': 'Table of Contents'
+        },
+
+        # The rest of this dictionary is the default value
+        # http://docs.getpelican.com/en/stable/settings.html
+        'markdown.extensions.codehilite': {'css_class': 'highlight'},
+        'markdown.extensions.extra': {},
+        'markdown.extensions.meta': {},
+    },
+    'output_format': 'html5'
+}
 
 
 # --------------------
