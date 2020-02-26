@@ -3,16 +3,7 @@ Date: 2020-02-22 13:00
 Category: Python
 Tags: python, constructor, computer science, object oriented programming
 
-## Table of Contents
-
-* [Confuse\-A\-Constructor](#confuse-a-constructor)
-* [What is the constructor?](#what-is-the-constructor)
-* [Rewiring the constructor to do\.\.\. weird stuff](#rewiring-the-constructor-to-do-weird-stuff)
-* [A simple example class](#a-simple-example-class)
-* [Adding a \_\_new\_\_ method](#adding-a-__new__-method)
-* [When \_\_new\_\_ returns objects, not classes](#when-__new__-returns-objects-not-classes)
-* [Moving beyond argparse](#moving-beyond-argparse)
-* [Using \_\_new\_\_ in your patterns](#using-__new__-in-your-patterns)
+[TOC]
 
 ## Confuse-A-Constructor
 

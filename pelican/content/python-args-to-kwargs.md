@@ -3,12 +3,7 @@ Date: 2020-02-25 16:00
 Category: Python
 Tags: python, programming, arguments, functions, methods, parameters
 
-## Table of Contents
-
-* [Overview](#overview)
-* [The Easy Way: locals()](#the-easy-way-locals)
-* [When locals() Won't Work: Getting a Method Signature Programmatically](#when-locals-wont-work-getting-a-method-signature-programmatically)
-* [Args to Kwargs: Parameter Extraction from Decorator](#args-to-kwargs-parameter-extraction-from-decorator)
+[TOC]
 
 ## Overview
 
