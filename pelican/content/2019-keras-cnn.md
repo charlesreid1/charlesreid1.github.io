@@ -3,35 +3,7 @@ Date: 2019-05-29 14:00
 Category: Machine Learning
 Tags: deep learning, machine learning, neural networks, python, keras, convolutional neural networks, cnn
 
-# Table of Contents
-
-* [Table of Contents](#table-of-contents)
-* [Introduction: A Simple CNN Example](#introduction-a-simple-cnn-example)
-* [Exploring Data](#exploring-data)
-* [Create CNN](#create-cnn)
-* [Analyzing Network Architecture and Tensor Shapes](#analyzing-network-architecture-and-tensor-shapes)
-
-    * [Input Image Layer](#input-image-layer)
-
-    * [First Convolution Layer](#first-convolution-layer)
-    * [First Activation Layer](#first-convolution-layer)
-    * [First Pooling Layer](#first-convolution-layer)
-
-    * [Second Convolution Layer](#second-convolution-layer)
-    * [Second Activation Layer](#second-convolution-layer)
-    * [Second Pooling Layer](#second-convolution-layer)
-
-    * [Third Convolution Layer](#third-convolution-layer)
-    * [Third Activation Layer](#third-convolution-layer)
-    * [Third Pooling Layer](#third-convolution-layer)
-
-    * [Flatten and Dense Layers](#flatten-and-dense-layers)
-    * [Categorical Output](#categorical-output)
-
-* [Image Transformer](#image-transformer)
-
-* [Next Steps](#next-steps)
-
+[TOC]
 
 # Introduction: A Simple CNN Example
 

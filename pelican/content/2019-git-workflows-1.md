@@ -3,39 +3,14 @@ Date: 2019-10-07 20:00
 Category: Git
 Tags: git, rebase, cherry-pick, branching, version control
 
-# Table of Contents
-
-* [Source](#source)
-* [user section](#user-section)
-* [Bash Aliases](#bash-aliases)
-    * [The Best One Letter Alias Ever](#the-best-one-letter-alias-ever)
-    * [Ending Bad Habits](#ending-bad-habits)
-* [alias section](#alias-section)
-    * [Log Utils](#log-utils)
-    * [Status Utils](#status-utils)
-    * [Fetching](#fetching)
-    * [Branch Utils](#branch-utils)
-        * [Branch and Checkout](#branch-and-checkout)
-    * [Remote Utils](#remote-utils)
-    * [Commit Utils](#commit-utils)
-        * [Committing All Changes](#committing-all-changes)
-        * [Fixing Commits](#fixing-commits)
-    * [Miscellaneous Utils](#miscellaneous-utils)
-        * [Rebasing shortcuts](#rebasing-shortcuts)
-        * [Diff shortcuts](#diff-shortcuts)
-        * [Pull shortcuts](#pull-shortcuts)
-        * [Clone shortcuts](#clone-shortcuts)
-        * [Contributor shortcuts](#contributor-shortcuts)
-* [core section](#core-section)
-* [color section](#color-section)
-* [url section](#url-section)
+[TOC]
 
 # Source
 
 Most of the good stuff is from
 <https://github.com/mathiasbynens/dotfiles>!
 
-# user section
+# User Section
 
 Start off easy - here's how you set your email and name for commits:
 
@@ -91,7 +66,7 @@ git() {
 }
 ```
 
-# alias section
+# Alias section
 
 In the `~/.gitconfig` file, aliases specific to git can be
 defined in a section beginning with alias.
@@ -353,7 +328,7 @@ $ g contributors
     12  Atharva Chauthaiwale
 ```
 
-# core section
+# Core section
 
 Because it's the best text editor:
 
@@ -388,7 +363,7 @@ I have some other stuff I've collected, many of them from
     untrackedCache = true
 ```
 
-# color section
+# Color section
 
 Make some nice beautiful colors that are easy to understand:
 
@@ -419,7 +394,7 @@ Make some nice beautiful colors that are easy to understand:
     untracked = cyan
 ```
 
-# url section
+# Url section
 
 This makes some Github-related URLs easier and shorter to type:
 

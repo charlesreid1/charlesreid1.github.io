@@ -3,16 +3,7 @@ Date: 2019-12-12 12:12
 Category: Python
 Tags: python, pip, version control, make, makefile
 
-## Table of Contents
-
-* [Summary](#summary)
-* [What is requirements\.txt?](#what-is-requirementstxt)
-* [Converting requirements\.txt\.in to requirements\.txt](#converting-requirementstxtin-to-requirementstxt)
-* [Automating the step with a make rule](#automating-the-step-with-a-make-rule)
-* [Refreshing requirements](#refreshing-requirements)
-
-<br />
-<br />
+[TOC]
 
 ## Summary
 

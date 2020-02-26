@@ -3,31 +3,9 @@ Date: 2019-02-02 10:00
 Category: Python
 Tags: context managers, testing, python, programming
 
+[TOC]
 
-## Table of Contents
 
-* [A Predicament](#predicament)
-* [What is a context manager?](#wat)
-* [What is Graphviz dot?](#wat)
-* [Capturing stdout](#stdout)
-* [Replacing stdout](#replacing)
-* [Creating a context manager](#context)
-    * [Constructor](#_init)
-    * [Enter method](#_enter)
-    * [Exit method](#_exit)
-    * [In action](#action)
-* [Using the new dag flags](#using)
-* [Other context manager applications](#other)
-    * [SSH connections](#ssh)
-    * [Jupyter notebook](#ssh)
-    * [iPython (Jupyter) notebook and matplotlib figure management](#figs)
-    * [Database connection](#dbconn)
-* [References](#refs)
-
-<br />
-<br />
-
-<a name="predicament"></a>
 ## A Predicament
 
 Recently we spent some time contributing to
@@ -97,7 +75,6 @@ from Snakemake. In this post we'll cover how
 this context manager works, and mention a few
 other possibilities with context managers.
 
-<a name="wat"></a>
 ## What is a context manager?
 
 If you have done even a little Python programming,
@@ -130,7 +107,6 @@ applications. We cover how to use it to capture
 output to `sys.stdout` below.
 
 
-<a name="dot"></a>
 ## What is Graphviz dot?
 
 We mentioned that Snakemake can output visualizations of
@@ -185,7 +161,6 @@ Snakefile rules. Here is an example from elvers:
 ![elvers dag](/images/elvers_dag.png)
 
 
-<a name="stdout"></a>
 ## Capturing stdout
 
 In elvers, the `run_eelpond` command line wrapper that kicks
@@ -246,7 +221,6 @@ then replace stdout again, we can isolate and capture all stdout from
 the Snakemake API call.
 
 
-<a name="replacing"></a>
 ## Replacing stdout
 
 The strategy for our context manager and the entry and exit
@@ -275,7 +249,6 @@ methods to an object, and it can become a context
 manager.
 
 
-<a name="context"></a>
 ## Creating a context manager
 
 In our case, we are capturing stdout from Snakemake
@@ -312,7 +285,6 @@ need the context manager to have a state so that
 we can restore the original runtime context to
 the way it was when we're done.)
 
-<a name="_init"></a>
 ### Constructor
 
 The constructor is where we process any input
@@ -346,7 +318,6 @@ class CaptureStdout(list):
         self.passthru = passthru
 ```
 
-<a name="_enter"></a>
 ### Enter method
 
 When we open the context, we want to swap out
@@ -385,7 +356,6 @@ class CaptureStdout(list):
         return self
 ```
 
-<a name="_exit"></a>
 ### Exit method
 
 To clean up, we will need to restore `sys.stdout`
@@ -429,7 +399,6 @@ class CaptureStdout(list):
         sys.stdout = self._stdout
 ```
 
-<a name="action"></a>
 ### In action
 
 To see the context manager in action, let's go back to
@@ -521,7 +490,6 @@ The final code is implemented in the [`cmr_better_dag_handling` branch of eelpon
 and [pull request \#73 in eelpond/elvers](https://github.com/dib-lab/eelpond/pull/73).
 
 
-<a name="using"></a>
 ## Using the new dag flags
 
 ```
@@ -595,7 +563,6 @@ and here is the result:
 ![elvers dag](/images/elvers_dag.png)
 
 
-<a name="other"></a>
 ## Other context manager applications
 
 Actions requiring temporary contexts, which are a bit like self-contained
@@ -604,7 +571,6 @@ few examples and references.
 
 <br />
 
-<a name="ssh"></a>
 **SSH connections:** the context manager's `__enter__` function creates/loads
 connection details, creates a connection object, and opens the connection.
 The `__exit__` function cleans up by closing the connection. This way,
@@ -627,7 +593,6 @@ valid.
 
 <br />
 
-<a name="figs"></a>
 **iPython notebook and matplotlib figure management:** Camille Scott has
 [a blog post](http://www.camillescott.org/2014/05/05/context-management/) 
 covering a way of managing large Jupyter notebooks with
@@ -658,7 +623,6 @@ Blog post: [Context Managers and IPython Notebook](http://www.camillescott.org/2
 
 <br />
 
-<a name="dbconn"></a>
 **Database Connection:** this example comes from Django's test suite.
 In it, a context manager is defined that creates new MySQL database
 connections when the context is opened, and closes them when the
@@ -698,9 +662,7 @@ of an existing MySQL connection, then closing it when the
 requesting method is finished using it.
 
 <br />
-<br />
 
-<a name="refs"></a>
 ## References
 
 1. [elvers (dib-lab/eelpond on Github)](https://github.com/dib-lab/eelpond),

@@ -6,26 +6,10 @@ Tags: python, bioinformatics, workflows, pipelines, snakemake, travis
 **NOTE:** These ideas are implemented in the repository
 [charlesreid1/2019-snakemake-cli](https://github.com/charlesreid/2019-snakemake-cli).
 
-<br />
-<br />
+[TOC]
 
-## Table of Contents:
-
-- [Basic Idea: Wrapping Snakemake API Calls](#basic)
-    - [2018-snakemake-cli](#2018)
-    - [2019-snakemake-cli](#2019)
-- [Turning Executables into Packages](#exe)
-- [End Result: Using bananas](#using)
-- [Adding Travis CI Tests](#travis)
-- [Next Steps](#next)
-
-<br />
-<br />
-
-<a name="basic"></a>
 # Basic Idea: Wrapping Snakemake API Calls
 
-<a name="2018"></a>
 ## 2018-snakemake-cli
 
 This blog post covers the implementation of an idea
@@ -42,7 +26,7 @@ but the basic idea is to implement a command line
 utility that takes two orthogonal sets of inputs:
 a workflow configuration file, and a parameter set.
 
-```
+```text
 ./run <workflow-config> <workflow-params>
 ```
 
@@ -127,7 +111,6 @@ Additional argparser flags can be added, and the
 `config` dictionary contents modified based on
 the flags.
 
-<a name="2019"></a>
 ## 2019-snakemake-cli
 
 We wanted to take this demo a step further, and add
@@ -142,7 +125,6 @@ We implemented a bundled Snakemake workflow as a
 command line tool called `bananas`.
 
 
-<a name="exe"></a>
 # Turning Executables into Packages
 
 We began with an executable script `run` and wished
@@ -168,7 +150,7 @@ the parameters file (or via command line flags).
 
 `cli/Snakefile`:
 
-```
+```text
 name = config['name']
 
 rule rulename1:
@@ -202,7 +184,7 @@ number:
 
 `cli/__init__.py`:
 
-```
+```python
 _program = "bananas"
 __version__ = "0.1.0"
 ```
@@ -343,7 +325,6 @@ setup(name='bananas',
 ``` 
 
 
-<a name="using"></a>
 # End Result: Using bananas
 
 The end result is a command line utility that bundles a
@@ -369,13 +350,13 @@ python setup.py build install
 
 Now you should see `bananas` on your path:
 
-```
+```text
 which bananas
 ```
 
 ## Quick Start: Running Tests
 
-```
+```text
 pytest
 ```
 
@@ -384,33 +365,32 @@ pytest
 Change to the `test/` directory and run tests with
 the example config and param files.
 
-```
+```text
 cd test
 ```
 
 Run the hello workflow with Amy params:
 
-```
+```text
 rm -f hello.txt
 bananas workflow-hello params-amy
 ```
 
 Run the hello workflow with Beth params:
 
-```
+```text
 rm -f hello.txt
 bananas workflow-hello params-beth
 ```
 
 Run the goodbye workflow with Beth params:
 
-```
+```text
 rm -f goodbye.txt
 bananas workflow-goodbye params-beth
 ```
 
 
-<a name="travis"></a>
 # Adding Travis CI Tests
 
 To test or workflow, we break down the necessary tasks:
@@ -442,7 +422,6 @@ script:
   - pytest
 ```
 
-<a name="repo"></a>
 # Final Repository
 
 All of the code for this repository is in
@@ -452,7 +431,6 @@ See the [v2.0 tag](https://github.com/charlesreid1/2019-snakemake-cli/releases/t
 in case there are changes to the code that are not reflected in
 this blog post.
 
-<a name="next"></a>
 # Next Steps
 
 This demo provides a starting point for creating executable Snakemake

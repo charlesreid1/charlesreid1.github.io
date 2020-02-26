@@ -3,25 +3,7 @@ Date: 2019-05-07 16:00
 Category: Computational Biology
 Tags: go, golang, rosalind, computational biology, bioinformatics, euler, recursion, backtracking, graphs, algorithms, hamiltonian, eulerian
 
-# Table of Contents
-
-* [The Context: de Bruijn Graphs](#the-context-de-bruijn-graphs)
-* [Assembling the de Bruijn Graph](#assembling-the-de-bruijn-graph)
-    * [Directed Graph Representation: Adjacency List](#directed-graph-representation-adjacency-list)
-    * [A Quick Example](#a-quick-example)
-    * [Python vs. Go](#python-vs-go)
-    * [Directed Graph Class: Python Implementation](#directed-graph-class-python-implementation)
-* [Checking for Eulerian Paths and Cycles](#checking-for-eulerian-paths-and-cycles)
-* [Algorithm Building Blocks](#algorithm-building-blocks)
-    * [Depth First Search](#depth-first-search)
-    * [Kosaraju's Algorithm: Connected Components](#kosarajus-algorithm-connected-components)
-* [Finding the Eulerian Path or Cycle](#finding-the-eulerian-path-or-cycle)
-    * [Hierholzer's Algorithm: Finding Euler Cycles](#hierholzers-algorithm-finding-euler-cycles)
-    * [Hierholzer's Algorithm: Finding Euler Paths](#hierholzers-algorithm-finding-euler-paths)
-* [Final Code](#final-code)
-
-<br />
-<br />
+[TOC]
 
 # The Context: de Bruijn Graphs
 

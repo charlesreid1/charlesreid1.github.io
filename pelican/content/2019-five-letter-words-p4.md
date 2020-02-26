@@ -3,13 +3,8 @@ Date: 2019-03-10 10:00
 Category: Computer Science
 Tags: python, computer science, graphs, algorithms, art of computer programming, knuth, five letter words
 
-## Table of Contents
+[TOC]
 
-* [Five Letter Words, Revisited](#five4-about)
-* [Different By One, Revisited](#five4-diff-by-one)
-* [Different By N, Revisited](#five4-diff-by-n)
-
-<a name="five4-about"></a>
 ## About the Five-Letter Words
 
 In Volume 4, Facsimile 0 of Donald Knuth's <u>Art of Computer Programming</u>, 
@@ -24,7 +19,6 @@ See [Five Letter Words](https://charlesreid1.com/wiki/Five_Letter_Words)
 on the charlesreid1.com wiki for details.
 
 
-<a name="five4-diff-by-one"></a>
 ## Different by 1, Revisited
 
 This post is revisiting an exercise from the above volume,
@@ -113,7 +107,6 @@ The approach we used was as follows:
     - If so, add ordered pair (word1,word2)
       to a set of solutions (to avoid dupes)
 
-<a name="five4-diff-by-n"></a>
 ## Different by N, Revisited
 
 We went back and modified the code to take a

@@ -9,30 +9,8 @@ This is Part 3 of an N-part series.
 * [The Josephus Problem: Part 2: Two Examples](https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html)
 * [The Josephus Problem: Part 3: Solving the Double Step Case](https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html)
 
-<br />
-<br />
+[TOC]
 
-## Table of Contents
-
-* [Solving the Double Step Case](#solving-the-double-step-case)
-* [Algorithm D: Using Doubling Permutation](#algorithm-d-using-doubling-permutation)
-    * [The Algorithm](#the-algorithm)
-    * [Write the Doubling Permutation](#write-the-doubling-permutation)
-    * [Table Method](#table-method)
-    * [Reverse the Doubling Permutation](#reverse-the-doubling-permutation)
-    * [Trim the Reversed Doubling Permutation](#trim-the-reversed-doubling-permutation)
-* [Why Does Algorithm D Work?](#why-does-algorithm-d-work)
-    * [An Important Observation](#an-important-observation)
-    * [Three Facts](#three-facts)
-    * [Power of Two Example](#power-of-two-example)
-    * [Not a Power of Two Example](#not-a-power-of-two-example)
-    * [The Power of Two Shortcut](#the-power-of-two-shortcut)
-* [Algorithm D Summary](#algorithm-d-summary)
-
-<br />
-<br />
-
-<a name="solving-the-double-step-case"></a>
 ## Solving the Double Step Case
 
 The Josephus Problem for a step size of $m = 2$
@@ -62,7 +40,6 @@ generalizations and give a shortcut method for
 the general double-step case.
 
 
-<a name="algorithm-d-using-doubling-permutation"></a>
 ## Algorithm D: Using Doubling Permutation
 
 In Exercise 29, Knuth asks a question that lays out
@@ -82,10 +59,6 @@ at all obvious why the solution procedure works, so
 once we have seen how to apply it, we have to do a
 bit more work before we can understand it.
 
-<br />
-<br />
-
-<a name="the-algorithm"></a>
 ### The Algorithm
 
 Given an input size $n$, the algorithm steps are:
@@ -98,10 +71,6 @@ Given an input size $n$, the algorithm steps are:
 
 The result will be the Josephus permutation cycles.
 
-<br />
-<br />
-
-<a name="write-the-doubling-permutation"></a>
 ### Write the Doubling Permutation
 
 As mentioned above, we will start with the concrete example of
@@ -166,7 +135,6 @@ $$
 
 We now have the cycles of the doubling permutation! Step 2 finished.
 
-<a name="table-method"></a>
 ### Table Method
 
 Slightly more convenient than writing out the cycles the way we did above
@@ -221,7 +189,6 @@ $$
 $$
 
 
-<a name="reverse-the-doubling-permutation"></a>
 ### Reverse the Doubling Permutation
 
 The next step is to reverse the permutation from left to right,
@@ -243,7 +210,6 @@ $$
 $$
 
 
-<a name="trim-the-reversed-doubling-permutation"></a>
 ### Trim the Reversed Doubling Permutation
 
 Now we eliminate any numbers from the reversed doubling permutation
@@ -275,7 +241,6 @@ Congratulations! You just solved the problem.
 
 
 
-<a name="why-does-algorithm-d-work"></a>
 ## Why Does Algorithm D Work?
 
 If at this point you are scratching your head in wonder
@@ -290,7 +255,6 @@ some observations and generalizations to uncover the pattern
 at work in Algorithm D. 
 
 
-<a name="an-important-observation"></a>
 ### An Important Observation
 
 Start with an important observation: each time we complete one 
@@ -309,7 +273,6 @@ intimately linked with powers of 2 (or, base 2 logs),
 so that's where the powers of 2 will come from.
 
 
-<a name="three-facts"></a>
 ### Three Facts
 
 Now we use this observation about halving to
@@ -363,7 +326,6 @@ to be removed from the circle.)
 
 Now we will use these 3 facts to understand Algorithm D.
 
-<a name="power-of-two-example"></a>
 ### Power of Two Example
 
 Let's run through a Josephus solution for an example
@@ -482,7 +444,6 @@ We confirm the cycle does contain $1 \rightarrow 8$
 (meaning, the item in position 1 will be removed 
 eighth).
 
-<a name="not-a-power-of-two-example"></a>
 ### Not a Power of Two Example
 
 Now that we've looked at an example where the size of
@@ -560,7 +521,6 @@ item in the circle that will be removed that only
 requires us to carry out 3 steps.
 
 
-<a name="the-power-of-two-shortcut"></a>
 ### The Power of Two Shortcut
 
 Unlike the circle whose size was a power of two,
@@ -609,7 +569,6 @@ starting item for the next round. That item will be the
 last item to be removed.
 
 
-<a name="algorithm-d-summary"></a>
 ## Algorithm D Summary
 
 To summarize what we covered in this blog post:

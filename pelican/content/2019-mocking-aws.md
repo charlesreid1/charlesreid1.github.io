@@ -3,15 +3,7 @@ Date: 2019-09-23 9:00
 Category: Python
 Tags: python, pytest, tests, aws, mock, mocking
 
-## Table of Contents
-
-* [Overview](#overview)
-* [A Simple Example: Mocking API Responses](#a-simple-example-mocking-api-responses)
-    * [The Genuine AWS Call](#the-genuine-aws-call)
-    * [The Mocked AWS Call](#the-mocked-aws-call)
-
-<br />
-<br />
+[TOC]
 
 ## Overview
 

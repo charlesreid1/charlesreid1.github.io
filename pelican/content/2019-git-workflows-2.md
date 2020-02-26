@@ -3,25 +3,7 @@ Date: 2019-11-14 20:00
 Category: Git
 Tags: git, rebase, cherry-pick, branching, version control
 
-# Table of Contents
-
-* [Summary](#summary)
-* [What is a commit](#what-is-a-commit)
-    * [git add](#git-add)
-    * [git commit](#git-commit)
-    * [git rebase](#git-rebase)
-    * [git fetch and git pull](#git-fetch-and-git-pull)
-        * [rebase, merge, branch, pass](#rebase-merge-branch-pass)
-    * [git push](#git-push)
-    * [force pushing](#force-pushing)
-* [Commit Workflow](#commit-workflow)
-    * [Principles](#principles)
-    * [Making Small Commits](#making-small-commits)
-        * [git add patch mode](#git-add-patch-mode)
-        * [git add editor mode](#git-add-editor-mode)
-    * [Modifying Commits](#modifying-commits)
-    * [Rearranging Commits](#rearranging-commits)
-    * [Combining Commits](#combining-commits)
+[TOC]
 
 # Summary
 

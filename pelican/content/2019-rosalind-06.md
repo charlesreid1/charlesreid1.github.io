@@ -3,18 +3,7 @@ Date: 2019-05-02 19:00
 Category: Computational Biology
 Tags: go, golang, rosalind, computational biology, bioinformatics, euler, recursion, backtracking, graphs, algorithms, hamiltonian, eulerian
 
-# Table of Contents
-
-* [The Context: Rosalind\.info](#the-context-rosalindinfo)
-* [Graphs for Bioinformatics](#graphs-for-bioinformatics)
-    * [Building a K-mer Graph (The Wrong Graph)](#building-a-k-mer-graph-the-wrong-graph)
-    * [Building a De Bruijn Graph (The Right Graph)](#building-a-de-bruijn-graph-the-right-graph)
-    * [Transform the Problem: Hamiltonian Paths to Eulerian Paths](#transform-the-problem-hamiltonian-paths-to-eulerian-paths)
-* [An Example](#an-example)
-* [Back to DNA](#back-to-dna)
-
-<br />
-<br />
+[TOC]
 
 # The Context: Rosalind.info
 

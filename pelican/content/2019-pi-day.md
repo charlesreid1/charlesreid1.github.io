@@ -3,6 +3,8 @@ Date: 2019-03-14 16:20
 Category: Mathematics
 Tags: pi, continued fractions, number theory, mathematics, python, irrational numbers
 
+[TOC]
+
 ## Favorite Pi Approximations
 
 What's your favorite $\pi$ approximation?

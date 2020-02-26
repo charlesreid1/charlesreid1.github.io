@@ -12,24 +12,8 @@ This is Part 1 of an N-part series.
 <br />
 <br />
 
-## Table of Contents
+[TOC]
 
-* [The Josephus Problem and Variations](#the-josephus-problem-and-variations)
-    * [The Sushi Boat Variation](#the-sushi-boat-variation)
-    * [More Backstory](#more-backstory)
-* [The Tools](#the-tools)
-    * [Permutations](#permutations)
-    * [Cycles](#cycles)
-    * [Circular Linked Lists](#circular-linked-lists)
-* [TeX for Diagrams](#tex-for-diagrams)
-    * [Empty Josephus Circle Diagram](#empty-josephus-circle-diagram)
-    * [Josephus Circle Diagram With Permutation Paths](#josephus-circle-diagram-with-permutation-paths)
-* [Next Steps: Examples and Solutions](#next-steps-examples-and-solutions)
-
-<br />
-<br />
-
-<a name="the-josephus-problem-and-variations"></a>
 ## The Josephus Problem and Variations
 
 The following problem, Cat and Mice, is Puzzle 88 
@@ -63,7 +47,6 @@ Exercise 22 presents the Josephus Problem:
 > order of execution when $n = 24, m = 11$.  Try to design a clever algorithm
 > that works at high speed when $n$ and $m$ are large.
 
-<a name="the-sushi-boat-variation"></a>
 ### The Sushi Boat Variation
 
 You are at the sushi boat restaurant, where plates of
@@ -81,7 +64,6 @@ In what order will the sushi plates be stacked when you are done?
 Which plate of sushi will be eaten last?
 
 
-<a name="more-backstory"></a>
 ### More Backstory
 
 More background on the Josephus problem and its various solutions is given in a
@@ -93,7 +75,6 @@ the Josephus problem as presented above) without referencing the Josephus
 problem.  Here is [the original article](https://fq.math.ca/Scanned/13-2/booth.pdf).
 
 
-<a name="the-tools"></a>
 ## The Tools
 
 To solve the Josephus problem, we need to use several 
@@ -103,7 +84,6 @@ some notation we will use and give links to pages on the
 that are useful.
 
 
-<a name="permutations"></a>
 ### Permutations
 
 We can think of the outcome of the Josephus problem as a
@@ -179,7 +159,6 @@ in the context of Rubiks Cubes on the
 page of the charlesreid1.com wiki.
 
 
-<a name="cycles"></a>
 ### Cycles
 
 While the above permutation notation is useful,
@@ -242,7 +221,6 @@ the sections on [Permutation Algebra](https://charlesreid1.com/wiki/Rubiks_Cube/
 that cover intercalation products).
 
 
-<a name="circular-linked-lists"></a>
 ### Circular Linked Lists
 
 Among the many ways of solving the Josephus problem,
@@ -311,7 +289,6 @@ A Python implementation used to solve the Josephus
 problem is available in the cs/josephus repo:
 repo: <https://git.charlesreid1.com/cs/josephus>
 
-<a name="tex-for-diagrams"></a>
 ## TeX for Diagrams
 
 In addition to writing The Art of Computer Programming,
@@ -328,7 +305,6 @@ and in visualizing various permutations.
 A few examples and links to Github Gists with TeX 
 code follow.
 
-<a name="empty-josephus-circle-diagram"></a>
 ### Empty Josephus Circle Diagram
 
 [Link to gist with TeX code](https://gist.github.com/charlesreid1/a5f1cf398fb9c56e7ed5c2f55d01e10f)
@@ -392,7 +368,6 @@ Here is the TeX code to generate this diagram:
 \end{document}
 ```
 
-<a name="josephus-circle-diagram-with-permutation-paths"></a>
 ### Josephus Circle Diagram With Permutation Paths
 
 Next, we can illustrate cycles in the permutation
@@ -566,7 +541,6 @@ The code to generate these diagrams is below.
 \end{document}
 ```
 
-<a name="next-steps-examples-and-solutions"></a>
 ## Next Steps: Examples and Solutions
 
 So far in **[Part 1](https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html)** we have covered some common

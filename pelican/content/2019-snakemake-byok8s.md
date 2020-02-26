@@ -6,35 +6,8 @@ Tags: python, bioinformatics, workflows, pipelines, snakemake, travis, kubernete
 **NOTE:** These ideas are implemented in the repository
 [charlesreid1/2019-snakemake-byok8s](https://github.com/charlesreid/2019-snakemake-byok8s).
 
-<br />
-<br />
+[TOC]
 
-## Table of Contents:
-
-- [Recap: Workflows as Executables](#exe)
-    - [2018-snakemake-cli](#2018)
-    - [2019-snakemake-cli](#2019)
-    - [2019-snakemake-byok8s](#byok8s)
-- [Overview of 2019-snakemake-byok8s](#byok8s2)
-    - [Cloud + Scale = Kubernetes](#k8s)
-    - [Snakemake k8s support](#smkk8s)
-- [Modifying the CLI](#cli)
-    - [Namespaces](#ns)
-    - [Adding flags](#flags)
-- [Local Kubernetes Clusters with Minikube](#minikube)
-    - [What is minikube?](#minikube)
-    - [AWS](#aws)
-    - [Fixing DNS issues with AWS](#dns-aws)
-    - [Travis](#travis)
-    - [`.travis.yml`](#travis-yml)
-- [End Product: byok8s](#byok8s3)
-- [Documentation](#docs)
-- [Next Steps](#next)
-
-<br />
-<br />
-
-<a name="exe"></a>
 # Recap: Workflows as Executables
 
 In our previous blog post, [Building Snakemake Command Line Wrappers](https://charlesreid1.github.io/building-snakemake-command-line-wrappers.html),
@@ -45,7 +18,6 @@ command line utilities.
 In this post, we extend those ideas to Snakemake workflows
 that run on Kubernetes clusters.
 
-<a name="2018"></a>
 ## 2018-snakemake-cli
 
 To recap, back in March 2018 Titus Brown wrote a blog post titled
@@ -137,13 +109,8 @@ minikube stop
 
 We cover the details below.
 
-<br />
-<br />
-
-<a name="byok8s2"></a>
 # Overview of 2019-snakemake-byok8s
 
-<a name="k8s"></a>
 ## Cloud + Scale = Kubernetes (k8s)
 
 First, why kubernetes (k8s)?
@@ -160,8 +127,6 @@ k8s is a simple and popular way to orchestrate
 multiple compute nodes (support for Docker images
 is also baked directly into k8s).
 
-
-<a name="smkk8s"></a>
 ## Snakemake k8s Support
 
 Snakemake has built-in support for k8s, making
@@ -186,10 +151,6 @@ run a Snakemake workflow on that cluster.
 
 Let's get into the changes required in the Python code.
 
-<br />
-<br />
-
-<a name="cli"></a>
 # Modifying the CLI
 
 In our [prior post](https://charlesreid1.github.io/building-snakemake-command-line-wrappers.html)
@@ -225,8 +186,6 @@ The only change required happens in the file
 `command.py`, where the Snakemake API call 
 happens.
 
-
-<a name="ns"></a>
 ## Namespaces 
 
 Checking the [Snakemake API documentation](https://snakemake.readthedocs.io/en/stable/api_reference/snakemake.html),
@@ -244,7 +203,6 @@ to the ArgParser to allow the user to specify
 the Kubernetes namespace name. By default
 the Kubernetes namespace used is `default`.
 
-<a name="flags"></a>
 ## Adding flags
 
 We add and modify some flags to make the workflow
@@ -279,13 +237,8 @@ website once Travis CI has been enabled.
 See <https://charlesreid1.github.io/2019-snakemake-byok8s/travis_tests/>
 for details.
 
-<br />
-<br />
-
-<a name="minikube"></a>
 # Local Kubernetes Clusters with Minikube
 
-<a name="minikube"></a>
 ## What is minikube?
 
 Minikube is a Go program that allows users to simulate
@@ -304,7 +257,6 @@ We cover two ways to use it:
 2. Running a minikube cluster on a Travis CI worker node
    to enable us to _test_ Snakemake + kubernetes workflows.
 
-<a name="aws"></a>
 ## AWS
 
 Using Minikube from an AWS EC2 compute node comes 
@@ -423,7 +375,6 @@ However, as-is, the cluster's DNS settings are broken!
 We need to fix them before running.
 
 
-<a name="dns-aws"></a>
 ## Fixing DNS issues with AWS
 
 We mentioned a second hangup with AWS was with the
@@ -590,8 +541,6 @@ in the same Github issue in the minikube repo
 that was linked to above, [kubernetes/minikube
 issue \#2027: dnsmasq pod CrashLoopBackOff](https://github.com/kubernetes/minikube/issues/2027).
 
-
-<a name="aws-byok8s"></a>
 ## AWS + byok8s Workflow
 
 Now that the k8s cluster is running successfully,
@@ -671,8 +620,6 @@ removed all locks
 Woo hoo! You've successfully run a Snakemake workflow 
 on a virtual Kubernetes cluster!
 
-
-<a name="travis"></a>
 ## Travis
 
 Like running minikube on an AWS node, running minikube on Travis workers
@@ -696,7 +643,6 @@ and we only needed to modify a few lines of LiliC's Travis file
 (which launches a redis container using kubectl)
 to use Snakemake (launched via byok8s) instead.
 
-<a name="travis-yml"></a>
 ## `.travis.yml`
 
 Here is the final `.travis.yml` file, which has explanatory comments.
@@ -760,7 +706,6 @@ script:
 - byok8s --s3-bucket=cmr-0123 -f workflow-alpha params-blue
 ```
 
-<a name="byok8s3"></a>
 # End Product: byok8s
 
 The final byok8s package can be found in the
@@ -810,10 +755,6 @@ byok8s workflow-alpha params-blue --s3-bucket=mah-bukkit
 sudo minikube stop
 ```
 
-<br />
-<br />
-
-<a name="docs"></a>
 # Documentation
 
 You can find documentation for 2019-snakemake-byok8s 
@@ -824,10 +765,6 @@ similar to what is covered above, as well as more information
 about running byok8s on other types of Kubernetes clusters
 (e.g., AWS, Google Cloud, and Digital Ocean).
 
-<br />
-<br />
-
-<a name="next"></a>
 # Next Steps
 
 Last year we were working on implementing metagenomic pipelines for

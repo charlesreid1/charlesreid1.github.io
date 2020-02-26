@@ -13,32 +13,10 @@ in the Go programming language._
 
 * _[Part 1: Counting Variations](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html)_
 * _[Part 2: Generating Variations](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html)_
-* _Part 3: Go Implementation of Recursive Backtracking (you are here)_
+* _[Part 3: Go Implementation of Recursive Backtracking](https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html)_
 
-<br />
-<br />
+[TOC]
 
-<a name="toc"></a>
-## Table of Contents
-
-* [Problem Description](#problem-descr)
-
-* [Recursive Backtracking Pseudocode](#backtracking)
-
-* [Recursive Backtracking: Go Implementation](#go-implementation)
-    * [Visit Hamming Neighbors Function](#visit-hamming)
-    * [Assemble Visit Variations Function](#assemble-visit)
-
-* [Tests](#tests)
-
-* [Final Code](#final)
-
-* [Go forth and be fruitful](#fruitful)
-
-<br />
-<br />
-
-<a name="problem-descr"></a>
 ## Problem Description
 
 The task at hand is to take a given input strand of DNA,
