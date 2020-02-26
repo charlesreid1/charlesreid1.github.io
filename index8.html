@@ -418,33 +418,24 @@ brief but elegant. Brevity is the soul of wit, after all.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
-<ul>
-<li><a href="#predicament">A Predicament</a></li>
-<li><a href="#wat">What is a context manager?</a></li>
-<li><a href="#wat">What is Graphviz dot?</a></li>
-<li><a href="#stdout">Capturing stdout</a></li>
-<li><a href="#replacing">Replacing stdout</a></li>
-<li><a href="#context">Creating a context manager</a><ul>
-<li><a href="#_init">Constructor</a></li>
-<li><a href="#_enter">Enter method</a></li>
-<li><a href="#_exit">Exit method</a></li>
-<li><a href="#action">In action</a></li>
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#a-predicament">A Predicament</a></li>
+<li><a href="#what-is-a-context-manager">What is a context manager?</a></li>
+<li><a href="#what-is-graphviz-dot">What is Graphviz dot?</a></li>
+<li><a href="#capturing-stdout">Capturing stdout</a></li>
+<li><a href="#replacing-stdout">Replacing stdout</a></li>
+<li><a href="#creating-a-context-manager">Creating a context manager</a><ul>
+<li><a href="#constructor">Constructor</a></li>
+<li><a href="#enter-method">Enter method</a></li>
+<li><a href="#exit-method">Exit method</a></li>
+<li><a href="#in-action">In action</a></li>
 </ul>
 </li>
-<li><a href="#using">Using the new dag flags</a></li>
-<li><a href="#other">Other context manager applications</a><ul>
-<li><a href="#ssh">SSH connections</a></li>
-<li><a href="#ssh">Jupyter notebook</a></li>
-<li><a href="#figs">iPython (Jupyter) notebook and matplotlib figure management</a></li>
-<li><a href="#dbconn">Database connection</a></li>
+<li><a href="#using-the-new-dag-flags">Using the new dag flags</a></li>
+<li><a href="#other-context-manager-applications">Other context manager applications</a></li>
+<li><a href="#references">References</a></li>
 </ul>
-</li>
-<li><a href="#refs">References</a></li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="predicament"></a></p>
+</div>
 <h2 id="a-predicament">A Predicament</h2>
 <p>Recently we spent some time contributing to
 <a href="https://github.com/dib-lab/eelpond">dib-lab/eelpond (renamed to elvers)</a>,
@@ -502,7 +493,6 @@ we utilized a context manager to capture output
 from Snakemake. In this post we'll cover how
 this context manager works, and mention a few
 other possibilities with context managers.</p>
-<p><a name="wat"></a></p>
 <h2 id="what-is-a-context-manager">What is a context manager?</h2>
 <p>If you have done even a little Python programming,
 you have probably seen and used <a href="https://docs.python.org/3/reference/datamodel.html#context-managers">context managers</a>
@@ -530,7 +520,6 @@ normal state for the rest of the program.</p>
 <p>It's a general concept with a <em>lot</em> of different 
 applications. We cover how to use it to capture
 output to <code>sys.stdout</code> below.</p>
-<p><a name="dot"></a></p>
 <h2 id="what-is-graphviz-dot">What is Graphviz dot?</h2>
 <p>We mentioned that Snakemake can output visualizations of
 workflows in Graphviz dot format. For the purposes
@@ -573,7 +562,6 @@ as the flow of tasks is much easier to understand
 and troubleshoot than the convoluted logic of
 Snakefile rules. Here is an example from elvers:</p>
 <p><img alt="elvers dag" src="/images/elvers_dag.png"></p>
-<p><a name="stdout"></a></p>
 <h2 id="capturing-stdout">Capturing stdout</h2>
 <p>In elvers, the <code>run_eelpond</code> command line wrapper that kicks
 off the workflow is a Python script that calls the Snakemake
@@ -627,7 +615,6 @@ so if we can somehow tell Python to swap out stdout with a string
 buffer that has the same methods (print, printf, etc.), run Snakemake,
 then replace stdout again, we can isolate and capture all stdout from
 the Snakemake API call.</p>
-<p><a name="replacing"></a></p>
 <h2 id="replacing-stdout">Replacing stdout</h2>
 <p>The strategy for our context manager and the entry and exit
 methods, then, is clear:</p>
@@ -653,7 +640,6 @@ managers that makes them magical: </p>
 <p>All we need to do is add <code>__enter__()</code> and <code>__exit__()</code>
 methods to an object, and it can become a context
 manager.</p>
-<p><a name="context"></a></p>
 <h2 id="creating-a-context-manager">Creating a context manager</h2>
 <p>In our case, we are capturing stdout from Snakemake
 so that we can potentially process it, and then dump 
@@ -686,7 +672,6 @@ methods, to enable this list to be a context manager:</p>
 need the context manager to have a state so that
 we can restore the original runtime context to
 the way it was when we're done.)</p>
-<p><a name="_init"></a></p>
 <h3 id="constructor">Constructor</h3>
 <p>The constructor is where we process any input
 arguments passed in when the context is created.</p>
@@ -715,7 +700,6 @@ No need to call <code>super().__init__()</code>.</p>
 </pre></div>
 
 
-<p><a name="_enter"></a></p>
 <h3 id="enter-method">Enter method</h3>
 <p>When we open the context, we want to swap out
 <code>sys.stdout</code> with a string buffer. But we also
@@ -752,7 +736,6 @@ printing to stdout after Snakemake is done.</p>
 </pre></div>
 
 
-<p><a name="_exit"></a></p>
 <h3 id="exit-method">Exit method</h3>
 <p>To clean up, we will need to restore <code>sys.stdout</code>
 using the pointer we saved in <code>__enter__</code>, then
@@ -793,7 +776,6 @@ transferred its contents.</p>
 </pre></div>
 
 
-<p><a name="action"></a></p>
 <h3 id="in-action">In action</h3>
 <p>To see the context manager in action, let's go back to
 the snippet of code where we call the Snakemake API:</p>
@@ -882,7 +864,6 @@ whether <code>dot</code> exists:</p>
 
 <p>The final code is implemented in the <a href="https://github.com/dib-lab/eelpond/tree/cmr_better_dag_handling"><code>cmr_better_dag_handling</code> branch of eelpond/elvers</a>
 and <a href="https://github.com/dib-lab/eelpond/pull/73">pull request #73 in eelpond/elvers</a>.</p>
-<p><a name="using"></a></p>
 <h2 id="using-the-new-dag-flags">Using the new dag flags</h2>
 <div class="highlight"><pre><span></span>$ git clone https://github.com/dib-lab/eelpond.git
 $ <span class="nb">cd</span> eelpond
@@ -946,14 +927,12 @@ so they are eaiser to view).</p>
 
 <p>and here is the result:</p>
 <p><img alt="elvers dag" src="/images/elvers_dag.png"></p>
-<p><a name="other"></a></p>
 <h2 id="other-context-manager-applications">Other context manager applications</h2>
 <p>Actions requiring temporary contexts, which are a bit like self-contained
 workspaces, are good candidates for context managers. Following are a
 few examples and references.</p>
 <p><br /></p>
-<p><a name="ssh"></a>
-<strong>SSH connections:</strong> the context manager's <code>__enter__</code> function creates/loads
+<p><strong>SSH connections:</strong> the context manager's <code>__enter__</code> function creates/loads
 connection details, creates a connection object, and opens the connection.
 The <code>__exit__</code> function cleans up by closing the connection. This way,
 you can say something like</p>
@@ -971,8 +950,7 @@ decorated with a context manager utility function; this is a
 different approach than our class-based approach but is still
 valid.</p>
 <p><br /></p>
-<p><a name="figs"></a>
-<strong>iPython notebook and matplotlib figure management:</strong> Camille Scott has
+<p><strong>iPython notebook and matplotlib figure management:</strong> Camille Scott has
 <a href="http://www.camillescott.org/2014/05/05/context-management/">a blog post</a> 
 covering a way of managing large Jupyter notebooks with
 lots of figures using context managers. In this case, the context
@@ -996,8 +974,7 @@ with manual figure and axis management.</p>
 <p>Nice!</p>
 <p>Blog post: <a href="http://www.camillescott.org/2014/05/05/context-management/">Context Managers and IPython Notebook</a></p>
 <p><br /></p>
-<p><a name="dbconn"></a>
-<strong>Database Connection:</strong> this example comes from Django's test suite.
+<p><strong>Database Connection:</strong> this example comes from Django's test suite.
 In it, a context manager is defined that creates new MySQL database
 connections when the context is opened, and closes them when the
 context is done.</p>
@@ -1028,9 +1005,7 @@ while the last line is equivalent to an <code>__exit__</code> method.</p>
 <p>The context manager is a convenient way of creating a copy
 of an existing MySQL connection, then closing it when the
 requesting method is finished using it.</p>
-<p><br />
-<br /></p>
-<p><a name="refs"></a></p>
+<p><br /></p>
 <h2 id="references">References</h2>
 <ol>
 <li>
@@ -1130,41 +1105,46 @@ requesting method is finished using it.</p>
 
         <div class="entry-content"><p><strong>NOTE:</strong> These ideas are implemented in the repository
 <a href="https://github.com/charlesreid/2019-snakemake-byok8s">charlesreid1/2019-snakemake-byok8s</a>.</p>
-<p><br />
-<br /></p>
-<h2 id="table-of-contents">Table of Contents:</h2>
-<ul>
-<li><a href="#exe">Recap: Workflows as Executables</a><ul>
-<li><a href="#2018">2018-snakemake-cli</a></li>
-<li><a href="#2019">2019-snakemake-cli</a></li>
-<li><a href="#byok8s">2019-snakemake-byok8s</a></li>
+<div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#recap-workflows-as-executables">Recap: Workflows as Executables</a><ul>
+<li><a href="#2018-snakemake-cli">2018-snakemake-cli</a></li>
+<li><a href="#2019-snakemake-cli">2019-snakemake-cli</a></li>
+<li><a href="#2019-snakemake-byok8s">2019-snakemake-byok8s</a></li>
 </ul>
 </li>
-<li><a href="#byok8s2">Overview of 2019-snakemake-byok8s</a><ul>
-<li><a href="#k8s">Cloud + Scale = Kubernetes</a></li>
-<li><a href="#smkk8s">Snakemake k8s support</a></li>
+<li><a href="#overview-of-2019-snakemake-byok8s">Overview of 2019-snakemake-byok8s</a><ul>
+<li><a href="#cloud-scale-kubernetes-k8s">Cloud + Scale = Kubernetes (k8s)</a></li>
+<li><a href="#snakemake-k8s-support">Snakemake k8s Support</a></li>
 </ul>
 </li>
-<li><a href="#cli">Modifying the CLI</a><ul>
-<li><a href="#ns">Namespaces</a></li>
-<li><a href="#flags">Adding flags</a></li>
+<li><a href="#modifying-the-cli">Modifying the CLI</a><ul>
+<li><a href="#namespaces">Namespaces</a></li>
+<li><a href="#adding-flags">Adding flags</a></li>
 </ul>
 </li>
-<li><a href="#minikube">Local Kubernetes Clusters with Minikube</a><ul>
-<li><a href="#minikube">What is minikube?</a></li>
-<li><a href="#aws">AWS</a></li>
-<li><a href="#dns-aws">Fixing DNS issues with AWS</a></li>
+<li><a href="#local-kubernetes-clusters-with-minikube">Local Kubernetes Clusters with Minikube</a><ul>
+<li><a href="#what-is-minikube">What is minikube?</a></li>
+<li><a href="#aws">AWS</a><ul>
+<li><a href="#installing-python-prerequisites">Installing Python Prerequisites</a></li>
+<li><a href="#installing-byok8s">Installing byok8s</a></li>
+<li><a href="#starting-a-k8s-cluster-with-minikube">Starting a k8s cluster with minikube</a></li>
+</ul>
+</li>
+<li><a href="#fixing-dns-issues-with-aws">Fixing DNS issues with AWS</a><ul>
+<li><a href="#the-problem">The Problem</a></li>
+<li><a href="#the-fix">The Fix</a></li>
+</ul>
+</li>
+<li><a href="#aws-byok8s-workflow">AWS + byok8s Workflow</a></li>
 <li><a href="#travis">Travis</a></li>
-<li><a href="#travis-yml"><code>.travis.yml</code></a></li>
+<li><a href="#travisyml">.travis.yml</a></li>
 </ul>
 </li>
-<li><a href="#byok8s3">End Product: byok8s</a></li>
-<li><a href="#docs">Documentation</a></li>
-<li><a href="#next">Next Steps</a></li>
+<li><a href="#end-product-byok8s">End Product: byok8s</a></li>
+<li><a href="#documentation">Documentation</a></li>
+<li><a href="#next-steps">Next Steps</a></li>
 </ul>
-<p><br />
-<br /></p>
-<p><a name="exe"></a></p>
+</div>
 <h1 id="recap-workflows-as-executables">Recap: Workflows as Executables</h1>
 <p>In our previous blog post, <a href="https://charlesreid1.github.io/building-snakemake-command-line-wrappers.html">Building Snakemake Command Line Wrappers</a>,
 we covered some approaches to making Snakemake
@@ -1172,7 +1152,6 @@ workflows into executables that can be run as
 command line utilities.</p>
 <p>In this post, we extend those ideas to Snakemake workflows
 that run on Kubernetes clusters.</p>
-<p><a name="2018"></a></p>
 <h2 id="2018-snakemake-cli">2018-snakemake-cli</h2>
 <p>To recap, back in March 2018 Titus Brown wrote a blog post titled
 <a href="http://ivory.idyll.org/blog/2018-workflows-applications.html">Pydoit, snakemake, and workflows-as-applications</a>
@@ -1247,11 +1226,7 @@ minikube stop
 
 
 <p>We cover the details below.</p>
-<p><br />
-<br /></p>
-<p><a name="byok8s2"></a></p>
 <h1 id="overview-of-2019-snakemake-byok8s">Overview of 2019-snakemake-byok8s</h1>
-<p><a name="k8s"></a></p>
 <h2 id="cloud-scale-kubernetes-k8s">Cloud + Scale = Kubernetes (k8s)</h2>
 <p>First, why kubernetes (k8s)?</p>
 <p>To scale Snakemake workflows to multiple compute nodes,
@@ -1264,7 +1239,6 @@ Cloud Platform) or AWS (Amazon Web Services),
 k8s is a simple and popular way to orchestrate
 multiple compute nodes (support for Docker images
 is also baked directly into k8s).</p>
-<p><a name="smkk8s"></a></p>
 <h2 id="snakemake-k8s-support">Snakemake k8s Support</h2>
 <p>Snakemake has built-in support for k8s, making
 the combination a logical choice for running 
@@ -1283,9 +1257,6 @@ to the cluster and launch jobs.)</p>
 to control the Kubernetes cluster, you can
 run a Snakemake workflow on that cluster.</p>
 <p>Let's get into the changes required in the Python code.</p>
-<p><br />
-<br /></p>
-<p><a name="cli"></a></p>
 <h1 id="modifying-the-cli">Modifying the CLI</h1>
 <p>In our <a href="https://charlesreid1.github.io/building-snakemake-command-line-wrappers.html">prior post</a>
 covering <a href="https://github.com/charlesreid1/2019-snakemake-cli">charlesreid1/2019-snakemake-cli</a>,
@@ -1316,7 +1287,6 @@ across the package.</p>
 <p>The only change required happens in the file
 <code>command.py</code>, where the Snakemake API call 
 happens.</p>
-<p><a name="ns"></a></p>
 <h2 id="namespaces">Namespaces</h2>
 <p>Checking the <a href="https://snakemake.readthedocs.io/en/stable/api_reference/snakemake.html">Snakemake API documentation</a>,
 we can see that the API has a <code>kubernetes</code> option:</p>
@@ -1332,7 +1302,6 @@ we want to use) but we added a <code>-k</code> argument
 to the ArgParser to allow the user to specify
 the Kubernetes namespace name. By default
 the Kubernetes namespace used is <code>default</code>.</p>
-<p><a name="flags"></a></p>
 <h2 id="adding-flags">Adding flags</h2>
 <p>We add and modify some flags to make the workflow
 more flexible:</p>
@@ -1367,11 +1336,7 @@ can be set in the repository settings on the Travis
 website once Travis CI has been enabled.</p>
 <p>See <a href="https://charlesreid1.github.io/2019-snakemake-byok8s/travis_tests/">https://charlesreid1.github.io/2019-snakemake-byok8s/travis_tests/</a>
 for details.</p>
-<p><br />
-<br /></p>
-<p><a name="minikube"></a></p>
 <h1 id="local-kubernetes-clusters-with-minikube">Local Kubernetes Clusters with Minikube</h1>
-<p><a name="minikube"></a></p>
 <h2 id="what-is-minikube">What is minikube?</h2>
 <p>Minikube is a Go program that allows users to simulate
 a single-node kubernetes cluster using a virtual machine.
@@ -1391,7 +1356,6 @@ become ready.</p>
    to enable us to <em>test</em> Snakemake + kubernetes workflows.</p>
 </li>
 </ol>
-<p><a name="aws"></a></p>
 <h2 id="aws">AWS</h2>
 <p>Using Minikube from an AWS EC2 compute node comes 
 with two hangups.</p>
@@ -1489,7 +1453,6 @@ it and interact with it like a normal k8s cluster
 using <code>kubectl</code>.</p>
 <p>However, as-is, the cluster's DNS settings are broken!
 We need to fix them before running.</p>
-<p><a name="dns-aws"></a></p>
 <h2 id="fixing-dns-issues-with-aws">Fixing DNS issues with AWS</h2>
 <p>We mentioned a second hangup with AWS was with the
 DNS settings. </p>
@@ -1637,7 +1600,6 @@ and is <code>Running</code> nicely:</p>
 in the same Github issue in the minikube repo
 that was linked to above, <a href="https://github.com/kubernetes/minikube/issues/2027">kubernetes/minikube
 issue #2027: dnsmasq pod CrashLoopBackOff</a>.</p>
-<p><a name="aws-byok8s"></a></p>
 <h2 id="aws-byok8s-workflow">AWS + byok8s Workflow</h2>
 <p>Now that the k8s cluster is running successfully,
 run the example byok8s workflow in the <code>test/</code> 
@@ -1712,7 +1674,6 @@ removed all locks
 
 <p>Woo hoo! You've successfully run a Snakemake workflow 
 on a virtual Kubernetes cluster!</p>
-<p><a name="travis"></a></p>
 <h2 id="travis">Travis</h2>
 <p>Like running minikube on an AWS node, running minikube on Travis workers
 also suffers from DNS issues. Fortunately, Github user 
@@ -1731,7 +1692,6 @@ provided by LiliC on that branch is
 and we only needed to modify a few lines of LiliC's Travis file
 (which launches a redis container using kubectl)
 to use Snakemake (launched via byok8s) instead.</p>
-<p><a name="travis-yml"></a></p>
 <h2 id="travisyml"><code>.travis.yml</code></h2>
 <p>Here is the final <code>.travis.yml</code> file, which has explanatory comments.</p>
 <p><strong><code>.travis.yml</code>:</strong></p>
@@ -1792,7 +1752,6 @@ to use Snakemake (launched via byok8s) instead.</p>
 </pre></div>
 
 
-<p><a name="byok8s3"></a></p>
 <h1 id="end-product-byok8s">End Product: byok8s</h1>
 <p>The final byok8s package can be found in the
 <a href="https://github.com/charlesreid1/2019-snakemake-byok8s">charlesreid1/2019-snakemake-byok8s</a>
@@ -1838,9 +1797,6 @@ sudo minikube stop
 </pre></div>
 
 
-<p><br />
-<br /></p>
-<p><a name="docs"></a></p>
 <h1 id="documentation">Documentation</h1>
 <p>You can find documentation for 2019-snakemake-byok8s 
 here: <a href="https://charlesreid1.github.io/2019-snakemake-byok8s/">https://charlesreid1.github.io/2019-snakemake-byok8s/</a></p>
@@ -1848,9 +1804,6 @@ here: <a href="https://charlesreid1.github.io/2019-snakemake-byok8s/">https://ch
 similar to what is covered above, as well as more information
 about running byok8s on other types of Kubernetes clusters
 (e.g., AWS, Google Cloud, and Digital Ocean).</p>
-<p><br />
-<br /></p>
-<p><a name="next"></a></p>
 <h1 id="next-steps">Next Steps</h1>
 <p>Last year we were working on implementing metagenomic pipelines for
 shotgun sequencing data as part of the <a href="https://github.com/dahak-metagenomics">dahak-metagenomics</a>
