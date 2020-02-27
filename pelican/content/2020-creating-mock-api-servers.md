@@ -79,7 +79,7 @@ Next, the `start_serving()` method should start a thread
 and create an underlying HTTP server (and using the `self._server`
 attribute to store it for later):
 
-```
+```python
     @classmethod
     def start_serving(cls):
         # Get the bind address and port
