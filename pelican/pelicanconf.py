@@ -3,8 +3,8 @@
 from __future__ import unicode_literals
 import re, os
 
-#SITEURL = 'https://charlesreid1.github.io'
-SITEURL = 'http://localhost:8000'
+SITEURL = 'https://charlesreid1.github.io'
+#SITEURL = 'http://localhost:8000'
 AUTHOR = u'charlesreid1'
 SITENAME = u'charlesreid1'
 
