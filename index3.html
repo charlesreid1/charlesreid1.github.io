@@ -102,6 +102,487 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Git Workflows, Part 3: Refactoring Large Branches and Pull Requests
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-12-08T15:00:00-08:00" pubdate>Sunday 12/08/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/git-workflows-part-3-refactoring-large-branches-and-pull-requests.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#managing-complexity">Managing Complexity</a></li>
+<li><a href="#refactoring-large-branches">Refactoring Large Branches</a><ul>
+<li><a href="#converting-a-set-of-commits-to-unstaged-changes">Converting a Set of Commits to Unstaged Changes</a><ul>
+<li><a href="#git-format-patch">git format-patch</a></li>
+<li><a href="#cherry-pick-and-unstage">cherry-pick and unstage</a></li>
+<li><a href="#soft-reset-and-commit">soft reset and commit</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#refactoring-large-pull-requests">Refactoring Large Pull Requests</a><ul>
+<li><a href="#chaining-pull-requests">Chaining Pull Requests</a></li>
+<li><a href="#preparing-to-merge-a-large-pull-request">Preparing to Merge a Large Pull Request</a></li>
+<li><a href="#rinse-and-repeat">Rinse and Repeat</a></li>
+<li><a href="#final-merge-into-master">Final Merge into Master</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h1 id="summary">Summary</h1>
+<ul>
+<li>If a feature branch or pull request gets too complicated and should be refactored
+  into simpler pieces:<ul>
+<li>Create a new feature branch from the original destination branch</li>
+<li>Turn commits into patches, or cherry-pick commits (leaving changes unstaged)</li>
+<li>Apply patches or cherry-picks to the feature branch</li>
+<li>Use <code>git add --patch</code> or <code>git add --edit</code> to selectively split out changes into separate commits</li>
+</ul>
+</li>
+</ul>
+<p>This post contains many common patterns applied to different workflows.</p>
+<h1 id="managing-complexity">Managing Complexity</h1>
+<p>When collaborating on software, especially large software with people who are not the
+primary developers, it is important to limit the complexity of features and proposed
+changes. Why is it bad practice to propose large, complex changes?</p>
+<ul>
+<li>It is harder to review the proposed changes</li>
+<li>Bugs increase in likelihood, and increase in likelihood far faster than the amount of code.</li>
+<li>More complex changes usually combine </li>
+</ul>
+<h1 id="refactoring-large-branches">Refactoring Large Branches</h1>
+<p>Consider the case of a large feature branch that is suffering from feature creep (trying to
+cram too many changes into one branch.) For example, in the process of implementing a feature,
+you may also implement significant fixups, refactoring of functions, and code cleanup that is
+in the same file but not entirely related. While writing tests for the new feature, you may also
+refactor tests to be cleaner, or to use context manager foobar, or etc.</p>
+<p>To illustrate: suppose you are on a branch called <code>feature</code> (created off of <code>master</code>) that consists of
+three sets of changes, DEF:</p>
+<div class="highlight"><pre><span></span>A - B - C (master)
+    \
+     D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
+</pre></div>
+
+
+<ul>
+<li>D corresponds to implementing the new feature and writing tests for it</li>
+<li>E corresponds to fixups to the same file that was changed to implement the feature</li>
+<li>F corresponds to fixups to tests unrelated to the new feature</li>
+</ul>
+<p>Now, in reality, if things were really so clean, if you had a time machine or the patience to
+to rebase commits one at a time and split them into atomic changes only to the features in their
+scope (which would be super easy because of course your git logs are filled with helpful, concise
+commit messages) you could use <code>git cherry-pick</code> to replay commits D1, D2, D3 onto a new D
+branch, and so on. </p>
+<p>But in reality, commit F1 contains a little bit of E1, and D2, and vice versa, and so on.
+It's much easier to navigate a diff and select pieces from it.  That's were <code>git add -e</code>
+(or <code>--edit</code>) will help.</p>
+<p>We also have to turn a set of commits into a single set of unstaged changes (meaning, replay
+the changes each commit made but not replay the commits themselves). There are a few ways
+to do this, we'll cover two ways: squashing and rolling back a set of commits, and converting
+a set of commits into a set of patch files.</p>
+<p>Once the commits have been rolled back and unstaged, particular changes can be staged for each
+split commit using <code>git add -e</code> and using the editor to select which changes to include or exclude
+from the commit. As each commit is created, branches can be created that are linked to the group
+of changes in each new commit.</p>
+<h2 id="converting-a-set-of-commits-to-unstaged-changes">Converting a Set of Commits to Unstaged Changes</h2>
+<p>We are trying to untangle a set of unrelated changes into separate commits that group related
+changes together. For the example, we want to convert this:</p>
+<div class="highlight"><pre><span></span>A - B - C (master)
+    \
+     D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
+</pre></div>
+
+
+<p>to this:</p>
+<div class="highlight"><pre><span></span>A - B - C (master)
+    \
+     D - E - F (feature)
+</pre></div>
+
+
+<p>so that the changes in commits D, E, and F are simpler, more limited in scope, and easier to review.</p>
+<p>We cover three strategies for turning a sequence of commits like <code>D1-E1-...-E3</code> into a set of unstaged
+changes. Then, particular changes can be selectively added to commits using <code>git add -e</code> (<code>--edit</code>) or
+<code>git add -p</code> (<code>--patch</code>).</p>
+<h3 id="git-format-patch">git format-patch</h3>
+<p>To create a set of patches, one per commit, to edit them or apply them in various orders,
+you can use <code>git format-patch</code> with a commit range:</p>
+<div class="highlight"><pre><span></span>git format-patch D1..E3
+</pre></div>
+
+
+<p>This will create a series of patches like </p>
+<div class="highlight"><pre><span></span>patches/0001-the-D1-commit-message.patch
+patches/0001-the-E1-commit-message.patch
+patches/0001-the-D2-commit-message.patch
+patches/0001-the-F1-commit-message.patch
+patches/0001-the-E2-commit-message.patch
+patches/0001-the-F2-commit-message.patch
+patches/0001-the-D3-commit-message.patch
+patches/0001-the-F3-commit-message.patch
+patches/0001-the-E3-commit-message.patch
+</pre></div>
+
+
+<p>Patches can be further split or modified, and can be applied in the desired order (although
+changes in line numbers happening out of order may confuse the program applying the patch).</p>
+<p>Start by creating a branch from the desired commit (commit <code>B</code> in the diagram above):</p>
+<div class="highlight"><pre><span></span>git checkout B
+</pre></div>
+
+
+<p>(where <code>B</code> should be either the commit hash for commit B, or a tag or branch that is associated
+with commit B). Now create a branch that will start from that commit (we'll start with our branch
+for feature D here):</p>
+<div class="highlight"><pre><span></span>git checkout -b feature-d
+</pre></div>
+
+
+<p>Now apply patches to the new branch, which will start from commit <code>B</code>.</p>
+<p>To apply a patch, use <code>patch -p1</code>:</p>
+<div class="highlight"><pre><span></span>patch -p1 &lt; 0001-the-D1-commit-message.patch
+</pre></div>
+
+
+<p>The <code>-p1</code> strips the prefix by 1 directory level, which is necessary with patches created
+by git. We use <code>patch</code> rather than <code>git am</code> to apply the patch, because we want to apply
+the changes independent of git, and only stage the changes we want into our next commit.</p>
+<p>If you have a series of commits that you want to squash, that's also easy to do by applying
+each patch for those commits, then staging all the changes from those patches into a new
+commit.</p>
+<p>As patches are applied, particular changes can be staged and commits can be crafted. Use 
+the <code>--edit</code> or <code>--patch</code> flags of <code>git add</code>:</p>
+<div class="highlight"><pre><span></span>git add --edit &lt;filename&gt;
+git add --patch &lt;filename&gt;
+</pre></div>
+
+
+<p>This allows selective filtering of particular edits into the next commit, so that one patch
+(or any number of patches) can be applied, and selective changes can be staged into a commit.</p>
+<p>Once you are ready, just run</p>
+<div class="highlight"><pre><span></span>git commit
+</pre></div>
+
+
+<p>without specifying the filename. (If you specify the filename, it will stage all changes,
+and ignore the crafting you've done.)</p>
+<p>As you create a commit or a set of commits specific to changeset D, you can work on a D branch.
+When you finish all commits related to D, you can start a new branch with</p>
+<div class="highlight"><pre><span></span>git checkout feature-e
+</pre></div>
+
+
+<p>that will start a new branch from where the d-branch left off. Chaining your
+changes together into several small branches that build on each other will 
+help keep pull requests simpler too.</p>
+<p>The advantages of this approach include:</p>
+<ul>
+<li>Commits can be split by applying the patch and staging particular edits</li>
+<li>The ability to split single commits into more commits, or combine/squash commits together, means
+  this approach has a lot of flexibility</li>
+<li>Best for some situations where, e.g., a long series of commits with many small commits that should
+  be squashed and some large commits that should be split </li>
+</ul>
+<p>The disadvantages of this approach include:</p>
+<ul>
+<li>Patches applied out of order can confuse the program applying the patches</li>
+</ul>
+<h3 id="cherry-pick-and-unstage">cherry-pick and unstage</h3>
+<p>An alternative to the above workflow is to use <code>git cherry-pick</code> to apply the changes from particular
+commits, but to leave those changes unstaged using the <code>--no-commit</code> or <code>-n</code> flag:</p>
+<div class="highlight"><pre><span></span>git cherry-pick --no-commit &lt;commit-hash&gt;
+git cherry-pick -n &lt;commit-hash&gt;
+</pre></div>
+
+
+<p>Alternatively, a range of commits can be used instead:</p>
+<div class="highlight"><pre><span></span>git cherry-pick -n &lt;commit-hash-start&gt;..&lt;commit-hash-end&gt;
+</pre></div>
+
+
+<p>This can help achieve a similar level of flexibility to the patch approach.</p>
+<h3 id="soft-reset-and-commit">soft reset and commit</h3>
+<p>Suppose the commit history is simple enough that you can squash all of the commits together
+into a single diff set, and pick the changes to split into commits D, E, and F.</p>
+<p>In that case, the easiest way might be to roll back all of the commits made, but preserve
+the changes that each commit made. This is precisely what a <em>soft reset</em> will do.</p>
+<p>For the git commit history</p>
+<div class="highlight"><pre><span></span>A - B - C (master)
+    \
+     D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
+</pre></div>
+
+
+<p>Run the command</p>
+<div class="highlight"><pre><span></span>git reset --soft B
+</pre></div>
+
+
+<p>to move the HEAD pointer to commit B, while also <em>preserving</em> all changes made from the
+start of the feature branch <code>D1</code> to the tip of the feature branch <code>E3</code>, all added as
+staged changes (as though they had been <code>git add</code>-ed).</p>
+<p>The changes will be staged, but changes to files can be unstaged using</p>
+<div class="highlight"><pre><span></span>git restore --staged &lt;filename&gt;
+</pre></div>
+
+
+<p>Now add changes selectively using the <code>--edit</code> or <code>--patch</code> flags</p>
+<div class="highlight"><pre><span></span>git add --edit &lt;filename&gt;
+git add --patch &lt;filename&gt;
+</pre></div>
+
+
+<p>If desired, those changes can be unstaged, and then re-staged using <code>git add --edit</code> or
+<code>git add --patch</code> to selectively add changes to particular commits.</p>
+<p>When done, run </p>
+<div class="highlight"><pre><span></span>git commit
+</pre></div>
+
+
+<p>with no arguments to commit the changes you made.</p>
+<h1 id="refactoring-large-pull-requests">Refactoring Large Pull Requests</h1>
+<p>The approaches above can be useful for refactoring branches. The end result will look something like this:</p>
+<div class="highlight"><pre><span></span>A - B - C (master)
+    \
+     D (feature-d)
+      \ 
+       E (feature-e)
+        \
+         F (feature-f)
+</pre></div>
+
+
+<p>Now 3 pull requests can be made, one for each feature. Thanks to the refactoring above, each branch
+should be a more isolated set of changes that are all related, and therefore easier to review.</p>
+<h2 id="chaining-pull-requests">Chaining Pull Requests</h2>
+<p>The three D E F branches should be merged in together, since they are all related. But their changes should
+be kept separate to make reviewing each branch easier. To accomplish this, chain the pull requests together
+like so:</p>
+<p>Pull Request 1: merge <code>feature-d</code> into <code>master</code></p>
+<p>Pull Request 2: merge <code>feature-e</code> into <code>feature-d</code></p>
+<p>Pull Request 3: merge <code>feature-f</code> into <code>feature-e</code></p>
+<p>In this way, each pull request only shows the changes specific to that branch.</p>
+<p>(If each pull request were made against <code>master</code>, then later branches (F) would also incorporate changes
+from prior branches (D), resulting in messy and hard-to-review pull requests.)</p>
+<p>Pull requests are reviewed and discussed, and new commits will probably be added to fix things or incorporate
+feedback:</p>
+<div class="highlight"><pre><span></span>A - B - C (master)
+    \
+     D - DA - DB (feature-d)
+      \ 
+       E - EA - EB (feature-e)
+        \
+         F - FA - FB (feature-f)
+</pre></div>
+
+
+<h2 id="preparing-to-merge-a-large-pull-request">Preparing to Merge a Large Pull Request</h2>
+<p>All of your pull requests are approved and ready to merge. Now what?</p>
+<p>Pull requests will need to be merged in reverse order (last PR is merged first - f into e, e into d, d into
+master).  To test that things go smoothly with the first pull request (<code>feature-f</code> into <code>feature-e</code>), we should
+create a local E-F integration branch.</p>
+<p>The local integration branch will have new commits if changes are needed to resolve merge conflicts or fix
+broken tests. Any changes made can be added to the <code>feature-f</code> branch and pushed to the remote, so that
+they are part of the pull request, making the merge into <code>feature-e</code> go smoothly.</p>
+<p>To create a throwaway E-F integration branch, we start by creating a test integration branch from the tip of the
+<code>feature-f</code> branch, and we will merge branch <code>feature-e</code> into branch <code>feature-f</code>.</p>
+<div class="highlight"><pre><span></span>git checkout feature-f
+</pre></div>
+
+
+<p>Now we create a local E-F integration branch:</p>
+<div class="highlight"><pre><span></span>git checkout -b integration-e-f
+</pre></div>
+
+
+<p>Now we merge <code>feature-e</code> into <code>integration-e-f</code>, which is the same as <code>feature-f</code>:</p>
+<div class="highlight"><pre><span></span>git merge --no-ff feature-e
+</pre></div>
+
+
+<p>The <code>--no-ff</code> flag creates a separate merge commit, which is useful here to keep our commit history clean.</p>
+<p>If merge conflicts are encountered, those can be resolved in the usual manner, and the (conflict-free) new
+versions of each file, reflecting changes from <code>feature-f</code> and <code>feature-e</code>, will all be present after the
+merge commit.</p>
+<p>Further commits can also be made to make tests pass, with a resulting git diagram:</p>
+<div class="highlight"><pre><span></span>A - B - C (master)
+    \
+     D - DA - DB (feature-d)
+      \ 
+       E - EA - EB ----
+        \              \
+         F - FA - FB - EF1 - EF2 (integration-e-f)
+                              ^
+                             HEAD
+</pre></div>
+
+
+<p>Once the <code>integration-e-f</code> branch is polished and passing tests, we can re-label it as <code>feature-f</code> and push
+the new commits to the remote. To re-label <code>integration-e-f</code> as <code>feature-f</code>, assuming we're at the tip of
+the <code>integration-e-f</code> branch (where we left off above):</p>
+<div class="highlight"><pre><span></span>git branch -D feature-f
+git checkout -b feature-f
+</pre></div>
+
+
+<p>and push the new commits to the remote's <code>feature-f</code> branch, before you merge in the pull request (<code>feature-f</code>
+into <code>feature-e</code>):</p>
+<div class="highlight"><pre><span></span>git push origin feature-f
+</pre></div>
+
+
+<p>Now you are ready to merge pull request 3 (F into E).</p>
+<h2 id="rinse-and-repeat">Rinse and Repeat</h2>
+<p>Rinse and repeat for pull requests 2 and 1.</p>
+<p>For Pull Request 2, we start by creating a new <code>integration-d-e-f</code> branch from the tip of the
+<code>integration-e-f</code> branch, like so:</p>
+<div class="highlight"><pre><span></span>git checkout integration-d-e
+git checkout -b integration-d-e-f
+</pre></div>
+
+
+<p>and use the same approach of merging in the <code>feature-d</code> branch with an explicit merge commit:</p>
+<div class="highlight"><pre><span></span>git merge --no-ff feature-d
+</pre></div>
+
+
+<p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
+and you should now have a git commit history like this:</p>
+<div class="highlight"><pre><span></span>A - B - C (master)
+    \
+     D - DA - DB ----------------
+      \                          \
+       E - EA - EB ----           \
+        \              \           \
+         F - FA - FB - EF1 - EF2 - DEF1 - DEF2 (integration-d-e-f)
+                                            ^
+                                           HEAD
+</pre></div>
+
+
+<p>Now re-label the <code>integration-d-e-f</code> branch as <code>feature-e</code>:</p>
+<div class="highlight"><pre><span></span>git branch -D feature-e &amp;&amp; git checkout -b feature-e
+</pre></div>
+
+
+<p>Finally, push all new commits to the remote, including the new merge
+commit, which will make sure the pull request can be merged without
+any conflicts:</p>
+<div class="highlight"><pre><span></span>git push origin feature-e
+</pre></div>
+
+
+<p>Now PR 2 (E into D) can be merged.</p>
+<h2 id="final-merge-into-master">Final Merge into Master</h2>
+<p>The last and final PR, D into master, will merge all combined feature
+branches into the master branch. We start with a <code>feature-d</code> branch
+that has several commits related to feature D, then several commits
+from merging the <code>feature-e</code> branch in (pull request 2, E into D),
+and the <code>feature-e</code> branch also had <code>feature-f</code> merged into it.</p>
+<div class="highlight"><pre><span></span>A - B - C (master)
+     \
+      D - D2 - DEF1 - DEF2 (feature-d)
+</pre></div>
+
+
+<p>Now we will create one more commit on the <code>feature-d</code> branch that is
+merging <code>master</code> into <code>feature-d</code>, which will help the merge happen
+smoothly for pull request 1 (D into master).</p>
+<p>But first we switch to an integration branch, in case things don't go
+smoothly and we want to throw away the merge commit:</p>
+<div class="highlight"><pre><span></span>git branch integration-def-master
+</pre></div>
+
+
+<p>Create an explicit merge commit to merge <code>master</code> into <code>integration-def-master</code>:</p>
+<div class="highlight"><pre><span></span>git merge --no-ff master
+</pre></div>
+
+
+<p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
+and you should now have a git commit history like this:</p>
+<div class="highlight"><pre><span></span>A - B - C (master)
+     \   \---------------------
+      \                        \
+       D - D2 - DEF1 - DEF2 - DEF3 (integration-def-master)
+</pre></div>
+
+
+<p>where commit <code>DEF3</code> is the merge commit created with the <code>--no-ff</code> command.</p>
+<p>The merge commit will resolve any conflicts. When you're satisfied with the
+merge commit, you can switch out the <code>integration-def-master</code> branch with the
+<code>feature-d</code> branch like so:</p>
+<div class="highlight"><pre><span></span>git branch -D feature-d
+git checkout -b feature-d
+</pre></div>
+
+
+<p>Now you can push the merge commit to the remote:</p>
+<div class="highlight"><pre><span></span>git push origin feature-d
+</pre></div>
+
+
+<p>and you're now ready to merge your (conflict-free) pull request!</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Git Workflows, Part 2: Crafting Commits
             </b></h1>
         
@@ -1048,225 +1529,6 @@ and you'll find yourself using a lot fewer keystrokes!</p></div>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Mocking AWS in Unit Tests
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-09-23T09:00:00-07:00" pubdate>Monday 09/23/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/mocking-aws-in-unit-tests.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#a-simple-example-mocking-api-responses">A Simple Example: Mocking API Responses</a><ul>
-<li><a href="#the-genuine-aws-call">The Genuine AWS Call</a></li>
-<li><a href="#the-mocked-aws-call">The Mocked AWS Call</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<h2 id="overview">Overview</h2>
-<p>This post covers a technique for mocking AWS in unit tests so that you can test functionality that normally
-requires API calls and handling responses, by mocking those responses instead of making actual API calls.</p>
-<h2 id="a-simple-example-mocking-api-responses">A Simple Example: Mocking API Responses</h2>
-<h3 id="the-genuine-aws-call">The Genuine AWS Call</h3>
-<p>Let's start with an example of an AWS API call. Here's how our program will be structured:
-start with a driver <code>lister.py</code> that creates an AWS secrets manager client and defines a 
-function to list secrets using the secrets manager client, then a test for it in <code>test_lister.py</code>
-that mocks the AWS call.</p>
-<p>This example is simple and uses just one function, <code>list_secrets()</code>,
-which returns a JSON response that looks something like this:</p>
-<div class="highlight"><pre><span></span>{
-  &quot;SecretList&quot;: [
-    {
-      &quot;ARN&quot;: &quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret1-abc123&quot;,
-      &quot;Name&quot;: &quot;prefix/es_source_ip&quot;,
-      &quot;LastChangedDate&quot;: &quot;2019-09-23 17:29:16.267000-07:00&quot;,
-      &quot;LastAccessedDate&quot;: &quot;2019-09-23 17:00:00-07:00&quot;,
-      &quot;SecretVersionsToStages&quot;: {
-        &quot;658c3b41-0806-48b9-b05d-ea7dc2dbf237&quot;: [
-          &quot;AWSCURRENT&quot;
-        ],
-        &quot;f37ccfe2-16e0-4305-a250-ef89d2c47ece&quot;: [
-          &quot;AWSPREVIOUS&quot;
-        ]
-      }
-    },
-    {
-      &quot;ARN&quot;: &quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret2-def789&quot;,
-      &quot;Name&quot;: &quot;prefix/secret2&quot;,
-      &quot;LastChangedDate&quot;: &quot;2019-09-22 17:05:01.431000-07:00&quot;,
-      &quot;LastAccessedDate&quot;: &quot;2019-09-22 17:00:00-07:00&quot;,
-      &quot;SecretVersionsToStages&quot;: {
-        &quot;95AE5F8B-34E7-4EDF-A672-9E3AF1A4732E&quot;: [
-          &quot;AWSCURRENT&quot;
-        ],
-        &quot;F29E224A-BC03-4780-B64E-EA666B99D952&quot;: [
-          &quot;AWSPREVIOUS&quot;
-        ]
-      }
-    }
-  ]
-}
-</pre></div>
-
-
-<p>Using the secrets manager API:</p>
-<p><strong><code>lister.py</code></strong>:</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">boto3</span>
-
-<span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">print_secret_names</span><span class="p">():</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span><span class="p">()</span>
-    <span class="k">for</span> <span class="n">secret</span> <span class="ow">in</span> <span class="n">s</span><span class="p">[</span><span class="s1">&#39;SecretList&#39;</span><span class="p">]:</span>
-        <span class="k">if</span> <span class="s1">&#39;Name&#39;</span> <span class="ow">in</span> <span class="n">secret</span> <span class="ow">and</span> <span class="s1">&#39;LastAccessedDate&#39;</span> <span class="ow">in</span> <span class="n">secret</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Secret Name: </span><span class="si">{secret[&#39;Name&#39;]}</span><span class="s2"> (last accessed: </span><span class="si">{secret[&#39;LastAccessedDate&#39;]}</span><span class="s2">)&quot;</span><span class="p">)</span>
-
-<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="n">print_secret_names</span><span class="p">()</span>
-</pre></div>
-
-
-<p>If we run this file, we'll see a list of secrets in the real secrets manager -
-that is, the secrets manager that is linked to the boto credentials in <code>~/.aws</code>,
-so the secrets we see are the actual secrets in the secret manager:</p>
-<div class="highlight"><pre><span></span>$ python lister.py
-Secret Name: prefix/secret1 (last accessed: 2019-09-23 17:00:00-07:00)
-Secret Name: prefix/secret2 (last accessed: 2019-09-23 17:00:00-07:00)
-Secret Name: prefix/secret3 (last accessed: 2019-09-23 17:00:00-07:00)
-</pre></div>
-
-
-<h3 id="the-mocked-aws-call">The Mocked AWS Call</h3>
-<p>It is important to only mock the functionality we need.
-We should mock the returned JSON, but only the <code>Name</code>
-and <code>LastAccessedDate</code> fields.</p>
-<p>To mock the call to <code>list_secrets()</code>, we start by importing
-<code>mock</code> from <code>unittest</code>. Then we import the file that has the
-function we want to test. We also import any other modules
-we need.</p>
-<p>Next, we are mocking a call to a method of an object,
-which we can do by creating a context via <code>with mock.patch()</code>
-(and passing it a string with the name of the object we want
-to mock, or patch).</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">unittest</span>
-<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
-<span class="kn">import</span> <span class="nn">lister</span>
-<span class="kn">import</span> <span class="nn">datetime</span>
-
-<span class="k">class</span> <span class="nc">TestMo</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mo.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
-            <span class="o">...</span>
-            <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span> <span class="o">...</span> <span class="p">)</span>
-            <span class="o">...</span>
-</pre></div>
-
-
-<p>Any calls made to <code>sm_client</code> in the <code>mo</code> module will be mocked
-using the <code>mock.MagicMock</code> object that we define in the context,
-so we craft the response we want before we call the method we 
-want to test (which in turn will call <code>sm_client.list_secrets()</code>).</p>
-<p>The full version of the test looks like this:</p>
-<p><strong><code>test_lister.py</code></strong>:</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">unittest</span>
-<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
-<span class="kn">import</span> <span class="nn">lister</span>
-<span class="kn">import</span> <span class="nn">datetime</span>
-
-<span class="k">class</span> <span class="nc">TestLister</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;lister.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
-            <span class="n">return_json</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;SecretList&quot;</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="p">{</span>
-                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret1&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
-                    <span class="p">},</span>
-                    <span class="p">{</span>
-                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret2&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
-                    <span class="p">}</span>
-                <span class="p">]</span>
-            <span class="p">}</span>
-            <span class="n">sm</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">return_json</span><span class="p">)</span>
-            <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
-
-<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
-</pre></div>
-
-
-<p>When the test file is run via Python, we see the fake secrets:</p>
-<div class="highlight"><pre><span></span>$ python test_lister.py
-Secret Name: fakesecret1 (last accessed: 2019-09-23 20:31:49.186874)
-Secret Name: fakesecret2 (last accessed: 2019-09-23 20:31:49.186880)
-.
-----------------------------------------------------------------------
-Ran 1 test in 0.000s
-
-OK
-</pre></div></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/pytest.html">pytest</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/tests.html">tests</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/aws.html">aws</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1302,6 +1564,9 @@ OK
 
             <h2>February 2020</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/creating-mock-api-servers.html">Creating Mock API Servers</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/python-from-args-to-kwargs.html">Python: From Args to Kwargs</a>
             </p>
