@@ -113,10 +113,10 @@ def make_api_call(api_url)
     # Assemble our API call
     endpoint = '/hello/world'
     url = urllib.parse.urljoin(api_url, endpoint)
-    params = dict(foo=bar)
+    params = dict(message='hello world')
 
     # The basic mock server will just echo our request back
-    data = requests.get(url)
+    data = requests.get(url, params=params)
     data = resp.json()
     return
 ```
@@ -146,6 +146,22 @@ class TestAPICalls(unittest.TestCase):
     def tearDownClass(cls):
         cls.app.stop_serving()
 ```
+
+We can run the test like so:
+
+```
+python test_foobar.py
+```
+
+Here's what happens when we run the test:
+
+* The `setUpClass()` method is called, which creates a mock API server that starts on
+  localhost on port 9876 and runs the server on a thread.
+* The `test_api_call()` method is run, which makes the API call to the mock API server.
+  (Nothing interesting is happening on either end, right now, but stay tuned for more
+  examples.)
+* The `tearDownClass()` method is called, which stops the mock API server and returns
+  the thread worker to the pool of workers.
 
 Stay tuned for more complicated examples in the future - we are currently working on
 extending this mock API server to mock calls to the Github API.
