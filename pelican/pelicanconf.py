@@ -8,6 +8,8 @@ SITEURL = 'https://charlesreid1.github.io'
 AUTHOR = u'charlesreid1'
 SITENAME = u'charlesreid1'
 
+TIMEZONE = 'America/Los_Angeles'
+
 PATH = 'content'
 THEME = 'charlesreid1-githubio-theme'
 
