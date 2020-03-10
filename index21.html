@@ -102,6 +102,341 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Stunnel
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-04-30T20:00:00-07:00" pubdate>Sunday 04/30/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/stunnel.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><ul>
+<li>
+<p><a href="#stunnel-intro">Introduction</a></p>
+<ul>
+<li><a href="#stunnel-what">What Does Stunnel Do?</a></li>
+<li><a href="#stunnel-work">How Does Stunnel Work?</a> </li>
+</ul>
+</li>
+<li>
+<p><a href="#stunnel-server">Setting Up an Stunnel Server</a></p>
+<ul>
+<li><a href="#stunnel-server-resoures">Charlesreid1.com Resources for Stunnel Servers</a></li>
+</ul>
+</li>
+<li>
+<p><a href="#stunnel-client">Setting Up an Stunnel Client</a></p>
+</li>
+<li>
+<p><a href="#stunnel-protocols">Example Protocols</a></p>
+</li>
+<li>
+<p><a href="#stunnel-docker">Stunnel with Docker</a></p>
+</li>
+<li>
+<p><a href="#stunnel-troubleshooting">Troubleshooting Stunnel Connections</a></p>
+</li>
+<li>
+<p><a href="#stunnel-refs">References</a></p>
+</li>
+</ul>
+<p><a name="stunnel-intro"></a></p>
+<h2 id="introduction">Introduction</h2>
+<p><a name="stunnel-what"></a></p>
+<h3 id="what-does-stunnel-do">What Does Stunnel Do?</h3>
+<p>Stunnel is a tool for creating SSL tunnels between a client and a server.</p>
+<p>Creating SSL connections is a general task that is very useful.
+In particular, any packet of any protocol can always be wrapped in an
+additional SSL layer, with packets embedded within packets, so this means 
+you can wrap arbitrary traffic protocols in SSL using Stunnel.</p>
+<p>Stunnel requires a client and a server on either end of the tunnel.</p>
+<p>This writeup assumes access to both the server and the client.
+If you don't have access to the client, the server certificate
+needs to be signed by a certificate authority that the client trusts.
+You can either:</p>
+<ul>
+<li>
+<p>Shell out big bucks for a certificate signed by a certificate authority company, thereby contributing to the ongoing racketeering of said companies;</p>
+</li>
+<li>
+<p>Use a LetsEncrypt certificate, signed by a certificate authority for free; or</p>
+</li>
+<li>
+<p>Use a self-signed certificate and install the certificate authority onto the client computer.</p>
+</li>
+</ul>
+<p>(These are all difficult and confusing processes, 
+compounded by OpenSSL's lack of documentation
+and a proliferation of incorrect terminology.
+Good luck.)</p>
+<p><a name="stunnel-work"></a></p>
+<h3 id="how-does-stunnel-work">How Does Stunnel Work?</h3>
+<p>The client stunnel instance will encrypt traffic, 
+and the server stunnel instance will decrypt traffic.</p>
+<p>When encrypting traffic, stunnel accepts incoming traffic by listening on
+a port (almost always a local port). It will wrap the traffic in an encrypted
+SSL layer (TCP wrapping) using the SSL certificate/key that is shared between
+the client and the server. The client then sends out the encrypted traffic 
+over an external connection, and on to the stunnel server.</p>
+<p>When decrypting traffic, stunnel will listen on an external connection for 
+incoming, encrypted SSL traffic. It will use its SSL certificate/key to 
+decrypt the traffic and unwrap the SSL layer. It will then forward this traffic
+on to another (usually local) port.</p>
+<p><img alt="Stunnel flowchart schematic" src="/images/stunnel1.png"></p>
+<p><a name="stunnel-server"></a></p>
+<h2 id="setting-up-an-stunnel-server">Setting Up an Stunnel Server</h2>
+<p>Stunnel servers can listen on any port, and the port you choose depends on the application. 
+The configuration we're showing here is intended to bypass a network that is tightly controlled
+and locked down except for HTTP and HTTPS traffic (ports 80 and 443).</p>
+<p>Consider an example of connecting a local service on local port 8443 (not open to the outside world)
+to an stunnel server listening on port 443 (open to the outside world).</p>
+<p>stunnel will listen on port 443, open to external traffic, for SSL-encrypted stunnel traffic. 
+This means that only stunnel can listen on 443 (so this cannot be a server for an HTTPS web 
+site - if a user points their browser to https://yourstunnelserver.com stunnel will not understand
+the HTTPS request and will discard it). 
+We can use stunnel on any port that we want, but communicating between stunnel clients 
+and servers on port 443 allows us to disguise arbitrary traffic (HTTP, HTTPS, SSH, database, 
+etc.) as legitimate HTTPS. </p>
+<p>This is very useful if we have a firewall that is actively inspecting
+the type of traffic inside of packets, and dropping packets with particular protocols like 
+SSH or OpenVPN. By wrapping that traffic in an SSL layer, there is no way for the 
+firewall to inspect the contents of the packet, so it just looks like ordinary HTTPS traffic.
+The firewall can't decrypt the packet contents, so it doesn't know if you are visiting 
+your bank, checking your email, or sneaking SSH/OpenVPN traffic through the firewall. </p>
+<p>(Note that other services like Iodine allow you to do similar things with other protocols,
+like disguising network connections using encrypted DNS on port 53.)</p>
+<p>Typically, stunnel is forwarding that traffic on to a local port, something like 8443. 
+(The common scenario is if you have a service only exposed to LOCAL traffic from localhost or 127.0.0.1 
+and not bound to an EXTERNAL ip address like 0.0.0.0). </p>
+<p><a name="stunnel-server-resources"></a></p>
+<h3 id="charlesreid1com-resources-for-stunnel-servers">Charlesreid1.com Resources for Stunnel Servers</h3>
+<p>The charlesreid1.com wiki has an extensive guide to setting up an Stunnel server: </p>
+<ul>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/Server">charlesreid1.com/wiki/Stunnel/Server</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/Docker">charlesreid1.com/wiki/Stunnel/Docker</a> - wiki page detailing the use of Docker and Docker containers to run an stunnel server.</p>
+</li>
+</ul>
+<p>The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel server: </p>
+<ul>
+<li><a href="https://git.charlesreid1.com/docker/d-stunnel">d-stunnel repository</a> - repo containing Docker configuration files, for creating a Docker container that runs an stunnel server.
+    This repository contains example stunnel configuration files for running a number of different protocols over stunnel (ssh, http, and rsync).</li>
+</ul>
+<p><a name="stunnel-client"></a></p>
+<h2 id="setting-up-an-stunnel-client">Setting Up an Stunnel Client</h2>
+<p>Running an stunnel client requires installing stunnel and 
+setting up a configuration file just like if you were setting up an Stunnel/Server, 
+except swapping the accept and connect ports, since we want the client to accept local 
+traffic (e.g., on port 8443) and send it on to the server that it connects to with SSL 
+(e.g., on port 443).</p>
+<p><a name="stunnel-client-resources"></a></p>
+<h2 id="charlesreid1com-resources-for-stunnel-clients">Charlesreid1.com Resources for Stunnel Clients</h2>
+<p>The charlesreid1.com wiki has an extensive guide to setting up an Stunnel client: </p>
+<ul>
+<li><a href="https://charlesreid1.com/wiki/Stunnel/Client">charlesreid1.com/wiki/Stunnel/Client</a> - wiki page detailing the stunnel configuration process for stunnel servers.</li>
+</ul>
+<p>The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel client: </p>
+<ul>
+<li>
+<p><a href="https://git.charlesreid1.com/mac/m-stunnel">m-stunnel repository</a> - stunnel configuration files for running an stunnel client on Mac OS X</p>
+</li>
+<li>
+<p><a href="https://git.charlesreid1.com/rpi/pi-stunnel">pi-stunnel repository</a> - stunnel configuration files for running an stunnel client on Raspberry Pi</p>
+</li>
+</ul>
+<p><a name="stunnel-protocols"></a></p>
+<h2 id="example-protocols">Example Protocols</h2>
+<p>One of the most beautiful aspects of networking is that packets can be wrapped within other packets - 
+so theoretically it can be packets all the way down. This allows us to use stunnel's SSL TCP wrappers to wrap
+just about any traffic we want. This means we can run various services (encrypted or not) through stunnel,
+including but not limited to:</p>
+<ul>
+<li>
+<p>SSH (secure shell)</p>
+</li>
+<li>
+<p>SCP (secure copy)</p>
+</li>
+<li>
+<p>OpenVPN (virtual network)</p>
+</li>
+<li>
+<p>Rsync (file transfer)</p>
+</li>
+<li>
+<p>MongoDB (NoSQL database)</p>
+</li>
+<li>
+<p>Redis (local-only NoSQL database)</p>
+</li>
+</ul>
+<p>While stunnel has a few pre-configured services that it can deal with, 
+users can also define their own custom protocols, over whatever port they please.</p>
+<p>The charlesreid1.com wiki details stunnel configuration for all of the above protocols,
+excepting MongoDB and redis. Here are links to pages specifying how to configure stunnel
+for each protocol:</p>
+<ul>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/SSH">SSH over stunnel</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/Scp">SCP over stunnel</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/HTTP">HTTP over stunnel</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/OpenVPN">OpenVPN over stunnel</a></p>
+</li>
+<li>
+<p><a href="https://charlesreid1.com/wiki/Stunnel/Rsync">Rsync over stunnel</a></p>
+</li>
+</ul>
+<p>The <a href="https://charlesreid1.com/wiki/Stunnel/Rsync">Rsync over stunnel</a> page, in particular,
+details the steps needed to define your own custom protocol and have stunnel wrap it 
+in an SSL layer <em>correctly</em>.</p>
+<p><a name="stunnel-docker"></a></p>
+<h2 id="stunnel-with-docker">Stunnel with Docker</h2>
+<p>Docker is a useful way of managing services in a self-contained and reproducible manner.
+Running stunnel through a Docker container is surprisingly easy: 
+once you've installed stunnel into the docker container, you just need to map 
+the incoming port (containing incoming encrypted traffic from the client, linked to the external network interface)
+to the outgoing port (containing decrypted traffic from stunnel, linked to a local-only service on a closed port).</p>
+<p>The charlesreid1.com wiki details how to create set up SSH over stunnel at the following page:
+* <a href="https://charlesreid1.com/wiki/Stunnel/Docker">charlesreid1.com/wiki/Stunnel/Docker</a></p>
+<p>The charlesreid1.com git server has an stunnel docker repository with configuration files
+for running a Docker stunnel server, along with several example stunnel server configuration files
+for handling protocols like rsync, ssh, and http:
+* <a href="https://git.charlesreid1.com/docker/d-stunnel">d-stunnel repository</a></p>
+<p><a name="stunnel-troubleshooting"></a></p>
+<h2 id="troubleshooting-stunnel-connections">Troubleshooting Stunnel Connections</h2>
+<p>In the <a href="https://git.charlesreid1.com/docker/d-stunnel">d-stunnel repository</a> is a document called <code>DEBUGGING.md</code> 
+that contains a number of techniques for debugging an stunnel connection. </p>
+<p><a href="https://git.charlesreid1.com/docker/d-stunnel/src/master/DEBUGGING.md">Here is the direct link to DEBUGGING.md</a>.</p>
+<p>The techniques covered include:</p>
+<ul>
+<li>
+<p>Configuring stunnel to run in the foreground (print log messages to console instead of to log file)</p>
+</li>
+<li>
+<p>Configuring stunnel to output debugging information </p>
+</li>
+<li>
+<p>Poking the stunnel server with telnet</p>
+</li>
+<li>
+<p>Inspecting open ports with nmap</p>
+</li>
+<li>
+<p>Watching <code>/var/log/syslog</code> for activity</p>
+</li>
+</ul>
+<p>See <a href="https://git.charlesreid1.com/docker/d-stunnel/src/master/DEBUGGING.md">DEBUGGING.md</a> for details.</p>
+<p><a name="stunnel-refs"></a></p>
+<h2 id="references">References</h2>
+<ol>
+<li>
+<p>"Stunnel". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel">https://charlesreid1.com/wiki/Stunnel</a>&gt;</p>
+</li>
+<li>
+<p>"Category: Stunnel". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Category:Stunnel">https://charlesreid1.com/wiki/Category:Stunnel</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Server". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Server">https://charlesreid1.com/wiki/Stunnel/Server</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Client". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Client">https://charlesreid1.com/wiki/Stunnel/Client</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Docker". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Docker">https://charlesreid1.com/wiki/Stunnel/Docker</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Certificates". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Certificates">https://charlesreid1.com/wiki/Stunnel/Certificates</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Rsync". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Rsync">https://charlesreid1.com/wiki/Stunnel/Rsync</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/SSH". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/SSH">https://charlesreid1.com/wiki/Stunnel/SSH</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/Scp". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Scp">https://charlesreid1.com/wiki/Stunnel/Scp</a>&gt;</p>
+</li>
+<li>
+<p>"Stunnel/OpenVPN". Charlesreid1.com wiki. 30 April 2017. 
+&lt;<a href="https://charlesreid1.com/wiki/Stunnel/OpenVPN">https://charlesreid1.com/wiki/Stunnel/OpenVPN</a>&gt;</p>
+</li>
+</ol></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/stunnel.html">stunnel</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/ssl.html">SSL</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/encryption.html">encryption</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/ssh.html">SSH</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/networking.html">networking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/openvpn.html">OpenVPN</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Traveling Schoolteacher Problem
             </b></h1>
         
@@ -247,82 +582,82 @@ The backtracking solution will explore various paths through teh graph, keeping 
 </li>
 </ul>
 <p>Here is the explore method header:</p>
-<div class="highlight"><pre><span></span><span class="err">    /** Recursive backtracking method: </span>
-<span class="err">        explore possible solutions starting </span>
-<span class="err">        at this node, having made nchoices */</span>
-<span class="err">    public void explore(Node node, int nchoices) {</span>
+<div class="highlight"><pre><span></span>    /** Recursive backtracking method: 
+        explore possible solutions starting 
+        at this node, having made nchoices */
+    public void explore(Node node, int nchoices) {
 </pre></div>
 
 
 <p><a name="tstp-base"></a></p>
 <h3 id="explore-base-case">Explore: Base Case</h3>
 <p>The base case begins by checking if the minimum distance has been set, and if so, whether the current distance is larger than the minimum distance. If so, this route is abandoned; otherwise, we have a new solution.</p>
-<div class="highlight"><pre><span></span>        <span class="k">if</span><span class="p">(</span><span class="n">nchoices</span> <span class="o">==</span> <span class="n">graphSize</span><span class="p">)</span> <span class="err">{</span>
-            <span class="o">//</span> 
-            <span class="o">//</span> <span class="n">BASE</span> <span class="k">CASE</span>
-            <span class="o">//</span>
-            <span class="k">if</span><span class="p">(</span><span class="n">this</span><span class="p">.</span><span class="n">this_distance</span> <span class="o">&lt;</span> <span class="n">this</span><span class="p">.</span><span class="n">min_distance</span> <span class="o">||</span> <span class="n">this</span><span class="p">.</span><span class="n">min_distance</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="err">{</span>
-                <span class="n">this</span><span class="p">.</span><span class="n">min_distance</span> <span class="o">=</span> <span class="n">this</span><span class="p">.</span><span class="n">this_distance</span><span class="p">;</span>
-                <span class="n">printSolution</span><span class="p">();</span>
-            <span class="err">}</span> <span class="k">else</span> <span class="err">{</span>
-                <span class="n">printFailure</span><span class="p">();</span>
-            <span class="err">}</span>
+<div class="highlight"><pre><span></span>        if(nchoices == graphSize) {
+            // 
+            // BASE CASE
+            //
+            if(this.this_distance &lt; this.min_distance || this.min_distance &lt; 0) {
+                this.min_distance = this.this_distance;
+                printSolution();
+            } else {
+                printFailure();
+            }
 
-        <span class="err">}</span> <span class="k">else</span> <span class="err">{</span>
+        } else {
 </pre></div>
 
 
 <p><a name="tstp-recursive"></a></p>
 <h3 id="explore-recursive-case">Explore: Recursive Case</h3>
 <p>Next, the recursive case will explore each of the possible choices open to it by iterating over each choice available at a node, and for each node, choosing it, exploring the results, and unchoosing it. </p>
-<div class="highlight"><pre><span></span><span class="w">        </span><span class="err">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
-<span class="w">            </span><span class="o">//</span><span class="w"></span>
-<span class="w">            </span><span class="o">//</span><span class="w"> </span><span class="k">RECURSIVE</span><span class="w"> </span><span class="k">CASE</span><span class="w"></span>
-<span class="w">            </span><span class="o">//</span><span class="w">  </span>
-<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="n">this</span><span class="p">.</span><span class="n">gas_tank</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
-<span class="w">                </span><span class="o">//</span><span class="w"> </span><span class="n">Bummer</span><span class="p">,</span><span class="w"> </span><span class="n">man</span><span class="p">.</span><span class="w"></span>
-<span class="w">                </span><span class="k">return</span><span class="p">;</span><span class="w"></span>
-<span class="w">            </span><span class="err">}</span><span class="w"></span>
-<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="n">this</span><span class="p">.</span><span class="n">min_distance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">this</span><span class="p">.</span><span class="n">this_distance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">this</span><span class="p">.</span><span class="n">min_distance</span><span class="p">)</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
-<span class="w">                </span><span class="o">//</span><span class="w"> </span><span class="n">Give</span><span class="w"> </span><span class="n">up</span><span class="p">,</span><span class="w"> </span><span class="n">there</span><span class="err">&#39;</span><span class="n">s</span><span class="w"> </span><span class="k">no</span><span class="w"> </span><span class="n">hope</span><span class="p">.</span><span class="w"></span>
-<span class="w">                </span><span class="k">return</span><span class="p">;</span><span class="w"></span>
-<span class="w">            </span><span class="err">}</span><span class="w"></span>
+<div class="highlight"><pre><span></span>        } else {
+            //
+            // RECURSIVE CASE
+            //  
+            if(this.gas_tank &lt;= 0) {
+                // Bummer, man.
+                return;
+            }
+            if(this.min_distance &gt; 0 &amp;&amp; this.this_distance &gt; this.min_distance) {
+                // Give up, there&#39;s no hope.
+                return;
+            }
 
-<span class="w">            </span><span class="o">//</span><span class="w"> </span><span class="n">Now</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">teacher</span><span class="w"> </span><span class="n">teaches</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="o">//</span><span class="w"> </span><span class="n">Now</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">teacher</span><span class="w"> </span><span class="n">gets</span><span class="w"> </span><span class="ow">some</span><span class="w"> </span><span class="n">gas</span><span class="p">.</span><span class="w"> </span>
-<span class="w">            </span><span class="o">//</span><span class="w"> </span><span class="k">If</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">tank</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">full</span><span class="p">...</span><span class="w">  </span><span class="n">bummer</span><span class="p">,</span><span class="w"> </span><span class="n">man</span><span class="p">.</span><span class="w"></span>
-<span class="w">            </span><span class="n">this</span><span class="p">.</span><span class="n">gas_tank</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">Math</span><span class="p">.</span><span class="nf">min</span><span class="p">(</span><span class="n">this</span><span class="p">.</span><span class="n">tankSize</span><span class="p">,</span><span class="w"> </span><span class="n">this</span><span class="p">.</span><span class="n">gas_tank</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">node</span><span class="p">.</span><span class="n">pay</span><span class="p">);</span><span class="w"></span>
+            // Now the teacher teaches,
+            // Now the teacher gets some gas. 
+            // If the tank is full...  bummer, man.
+            this.gas_tank += Math.min(this.tankSize, this.gas_tank + node.pay);
 
-<span class="w">            </span><span class="o">//</span><span class="w"> </span><span class="k">For</span><span class="w"> </span><span class="k">each</span><span class="w"> </span><span class="nl">neighbor</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="k">Set</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span><span class="w"> </span><span class="n">neighbors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="n">adjacentNodes</span><span class="p">(</span><span class="n">node</span><span class="p">);</span><span class="w"></span>
-<span class="w">            </span><span class="k">for</span><span class="p">(</span><span class="n">Node</span><span class="w"> </span><span class="n">neighbor</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">neighbors</span><span class="p">)</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
-<span class="w">                </span><span class="k">if</span><span class="p">(</span><span class="n">neighbor</span><span class="p">.</span><span class="n">visited</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="k">false</span><span class="p">)</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
+            // For each neighbor:
+            Set&lt;Node&gt; neighbors = graph.adjacentNodes(node);
+            for(Node neighbor : neighbors) {
+                if(neighbor.visited == false) {
 
-<span class="w">                    </span><span class="nc">int</span><span class="w"> </span><span class="n">distance_btwn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mi">10000</span><span class="p">;</span><span class="w"></span>
+                    int distance_btwn = -10000;
 
-<span class="w">                    </span><span class="o">//</span><span class="w"> </span><span class="k">Using</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">loop</span><span class="p">,</span><span class="w"> </span>
-<span class="w">                    </span><span class="o">//</span><span class="w"> </span><span class="n">but</span><span class="w"> </span><span class="n">there</span><span class="w"> </span><span class="n">should</span><span class="w"> </span><span class="k">only</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="n">edge</span><span class="p">.</span><span class="w"></span>
-<span class="w">                    </span><span class="k">for</span><span class="p">(</span><span class="w"> </span><span class="n">Edge</span><span class="w"> </span><span class="n">edge</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="n">edgesConnecting</span><span class="p">(</span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="n">neighbor</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
-<span class="w">                        </span><span class="n">distance_btwn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge</span><span class="p">.</span><span class="n">cost</span><span class="p">;</span><span class="w"></span>
-<span class="w">                    </span><span class="err">}</span><span class="w"></span>
+                    // Using a for loop, 
+                    // but there should only be one edge.
+                    for( Edge edge : graph.edgesConnecting(node, neighbor) ) {
+                        distance_btwn = edge.cost;
+                    }
 
-<span class="w">                    </span><span class="o">//</span><span class="w"> </span><span class="n">Make</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">choice</span><span class="w"></span>
-<span class="w">                    </span><span class="n">this</span><span class="p">.</span><span class="n">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">neighbor</span><span class="p">.</span><span class="n">id</span><span class="p">;</span><span class="w"></span>
-<span class="w">                    </span><span class="n">neighbor</span><span class="p">.</span><span class="n">visit</span><span class="p">();</span><span class="w"></span>
-<span class="w">                    </span><span class="n">this</span><span class="p">.</span><span class="n">this_distance</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">distance_btwn</span><span class="p">;</span><span class="w"></span>
+                    // Make a choice
+                    this.route[nchoices] = neighbor.id;
+                    neighbor.visit();
+                    this.this_distance += distance_btwn;
 
-<span class="w">                    </span><span class="o">//</span><span class="w"> </span><span class="n">Explore</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">consequences</span><span class="w"></span>
-<span class="w">                    </span><span class="n">explore</span><span class="p">(</span><span class="n">neighbor</span><span class="p">,</span><span class="n">nchoices</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span><span class="w"></span>
+                    // Explore the consequences
+                    explore(neighbor,nchoices+1);
 
-<span class="w">                    </span><span class="o">//</span><span class="w"> </span><span class="n">Unmake</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">choice</span><span class="w"></span>
-<span class="w">                    </span><span class="n">this</span><span class="p">.</span><span class="n">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
-<span class="w">                    </span><span class="n">neighbor</span><span class="p">.</span><span class="n">unvisit</span><span class="p">();</span><span class="w"></span>
-<span class="w">                    </span><span class="n">this</span><span class="p">.</span><span class="n">this_distance</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="n">distance_btwn</span><span class="p">;</span><span class="w"></span>
-<span class="w">                </span><span class="err">}</span><span class="w"></span>
-<span class="w">                </span><span class="o">//</span><span class="w"> </span><span class="n">Move</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">next</span><span class="w"> </span><span class="n">choice</span><span class="w"> </span><span class="p">(</span><span class="k">continue</span><span class="w"> </span><span class="n">loop</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="err">}</span><span class="w">               </span>
-<span class="w">        </span><span class="err">}</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="k">End</span><span class="w"> </span><span class="n">base</span><span class="o">/</span><span class="k">recursive</span><span class="w"> </span><span class="k">case</span><span class="w"></span>
-<span class="w">    </span><span class="err">}</span><span class="w"></span>
+                    // Unmake the choice
+                    this.route[nchoices] = -1;
+                    neighbor.unvisit();
+                    this.this_distance -= distance_btwn;
+                }
+                // Move on to the next choice (continue loop)
+            }               
+        } // End base/recursive case
+    }
 </pre></div>
 
 
@@ -354,19 +689,19 @@ of the <code>RandomNodeGraph.java</code> class. </p>
 <p>The <code>getNextCost()</code> method generates a random edge
 between two cities, with a <span class="math">\(\frac{T}{T+1}\)</span> percent chance of it being impossible for the 
 teacher to travel that route due to a gas tank that's too small:</p>
-<div class="highlight"><pre><span></span><span class="err">    private static int getNextCost(int T) {</span>
-<span class="err">        Random r = new Random();</span>
-<span class="err">        return 1+r.nextInt(T);</span>
-<span class="err">    }</span>
+<div class="highlight"><pre><span></span>    private static int getNextCost(int T) {
+        Random r = new Random();
+        return 1+r.nextInt(T);
+    }
 </pre></div>
 
 
 <p>Likewise, here is the <code>getNextPay()</code> method, which generates a random 
 amount of pay (in gas) that the </p>
-<div class="highlight"><pre><span></span><span class="err">    private static int getNextPay(int T) {</span>
-<span class="err">        Random r = new Random();</span>
-<span class="err">        return (int)(0.5*T + 0.5*(r.nextInt(T)+1));</span>
-<span class="err">    }</span>
+<div class="highlight"><pre><span></span>    private static int getNextPay(int T) {
+        Random r = new Random();
+        return (int)(0.5*T + 0.5*(r.nextInt(T)+1));
+    }
 </pre></div>
 
 
@@ -423,13 +758,10 @@ and comparisons between the TSP and TSTP slopes will be added later.</p>
     mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
     mathjaxscript.type = 'text/javascript';
     mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
         "MathJax.Hub.Config({" +
         "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
         "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
         "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
         "    displayAlign: '"+ align +"'," +
@@ -443,8 +775,6 @@ and comparisons between the TSP and TSTP slopes will be added later.</p>
         "        preview: 'TeX'," +
         "    }, " +
         "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
         "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
         "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
         "    }, " +
@@ -465,8 +795,6 @@ and comparisons between the TSP and TSTP slopes will be added later.</p>
                 "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
             "});" +
         "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
 </script></div>
@@ -575,9 +903,9 @@ These numbers are positive or negative integers. Here is an illustration of an e
 <h2 id="simple-example-loop">Simple Example: Loop</h2>
 <p>Here is an example of a loop program. This program sets memory index 4 to zero, 
 then increments it until it is equal to the value in memory index 20:</p>
-<div class="highlight"><pre><span></span><span class="err">001   Z4</span>
-<span class="err">002   I4</span>
-<span class="err">003   J4,20 --&gt; 002</span>
+<div class="highlight"><pre><span></span>001   Z4
+002   I4
+003   J4,20 --&gt; 002
 </pre></div>
 
 
@@ -615,16 +943,16 @@ the first loop increments the result and increments a temporary variable 1,
 and does that until the temporary variable 1 is equal to the first number. 
 The second loop increments the result and increments the result by 1 
 for a number of times equal to the number at index 1.</p>
-<div class="highlight"><pre><span></span><span class="err">001   Z2                    // clear space for the result</span>
-<span class="err">002   Z3                    // clear space for temp variable 1</span>
-<span class="err">003   I2                    // increment result</span>
-<span class="err">004   I3                    // increment temp variable 1</span>
-<span class="err">005   J3,0 --&gt; 003</span>
-<span class="err">006   Z4                    // clear space for temp variable 2</span>
-<span class="err">007   I2                    // increment result</span>
-<span class="err">008   I3                    // increment temp variable 2</span>
-<span class="err">009   J4,1 --&gt; 007</span>
-<span class="err">010   Z3                    // clean up</span>
+<div class="highlight"><pre><span></span>001   Z2                    // clear space for the result
+002   Z3                    // clear space for temp variable 1
+003   I2                    // increment result
+004   I3                    // increment temp variable 1
+005   J3,0 --&gt; 003
+006   Z4                    // clear space for temp variable 2
+007   I2                    // increment result
+008   I3                    // increment temp variable 2
+009   J4,1 --&gt; 007
+010   Z3                    // clean up
 </pre></div>
 
 
@@ -642,37 +970,37 @@ if either cell 0 or cell 1 holds a zero.</p>
 <p>Here is code that can deal more gracefully with a zero in either 
 the first or second positions. This utilizes some extra space in memory
 to keep track of whether index 0 is a zero and whether index 1 is a zero.</p>
-<div class="highlight"><pre><span></span><span class="o">//</span> <span class="k">initialize</span>
-<span class="mi">001</span>     <span class="n">Z3</span>
-<span class="mi">002</span>     <span class="n">Z4</span> <span class="o">//</span> <span class="n">temp</span> <span class="mi">0</span>
-<span class="mi">003</span>     <span class="n">Z5</span> <span class="o">//</span> <span class="n">temp</span> <span class="mi">1</span>
-<span class="mi">004</span>     <span class="n">Z6</span> <span class="o">//</span> <span class="k">is</span> <span class="k">index</span> <span class="mi">0</span> <span class="n">a</span> <span class="n">zero</span><span class="o">?</span>
-<span class="mi">005</span>     <span class="n">Z7</span> <span class="o">//</span> <span class="k">is</span> <span class="k">index</span> <span class="mi">1</span> <span class="n">a</span> <span class="n">zero</span><span class="o">?</span>
-<span class="mi">006</span>     <span class="n">Z8</span> <span class="o">//</span> <span class="n">zero</span>
-<span class="mi">007</span>     <span class="n">Z9</span> <span class="o">//</span> <span class="n">one</span>
-<span class="mi">008</span>     <span class="n">I9</span>
+<div class="highlight"><pre><span></span>// initialize
+001     Z3
+002     Z4 // temp 0
+003     Z5 // temp 1
+004     Z6 // is index 0 a zero?
+005     Z7 // is index 1 a zero?
+006     Z8 // zero
+007     Z9 // one
+008     I9
 
-<span class="o">//</span> <span class="k">increment</span> <span class="k">by</span> <span class="n">amount</span> <span class="k">in</span> <span class="k">index</span> <span class="mi">0</span>
-<span class="mi">009</span>     <span class="n">J0</span><span class="p">,</span><span class="mi">8</span> <span class="c1">--&gt; 014</span>
-<span class="mi">010</span>     <span class="n">I6</span>
-<span class="mi">011</span>     <span class="n">J4</span><span class="p">,</span><span class="mi">6</span> <span class="c1">--&gt; 014</span>
-<span class="mi">012</span>     <span class="n">I4</span>
-<span class="mi">013</span>     <span class="n">I3</span>
-<span class="mi">014</span>     <span class="n">J0</span><span class="p">,</span><span class="mi">4</span> <span class="c1">--&gt; 009</span>
+// increment by amount in index 0
+009     J0,8 --&gt; 014
+010     I6
+011     J4,6 --&gt; 014
+012     I4
+013     I3
+014     J0,4 --&gt; 009
 
-<span class="o">//</span> <span class="k">increment</span> <span class="k">by</span> <span class="n">amount</span> <span class="k">in</span> <span class="k">index</span> <span class="mi">1</span>
-<span class="mi">015</span>     <span class="n">J1</span><span class="p">,</span><span class="mi">8</span> <span class="c1">--&gt; 020</span>
-<span class="mi">016</span>     <span class="n">I7</span>
-<span class="mi">017</span>     <span class="n">J7</span><span class="p">,</span><span class="mi">8</span> <span class="c1">--&gt; 020</span>
-<span class="mi">018</span>     <span class="n">I5</span>
-<span class="mi">019</span>     <span class="n">I3</span>
-<span class="mi">020</span>     <span class="n">J1</span><span class="p">,</span><span class="mi">5</span> <span class="c1">--&gt; 017</span>
+// increment by amount in index 1
+015     J1,8 --&gt; 020
+016     I7
+017     J7,8 --&gt; 020
+018     I5
+019     I3
+020     J1,5 --&gt; 017
 
-<span class="o">//</span> <span class="n">clean</span> <span class="n">up</span>
-<span class="mi">021</span>     <span class="n">Z4</span>
-<span class="mi">022</span>     <span class="n">Z5</span>
-<span class="mi">023</span>     <span class="n">Z6</span>
-<span class="mi">024</span>     <span class="n">Z7</span>
+// clean up
+021     Z4
+022     Z5
+023     Z6
+024     Z7
 </pre></div>
 
 
@@ -696,14 +1024,14 @@ cell 2, which contains a sentinel value, is incremented. The program them checks
 cell 2 is equal to cell 0. If it is not, the program increments cell 1, and repeats.
 If cell 2 is equal to cell 0, the program stops before cell 1 is incremented, leaving it 
 one less than the original value in cell 0.</p>
-<div class="highlight"><pre><span></span><span class="err">001   Z1            // decrement result</span>
-<span class="err">002   Z2            // zero</span>
-<span class="err">003   Z3            // one</span>
-<span class="err">004   I3</span>
-<span class="err">005   J2,3 --&gt; 007  // always false</span>
-<span class="err">006   I1</span>
-<span class="err">007   I2</span>
-<span class="err">008   J2,0 --&gt; 006</span>
+<div class="highlight"><pre><span></span>001   Z1            // decrement result
+002   Z2            // zero
+003   Z3            // one
+004   I3
+005   J2,3 --&gt; 007  // always false
+006   I1
+007   I2
+008   J2,0 --&gt; 006
 </pre></div>
 
 
@@ -730,18 +1058,18 @@ at index 0 and index 1, we can use the following Z-Machine code,
 which continually checks if the number at index 2 is equal to 
 either the number at index 0 or the number at index 1, increments if false, 
 and stops when true (when it reaches the smaller of the two). </p>
-<div class="highlight"><pre><span></span><span class="mi">001</span>     <span class="n">Z2</span> <span class="o">//</span> <span class="n">smaller</span> <span class="k">of</span> <span class="n">the</span> <span class="n">two</span> <span class="n">numbers</span>
-<span class="mi">002</span>     <span class="n">Z3</span> <span class="o">//</span> <span class="n">zero</span>
-<span class="mi">003</span>     <span class="n">Z4</span> <span class="o">//</span> <span class="n">one</span>
-<span class="mi">004</span>     <span class="n">I4</span>
+<div class="highlight"><pre><span></span>001     Z2 // smaller of the two numbers
+002     Z3 // zero
+003     Z4 // one
+004     I4
 
-<span class="mi">005</span>     <span class="n">J0</span><span class="p">,</span><span class="mi">2</span> <span class="c1">--&gt; 007</span>
-<span class="mi">006</span>     <span class="n">J3</span><span class="p">,</span><span class="mi">4</span> <span class="c1">--&gt; 011</span>
-<span class="mi">007</span>     <span class="n">J1</span><span class="p">,</span><span class="mi">2</span> <span class="c1">--&gt; 009</span>
-<span class="mi">008</span>     <span class="n">J3</span><span class="p">,</span><span class="mi">4</span> <span class="c1">--&gt; 011</span>
-<span class="mi">009</span>     <span class="n">I2</span>
-<span class="mi">010</span>     <span class="n">J3</span><span class="p">,</span><span class="mi">4</span> <span class="c1">--&gt; 005</span>
-<span class="mi">011</span>     <span class="n">Z4</span>
+005     J0,2 --&gt; 007
+006     J3,4 --&gt; 011
+007     J1,2 --&gt; 009
+008     J3,4 --&gt; 011
+009     I2
+010     J3,4 --&gt; 005
+011     Z4
 </pre></div>
 
 
@@ -759,15 +1087,15 @@ was composed entirely of NOR gates. </p>
 <p>In fact, the Apollo Guidance Computer is a fantastic example of a computational device 
 constructed from a set of such simple instructions as the ones available in the Z-Machine.
 A few example operations from the Wikipedia article on the Apollo Guidance Computer:</p>
-<div class="highlight"><pre><span></span><span class="n">AD</span> <span class="p">(</span><span class="k">add</span><span class="p">)</span>
-    <span class="k">Add</span> <span class="n">the</span> <span class="n">contents</span> <span class="k">of</span> <span class="n">memory</span> <span class="k">to</span> <span class="n">register</span> <span class="n">A</span> <span class="k">and</span> <span class="n">store</span> <span class="n">the</span> <span class="k">result</span> <span class="k">in</span> <span class="n">A</span><span class="p">.</span>
+<div class="highlight"><pre><span></span>AD (add)
+    Add the contents of memory to register A and store the result in A.
 
-<span class="k">INDEX</span>
-    <span class="k">Add</span> <span class="n">the</span> <span class="k">data</span> <span class="n">retrieved</span> <span class="k">at</span> <span class="n">the</span> <span class="n">address</span> <span class="n">specified</span> <span class="k">by</span> <span class="n">the</span> <span class="n">instruction</span> 
-    <span class="k">to</span> <span class="n">the</span> <span class="k">next</span> <span class="n">instruction</span><span class="p">.</span> <span class="k">INDEX</span> <span class="n">can</span> <span class="n">be</span> <span class="n">used</span> <span class="k">to</span> <span class="k">add</span> <span class="k">or</span> <span class="n">subtract</span> 
-    <span class="n">an</span> <span class="k">index</span> <span class="n">value</span> <span class="k">to</span> <span class="n">the</span> <span class="n">base</span> <span class="n">address</span> <span class="n">specified</span> <span class="k">by</span> <span class="n">the</span> <span class="n">operand</span> 
-    <span class="k">of</span> <span class="n">the</span> <span class="n">instruction</span> <span class="n">that</span> <span class="n">follows</span> <span class="k">INDEX</span><span class="p">.</span> <span class="n">This</span> <span class="k">method</span> <span class="k">is</span> <span class="n">used</span> 
-    <span class="k">to</span> <span class="n">implement</span> <span class="n">arrays</span> <span class="k">and</span> <span class="k">table</span> <span class="n">look</span><span class="o">-</span><span class="n">ups</span><span class="p">.</span>
+INDEX
+    Add the data retrieved at the address specified by the instruction 
+    to the next instruction. INDEX can be used to add or subtract 
+    an index value to the base address specified by the operand 
+    of the instruction that follows INDEX. This method is used 
+    to implement arrays and table look-ups.
 </pre></div>
 
 
@@ -808,13 +1136,10 @@ You never know when you'll be designing a new computer device.</p>
     mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
     mathjaxscript.type = 'text/javascript';
     mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
         "MathJax.Hub.Config({" +
         "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
         "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
         "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
         "    displayAlign: '"+ align +"'," +
@@ -828,8 +1153,6 @@ You never know when you'll be designing a new computer device.</p>
         "        preview: 'TeX'," +
         "    }, " +
         "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
         "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
         "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
         "    }, " +
@@ -850,8 +1173,6 @@ You never know when you'll be designing a new computer device.</p>
                 "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
             "});" +
         "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
 </script></div>
@@ -875,325 +1196,6 @@ You never know when you'll be designing a new computer device.</p>
                     <a href="https://charlesreid1.github.io/tag/apollo.html">apollo</a>
                     &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/assembly.html">assembly</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                AWSome Day Seattle Notes: Part 2: Networking, Security, and Miscellany
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-04-12T10:00:00-07:00" pubdate>Wednesday 04/12/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/charlesreid1.html">Charlesreid1</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/awsome-day-seattle-notes-part-2-networking-security-and-miscellany.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>These notes are also available on git.charlesreid1.com 
-<a href="https://git.charlesreid1.com/charlesreid1/aws/src/branch/master/awsome-day-sea-2018/Part2.md">here</a>
-or in
-<a href="https://git.charlesreid1.com/charlesreid1/aws">https://git.charlesreid1.com/charlesreid1/aws</a>.</p>
-<h1 id="awsome-day-notes-part-2-networking-security-and-miscellany">AWSome Day Notes: Part 2: Networking, Security, and Miscellany</h1>
-<p>Following are some notes from Amazon's AWSome Day (Tuesday, February 27, 2018).</p>
-<h2 id="nomenclature">Nomenclature</h2>
-<p><strong>Elastic:</strong> You'll see the word "elastic" on a lot of Amazon's services. The "elastic" concept refers to a service that is able to handle huge increases in traffic (Pokemon Go - number of users grew orders of magnitude faster/larger than what they designed for).</p>
-<p><strong>Virtual Private Cloud (VPC):</strong> The AWS equivalent of a virtual private network (VPN). A VPC is a virtual network that allows a given set of nodes in the same region and zone to create a virtual network to communicate privately.</p>
-<h2 id="services">Services</h2>
-<p>This document will give a brief summary of some of the popular cloud services. The model for most of these technologies is, the Apache Software Foundation will release an open-source big data project (can be installed/run by anyone). But since most people are using cloud providers anyway, the cloud providers offer their own ready-to-go implementation of these services. These run stable versions of the Apache software, wrapped by the cloud provider's API. This is a win-win because you don't have to fiddle with wrangling servers, and they can use their resources more wisely.</p>
-<p>As an example, Apache Kafka is software for handling message streams. (Like a giant digital mail room - some services broadcast/publish messages, some services receive/subscribe to messages.) You can install Kafka locally or on a cluster, or rent cloud nodes and install it yourself. Or, you can use Kinesis on AWS, or PubSub on Google Cloud Platform (GCP), both of which are elastic (completely transparent to you) and charge for data throughput instead of compute time. Code written for Kafka can be uploaded and used without modification.</p>
-<p>A few other important services, listing the Apache, AWS, and GCP equivalents:</p>
-<table>
-<thead>
-<tr>
-<th>Apache</th>
-<th align="left">AWS</th>
-<th>GCP</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Hadoop</td>
-<td align="left">Kinesis Analytics</td>
-<td>Dataproc</td>
-<td>Running data-intensive parallel jobs</td>
-</tr>
-<tr>
-<td>Spark</td>
-<td align="left">Kinesis Analytics</td>
-<td>Dataproc</td>
-<td>Running data-intensive parallel jobs</td>
-</tr>
-<tr>
-<td>HDFS</td>
-<td align="left">S3</td>
-<td>GC Storage</td>
-<td>Object-based file storage</td>
-</tr>
-<tr>
-<td>Beam</td>
-<td align="left">Kinesis Streams</td>
-<td>Dataflow</td>
-<td>Sream/batch data processing pipelines</td>
-</tr>
-<tr>
-<td>Impala</td>
-<td align="left">Redshift/Athena</td>
-<td>BigQuery</td>
-<td>Handles SQL queries on massive (&gt;1 PB) data sets</td>
-</tr>
-<tr>
-<td>Kafka</td>
-<td align="left">Kinesis</td>
-<td>PubSub</td>
-<td>Message streaming</td>
-</tr>
-</tbody>
-</table>
-<p>There are many other cloud services, some without a corresponding Apache project (e.g., Google's Machine Learning APIs or Amazon's text-to-speech API) but these five are common in big data ecosystems.</p>
-<h2 id="networking">Networking</h2>
-<p>Cloud networking is like the condiment bar of cloud providers - customers don't pay for it, but they can help themselves. </p>
-<p>Why set up a VPC? </p>
-<ul>
-<li>Scaling - having the ability to connect nodes via network means you can scale up client-server services (e.g., databases/web servers)</li>
-<li>Security - VPC traffic is encrypted and not visible to outsiders, even when it occurs over public channels. Services can be set up to listen only for traffic from the VPC. You can also connect from an outside box (e.g., your laptop) to the VPC using a VPN client.</li>
-<li>Learning - you have to deal with some nitty gritty details, but learning how to set up virtual networks gives you a real education in network security and in how the internet works. </li>
-</ul>
-<p>You can still accomplish a lot even with simple networking patterns.</p>
-<h3 id="making-a-vpc-plan">Making a VPC: Plan</h3>
-<p>To create a VPC, you first define the entire VPC network, then define a subnet on the network. The subnet must have an internet gateway, a routing table, and DHCP/DNS added to it so that nodes on the subnet can access the outside internet and find each other.</p>
-<p>Here is a visual depiction of the architecture:</p>
-<div class="highlight"><pre><span></span><span class="err">         +--------------------------------------------------------------------------+</span>
-<span class="err">         | Whole Internet                                                           |</span>
-<span class="err">         |                                                                          |</span>
-<span class="err">         |                                                                          |</span>
-<span class="err">         |  +--------------------------------------------------------------------+  |</span>
-<span class="err">         |  |  Amazon                                                            |  |</span>
-<span class="err">         |  |                                                                    |  |</span>
-<span class="err">         |  |                                                                    |  |</span>
-<span class="err">         |  |                                                                    |  |</span>
-<span class="err">         |  |   +---------------------------------------------------+            |  |</span>
-<span class="err">         |  |   |   Virtual Private Cloud: WAN                      |            |  |</span>
-<span class="err">         |  |   |                                             +-----+-----+      |  |</span>
-<span class="err">         |  |   |   Network IP Block: 10.117.0.0/16           | Internet  |      |  |</span>
-<span class="err">         |  |   |                     10.117.*.*              | Gateway   |      |  |</span>
-<span class="err">         |  |   |                                             +-----+-----+      |  |</span>
-<span class="err">         |  |   |    +----------------------------------+           |            |  |</span>
-<span class="err">         |  |   |    |  VPC Subnet: LAN                 |           |            |  |</span>
-<span class="err">         |  |   |    |                                  |     +-----+-----+      |  |</span>
-<span class="err">         |  |   |    |  Subnet IP Block: 10.117.0.0/24  |     |  Routing  |      |  |</span>
-<span class="err">         |  |   |    |                   10.117.0.*     |     |  Table    |      |  |</span>
-<span class="err">         |  |   |    |                                  |     +-----+-----+      |  |</span>
-<span class="err">         |  |   |    |                                  |           |            |  |</span>
-<span class="err">         |  |   |    +----------------------------------+           |            |  |</span>
-<span class="err">         |  |   |                                             +-----+-----+      |  |</span>
-<span class="err">         |  |   |                                             |   DHCP    |      |  |</span>
-<span class="err">         |  |   |                                             +-----+-----+      |  |</span>
-<span class="err">         |  |   |                                                   |            |  |</span>
-<span class="err">         |  |   +---------------------------------------------------+            |  |</span>
-<span class="err">         |  |                                                                    |  |</span>
-<span class="err">         |  +--------------------------------------------------------------------+  |</span>
-<span class="err">         |                                                                          |</span>
-<span class="err">         +--------------------------------------------------------------------------+</span>
-</pre></div>
-
-
-<h3 id="making-a-vpc-network-and-subnet">Making a VPC: Network and Subnet</h3>
-<p>To sepcify the network and subnet IP ranges, you use CIDR notation, which is an IP address
-with zeroes in several blocks, and a suffix indicating which blocks are available for this 
-network to assign. (For reference, <code>A.B.C.D/8</code> means "the last 3 blocks" or <code>B.C.D</code>;  <code>A.B.C.D/16</code> means "the last 2 blocks" or <code>C.D</code>; and <code>A.B.C.D/24</code> means "the last block" or <code>.D</code>).</p>
-<p>The network IP address can be specified as:</p>
-<div class="highlight"><pre><span></span><span class="err">10.X.0.0/16</span>
-</pre></div>
-
-
-<p>where X is any number between 0 and 254 (when you include the reserved 255 value, that totals 256, since IP addresses are just 32 bit strings, 4 blocks of 8 bits each - <code>2^8 = 256</code>). The subnet can be specified with the CIDR IP range:</p>
-<div class="highlight"><pre><span></span><span class="err">10.X.Y.0/24</span>
-</pre></div>
-
-
-<p>where X and Y are integers between 0 and 254. This means any node joining this subnet will have an IP address of the form <code>10.X.Y.*</code>. Two IP addresses with the same <code>X</code> value are on the same VPC network; two IP addresses with the same <code>Y</code> value are on the same subnet.</p>
-<p>In the example above, X = 117, and we have the VPC defined by:</p>
-<div class="highlight"><pre><span></span><span class="err">10.117.0.0/16</span>
-</pre></div>
-
-
-<p>and the subnet defined by:</p>
-<div class="highlight"><pre><span></span><span class="err">10.117.0.0/24</span>
-</pre></div>
-
-
-<h3 id="making-a-vpc-the-essentials">Making a VPC: The Essentials</h3>
-<p>Once you've added the VPC and the subnet, you'll also need to add three essential services to the VPC network:</p>
-<ul>
-<li>Internet gateway - this is something you create from the VPC section of the AWS console. It's like your home wifi router that's connected to the internet. actually, it <em>is</em> the VPC network router, and it <em>is</em> connected to the internet.</li>
-<li>Routing table - this tells computers on the network how to find each other and how to find the gateway.</li>
-<li>DHCP - domain host control protocol, this is the service that is used to hand out IP addresses</li>
-<li>(Bundled with DHCP) DNS - domain name service, this is used to turn web URLs into IP addresses</li>
-</ul>
-<p>Now you should be good to go. (Scratch that - make a security group first.) </p>
-<h3 id="making-a-vpc-security-group">Making a VPC: Security Group</h3>
-<p>One last step, after you've constructed the network, is to create a security group to control outside access to the VPC. This is an AWS-level firewall that will only allow traffic on ports you specify. Here we specify a single security group for every node on the network, and the security policy opens the following ports from and to computers in the same VPC:</p>
-<ul>
-<li>19999 - netdata</li>
-<li>9090 - prometheus</li>
-<li>3000 - grafana</li>
-<li>27017 - mongodb</li>
-<li>8080 - mongoexpress</li>
-</ul>
-<h3 id="adding-nodes-to-the-vpc">Adding Nodes to the VPC</h3>
-<p>Test out your network by creating a t2.micro node and specifying the subnet you created as the network the node should connect to. Check to ensure you can access the internet.</p>
-<p>A good schema to use is:</p>
-<div class="highlight"><pre><span></span><span class="err">10.X.0.1      gateway</span>
-<span class="err">10.X.0.100    node0</span>
-<span class="err">10.X.0.101    node1</span>
-<span class="err">10.X.0.102    node2</span>
-<span class="err">...</span>
-</pre></div>
-
-
-<h2 id="scaling-your-process">Scaling Your Process</h2>
-<blockquote>
-<p>If you're SSHing into a machine, your automation is broken.
-- Alex the AWS trainer</p>
-</blockquote>
-<p>There are some tricks to getting your process to scale, but the essential part is figuring out how to remove SSH from the process. Cloud OS images (e.g. Ubuntu) have cloud-init, which runs an init script on boot. <a href="https://stackoverflow.com/a/10128171">More info in this Stack Overflow post</a>. This must be a bash script and size is limited to 16 KB. If it takes &gt; 10 minutes, AWS will treat it as hanging and kill the node, so keep it (relatively) simple.</p>
-<p>Example of what you can do:</p>
-<ul>
-<li>Check out a git repo with initailization scripts</li>
-<li>Install a hard-coded copy of your SSH <em>public</em> (not private) key, so you can get passwordless access to the node later</li>
-<li>Spawn a server or process in the background</li>
-<li>Start a server or process in a screen so that later you can SSH into the machine and attach to the screen to monitor the progress of the job or the service</li>
-</ul>
-<p>And so on.</p>
-<h2 id="ssh-and-identity-management">SSH and Identity Management</h2>
-<p>Identity access management (IAM) and access controls are the most confusing part of any cloud platform - don't feel frustrated if you don't pick it up easily. </p>
-<p>IAM is a way for you to provide limited, specified access to resources that you own/have created, without sharing your credentials.</p>
-<p>IAM is useful for you to use yourself (e.g., if you are using Amazon Kinesis and you want it to access an Amazon Redshift database, you can create an IAM for your Amazon Kinesis script that gives it permission to access data in a particular Amazon Reshift database, and run your Kinesis script under that identity). </p>
-<p>IAM is also useful for sharing resources with other AWS users. You can create a VPC and create an IAM group that allows people to manage the network, and add any network administrators to the group. This gives them full control over the network. You can also create an IAM group that gives members the ability to see, but not modify, the network (e.g., billing manager).</p>
-<p><a href="https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_IAM.html">More info on IAM</a></p>
-<h2 id="tricks-with-disks">Tricks with Disks</h2>
-<p>AMI (Amazon Machine Images) provide operating system images that you can use to initialize a new node. But you can also create your own AMIs. Use the EC2 console to create an AMI (image) from any of your running nodes; wait for the snapshot to complete (may take a few minutes); and now you can spawn a new node from the exact state of the existing node.</p>
-<p>This is useful for a couple of tasks:</p>
-<ul>
-<li>If you're doing a parameter study of an analysis technique and need to run a process in parallel on the same data set, you can download the data set and set up your code on a single node, create an image once you're finished, then spawn new nodes using that snapshot</li>
-<li>If you already have a node with a huge data set that took hours to download and process, and you realize your node needs another 32 GB of RAM, or a few extra CPUs, you won't be able to resize it on the fly. But you can create an AMI from the running node, shut it down, and create a new node from the image.</li>
-<li>If you created a node in region <code>us-west-1a</code> and another node in region <code>us-east-1c</code> and you want to connect them together on a VPC, you won't be able to create a VPC that spans regions. But you can create an AMI from one of the running nodes, shut it down, and spawn a new node in the correct region.</li>
-<li>If you have a particularly large data set, a complicated workflow setup, or a custom operating system, you can create a public AMI and share it with others. </li>
-<li>You can also <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharingamis-explicit.html">privately share AMIs</a></li>
-</ul>
-<h2 id="aws-cli-and-boto3">AWS CLI and Boto3</h2>
-<h3 id="aws-from-the-command-line">AWS from the Command Line</h3>
-<p>If you've clicked the AWS web interface to death and are looking for a better way of interacting with AWS, you can use <code>aws-cli</code>, a command line interface to AWS. This is extremely convenient for scripting common tasks. </p>
-<p><a href="https://aws.amazon.com/cli/">aws-cli</a></p>
-<p>This is a really powerful way of interacting with S3 buckets, and makes copying files to/from S3 buckets as easy as copying files in local directories.</p>
-<h3 id="boto3">Boto3</h3>
-<p>The CLI is much more powerful than the web interface, but is still missing some of the options available through the web. For the complicated stuff, use boto3, the Python API for AWS services.</p>
-<p><a href="https://github.com/boto/boto3">boto3 on github</a></p>
-<p><a href="https://aws.amazon.com/sdk-for-python/">boto3 documentation</a></p>
-<p>The basic formula for boto scripts is, you create Python objects representing different consoles or resources (e.g., a VPC object or an EC2 object), and you call functions to perform actions on those resources or in those consoles. These functions can take complicated nested dictionaries as parameters and allow you to specify every option available in AWS.</p>
-<h3 id="to-infinity-and-beyond">To Infinity... And Beyond!</h3>
-<p>Other libraries like <a href="https://www.terraform.io/intro/">terraform</a> build on boto3 and simplify the routine tasks of juggling information and configuration details, providing a kubernetes-like dashboard to run and manage an AWS cluster.</p>
-<h2 id="instance-metadata">Instance Metadata</h2>
-<p>One last topic - how to get access to information about your EC2 node, from your EC2 node.</p>
-<p>There are some special IP addresses - any IP address starting with 10 is reserved for private networks, as are networks starting with 192.168, and 127.0.0.1 is the IP address that points to yourself.</p>
-<p>The IP address 169.254 is another reserved IP block, and is normally used for crossover connections (direct ethernet-to-ethernet connections). Given its uselessness in the cloud, AWS repurposed that IP address to store instance metadata.</p>
-<p>This IP address exposes a restful API that you can call with curl. Information is organized hierarchically. For example:</p>
-<div class="highlight"><pre><span></span>$ curl http://169.254.169.254/latest/meta-data/
-
-ami-id
-ami-launch-index
-ami-manifest-path
-block-device-mapping/
-hostname
-iam/
-instance-action
-instance-id
-instance-type
-local-hostname
-local-ipv4
-mac
-metrics/
-network/
-placement/
-profile
-public-hostname
-public-ipv4
-public-keys/
-reservation-id
-security-groups
-services/
-</pre></div>
-
-
-<p>User data is also available:</p>
-<div class="highlight"><pre><span></span><span class="c">http://169.254.169.254/latest/user-data</span>
-</pre></div>
-
-
-<p>as are the IP addresses of network interfaces. The network interface can be specified if there are more than one. To get the private VPC IP, request the <code>local-ipv4</code> address:</p>
-<div class="highlight"><pre><span></span><span class="c">http://169.254.169.254/local-ipv4</span>
-</pre></div>
-
-
-<p>and to get the public IP address, use <code>public-ipv4</code>:</p>
-<div class="highlight"><pre><span></span><span class="c">http://169.254.169.254/public-ipv4</span>
-</pre></div>
-
-
-<p>by assigning these values to environment variables, you can write and run a single script across multiple machines, and control the execution behavior across those machines.</p>
-<p><a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html#instancedata-user-data-retrieval">Link to more info on instance data</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/aws.html">aws</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/cloud.html">cloud</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/vpc.html">vpc</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/containers.html">containers</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/data-engineering.html">data engineering</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1232,6 +1234,19 @@ services/
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>March 2020</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/using-mock-api-servers.html">Using Mock API Servers</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

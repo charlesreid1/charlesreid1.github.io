@@ -102,6 +102,380 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Computing Square Roots: Part 1: Using Newton's Method
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-07-14T18:00:00-07:00" pubdate>Friday 07/14/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/computing-square-roots-part-1-using-newtons-method.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li>
+<p><a href="#newton-roots">Newton's Method for Finding Roots of Equations</a></p>
+</li>
+<li>
+<p><a href="#newton-square-roots">Newton's Method for Finding Square Roots</a></p>
+</li>
+<li>
+<p><a href="#newton-program">Newton's Method for Finding Square Roots: Program</a></p>
+</li>
+<li>
+<p><a href="#newton-accuracy">Accuracy</a></p>
+</li>
+<li>
+<p><a href="#newton-speed">Speed</a></p>
+</li>
+<li>
+<p><a href="#newton-next">Next Steps</a></p>
+</li>
+<li>
+<p><a href="#newton-refs">References</a></p>
+</li>
+</ul>
+<p><a name="newton-roots"></a></p>
+<h2 id="newtons-method-for-finding-roots-of-equations">Newton's Method for Finding Roots of Equations</h2>
+<p>Suppose we have a function <span class="math">\(f(x)\)</span> and we want to 
+compute values of <span class="math">\(x\)</span> for which <span class="math">\(f(x)=0\)</span>. These values 
+of <span class="math">\(x\)</span> are called the <strong>roots</strong> of <span class="math">\(f(x)\)</span>.</p>
+<p>We can compute the roots using Newton's Method,
+which utilizes the derivative of the function
+to iteratively compute the roots of the function.</p>
+<p>Newton's method begins with an initial guess.
+It evaluates the derivative of the fnction at the 
+initial guess, which gives the slope of the tangent line,
+and computes the root of the tangent line as the next
+approximation of the root of the function.</p>
+<p>This is based on the point-slope formula,</p>
+<div class="math">$$
+y - y_0 = m(x - x_0) 
+$$</div>
+<p>Now the left side becomes </p>
+<div class="math">$$
+f(x) - f(x_0) = f'(x_0)(x - x_0)
+$$</div>
+<p>and at the root, we know <span class="math">\(f(x)=0\)</span>, so rearranging this equation
+into an expression for the root <span class="math">\(x\)</span> gives: </p>
+<div class="math">$$
+x = x_0 - \dfrac{f(x_0)}{f'(x_0)}
+$$</div>
+<p>Now, this is the equation for the next approximation for the root.
+To turn this into an iterative procedure, we write this as</p>
+<div class="math">$$
+x_{i+1} = x_{i} - \dfrac{f(x_i)}{f'(x_i)}
+$$</div>
+<p>Newton's Method then allows us to evaluate the 
+above expression as many times as we would like
+to achive the desired accuracy. </p>
+<p>Two caveats with Newton's Method: </p>
+<ul>
+<li>The function must be relatively well-behaved; 
+    Newton's Method does not converge for functions with
+    large, high-order derivatives.</li>
+<li>The convergence of the method depends on the accuracy 
+    of the initial guess. If you can make a good guess, do it!</li>
+</ul>
+<p><a name="newton-square-roots"></a></p>
+<h2 id="newtons-method-for-finding-square-roots">Newton's Method for Finding Square Roots</h2>
+<p>Note that we can use the procedure and equation from above
+to compute the numerical value of a given function to an arbitrary
+degree of accuracy, so long as we have the derivative (and a program 
+that can keep track of arbitrary digits).</p>
+<p>Suppose we want to use Newton's Method to compute <span class="math">\(\sqrt{2}\)</span>.
+Then we can solve for the roots of the following function:</p>
+<div class="math">$$
+f(x) = x^2 - a
+$$</div>
+<p>for <span class="math">\(a = 2\)</span>.</p>
+<p>Note that the derivative of this function is computed using the power rule,
+which is trivial to implement, so we can also use this method to compute
+general <span class="math">\(n^{th}\)</span> roots of <span class="math">\(a\)</span>, by solving for roots of:</p>
+<div class="math">$$
+f(x) = x^n - a
+$$</div>
+<p>For a monomial with nonzero power, the derivative is always l<span class="math">\(f'(x) = n x^{n-1}\)</span>, 
+so in the square root case we have <span class="math">\(f'(x) = 2x\)</span>. Now we plug these two functions
+into the iterative formula for Newton's Method to get:</p>
+<div class="math">$$
+\begin{array}
+a x_{i+1} &amp;=&amp; x_{i} - \dfrac{f(x_n)}{f'(x_n)} \\
+x_{i+1} &amp;=&amp; x_{i} - \dfrac{x_i^2 - a}{2 x_i }
+\end{array}
+$$</div>
+<p><a name="newton-program"></a></p>
+<h2 id="newtons-method-for-finding-square-roots-program">Newton's Method for Finding Square Roots: Program</h2>
+<p>This can be implemented in a programming language to yield an iterative
+method for computing square roots. We can either specify a tolerance (better),
+or a number of iterations. Here is a static method for computing
+a square root using Newton's method. The user specifies the value of <span class="math">\(a\)</span>,
+the number they want to compute the square root of; <span class="math">\(x_0\)</span>, the initial guess;
+and a tolerance, which controls the number of decimal places of accuracy of the 
+final answer.</p>
+<div class="highlight"><pre><span></span>    <span class="cm">/** Compute a square root using Newton&#39;s Method, to a specified tolerance.</span>
+<span class="cm">     *</span>
+<span class="cm">     * @param a Compute the square root of a.</span>
+<span class="cm">     * @param x0 Initial guess.</span>
+<span class="cm">     * @param tol Tolerance (stopping criteria).</span>
+<span class="cm">     */</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">double</span> <span class="nf">nmsqrttol</span><span class="o">(</span><span class="kt">double</span> <span class="n">a</span><span class="o">,</span> <span class="kt">double</span> <span class="n">x0</span><span class="o">,</span> <span class="kt">double</span> <span class="n">tol</span><span class="o">)</span> <span class="o">{</span> 
+        <span class="kt">double</span> <span class="n">xi</span><span class="o">,</span> <span class="n">xip1</span><span class="o">,</span> <span class="n">err</span><span class="o">;</span>
+        <span class="n">xi</span> <span class="o">=</span> <span class="n">xip1</span> <span class="o">=</span> <span class="n">x0</span><span class="o">;</span>
+        <span class="n">err</span> <span class="o">=</span> <span class="n">x0</span><span class="o">;</span>
+        <span class="k">while</span><span class="o">(</span><span class="n">err</span> <span class="o">&gt;</span> <span class="n">tol</span><span class="o">)</span> <span class="o">{</span> 
+            <span class="n">xip1</span> <span class="o">=</span> <span class="n">xi</span> <span class="o">-</span> <span class="o">(</span><span class="n">xi</span><span class="o">*</span><span class="n">xi</span><span class="o">-</span><span class="n">a</span><span class="o">)/(</span><span class="mi">2</span><span class="o">*</span><span class="n">xi</span><span class="o">);</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="n">Math</span><span class="o">.</span><span class="na">abs</span><span class="o">(</span> <span class="n">xip1</span> <span class="o">-</span> <span class="n">xi</span> <span class="o">);</span>
+            <span class="n">xi</span> <span class="o">=</span> <span class="n">xip1</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">xip1</span><span class="o">;</span>
+    <span class="o">}</span>
+</pre></div>
+
+
+<p>(There is no check for infinite loops because our function is a smooth
+polynomial and Newton's Method will always converge.) </p>
+<p>Here is sample output from a program that varies the tolerance and prints
+the corresponding value of the square root that was computed:</p>
+<div class="highlight"><pre><span></span>$ javac SquareRoot.java &amp;&amp; java SquareRoot
+Actual value sqrt(2) = 1.4142135623730951
+Testing Newton&#39;s Method, Specifying Tolerance:
+Tol         sqrt(2)
+0.1         1.4166666666666667
+0.01        1.4142156862745099
+0.001       1.4142135623746899
+0.0001      1.4142135623746899
+1e-05       1.4142135623746899
+1e-06       1.4142135623730951
+1e-07       1.4142135623730951
+1e-08       1.4142135623730951
+</pre></div>
+
+
+<p><a name="newton-accuracy"></a></p>
+<h2 id="accuracy">Accuracy</h2>
+<p>Now that we've coded up Newton's Method, we can determine the number of accurate 
+digits. There are a couple of ways to do this, but I went with a string comparison 
+method. I start with a text file containing thousands of digits of the square root of 2,
+then I compute the square root of 2 using Newton's Method. The longest common substring
+gives me the number of accurate digits, plus "1.", so if I subtract 2 I get the 
+total number of accurate digits after the decimal place. </p>
+<div class="highlight"><pre><span></span>javac SquareRoot.java &amp;&amp; java SquareRoot
+Tolerance = 0.1     Number of accurate digits = 2
+Tolerance = 0.01        Number of accurate digits = 5
+Tolerance = 0.001       Number of accurate digits = 11
+Tolerance = 0.0001      Number of accurate digits = 11
+Tolerance = 1e-05       Number of accurate digits = 11
+Tolerance = 1e-06       Number of accurate digits = 15
+Tolerance = 1e-07       Number of accurate digits = 15
+Tolerance = 1e-08       Number of accurate digits = 15
+Tolerance = 1e-09       Number of accurate digits = 15
+Tolerance = 1e-10       Number of accurate digits = 15
+Tolerance = 1e-11       Number of accurate digits = 15
+Tolerance = 1e-12       Number of accurate digits = 15
+Tolerance = 1e-13       Number of accurate digits = 15
+Tolerance = 1e-14       Number of accurate digits = 15
+</pre></div>
+
+
+<p><a name="newton-speed"></a></p>
+<h2 id="speed">Speed</h2>
+<p>It is also important to measure performance, in the form of speed. How fast is 
+Newton's Method relative to the built-in square root function in the math library?</p>
+<p>Turns out the performance of Newton's Method is much worse than the built-in math library's 
+square root function. The Newton's Method defined above is around 100 times slower. 
+Here are the results of a simple timing test, in which we compute the square root
+10 million times, timing how long it takes, and divide by the number of operations
+to yield the time per operation (or rather, as it is slightly easier to grasp, 
+the time per 1k operations);:</p>
+<div class="highlight"><pre><span></span>    <span class="c">/** Time Newton&#39;s Method.</span>
+<span class="c">     *</span>
+<span class="c">     * How long does it take to achieve 10 digits of accuracy? */</span>
+    <span class="nt">public</span> <span class="nt">static</span> <span class="nt">void</span> <span class="nt">testTime</span><span class="o">()</span> <span class="p">{</span> 
+
+        <span class="err">int</span> <span class="err">Nops</span><span class="p">;</span>
+        <span class="err">double</span> <span class="err">a</span><span class="p">;</span>
+        <span class="err">double</span> <span class="err">initialGuess</span><span class="p">;</span>
+        <span class="err">double</span> <span class="err">tol</span><span class="p">;</span>
+        <span class="err">double</span> <span class="err">time</span><span class="p">;</span>
+
+        <span class="err">Tim</span> <span class="err">tim</span><span class="p">;</span>
+
+        <span class="err">Nops</span> <span class="err">=</span> <span class="err">10000000</span><span class="p">;</span>
+        <span class="err">a</span> <span class="err">=</span> <span class="err">2</span><span class="p">;</span>
+        <span class="err">initialGuess</span> <span class="err">=</span> <span class="err">1</span><span class="p">;</span>
+        <span class="err">tol</span> <span class="err">=</span> <span class="err">1E-8</span><span class="p">;</span>
+        <span class="err">tim</span> <span class="err">=</span> <span class="err">new</span> <span class="err">Tim()</span><span class="p">;</span>
+        <span class="err">tim.tic()</span><span class="p">;</span>
+        <span class="err">for(int</span> <span class="err">i=0</span><span class="p">;</span> <span class="err">i&lt;Nops</span><span class="p">;</span> <span class="err">i++)</span> <span class="err">{</span> 
+            <span class="err">nmsqrttol(a,</span> <span class="err">initialGuess,</span> <span class="err">tol)</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="nt">tim</span><span class="p">.</span><span class="nc">toc</span><span class="o">();</span>
+        <span class="nt">time</span> <span class="o">=</span> <span class="nt">1000</span><span class="o">*</span><span class="nt">tim</span><span class="p">.</span><span class="nc">elapsedms</span><span class="o">()/</span><span class="nt">Nops</span><span class="o">;</span>
+        <span class="nt">System</span><span class="p">.</span><span class="nc">out</span><span class="p">.</span><span class="nc">println</span><span class="o">(</span><span class="s2">&quot;Newton&#39;s Method Time (ms) per 1k operations: &quot;</span><span class="o">+</span><span class="nt">time</span><span class="o">);</span>
+
+
+        <span class="nt">Nops</span> <span class="o">=</span> <span class="nt">10000000</span><span class="o">;</span>
+        <span class="nt">a</span> <span class="o">=</span> <span class="nt">2</span><span class="o">;</span>
+        <span class="nt">tim</span> <span class="o">=</span> <span class="nt">new</span> <span class="nt">Tim</span><span class="o">();</span>
+        <span class="nt">tim</span><span class="p">.</span><span class="nc">tic</span><span class="o">();</span>
+        <span class="nt">for</span><span class="o">(</span><span class="nt">int</span> <span class="nt">i</span><span class="o">=</span><span class="nt">0</span><span class="o">;</span> <span class="nt">i</span><span class="o">&lt;</span><span class="nt">Nops</span><span class="o">;</span> <span class="nt">i</span><span class="o">++)</span> <span class="p">{</span> 
+            <span class="err">Math.sqrt(a)</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="nt">tim</span><span class="p">.</span><span class="nc">toc</span><span class="o">();</span>
+        <span class="nt">time</span> <span class="o">=</span> <span class="nt">1000</span><span class="o">*</span><span class="nt">tim</span><span class="p">.</span><span class="nc">elapsedms</span><span class="o">()/</span><span class="nt">Nops</span><span class="o">;</span>
+        <span class="nt">System</span><span class="p">.</span><span class="nc">out</span><span class="p">.</span><span class="nc">println</span><span class="o">(</span><span class="s2">&quot;Math Library Time (ms) per 1k operations: &quot;</span><span class="o">+</span><span class="nt">time</span><span class="o">);</span>
+
+    <span class="err">}</span>
+</pre></div>
+
+
+<p>and the results:</p>
+<div class="highlight"><pre><span></span>javac SquareRoot.java &amp;&amp; java SquareRoot
+Newton&#39;s Method Time (ms) per 1k operations: 0.016
+Math Library Time (ms) per 1k operations: 3.0E-4
+</pre></div>
+
+
+<p>While the accuracy of Newton's Method for square roots may not be that great,
+it ain't bad, for 9 lines of code. </p>
+<p><a name="newton-next"></a></p>
+<h2 id="next-steps">Next Steps</h2>
+<p>In a blog post to follow, we'll compare the speed and accuracy of square root computations using Newton's Method
+to an alternative approach involving the continued fraction representation of square roots. This particularly interesting
+technique can also be used to solve the Pell equation, a quadratic Diophantine equation of the form:</p>
+<div class="math">$$
+x^2 - D y^2 = 1
+$$</div>
+<p>But more on that in a future post...</p>
+<p><a name="newton-refs"></a></p>
+<h2 id="references">References</h2>
+<ol>
+<li>
+<p>Press, William et al. "Numerical Recipes in C." Cambridge Unviersity Press (2007).</p>
+</li>
+<li>
+<p>"SquareRoot.java". Charles Reid. git.charlesreid1.com.
+&lt;<a href="https://git.charlesreid1.com/cs/java/src/master/numerics/newtons-method">https://git.charlesreid1.com/cs/java/src/master/numerics/newtons-method</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/number-theory.html">number theory</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/square-roots.html">square roots</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/numerical-methods.html">numerical methods</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/newtons-method.html">newtons method</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/irrational-numbers.html">irrational numbers</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 CSE 143 Final Project: Hilbert Sort: 3. The Code
             </b></h1>
         
@@ -155,36 +529,36 @@ Hilbert Sort problem.</p>
 <p><a name="hilbert3-pseudocode"></a></p>
 <h1 id="hilbert-sort-pseudocode">Hilbert Sort: Pseudocode</h1>
 <p>From our prior post, here is the psudocode for our Hilbert Sort function:</p>
-<div class="highlight"><pre><span></span><span class="n">define</span> <span class="n">hilbert_sort</span><span class="p">(</span> <span class="n">unsorted</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span> <span class="p">):</span>
-    <span class="k">create</span> <span class="n">southwest</span> <span class="n">queue</span>
-    <span class="k">create</span> <span class="n">northwest</span> <span class="n">queue</span>
-    <span class="k">create</span> <span class="n">northeast</span> <span class="n">queue</span>
-    <span class="k">create</span> <span class="n">southeast</span> <span class="n">queue</span>
-    <span class="k">for</span> <span class="k">each</span> <span class="n">point</span><span class="p">:</span>
-        <span class="k">if</span> <span class="k">in</span> <span class="n">southwest</span><span class="p">:</span>
-            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="n">Y</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="n">X</span>
-            <span class="k">add</span> <span class="k">to</span> <span class="n">southwest</span> <span class="n">queue</span>
-        <span class="k">if</span> <span class="k">in</span> <span class="n">northwest</span><span class="p">:</span>
-            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">Y</span> <span class="o">-</span> <span class="n">S</span>
-            <span class="k">add</span> <span class="k">to</span> <span class="n">northwest</span> <span class="n">queue</span>
-        <span class="k">if</span> <span class="k">in</span> <span class="n">northeast</span><span class="p">:</span>
-            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">X</span> <span class="o">-</span> <span class="n">S</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">Y</span> <span class="o">-</span> <span class="n">S</span>
-            <span class="k">add</span> <span class="k">to</span> <span class="n">northeast</span> <span class="n">queue</span>
-        <span class="k">if</span> <span class="k">in</span> <span class="n">southeast</span><span class="p">:</span>
-            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="n">S</span> <span class="o">-</span> <span class="mi">2</span><span class="n">Y</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">S</span> <span class="o">-</span> <span class="mi">2</span><span class="n">X</span>
-            <span class="k">add</span> <span class="k">to</span> <span class="n">southeast</span> <span class="n">queue</span>
+<div class="highlight"><pre><span></span>define hilbert_sort( unsorted queue, square dimension ):
+    create southwest queue
+    create northwest queue
+    create northeast queue
+    create southeast queue
+    for each point:
+        if in southwest:
+            create new point using X -&gt; Y, Y -&gt; X
+            add to southwest queue
+        if in northwest:
+            create new point using X -&gt; 2X, Y -&gt; 2Y - S
+            add to northwest queue
+        if in northeast:
+            create new point using X -&gt; 2X - S, Y -&gt; 2Y - S
+            add to northeast queue
+        if in southeast:
+            create new point using X -&gt; S - 2Y, Y -&gt; 2S - 2X
+            add to southeast queue
 
-        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">southwest</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
-        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">northwest</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
-        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">northeast</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
-        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">southeast</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
+        hilbertsort(southwest queue, square dimension)
+        hilbertsort(northwest queue, square dimension)
+        hilbertsort(northeast queue, square dimension)
+        hilbertsort(southeast queue, square dimension)
 
-        <span class="k">create</span> <span class="k">new</span> <span class="n">results</span> <span class="n">queue</span>
-        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">southwest</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
-        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">northwest</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
-        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">northeast</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
-        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">southeast</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
-        <span class="k">return</span> <span class="n">results</span> <span class="n">queue</span>
+        create new results queue
+        add points from southwest into results queue
+        add points from northwest into results queue
+        add points from northeast into results queue
+        add points from southeast into results queue
+        return results queue
 </pre></div>
 
 
@@ -205,21 +579,21 @@ from an input file and passing it to the sort method.</p>
 <p>To organize <span class="math">\((X,Y)\)</span> point data, we use a simple class
 using composition. This is defined next to the HilbertSort 
 class.</p>
-<div class="highlight"><pre><span></span><span class="err">/**</span>
-<span class="err"> * An (x,y) Point class. </span>
-<span class="err"> */</span>
-<span class="err">class Point {</span>
-<span class="err">    int x, y; // (x,y) point.</span>
-<span class="err">    String name; // Each (x,y) point has a name in the file. Used for output.</span>
-<span class="err">    /** Constructor. */</span>
-<span class="err">    public Point(int x, int y, String name) { </span>
-<span class="err">        this.x = x; this.y = y; this.name = name;</span>
-<span class="err">    }</span>
-<span class="err">    /** String representation (x,y). */</span>
-<span class="err">    public String toString() { </span>
-<span class="err">        return &quot;(&quot;+this.x+&quot;,&quot;+this.y+&quot;,&quot;+this.name+&quot;)&quot;;</span>
-<span class="err">    }</span>
-<span class="err">}</span>
+<div class="highlight"><pre><span></span><span class="cm">/**</span>
+<span class="cm"> * An (x,y) Point class. </span>
+<span class="cm"> */</span>
+<span class="kr">class</span> <span class="nx">Point</span> <span class="p">{</span>
+    <span class="kr">int</span> <span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">;</span> <span class="c1">// (x,y) point.</span>
+    <span class="nb">String</span> <span class="nx">name</span><span class="p">;</span> <span class="c1">// Each (x,y) point has a name in the file. Used for output.</span>
+    <span class="cm">/** Constructor. */</span>
+    <span class="kr">public</span> <span class="nx">Point</span><span class="p">(</span><span class="kr">int</span> <span class="nx">x</span><span class="p">,</span> <span class="kr">int</span> <span class="nx">y</span><span class="p">,</span> <span class="nb">String</span> <span class="nx">name</span><span class="p">)</span> <span class="p">{</span> 
+        <span class="k">this</span><span class="p">.</span><span class="nx">x</span> <span class="o">=</span> <span class="nx">x</span><span class="p">;</span> <span class="k">this</span><span class="p">.</span><span class="nx">y</span> <span class="o">=</span> <span class="nx">y</span><span class="p">;</span> <span class="k">this</span><span class="p">.</span><span class="nx">name</span> <span class="o">=</span> <span class="nx">name</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="cm">/** String representation (x,y). */</span>
+    <span class="kr">public</span> <span class="nb">String</span> <span class="nx">toString() {</span> 
+        <span class="k">return</span> <span class="s2">&quot;(&quot;</span><span class="o">+</span><span class="k">this</span><span class="p">.</span><span class="nx">x</span><span class="o">+</span><span class="s2">&quot;,&quot;</span><span class="o">+</span><span class="k">this</span><span class="p">.</span><span class="nx">y</span><span class="o">+</span><span class="s2">&quot;,&quot;</span><span class="o">+</span><span class="k">this</span><span class="p">.</span><span class="nx">name</span><span class="o">+</span><span class="s2">&quot;)&quot;</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 
 
@@ -230,95 +604,95 @@ consists of a split step, which partitions an <span class="math">\(S \times S\)<
 square into quadrants and distributes points in the square into their
 corresponding quadrants, and a merge step, which stitches together
 each quadrant in the correct order. </p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** Recursive implementation of a Hilbert sort. */</span>
-    <span class="k">public</span> <span class="k">static</span> <span class="n">Queue</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span> <span class="n">hilbertSort</span><span class="p">(</span><span class="n">Queue</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span> <span class="n">inputP</span><span class="p">,</span> <span class="nb">int</span> <span class="n">S</span><span class="p">)</span> <span class="err">{</span>
-        <span class="o">//</span> <span class="k">Recursive</span> <span class="k">method</span><span class="p">:</span>
-        <span class="o">//</span> <span class="n">Apply</span> <span class="n">the</span> <span class="n">Hilbert</span> <span class="n">geometrical</span> <span class="n">quadrant</span> <span class="n">division</span> 
-        <span class="o">//</span> <span class="k">to</span> <span class="n">sort</span> <span class="n">points</span> <span class="k">by</span> <span class="k">when</span> <span class="n">they</span> <span class="k">are</span> <span class="n">visited</span> <span class="k">by</span> <span class="n">a</span> <span class="n">Hilbert</span> <span class="n">curve</span><span class="p">.</span>
-        <span class="o">//</span>
-        <span class="o">//</span> <span class="n">Base</span> <span class="k">case</span><span class="p">:</span> 
-        <span class="o">//</span> <span class="n">There</span> <span class="k">are</span> <span class="mi">1</span> <span class="k">or</span> <span class="n">fewer</span> <span class="n">points</span> <span class="k">in</span> <span class="k">each</span> <span class="n">quadrant</span><span class="p">.</span>
-        <span class="o">//</span> <span class="n">Keep</span> <span class="n">splitting</span> <span class="k">into</span> <span class="n">quadrants</span> <span class="k">until</span> <span class="n">we</span> <span class="n">reach</span> <span class="n">the</span> <span class="n">base</span> <span class="k">case</span><span class="p">.</span> 
-        <span class="k">if</span><span class="p">(</span><span class="n">inputP</span><span class="p">.</span><span class="k">size</span><span class="p">()</span><span class="o">&lt;</span><span class="mi">1</span><span class="p">)</span> <span class="err">{</span>
-            <span class="k">return</span> <span class="k">new</span> <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span><span class="p">();</span>
-        <span class="err">}</span> <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="n">inputP</span><span class="p">.</span><span class="k">size</span><span class="p">()</span><span class="o">==</span><span class="mi">1</span><span class="p">)</span> <span class="err">{</span>
-            <span class="k">return</span> <span class="n">inputP</span><span class="p">;</span>
-        <span class="err">}</span>
+<div class="highlight"><pre><span></span>    /** Recursive implementation of a Hilbert sort. */
+    public static Queue&lt;Point&gt; hilbertSort(Queue&lt;Point&gt; inputP, int S) {
+        // Recursive method:
+        // Apply the Hilbert geometrical quadrant division 
+        // to sort points by when they are visited by a Hilbert curve.
+        //
+        // Base case: 
+        // There are 1 or fewer points in each quadrant.
+        // Keep splitting into quadrants until we reach the base case. 
+        if(inputP.size()&lt;1) {
+            return new LinkedList&lt;Point&gt;();
+        } else if(inputP.size()==1) {
+            return inputP;
+        }
 
-        <span class="o">//</span> <span class="n">split</span> <span class="k">by</span> <span class="n">quadrant</span>
-        <span class="n">Queue</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span> <span class="n">qSW</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span><span class="p">();</span>
-        <span class="n">Queue</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span> <span class="n">qNW</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span><span class="p">();</span>
-        <span class="n">Queue</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span> <span class="n">qNE</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span><span class="p">();</span>
-        <span class="n">Queue</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span> <span class="n">qSE</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span><span class="p">();</span>
+        // split by quadrant
+        Queue&lt;Point&gt; qSW = new LinkedList&lt;Point&gt;();
+        Queue&lt;Point&gt; qNW = new LinkedList&lt;Point&gt;();
+        Queue&lt;Point&gt; qNE = new LinkedList&lt;Point&gt;();
+        Queue&lt;Point&gt; qSE = new LinkedList&lt;Point&gt;();
 
-        <span class="o">//</span> <span class="n">Sort</span> <span class="n">points</span> <span class="k">by</span> <span class="n">dividing</span> <span class="k">into</span> <span class="n">quadrants</span>
-        <span class="k">for</span><span class="p">(</span><span class="n">Point</span> <span class="n">p</span> <span class="p">:</span> <span class="n">inputP</span><span class="p">)</span> <span class="err">{</span> 
+        // Sort points by dividing into quadrants
+        for(Point p : inputP) { 
 
-            <span class="o">//</span> <span class="k">Prepare</span> <span class="k">for</span> <span class="n">the</span> <span class="n">tricky</span> <span class="n">part</span><span class="p">.</span>
-            <span class="o">//</span>
-            <span class="o">//</span> <span class="n">Rotate</span> <span class="n">the</span> <span class="n">quadrant</span><span class="p">,</span> <span class="k">and</span> <span class="n">points</span> <span class="k">in</span> <span class="n">it</span><span class="p">,</span>
-            <span class="o">//</span> <span class="n">so</span> <span class="n">that</span> <span class="n">everything</span> <span class="k">is</span> <span class="n">now</span> <span class="n">translated</span> <span class="k">to</span> <span class="n">fit</span>
-            <span class="o">//</span> <span class="n">how</span> <span class="n">the</span> <span class="k">template</span> <span class="k">of</span> <span class="n">the</span> <span class="n">Hilbert</span> <span class="n">curve</span> <span class="k">is</span> <span class="n">being</span> <span class="n">drawn</span><span class="p">.</span>
-            <span class="o">//</span> <span class="p">(</span><span class="n">SW</span><span class="o">-&gt;</span><span class="n">NW</span><span class="o">-&gt;</span><span class="n">NE</span><span class="o">-</span><span class="n">SE</span><span class="p">)</span>
+            // Prepare for the tricky part.
+            //
+            // Rotate the quadrant, and points in it,
+            // so that everything is now translated to fit
+            // how the template of the Hilbert curve is being drawn.
+            // (SW-&gt;NW-&gt;NE-SE)
 
-            <span class="nb">boolean</span> <span class="n">inSWquadrant</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">S</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">y</span> <span class="o">&lt;=</span> <span class="n">S</span><span class="p">);</span>
-            <span class="nb">boolean</span> <span class="n">inNWquadrant</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">S</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">y</span> <span class="o">&gt;=</span> <span class="n">S</span><span class="p">);</span>
+            boolean inSWquadrant = (2*p.x &lt;= S) &amp;&amp; (2*p.y &lt;= S);
+            boolean inNWquadrant = (2*p.x &lt;= S) &amp;&amp; (2*p.y &gt;= S);
 
-            <span class="nb">boolean</span> <span class="n">inNEquadrant</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="n">S</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">y</span> <span class="o">&gt;=</span> <span class="n">S</span><span class="p">);</span>
-            <span class="nb">boolean</span> <span class="n">inSEquadrant</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="n">S</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">y</span> <span class="o">&lt;=</span> <span class="n">S</span><span class="p">);</span>
+            boolean inNEquadrant = (2*p.x &gt;= S) &amp;&amp; (2*p.y &gt;= S);
+            boolean inSEquadrant = (2*p.x &gt;= S) &amp;&amp; (2*p.y &lt;= S);
 
-            <span class="o">//</span> <span class="k">Each</span> <span class="n">time</span> <span class="n">we</span> <span class="n">sort</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span> <span class="n">points</span> <span class="k">into</span> <span class="n">quadrants</span><span class="p">,</span>
-            <span class="o">//</span> <span class="n">we</span> <span class="n">also</span> <span class="k">transform</span> <span class="k">each</span> <span class="n">coordinate</span> <span class="n">point</span> 
-            <span class="o">//</span> <span class="k">in</span> <span class="n">such</span> <span class="n">a</span> <span class="n">way</span> <span class="n">that</span> <span class="n">it</span> <span class="n">rescales</span> <span class="k">to</span> <span class="n">an</span> <span class="n">S</span> <span class="n">x</span> <span class="n">S</span> <span class="n">square</span><span class="p">,</span>
-            <span class="o">//</span> <span class="n">but</span> <span class="n">does</span> <span class="k">not</span> <span class="k">modify</span> <span class="n">the</span> <span class="k">order</span> <span class="k">of</span> <span class="n">the</span> <span class="n">points</span><span class="p">.</span> 
-            <span class="o">//</span>
-            <span class="o">//</span> <span class="n">Note</span> <span class="n">that</span> <span class="n">we</span> <span class="n">can</span> <span class="n">keep</span> <span class="n">everything</span> <span class="k">as</span> <span class="n">integers</span> <span class="k">by</span>
-            <span class="o">//</span> <span class="n">continuing</span> <span class="k">to</span> <span class="n">look</span> <span class="k">at</span> <span class="n">an</span> <span class="n">S</span> <span class="n">x</span> <span class="n">S</span> <span class="n">square</span><span class="p">,</span>
-            <span class="o">//</span> <span class="k">and</span> <span class="n">double</span> <span class="n">the</span> <span class="n">x</span> <span class="k">and</span> <span class="n">y</span> <span class="k">values</span> <span class="k">to</span> <span class="n">shift</span> <span class="n">them</span> <span class="n">over</span><span class="o">/</span><span class="n">up</span><span class="p">.</span>
-            <span class="o">//</span>
-            <span class="o">//</span> <span class="n">Two</span> <span class="n">easy</span> <span class="n">cases</span><span class="p">:</span>
-            <span class="k">if</span><span class="p">(</span><span class="n">inNWquadrant</span><span class="p">)</span> <span class="err">{</span>
-                <span class="o">//</span> <span class="n">Northwest</span> <span class="n">quadrant</span><span class="p">:</span> 
-                <span class="o">//</span> <span class="o">-</span> <span class="n">shift</span> <span class="n">y</span> <span class="n">down</span> <span class="k">by</span> <span class="n">S</span><span class="o">/</span><span class="mi">2</span>
-                <span class="o">//</span> <span class="o">-</span> <span class="n">keep</span> <span class="n">x</span> <span class="k">and</span> <span class="n">y</span> <span class="k">in</span> <span class="n">same</span> <span class="k">order</span>
-                <span class="n">qNW</span><span class="p">.</span><span class="k">add</span><span class="p">(</span> <span class="k">new</span> <span class="n">Point</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="o">-</span><span class="n">S</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">name</span><span class="p">)</span> <span class="p">);</span>
+            // Each time we sort (x,y) points into quadrants,
+            // we also transform each coordinate point 
+            // in such a way that it rescales to an S x S square,
+            // but does not modify the order of the points. 
+            //
+            // Note that we can keep everything as integers by
+            // continuing to look at an S x S square,
+            // and double the x and y values to shift them over/up.
+            //
+            // Two easy cases:
+            if(inNWquadrant) {
+                // Northwest quadrant: 
+                // - shift y down by S/2
+                // - keep x and y in same order
+                qNW.add( new Point(2*p.x, 2*p.y-S, p.name) );
 
-            <span class="err">}</span> <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="n">inNEquadrant</span><span class="p">)</span> <span class="err">{</span>
-                <span class="o">//</span> <span class="n">Northeast</span> <span class="n">quadrant</span><span class="p">:</span>
-                <span class="o">//</span> <span class="o">-</span> <span class="n">shift</span> <span class="n">x</span> <span class="k">and</span> <span class="n">y</span> <span class="n">down</span> <span class="k">by</span> <span class="n">S</span><span class="o">/</span><span class="mi">2</span>
-                <span class="o">//</span> <span class="o">-</span> <span class="n">keep</span> <span class="n">x</span> <span class="k">and</span> <span class="n">y</span> <span class="k">in</span> <span class="n">same</span> <span class="k">order</span>
-                <span class="n">qNE</span><span class="p">.</span><span class="k">add</span><span class="p">(</span> <span class="k">new</span> <span class="n">Point</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">x</span> <span class="o">-</span> <span class="n">S</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">y</span> <span class="o">-</span> <span class="n">S</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">name</span><span class="p">)</span> <span class="p">);</span>
+            } else if(inNEquadrant) {
+                // Northeast quadrant:
+                // - shift x and y down by S/2
+                // - keep x and y in same order
+                qNE.add( new Point(2*p.x - S, 2*p.y - S, p.name) );
 
-            <span class="err">}</span> <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="n">inSWquadrant</span><span class="p">)</span> <span class="err">{</span> 
-                <span class="o">//</span> <span class="n">Southwest</span> <span class="n">quadrant</span><span class="p">:</span>
-                <span class="o">//</span> <span class="o">-</span> <span class="n">x</span> <span class="k">and</span> <span class="n">y</span> <span class="n">need</span> <span class="k">to</span> <span class="n">swap</span> <span class="n">places</span> 
-                <span class="o">//</span> <span class="o">-</span> <span class="n">that</span><span class="err">&#39;</span><span class="n">s</span> <span class="n">it</span><span class="p">.</span>
-                <span class="n">qSW</span><span class="p">.</span><span class="k">add</span><span class="p">(</span> <span class="k">new</span> <span class="n">Point</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">name</span><span class="p">)</span> <span class="p">);</span>
+            } else if(inSWquadrant) { 
+                // Southwest quadrant:
+                // - x and y need to swap places 
+                // - that&#39;s it.
+                qSW.add( new Point(2*p.y, 2*p.x, p.name) );
 
-            <span class="err">}</span> <span class="k">else</span> <span class="k">if</span><span class="p">(</span><span class="n">inSEquadrant</span><span class="p">)</span> <span class="err">{</span> 
-                <span class="o">//</span> <span class="n">Southeast</span> <span class="n">quadrant</span><span class="p">:</span>
-                <span class="o">//</span> <span class="o">-</span> <span class="n">trickiest</span> <span class="n">quadrant</span><span class="p">.</span>
-                <span class="o">//</span> <span class="o">-</span> <span class="n">We</span> <span class="n">want</span> <span class="k">to</span> <span class="k">preserve</span> <span class="n">S</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="n">distance</span> <span class="k">from</span> <span class="k">right</span> <span class="n">side</span>
-                <span class="o">//</span> <span class="o">-</span> <span class="n">we</span> <span class="n">want</span> <span class="k">to</span> <span class="n">use</span> <span class="n">it</span> <span class="k">as</span> <span class="n">the</span> <span class="k">new</span> <span class="n">y</span> <span class="n">coordinate</span>
-                <span class="n">qSE</span><span class="p">.</span><span class="k">add</span><span class="p">(</span> <span class="k">new</span> <span class="n">Point</span><span class="p">(</span><span class="n">S</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">p</span><span class="p">.</span><span class="n">y</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="n">S</span> <span class="o">-</span> <span class="n">p</span><span class="p">.</span><span class="n">x</span><span class="p">),</span> <span class="n">p</span><span class="p">.</span><span class="n">name</span><span class="p">)</span> <span class="p">);</span>
+            } else if(inSEquadrant) { 
+                // Southeast quadrant:
+                // - trickiest quadrant.
+                // - We want to preserve S - x, distance from right side
+                // - we want to use it as the new y coordinate
+                qSE.add( new Point(S - 2*p.y, 2*(S - p.x), p.name) );
 
-            <span class="err">}</span>
+            }
 
-        <span class="err">}</span>
-        <span class="o">//</span> <span class="n">Sort</span> <span class="n">til</span> <span class="n">you</span> <span class="n">reach</span> <span class="n">the</span> <span class="n">base</span> <span class="k">case</span><span class="p">.</span>
-        <span class="n">qSW</span> <span class="o">=</span> <span class="n">hilbertSort</span><span class="p">(</span><span class="n">qSW</span><span class="p">,</span> <span class="n">S</span><span class="p">);</span> 
-        <span class="n">qNW</span> <span class="o">=</span> <span class="n">hilbertSort</span><span class="p">(</span><span class="n">qNW</span><span class="p">,</span> <span class="n">S</span><span class="p">);</span> 
-        <span class="n">qNE</span> <span class="o">=</span> <span class="n">hilbertSort</span><span class="p">(</span><span class="n">qNE</span><span class="p">,</span> <span class="n">S</span><span class="p">);</span> 
-        <span class="n">qSE</span> <span class="o">=</span> <span class="n">hilbertSort</span><span class="p">(</span><span class="n">qSE</span><span class="p">,</span> <span class="n">S</span><span class="p">);</span>
+        }
+        // Sort til you reach the base case.
+        qSW = hilbertSort(qSW, S); 
+        qNW = hilbertSort(qNW, S); 
+        qNE = hilbertSort(qNE, S); 
+        qSE = hilbertSort(qSE, S);
 
-        <span class="n">Queue</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span> <span class="k">result</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span><span class="p">();</span>
-        <span class="k">for</span><span class="p">(</span><span class="n">Point</span> <span class="n">q</span> <span class="p">:</span> <span class="n">qSW</span><span class="p">)</span> <span class="k">result</span><span class="p">.</span><span class="k">add</span><span class="p">(</span><span class="n">q</span><span class="p">);</span>
-        <span class="k">for</span><span class="p">(</span><span class="n">Point</span> <span class="n">q</span> <span class="p">:</span> <span class="n">qNW</span><span class="p">)</span> <span class="k">result</span><span class="p">.</span><span class="k">add</span><span class="p">(</span><span class="n">q</span><span class="p">);</span>
-        <span class="k">for</span><span class="p">(</span><span class="n">Point</span> <span class="n">q</span> <span class="p">:</span> <span class="n">qNE</span><span class="p">)</span> <span class="k">result</span><span class="p">.</span><span class="k">add</span><span class="p">(</span><span class="n">q</span><span class="p">);</span> 
-        <span class="k">for</span><span class="p">(</span><span class="n">Point</span> <span class="n">q</span> <span class="p">:</span> <span class="n">qSE</span><span class="p">)</span> <span class="k">result</span><span class="p">.</span><span class="k">add</span><span class="p">(</span><span class="n">q</span><span class="p">);</span>
+        Queue&lt;Point&gt; result = new LinkedList&lt;Point&gt;();
+        for(Point q : qSW) result.add(q);
+        for(Point q : qNW) result.add(q);
+        for(Point q : qNE) result.add(q); 
+        for(Point q : qSE) result.add(q);
 
-        <span class="k">return</span> <span class="k">result</span><span class="p">;</span>
-    <span class="err">}</span>
+        return result;
+    }
 </pre></div>
 
 
@@ -327,27 +701,27 @@ each quadrant in the correct order. </p>
 <p>The last part of the code is the portion that loads the points and their labels 
 from a file, and populates a Queue of Point objects from it.
 This queue of points is then sorted and returned in order.</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** Main driver. */</span>
-    <span class="k">public</span> <span class="k">static</span> <span class="n">void</span> <span class="n">main</span><span class="p">(</span><span class="n">String</span><span class="p">[]</span> <span class="n">args</span><span class="p">)</span> <span class="err">{</span> 
+<div class="highlight"><pre><span></span>    /** Main driver. */
+    public static void main(String[] args) { 
 
-        <span class="n">Scanner</span> <span class="k">stdin</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Scanner</span><span class="p">(</span><span class="k">new</span> <span class="n">BufferedReader</span><span class="p">(</span><span class="k">new</span> <span class="n">InputStreamReader</span><span class="p">(</span><span class="k">System</span><span class="p">.</span><span class="k">in</span><span class="p">)));</span>
+        Scanner stdin = new Scanner(new BufferedReader(new InputStreamReader(System.in)));
 
-        <span class="nb">int</span> <span class="n">n</span> <span class="o">=</span> <span class="k">stdin</span><span class="p">.</span><span class="n">nextInt</span><span class="p">();</span>
-        <span class="nb">int</span> <span class="n">S</span> <span class="o">=</span> <span class="k">stdin</span><span class="p">.</span><span class="n">nextInt</span><span class="p">();</span>
+        int n = stdin.nextInt();
+        int S = stdin.nextInt();
 
-        <span class="o">//</span> <span class="n">n</span> <span class="n">lines</span> <span class="k">of</span> <span class="mi">3</span> <span class="n">tokens</span> <span class="k">each</span>
-        <span class="n">Queue</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span> <span class="n">inputPoints</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedList</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span><span class="p">();</span>
-        <span class="k">for</span><span class="p">(</span><span class="nb">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="err">{</span> 
-            <span class="nb">int</span> <span class="n">x0</span> <span class="o">=</span> <span class="k">stdin</span><span class="p">.</span><span class="n">nextInt</span><span class="p">();</span>
-            <span class="nb">int</span> <span class="n">y0</span> <span class="o">=</span> <span class="k">stdin</span><span class="p">.</span><span class="n">nextInt</span><span class="p">();</span>
-            <span class="n">String</span> <span class="n">label</span> <span class="o">=</span> <span class="k">stdin</span><span class="p">.</span><span class="k">next</span><span class="p">();</span>
-            <span class="n">inputPoints</span><span class="p">.</span><span class="k">add</span><span class="p">(</span><span class="k">new</span> <span class="n">Point</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span><span class="n">y0</span><span class="p">,</span><span class="n">label</span><span class="p">));</span>
-        <span class="err">}</span>
-        <span class="n">Queue</span><span class="o">&lt;</span><span class="n">Point</span><span class="o">&gt;</span> <span class="n">sortedPoints</span> <span class="o">=</span> <span class="n">hilbertSort</span><span class="p">(</span><span class="n">inputPoints</span><span class="p">,</span> <span class="n">S</span><span class="p">);</span>
-        <span class="k">for</span><span class="p">(</span><span class="n">Point</span> <span class="n">p</span> <span class="p">:</span> <span class="n">sortedPoints</span><span class="p">)</span> <span class="err">{</span> 
-            <span class="k">System</span><span class="p">.</span><span class="k">out</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">name</span><span class="p">);</span>
-        <span class="err">}</span>
-    <span class="err">}</span>
+        // n lines of 3 tokens each
+        Queue&lt;Point&gt; inputPoints = new LinkedList&lt;Point&gt;();
+        for(int i=0; i&lt;n; i++) { 
+            int x0 = stdin.nextInt();
+            int y0 = stdin.nextInt();
+            String label = stdin.next();
+            inputPoints.add(new Point(x0,y0,label));
+        }
+        Queue&lt;Point&gt; sortedPoints = hilbertSort(inputPoints, S);
+        for(Point p : sortedPoints) { 
+            System.out.println(p.name);
+        }
+    }
 </pre></div>
 
 
@@ -378,13 +752,10 @@ This queue of points is then sorted and returned in order.</p>
     mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
     mathjaxscript.type = 'text/javascript';
     mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
         "MathJax.Hub.Config({" +
         "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
         "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
         "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
         "    displayAlign: '"+ align +"'," +
@@ -398,8 +769,6 @@ This queue of points is then sorted and returned in order.</p>
         "        preview: 'TeX'," +
         "    }, " +
         "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
         "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
         "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
         "    }, " +
@@ -420,8 +789,6 @@ This queue of points is then sorted and returned in order.</p>
                 "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
             "});" +
         "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
 </script></div>
@@ -686,8 +1053,8 @@ curve visits each point has not been affected.</p>
 <p><a name="hilbert2-procedure"></a></p>
 <h1 id="hilbert-sort-procedure">Hilbert Sort Procedure</h1>
 <p>The implementation strategy is, obviously, recursive. What we want to do at each level is:
-* Start with a square and points contained in the square. 
-* Cut the square under consideration into four quadrants.
+<em> Start with a square and points contained in the square. 
+</em> Cut the square under consideration into four quadrants.
 * Apply a transformation to each square so that it is re-oriented in a manner that matches our original Hilbert curve.</p>
 <p>Once each of those squares goes through all of its respective recursive calls, 
 it will return a sorted list of points. Then we will know what to do - 
@@ -737,47 +1104,47 @@ we can bin together all the points in a given quadrant, and consider the order
 in which those points go with an additional level of finer granularity. </p>
 <p><a name="hilbert2-pseudocode"></a></p>
 <h1 id="pseudocode">Pseudocode</h1>
-<div class="highlight"><pre><span></span><span class="k">set</span> <span class="n">square</span> <span class="n">dimension</span> <span class="n">S</span>
+<div class="highlight"><pre><span></span>set square dimension S
 
-<span class="k">create</span> <span class="n">unsorted</span> <span class="n">queue</span>
-<span class="k">load</span> <span class="n">points</span> <span class="k">into</span> <span class="n">unsorted</span> <span class="n">queue</span>
+create unsorted queue
+load points into unsorted queue
 
-<span class="k">create</span> <span class="n">sorted</span> <span class="n">queue</span>
-<span class="n">sorted</span> <span class="n">queue</span> <span class="o">=</span> <span class="n">hilbert_sort</span><span class="p">(</span> <span class="n">unsorted</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span> <span class="p">)</span>
+create sorted queue
+sorted queue = hilbert_sort( unsorted queue, square dimension )
 </pre></div>
 
 
 <p>Now here is the Hilbert sort function:</p>
-<div class="highlight"><pre><span></span><span class="n">define</span> <span class="n">hilbert_sort</span><span class="p">(</span> <span class="n">unsorted</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span> <span class="p">):</span>
-    <span class="k">create</span> <span class="n">southwest</span> <span class="n">queue</span>
-    <span class="k">create</span> <span class="n">northwest</span> <span class="n">queue</span>
-    <span class="k">create</span> <span class="n">northeast</span> <span class="n">queue</span>
-    <span class="k">create</span> <span class="n">southeast</span> <span class="n">queue</span>
-    <span class="k">for</span> <span class="k">each</span> <span class="n">point</span><span class="p">:</span>
-        <span class="k">if</span> <span class="k">in</span> <span class="n">southwest</span><span class="p">:</span>
-            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="n">Y</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="n">X</span>
-            <span class="k">add</span> <span class="k">to</span> <span class="n">southwest</span> <span class="n">queue</span>
-        <span class="k">if</span> <span class="k">in</span> <span class="n">northwest</span><span class="p">:</span>
-            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">Y</span> <span class="o">-</span> <span class="n">S</span>
-            <span class="k">add</span> <span class="k">to</span> <span class="n">northwest</span> <span class="n">queue</span>
-        <span class="k">if</span> <span class="k">in</span> <span class="n">northeast</span><span class="p">:</span>
-            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">X</span> <span class="o">-</span> <span class="n">S</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">Y</span> <span class="o">-</span> <span class="n">S</span>
-            <span class="k">add</span> <span class="k">to</span> <span class="n">northeast</span> <span class="n">queue</span>
-        <span class="k">if</span> <span class="k">in</span> <span class="n">southeast</span><span class="p">:</span>
-            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="n">S</span> <span class="o">-</span> <span class="mi">2</span><span class="n">Y</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">S</span> <span class="o">-</span> <span class="mi">2</span><span class="n">X</span>
-            <span class="k">add</span> <span class="k">to</span> <span class="n">southeast</span> <span class="n">queue</span>
+<div class="highlight"><pre><span></span>define hilbert_sort( unsorted queue, square dimension ):
+    create southwest queue
+    create northwest queue
+    create northeast queue
+    create southeast queue
+    for each point:
+        if in southwest:
+            create new point using X -&gt; Y, Y -&gt; X
+            add to southwest queue
+        if in northwest:
+            create new point using X -&gt; 2X, Y -&gt; 2Y - S
+            add to northwest queue
+        if in northeast:
+            create new point using X -&gt; 2X - S, Y -&gt; 2Y - S
+            add to northeast queue
+        if in southeast:
+            create new point using X -&gt; S - 2Y, Y -&gt; 2S - 2X
+            add to southeast queue
 
-        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">southwest</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
-        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">northwest</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
-        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">northeast</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
-        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">southeast</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
+        hilbertsort(southwest queue, square dimension)
+        hilbertsort(northwest queue, square dimension)
+        hilbertsort(northeast queue, square dimension)
+        hilbertsort(southeast queue, square dimension)
 
-        <span class="k">create</span> <span class="k">new</span> <span class="n">results</span> <span class="n">queue</span>
-        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">southwest</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
-        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">northwest</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
-        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">northeast</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
-        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">southeast</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
-        <span class="k">return</span> <span class="n">results</span> <span class="n">queue</span>
+        create new results queue
+        add points from southwest into results queue
+        add points from northwest into results queue
+        add points from northeast into results queue
+        add points from southeast into results queue
+        return results queue
 </pre></div>
 
 
@@ -812,13 +1179,10 @@ in which those points go with an additional level of finer granularity. </p>
     mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
     mathjaxscript.type = 'text/javascript';
     mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
         "MathJax.Hub.Config({" +
         "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
         "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
         "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
         "    displayAlign: '"+ align +"'," +
@@ -832,8 +1196,6 @@ in which those points go with an additional level of finer granularity. </p>
         "        preview: 'TeX'," +
         "    }, " +
         "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
         "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
         "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
         "    }, " +
@@ -854,391 +1216,6 @@ in which those points go with an additional level of finer granularity. </p>
                 "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
             "});" +
         "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hilbert-sort.html">hilbert sort</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                CSE 143 Final Project: Hilbert Sort: 1. The Problem
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-06-23T16:30:00-07:00" pubdate>Friday 06/23/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/cse-143-final-project-hilbert-sort-1-the-problem.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
-<p>This is the first in a series of three posts 
-detailing the Hilbert Sort problem,
-its solution, and its implementation.
-This post sets up the problem.</p>
-<ul>
-<li><a href="#hilbert-motivation">Hilbert Sort: Motivation</a></li>
-<li><a href="#hilbert-spacefilling">Hilbert, Peano, and Space-Filling Curves</a></li>
-<li><a href="#hilbert-curve">Constructing a Hilbert Curve</a></li>
-<li><a href="#hilbert-sort">Performing a Hilbert Sort</a></li>
-<li><a href="#hilbert-problem">Problem Statement</a></li>
-<li><a href="#hilbert-refs">References</a></li>
-</ul>
-<p><a name="hilbert-motivation"></a></p>
-<h1 id="hilbert-sort-motivation">Hilbert Sort: Motivation</h1>
-<p>In the next few series of posts, we will cover the Hilbert Sort problem,
-how it works, and how to implement it.<br>
-However, before we describe the problem further, 
-let's start with some motivation for solving this problem.</p>
-<p>Suppose we're dealing with a very large number of independent objects
-on a 2D coordinate grid, each with a coordinate location <span class="math">\((x,y)\)</span>.
-(For example, a large population of particles moving in a fluid, or a large number 
-of characters on a map in a game.) </p>
-<p>Here is our box of particles:</p>
-<p><img alt="Box of Particles" src="/images/hilbert1a.png"></p>
-<p>Now, suppose that we have more data than can be handled by a single computer,
-and we want to arrange the data on different computers. However, we want to 
-arrange the data in such a way that we preserve the spatial characteristics
-of the data.</p>
-<p>If we implement a naive sort method for Cartesian points that sorts points by
-x coordinate value, breaking ties with the y coordinate value, 
-we end up with points that are neighbors in space, but far away 
-in the data container's storage (like an array). 
-This is particularly true if there are large crowds of points in the grid.</p>
-<p>Here is an illustration of a set of points and their resulting 
-storage schema in an array that sorts points by x coordinate.
-It shows two purple particles, close by in space, but with<br>
-several green particles further away distance-wise but 
-not with respect to the x coordinate. The spatial locality
-of points is not preserved in the data container, 
-so clearly, a better method of sorting and organizing points is needed.</p>
-<p><img alt="Bad Schema" src="/images/hilbert1b.png"></p>
-<p>An alternative to this schema that yields better locality properties,
-but that leads to a much higher cost for sorting points, involves 
-iterating over each point, and for each point, finding the closest points to it
-in space. However, this itself requires iterating over each point.
-This approach ends up walking over each point (the point whose nearest neighbors we are finding),
-and doing a second nested walk over each point (checking if a point is a nearest neighbor
-to this one). The overall cost of doing this is <span class="math">\(O(N^2)\)</span>.</p>
-<p>It is a deceptively tricky problem: how to organize a large group of points 
-in a way that preserves spatial locality?</p>
-<p>But first, we'll cover the topic of space filling curves, then return to this topic.</p>
-<p><a name="hilbert-spacefilling"></a></p>
-<h1 id="space-filling-curves">Space Filling Curves</h1>
-<p>Mathematician Giuseppe Peano was a prolific teacher and researcher known for many things,
-but one of his more curious ideas is known as the Peano Curve. Peano was attempting to
-answer the question of whether a continuous curve could be bounded by a finite space,
-and he invented a counter-example: a recipe for breaking a curve into parts
-that can be replicated and repeated and applied to the copies as many times as 
-desired, and always result in a continuous curve.</p>
-<p>The way that space-filling curves in general are constructed is to 
-create a pattern, then scale it down and repeat it, 
-attaching subsequent scaled-down, repeated curves.
-Peano simply invented the first curve; there are many variations 
-on the original space-filling curve idea (including the Hilbert Curve - 
-more on that in a moment).</p>
-<p>The <a href="/files/PeanoCurve.pdf">original 1890 paper by Giuseppe Peano</a> is entitled "Sur une courbe,
-qui remplit toute une aire plane", published in 1890 in Mathematische Annalen I, 
-Issue 36. Unfortunately, it has no pictures, but here is a rendering from 
-Wikimedia Commons:</p>
-<p><img alt="Peano Curve" src="/images/PeanoCurve-Many.png"></p>
-<p><a href="https://commons.wikimedia.org/wiki/File:Peano_curve.png">(Link to original on Mediawiki Commons)</a></p>
-<p>Now, the Peano curve was nice, but it had some mathematical properties 
-that made it difficult to deal with. So in 1890,
-<a href="/files/HilbertCurve.pdf">David Hilbert published a follow-up paper</a> 
-in Mathematische Annalen I Issue 38, entitled 
-"Ueber die stetige Abbildung einer Linie auf ein Flächenstück",
-which slightly modified the recipe to create a curve with more 
-elegant mathematical properties. </p>
-<p>Also, he included pictures.</p>
-<p>Here is the first set of figures from Hilbert's 
-<a href="/files/HilbertCurve.pdf">original 1890 paper</a>:</p>
-<p><img alt="Hilbert Curve" src="/images/HilbertCurve-OriginalPaper.png"></p>
-<p>And here is a slightly cleaner rendering of the Hilbert Curve pattern 
-repeated six times:</p>
-<p><img alt="Hilbert Curve" src="/images/HilbertCurve-Many.png"></p>
-<p><a href="https://commons.wikimedia.org/wiki/File:Hilbert_curve.svg">(Link to original on Wikimedia Commons)</a></p>
-<p>From the abstract of Hilbert's paper:</p>
-<blockquote>
-Peano has recently shown in the Mathematical Annals, 2 by an arithmetical observation, 
-how the points of a line can be mapped continuously to the points of a surface part. 
-The functions required for such a mapping can be produced more clearly by using the 
-following geometrical view. Let us divide the line to be represented-about a straight 
-line of the length 1-into four equal parts 1, 2, 3, 4, and the surface which we assume 
-in the form of a square of the side length 1 Straight into 4 equal squares 1, 2, 3, 4 
-(Fig. 1). Secondly, we divide each of the partial sections 1, 2, 3, 4 again into 4 equal
-parts so that we obtain on the straight the 16 partial sections 1, 2, 3, ..., 16; At the 
-same time, each of the 4 squares 1, 2, 3, 4 is divided into 4 equal squares, and the numbers 
-1, 2, ..., 16 are then written to the resulting 16 squares, That each successive square 
-follows the previous one with one side (Fig. 2). If we think of this method, as shown in 
-Fig. 3, the next step, it is easy to see how to assign a single definite point of the 
-square to any given point of the line. It is only necessary to determine the partial 
-stretches of the line to which the given point falls. The squares indicated by the same 
-numbers are necessarily in one another and include a certain point of the surface piece 
-in the boundary. This is the point assigned to the given point. The image thus found is 
-unambiguous and continuous, and vice versa, each point of the square corresponds to 
-one, two, or four points of the line. Moreover, it appears remarkable that, by a 
-suitable modification of the partial lines in the squares, a clear and continuous 
-representation can easily be found, the reversal of which is nowhere more than 
-three-fold.
-
-<br />
-
-- David Hilbert, "Über die stetige Abbildung einer Linie auf ein Flächenstück", Mathematische Annalen Vol 38 
-
-</blockquote>
-
-<p>Thanks to Google Translate for an incredible job.</p>
-<p><a name="hilbert-curve"></a></p>
-<h1 id="constructing-a-hilbert-curve">Constructing a Hilbert Curve</h1>
-<p>To construct a Hilbert curve, you just have to follow the recipe.
-It doesn't matter what your square contains so far,
-or how many levels in you are, whether it's the first curve
-or the five hundredth:</p>
-<ol>
-<li>
-<p>First, take yer square. </p>
-</li>
-<li>
-<p>Second, quadruple yer square. That means, make four copies, that all make a square.</p>
-</li>
-<li>
-<p>Now rotate the bottom left and bottom right via diagonal reflection.</p>
-</li>
-<li>
-<p>Fourth step is, you're done - that's you're new square!</p>
-</li>
-</ol>
-<p><a name="hilbert-sort"></a></p>
-<h1 id="performing-a-hilbert-sort">Performing a Hilbert Sort</h1>
-<p>We will omit a proof of the statement, but given a set of unique (x,y) points,
-we can always construct a minimal-size Hilbert Curve that visits each point only
-once. </p>
-<p>Points can be sorted, then, according to when they would be visited by 
-said Hilbert Curve. And this ordering provides better preservation of spatial 
-locality and structure of points when aligning them in memory, because 
-these space-filling curves are recursive and preserve spatial locality
-in a top-down fashion.</p>
-<p>For example, if we have two points in our square, one in the lower left 
-and one in the lower right, and we are sorting them via a Hilbert Sort,
-we definitely know that a Hilbert curve constructed to visit both of these points
-will definitely visit the lower left point (the quadrant where the Hilbert curve starts)
-before it visits the lower right point (in the quadrant where the Hilbert curve stops).</p>
-<p>This requires thinking about <span class="math">\((x,y)\)</span> points in the box in terms of quadrants, 
-and the order in which the Hilbert curve will visit each quadrant or region,
-rather than thinking in terms of the explicit Hilbert curve that will visit each 
-particular <span class="math">\((x,y)\)</span> point:</p>
-<p><img alt="Box of Particles, Divided Into Quadrants" src="/images/hilbert2a.png"></p>
-<p>This is a subtle shift in the thinking about this problem, but it is crucial
-to a successful implementation of a Hilbert sort. The problem that will follow,
-which asks to implement the Hilbert sort, has many distracting details, 
-including the Hilbert curve itself. </p>
-<p><strong>Remember, in Hilbert sort, the end goal is not the curve itself, but the sort order.</strong></p>
-<p>Here is how the quadrant-by-quadrant partitioning to sort elements ends up looking 
-when applied repeatedly: </p>
-<p><img alt="Repeated Applications" src="/images/hilbert2b.png"></p>
-<p>It is important to note that the two diagonal reflections happening in the corners
-are the trickiest part of this problem. We will cover this operation in greater detail
-in the solution blog post.</p>
-<p><a name="hilbert-problem"></a></p>
-<h1 id="problem-statement">Problem Statement</h1>
-<p>Following is a paraphrased problem statement from the <a href="/files/HilbertSort.pdf">original
-ACM ICPC Regional Programming Competition
-problem statement</a> that this problem and its solution was based on.</p>
-<p>"If points <span class="math">\((x,y)\)</span> are sorted primarily by x, breaking ties by y, then points that are 
-adjacent in memory will have similar x coordinates but not necessarily similar y,
-potentially placing them far apart on the grid. To better preserve distances, we may 
-sort the data along a continuous space-filling curve.</p>
-<p>"We consider one such space-filling curve called the Hilbert curve...</p>
-<p>"Given some locations of interest, you are asked to sort them according to when the 
-Hilbert curve visits them. Note that while the curve intersects itself at 
-infinitely many places, e.g., at <span class="math">\((\frac{S}{2}, \frac{S}{2})\)</span>, making S odd 
-guarantees all integer points are visited just once."</p>
-<p>Here is an example input file, giving a set of points 
-on an <span class="math">\(M \times N\)</span> grid:</p>
-<div class="highlight"><pre><span></span><span class="err">    14 25</span>
-<span class="err">    5 5 Honolulu</span>
-<span class="err">    5 10 PugetSound</span>
-<span class="err">    5 20 Victoria</span>
-<span class="err">    10 5 Berkeley</span>
-<span class="err">    10 10 Portland</span>
-<span class="err">    10 15 Seattle</span>
-<span class="err">    10 20 Vancouver</span>
-<span class="err">    15 5 LasVegas</span>
-<span class="err">    15 10 Sacramento</span>
-<span class="err">    15 15 Kelowna</span>
-<span class="err">    15 20 PrinceGeorge</span>
-<span class="err">    20 5 Phoenix</span>
-<span class="err">    20 10 SaltLakeCity</span>
-<span class="err">    20 20 Calgary</span>
-</pre></div>
-
-
-<p>The corresponding output can be verified intuitively,
-assuming the coordinates given above are accurate!
-Here is the output. Indeed, the order in which each
-city is visited is what we would expect if we drew
-a space-filling Hilbert curve over a map of the western
-United States and Canada.</p>
-<div class="highlight"><pre><span></span><span class="err">    Honolulu</span>
-<span class="err">    Berkeley</span>
-<span class="err">    Portland</span>
-<span class="err">    PugetSound</span>
-<span class="err">    Victoria</span>
-<span class="err">    Vancouver</span>
-<span class="err">    Seattle</span>
-<span class="err">    Kelowna</span>
-<span class="err">    PrinceGeorge</span>
-<span class="err">    Calgary</span>
-<span class="err">    SaltLakeCity</span>
-<span class="err">    Sacramento</span>
-<span class="err">    LasVegas</span>
-<span class="err">    Phoenix</span>
-</pre></div>
-
-
-<p>Now that we've used up all of our space here describing the problem,
-in a follow-up post we will go into greater detail about
-how to solve the problem conceptually, and come up with some 
-pseudocode for a recursive method (since this is a recursive task).
-Then, a third post will go into greater detail about the 
-final Java code to perform this task.</p>
-<p><a name="hilbert-refs"></a></p>
-<h1 id="references">References</h1>
-<ol>
-<li>
-<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
-&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
-</li>
-<li>
-<p>"Sur une courbe, qui remplit toute une aire plane." G. Peano. 
-<strong>Mathematische Annalen</strong> 36 (1890), 157–160. <a href="/files/PeanoCurve.pdf">(pdf)</a></p>
-</li>
-<li>
-<p>"Über die stetige Abbildung einer Linie auf ein Flächenstück." D. Hilbert. 
-<strong>Mathematische Annalen</strong> 38 (1891), 459–460. <a href="/files/HilbertCurve.pdf">(pdf)</a></p>
-</li>
-<li>
-<p>"Hilbert Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 29 April 2017. Accessed 23 June 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Hilbert_curve">https://en.wikipedia.org/wiki/Hilbert_curve</a>&gt;</p>
-</li>
-<li>
-<p>"Peano Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 16 October 2016. Accessed 23 June 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Peano_curve">https://en.wikipedia.org/wiki/Peano_curve</a>&gt;</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
 </script></div>
@@ -1300,6 +1277,19 @@ final Java code to perform this task.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>March 2020</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/using-mock-api-servers.html">Using Mock API Servers</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
