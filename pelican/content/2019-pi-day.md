@@ -180,7 +180,7 @@ Implementing a recurrence to turn the above
 into convergents and printing the first 24
 terms and their approximate value:
 
-```
+```text
                                       Pi
 Convergent                                                          Approx 
 --------------------------------------------------------------------------------
@@ -243,7 +243,7 @@ Implementing a computer program to evaluate
 the convergents from the above patterns yields
 even more $\pi$ approximations:
 
-```
+```text
                                 Even More Pi
 Convergent                                                          Approx 
 --------------------------------------------------------------------------------
@@ -304,7 +304,7 @@ following table of convergents and their approximate
 values:
 
 
-```
+```text
                                Pi Simple
 Convergent                                                          Approx 
 --------------------------------------------------------------------------------
