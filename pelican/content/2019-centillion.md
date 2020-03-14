@@ -1,6 +1,6 @@
 Title: centillion: a document search engine
 Date: 2019-03-10 9:00
-Category: Python
+Category: Centillion
 Tags: python, centillion, search, search engine, google drive, github, flask
 
 We're excited to announce the public release of [centillion](https://github.com/dcppc/centillion),
