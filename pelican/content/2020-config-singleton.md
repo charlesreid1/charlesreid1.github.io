@@ -1,8 +1,7 @@
-Title: A Singleton Config Class in Python
+Title: A Singleton Configuration Class in Python
 Date: 2020-04-28 16:00
 Category: Python
 Tags: python, programming, patterns, design patterns, registry, computer science
-Status: draft
 
 [TOC]
 
@@ -185,7 +184,7 @@ file variable, or (if it is not present in the config file) with an environment
 variable. The `wuz` variable msut also be a path, so there is logic for checking
 whether the path exists.
 
-## Reset method
+# Reset method
 
 It can be useful to clear out an existing config file in order to
 load a new config file - specifically, when testing. Here we define a `reset()`
@@ -202,13 +201,18 @@ use the `reset()` method below.
         cls._WUZ = None
 ```
 
-## Creating a Config Context Manager
+This could be done more gracefully by iterating over each attribute of the Config class
+and only nullifying those attributes whose variable name matches the given pattern (start
+with an underscore, only contain capital letters and underscores) using a regular expression.
+
+# Creating a configuration context manager
 
 To make tests more convenient, we define a context manager that takes
 a dictionary as an input. The context manager creates a temporary file
 with the contents of that dictionary, and resets the Config class using
 the temporary file as the new config file. This allows tests to be written
-using different configurations:
+using different configurations on the fly, very useful when testing
+different configuration options:
 
 ```python
 cfg = {"peanut_butter": "jelly"}
@@ -218,7 +222,8 @@ with TempConfig(cfg) as config_file:
     assert val=="jelly"
 ```
 
-Here is the context manager class:
+Here is the context manager class to temporarily replace the configuration
+wrapped by the `Config` class:
 
 ```python
 class TempConfig(object):
@@ -264,7 +269,10 @@ class TempConfig(object):
             f.write(contents)
 ```
 
+# Next steps
 
-
-
-
+That's it for now. This singleton configuration class is being written into a
+new version of [centillion](https://charlesreid1.github.io/centillion-a-document-search-engine.html),
+which will be [centillion version 2.0](https://github.com/chmreid/centillion/pull/3).
+This is still a pull request in a centillion fork, though, so it's a work in progress.
+Stay tuned!
