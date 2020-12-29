@@ -201,10 +201,11 @@ The numerator and denominator of the $k^{th}$ convergent are denoted $P_k$ and $
 respectively, and can be computed through the recurrence relation:
 
 $$
-\dfrac{P_k}{Q_k} = \dfrac{a_k P_{k-1} + P_{k-2}}{a_k Q_{k-1} + Q_{k-2}}
+\dfrac{P_k}{Q_k} = \dfrac{P_{k-2} + a_k P_{k-1}}{Q_{k-2} + a_k Q_{k-1}}
 $$
 
-where the initial values are $P_{-1} = 1, P_{-2} = 0, Q_{-1} = 0, Q_{-2} = 1$
+where the initial values are $P_{-2} = 0, P_{-1} = 1$ for P and
+$Q_{-2} = 1, Q_{-1} = 0$ for Q
 (making the first convergent equal to $\frac{a_0}{1}$).
 This can be used to compute successive approximations.
 Note that on a computational platform, you will quickly reach the end 
@@ -387,21 +388,22 @@ to $\sqrt{14}$.
 We start with the expression given above for the $k^{th}$ convergent: 
 
 $$
-\dfrac{P_k}{Q_k} = \dfrac{a_k P_{k-1} + P_{k-2}}{a_k Q_{k-1} + Q_{k-2}}
+\dfrac{P_k}{Q_k} = \dfrac{P_{k-2} + a_k P_{k-1}}{Q_{k-2} + a_k Q_{k-1}}
 $$
 
-with initial values $P_{-1} = 1, P_{-2} = 0, Q_{-1} = 0, Q_{-2} = 1$. This yields 
+with initial values $P_{-2} = 0, P_{-1} = 1$ for P and
+$Q_{-2} = 1, Q_{-1} = 0$ for Q. This yields 
 the first "real" convergent:
 
 $$
-\dfrac{P_1}{Q_1} = \dfrac{a_0 + 0}{0 + 1} = 4
+\dfrac{P_1}{Q_1} = \dfrac{1 + 1 \times a_0}{0 + a_1 \times 1} = \dfrac{1 + 3}{0 + 1} = \dfrac{4}{1}
 $$
 
 Successive approximations will use the values $P_1$ and $Q_1$ to compute
 the next convergents.
 
 $$
-\dfrac{P_2}{Q_2} = \dfrac{P_1 a_1 + P_0}{Q_1 a_1 + Q_0} = \frac{11}{3}
+\dfrac{P_2}{Q_2} = \dfrac{P_0 + P_1 a_1}{Q_0 + Q_1 a_1} = \frac{11}{3}
 $$
 
 Continuing in this fashion gives:
@@ -449,9 +451,9 @@ of a square root:
 	 *
 	 * This uses the recurrence relation:
 	 *
-	 * P_n     a_n P_n-1  + P_n-2
+	 * P_n     P_n-2 + a_n P_n-1
 	 * ---- = -----------------
-	 *  Q_n    a_n Q_n-1  + Q_n-2
+	 *  Q_n    Q_n-2 + a_n Q_n-1
 	 */
 	public static long[] convergents(int n, int nterms) {
 		long[] convergents = new long[2];
@@ -471,8 +473,8 @@ of a square root:
 		for(int i=0; i<=nterms; i++) { 
 			int an = cfrepr.get(accessindex);
 
-			P = an * Pnm1 + Pnm2;
-			Q = an * Qnm1 + Qnm2;
+			P = Pnm2 + an * Pnm1;
+			Q = Qnm2 + an * Qnm1;
 
 			Pnm2 = Pnm1;
 			Pnm1 = P;
