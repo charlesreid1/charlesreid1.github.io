@@ -161,10 +161,9 @@
 into a Makefile.</p>
 <p>This is useful for cases where terraform is being used to manage infrastructure.
 In the end you will be able to run a command like</p>
-<div class="highlight"><pre><span></span>make plan-infra
+<div class="highlight"><pre><span></span><code>make plan-infra
 make deploy-infra
-</pre></div>
-
+</code></pre></div>
 
 <p>and and have this call the corresponding terraform commands to plan and deploy your
 terraformed cloud infrastructure.</p>
@@ -180,7 +179,7 @@ terraformed cloud infrastructure.</p>
 <h1 id="step-0-directory-and-file-layout">Step 0: Directory and File Layout</h1>
 <p>This tutorial presumes you have a top level directory corresponding to a git repository.
 We will use the following directory structure for this example:</p>
-<div class="highlight"><pre><span></span>my-project/
+<div class="highlight"><pre><span></span><code>my-project/
     Readme.md
     environment
     Makefile
@@ -189,14 +188,13 @@ We will use the following directory structure for this example:</p>
         component-1/
             variables.tf
             main.tf
-</pre></div>
-
+</code></pre></div>
 
 <h2 id="environment-variables">Environment Variables</h2>
 <p>In order to keep track of environment variables used in the terraform
 process, we use the file <code>envronment</code> in the top level project directory
 to keep all environment variable values under version control.</p>
-<div class="highlight"><pre><span></span><span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span>
 <span class="k">while</span> <span class="o">[</span> -h <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span> <span class="o">]</span> <span class="p">;</span> <span class="k">do</span> <span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>readlink <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="p">;</span> <span class="k">done</span>
 <span class="nb">export</span> <span class="nv">PROJECT_HOME</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">cd</span> -P <span class="s2">&quot;</span><span class="k">$(</span>dirname <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span><span class="s2">&quot;</span>
 
@@ -215,28 +213,25 @@ to keep all environment variable values under version control.</p>
 <span class="nv">AWS_DEFAULT_OUTPUT</span><span class="o">=</span>json
 <span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span>us-east-1
 <span class="nb">set</span> +a
-</pre></div>
-
+</code></pre></div>
 
 <p>Optionally, a local environment file can contain environment variable values
 that are sensitive or should not be kept under version control, so add this
 to the bottom of the <code>environment</code> file too:</p>
-<div class="highlight"><pre><span></span><span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
     <span class="nb">source</span> <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span>
 <span class="k">fi</span>
-</pre></div>
-
+</code></pre></div>
 
 <h1 id="step-1-top-level-makefile">Step 1: Top Level Makefile</h1>
 <p>Start by creating the <code>plan-infra</code> and <code>deploy-infra</code> commands in your top-level
 Makefile. These commands will, in turn, call make commands defined in <code>infra/Makefile</code>:</p>
-<div class="highlight"><pre><span></span><span class="nf">plan-infra</span><span class="o">:</span>
+<div class="highlight"><pre><span></span><code><span class="nf">plan-infra</span><span class="o">:</span>
     <span class="k">$(</span>MAKE<span class="k">)</span> -C infra plan-all
 
 <span class="nf">deploy-infra</span><span class="o">:</span>
     <span class="k">$(</span>MAKE<span class="k">)</span> -C infra apply-all
-</pre></div>
-
+</code></pre></div>
 
 <p>The <code>-C infra</code> flag indicates make should use a Makefile in a subdirectory.</p>
 <h1 id="step-2-infra-level-makefile">Step 2: Infra Level Makefile</h1>
@@ -249,13 +244,12 @@ Makefile. These commands will, in turn, call make commands defined in <code>infr
 <p>We cover the Makefile from the bottom up.</p>
 <h2 id="fake-targets">Fake Targets</h2>
 <p>Start by defining "fake" targets or rules, that is, make rules whose names are not file names:</p>
-<div class="highlight"><pre><span></span><span class="nf">.PHONY</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="nf">.PHONY</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
+</code></pre></div>
 
 <h2 id="commands-for-single-components">Commands for Single Components</h2>
 <p>Next, above that, we define terraform commands for a single component:</p>
-<div class="highlight"><pre><span></span><span class="nf">init</span><span class="o">:</span>
+<div class="highlight"><pre><span></span><code><span class="nf">init</span><span class="o">:</span>
     rm -rf <span class="k">$(</span>COMPONENT<span class="k">)</span>/.terraform/*.tfstate
     ./build_deploy_config.py <span class="k">$(</span>COMPONENT<span class="k">)</span>
     <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> terraform init<span class="p">;</span>
@@ -271,8 +265,7 @@ Makefile. These commands will, in turn, call make commands defined in <code>infr
 
 <span class="nf">clean</span><span class="o">:</span>
     <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> rm -rf .terraform
-</pre></div>
-
+</code></pre></div>
 
 <p>Note that the <code>init</code> command is running a <code>build_deploy_config.py</code> script,
 which we will cover in a moment. This script creates the terraform variables
@@ -280,7 +273,7 @@ file <code>variables.tf</code> and populates the variable values using environme
 variables.</p>
 <h2 id="commands-for-all-components">Commands for All Components</h2>
 <p>Above that, we have commands to perform each action on all components:</p>
-<div class="highlight"><pre><span></span><span class="nf">all</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span>
+<div class="highlight"><pre><span></span><code><span class="nf">all</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span>
 
 <span class="nf">init-all</span><span class="o">:</span>
     @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
@@ -306,22 +299,20 @@ variables.</p>
     @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
         <span class="k">$(</span>MAKE<span class="k">)</span> clean <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
     <span class="k">done</span>
-</pre></div>
-
+</code></pre></div>
 
 <h2 id="variables">Variables</h2>
 <p>Last but not least, we define a few variables at the top of the Makefile:
 most importantly, the list of infrastructure components. This is created by
 extracting the names of subdirectories in <code>infra/</code> containing <code>*.tf</code> files:</p>
-<div class="highlight"><pre><span></span><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span> <span class="se">\;</span> <span class="p">|</span> sort --unique<span class="o">}</span>
+<div class="highlight"><pre><span></span><code><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span> <span class="se">\;</span> <span class="p">|</span> sort --unique<span class="o">}</span>
 <span class="nv">COMPONENTS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> for d in </span><span class="k">$(</span>DIRS<span class="k">)</span><span class="p">; do basename </span><span class="nv">$$d</span><span class="p">; done</span><span class="si">}</span>
-</pre></div>
-
+</code></pre></div>
 
 <h2 id="final-makefile">Final Makefile</h2>
 <p>Here is the final <code>infra/Makefile</code>:</p>
 <p><strong><code>infra/Makefile</code>:</strong></p>
-<div class="highlight"><pre><span></span><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span> <span class="se">\;</span> <span class="p">|</span> sort --unique<span class="o">}</span>
+<div class="highlight"><pre><span></span><code><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span> <span class="se">\;</span> <span class="p">|</span> sort --unique<span class="o">}</span>
 <span class="nv">COMPONENTS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> for d in </span><span class="k">$(</span>DIRS<span class="k">)</span><span class="p">; do basename </span><span class="nv">$$d</span><span class="p">; done</span><span class="si">}</span>
 
 <span class="nf">all</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span>
@@ -369,8 +360,7 @@ extracting the names of subdirectories in <code>infra/</code> containing <code>*
     <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> rm -rf .terraform
 
 <span class="nf">.PHONY</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
-</pre></div>
-
+</code></pre></div>
 
 <h1 id="step-3-writing-terraform-components">Step 3: Writing Terraform Components</h1>
 <p>As an example, we will consider an example of terraform-managed buckets.</p>
@@ -378,7 +368,7 @@ extracting the names of subdirectories in <code>infra/</code> containing <code>*
 files for creating and managing the buckets.</p>
 <p>We can create one file per cloud provider. As an example, here is <code>s3.tf</code>:</p>
 <p><strong><code>s3.tf</code></strong>:</p>
-<div class="highlight"><pre><span></span>data &quot;aws_caller_identity&quot; &quot;current&quot; {}
+<div class="highlight"><pre><span></span><code>data &quot;aws_caller_identity&quot; &quot;current&quot; {}
 
 locals {
   common_tags = &quot;${map(
@@ -405,14 +395,12 @@ resource aws_s3_bucket dss_s3_bucket {
   }
   tags = merge(local.common_tags, local.aws_tags)
 }
-</pre></div>
-
+</code></pre></div>
 
 <p>Note that this requires several environment variables to be
 defined in <code>environment</code> and requires the operator to run:</p>
-<div class="highlight"><pre><span></span>source environment
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>source environment
+</code></pre></div>
 
 <h1 id="step-4-initializing-terraform-components">Step 4: Initializing Terraform Components</h1>
 <p>The following script will automatically generate terraform files for
@@ -421,25 +409,23 @@ values.</p>
 <p>It is called <code>build_deploy_config.py</code>.</p>
 <p>Start with a simple argument parser that just accepts a single argument,
 the component to make terraform files for:</p>
-<div class="highlight"><pre><span></span><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">)</span>
 <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;component&quot;</span><span class="p">)</span>
 <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>Next, we define several terraform file templates using Python's
 bracket template syntax. Start with a template for defining a
 terraform variable:</p>
-<div class="highlight"><pre><span></span>terraform_variable_template = &quot;&quot;&quot;
+<div class="highlight"><pre><span></span><code>terraform_variable_template = &quot;&quot;&quot;
 variable &quot;{name}&quot; {{
   default = &quot;{val}&quot;
 }}
 &quot;&quot;&quot;
-</pre></div>
-
+</code></pre></div>
 
 <p>Next, define a template for the terraform backend buket:</p>
-<div class="highlight"><pre><span></span>terraform_backend_template = &quot;&quot;&quot;# Auto-generated during infra build process.
+<div class="highlight"><pre><span></span><code>terraform_backend_template = &quot;&quot;&quot;# Auto-generated during infra build process.
 # Please edit infra/build_deploy_config.py directly.
 terraform {{
   backend &quot;s3&quot; {{
@@ -450,22 +436,20 @@ terraform {{
   }}
 }}
 &quot;&quot;&quot;
-</pre></div>
-
+</code></pre></div>
 
 <p>Next define terraform cloud providers:</p>
-<div class="highlight"><pre><span></span>terraform_providers_template = &quot;&quot;&quot;# Auto-generated during infra build process.
+<div class="highlight"><pre><span></span><code>terraform_providers_template = &quot;&quot;&quot;# Auto-generated during infra build process.
 # Please edit infra/build_deploy_config.py directly.
 provider aws {{
   region = &quot;{aws_region}&quot;
 }}
 &quot;&quot;&quot;
-</pre></div>
-
+</code></pre></div>
 
 <p>Provide a list of environment variables that should also be defined as
 terraform variables:</p>
-<div class="highlight"><pre><span></span><span class="nv">env_vars_to_infra</span> <span class="o">=</span> <span class="o">[</span>
+<div class="highlight"><pre><span></span><code><span class="nv">env_vars_to_infra</span> <span class="o">=</span> <span class="o">[</span>
 <span class="nv">PROJECT_DEPLOYMENT_STAGE</span><span class="o">=</span><span class="s2">&quot;dev&quot;</span>
 
 <span class="c1"># bucket name</span>
@@ -487,17 +471,16 @@ terraform variables:</p>
     <span class="s2">&quot;PROJECT_INFRA_TAG_SERVICE&quot;</span>,
     <span class="s2">&quot;PROJECT_INFRA_TAG_OWNER&quot;</span>
 <span class="o">]</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>Finally, substitute environment variable values into the templates, and write
 the templated content to the appropriate <code>*.tf</code> file. First, the backend:</p>
-<div class="highlight"><pre><span></span><span class="c1"># Write backend.tf</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># Write backend.tf</span>
 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;backend.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
     <span class="n">caller_info</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;sts&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get_caller_identity</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">):</span>
         <span class="n">profile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">]</span>
-        <span class="n">profile_setting</span> <span class="o">=</span> <span class="n">f</span><span class="s1">&#39;profile = &quot;{profile}&quot;&#39;</span>
+        <span class="n">profile_setting</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;profile = &quot;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">profile_setting</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_backend_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
@@ -507,28 +490,25 @@ the templated content to the appropriate <code>*.tf</code> file. First, the back
         <span class="n">region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
         <span class="n">profile_setting</span><span class="o">=</span><span class="n">profile_setting</span><span class="p">,</span>
     <span class="p">))</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>Next, the <code>variables.tf</code> for the component:</p>
-<div class="highlight"><pre><span></span><span class="c1"># Write variables.tf</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># Write variables.tf</span>
 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;variables.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
     <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Auto-generated during infra build process.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
     <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Please edit infra/build_deploy_config.py directly.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">env_vars_to_infra</span><span class="p">:</span>
         <span class="n">val</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
         <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_variable_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">val</span><span class="p">))</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>Finally, the cloud providers file <code>providers.tf</code>:</p>
-<div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;providers.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+<div class="highlight"><pre><span></span><code><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;providers.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
     <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_providers_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
         <span class="n">aws_region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
         <span class="n">gcp_project_id</span><span class="o">=</span><span class="n">GCP_PROJECT_ID</span><span class="p">,</span>
     <span class="p">))</span>
-</pre></div>
-
+</code></pre></div>
 
 <h1 id="workflow">Workflow</h1>
 <p>We now have a top-level Makefile that wraps the plan and apply commands directly,
@@ -539,9 +519,8 @@ and we have an infra-level Makefile with additional commands for managing infras
 environment variables into them, creating a new version of them with up-to-date values.</p>
 <p>The plan step (<code>make plan-infra</code>) calls the <code>build_deploy_config.py</code> script (detailed above)
 to regenerate the terraform files when environment variables are changed.</p>
-<div class="highlight"><pre><span></span>make plan-infra
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>make plan-infra
+</code></pre></div>
 
 <p>This script will iterate over each cloud infrastructure component in <code>infra/</code>, use terraform
 to plan the changes it would make to cloud resources, and print a summary of those changes
@@ -588,13 +567,12 @@ make deploy-infra</code></p>
 <p>As seen above, infrastructure components can be deleted with the <code>delete</code> command in the infra
 Makefile, and all infrastructure components can be deleted with the <code>delete-all</code> command.</p>
 <p>To delete a particular component:</p>
-<div class="highlight"><pre><span></span>make -C infra COMPONENT=buckets destroy
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>make -C infra COMPONENT=buckets destroy
+</code></pre></div>
 
 <p>To destroy all infra:</p>
-<div class="highlight"><pre><span></span>make -C infra destroy-all
-</pre></div></div>
+<div class="highlight"><pre><span></span><code>make -C infra destroy-all
+</code></pre></div></div>
 
     </div>
 </div>
@@ -671,20 +649,17 @@ Makefile, and all infrastructure components can be deleted with the <code>delete
 compatible versions of required software, and that specifies the full and exact version of each package to
 make the Python environment reproducible.</p>
 <p>This will turn a requirements input file (called <code>requirements.txt.in</code> for example) that looks like</p>
-<div class="highlight"><pre><span></span>numpy
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>numpy
+</code></pre></div>
 
 <p>into a requirements file that specifies the exact version of <code>numpy</code> and all dependencies, like</p>
-<div class="highlight"><pre><span></span>numpy==1.18.1
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>numpy==1.18.1
+</code></pre></div>
 
 <p>By the end of this post, you'll be able to do this to refresh and update the versions of all the software your
 project depends on:</p>
-<div class="highlight"><pre><span></span>make requirements.txt
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>make requirements.txt
+</code></pre></div>
 
 <p><strong>All of this code comes from the Human Cell Atlas <a href="https://github.com/HumanCellAtlas/data-store">data-store</a>
 project!</strong></p>
@@ -692,31 +667,27 @@ project!</strong></p>
 <p>When developing a Python project, the <code>requirements.txt</code> file is a plain text file that contains a list of
 Python software packages that need to be installed for the current Python software package to work. The software
 can be installed using the command</p>
-<div class="highlight"><pre><span></span>pip install -r requirements.txt
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>pip install -r requirements.txt
+</code></pre></div>
 
 <p>For example, if a package <code>foobar</code> has <code>import numpy</code> at the top of a Python file in the project, the <code>numpy</code> package
 must be installed before importing <code>foobar</code>. In this case, the <code>requirements.txt</code> could just contain</p>
-<div class="highlight"><pre><span></span>numpy
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>numpy
+</code></pre></div>
 
 <p>or it could specify a particular version of numpy, or a minimum version of numpy:</p>
-<div class="highlight"><pre><span></span>numpy &gt;= 1.10
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>numpy &gt;= 1.10
+</code></pre></div>
 
 <p>Start by creating a <code>requirements.txt.in</code>, which should look like a normal <code>requirements.txt</code> file,
 listing software packages for pip to install (and optionally version information - but version information
 does not <em>need</em> to be specified).</p>
 <p>This file is a looser set of specifications of software versions.</p>
 <p>Example <code>requirements.txt.in</code>:</p>
-<div class="highlight"><pre><span></span>numpy
+<div class="highlight"><pre><span></span><code>numpy
 pandas &gt; 0.22
 sphinx
-</pre></div>
-
+</code></pre></div>
 
 <h2 id="converting-requirementstxtin-to-requirementstxt">Converting requirements.txt.in to requirements.txt</h2>
 <p>Next, we use the <code>requirements.txt.in</code> file to install the latest versions of each software package (and all
@@ -724,16 +695,15 @@ dependent software packages) into a virtual environment.</p>
 <p>From that virtual environment, we can use <code>pip freeze</code> to output the names of each software package installed in
 the virtual environment, along with its exact version. This can be used to make a <code>requirements.txt</code> file.</p>
 <p>The manual steps are</p>
-<div class="highlight"><pre><span></span>virtualenv -p $(which python3) venv
+<div class="highlight"><pre><span></span><code>virtualenv -p $(which python3) venv
 venv/bin/pip install -r requirements.txt
 venv/bin/pip install -r requirements.txt.in
 venv/bin/pip freeze &gt;&gt; requirements.txt
 rm -fr venv
-</pre></div>
-
+</code></pre></div>
 
 <p>Using pip freeze means the resulting <code>results.txt</code> contains detailed version numbers:</p>
-<div class="highlight"><pre><span></span>alabaster==0.7.12
+<div class="highlight"><pre><span></span><code>alabaster==0.7.12
 Babel==2.7.0
 certifi==2019.11.28
 chardet==3.0.4
@@ -760,21 +730,19 @@ sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-qthelp==1.0.2
 sphinxcontrib-serializinghtml==1.1.3
 urllib3==1.25.7
-</pre></div>
-
+</code></pre></div>
 
 <p>This is automated with a make rule next.</p>
 <h2 id="automating-the-step-with-a-make-rule">Automating the step with a make rule</h2>
 <p>We have a nice Makefile rule that can be dropped into
 any Makefile that allows users to run</p>
-<div class="highlight"><pre><span></span>make requirements.txt
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>make requirements.txt
+</code></pre></div>
 
 <p>and it will use <code>requirements.txt.in</code>, perform the above steps, and output an updated <code>requirements.txt</code> with the
 latest compatible versions of software.</p>
 <p>Here is the Makefile rule:</p>
-<div class="highlight"><pre><span></span><span class="nf">requirements.txt</span><span class="o">:</span> %.<span class="n">txt</span> : %.<span class="n">txt</span>.<span class="n">in</span>
+<div class="highlight"><pre><span></span><code><span class="nf">requirements.txt</span><span class="o">:</span> %.<span class="n">txt</span> : %.<span class="n">txt</span>.<span class="n">in</span>
     <span class="o">[</span> ! -e .requirements-env <span class="o">]</span> <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span>
     virtualenv -p <span class="k">$(</span>shell which python3<span class="k">)</span> .$&lt;-env
     .$&lt;-env/bin/pip install -r <span class="nv">$@</span>
@@ -782,8 +750,7 @@ latest compatible versions of software.</p>
     <span class="nb">echo</span> <span class="s2">&quot;# You should not edit this file directly.  Instead, you should edit </span>$<span class="s2">&lt;.&quot;</span> &gt;<span class="p">|</span> <span class="nv">$@</span>
     .$&lt;-env/bin/pip freeze &gt;&gt; <span class="nv">$@</span>
     rm -rf .$&lt;-env
-</pre></div>
-
+</code></pre></div>
 
 <p>Summary of the make rule:</p>
 <ul>
@@ -805,18 +772,16 @@ latest compatible versions of software.</p>
 </ul>
 <h2 id="refreshing-requirements">Refreshing requirements</h2>
 <p>To update the requirements, update the <code>requirements.txt</code> with these manual steps:</p>
-<div class="highlight"><pre><span></span><span class="nf">refresh_all_requirements</span><span class="o">:</span>
+<div class="highlight"><pre><span></span><code><span class="nf">refresh_all_requirements</span><span class="o">:</span>
     @cat /dev/null &gt; requirements.txt
     @if <span class="o">[</span> <span class="nv">$$</span><span class="o">(</span>uname -s<span class="o">)</span> <span class="o">==</span> <span class="s2">&quot;Darwin&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span> sleep <span class="m">1</span><span class="p">;</span> <span class="k">fi</span>  <span class="c1"># this is require because Darwin HFS+ only has second-resolution for timestamps.</span>
     @touch requirements.txt.in
     @<span class="k">$(</span>MAKE<span class="k">)</span> requirements.txt
-</pre></div>
-
+</code></pre></div>
 
 <p>Now <code>requirements.txt</code> can be updated with</p>
-<div class="highlight"><pre><span></span>make refresh_all_requirements
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>make refresh_all_requirements
+</code></pre></div>
 
 <p>This can be done periodically, and the new <code>requirements.txt</code> updated in the version control system.</p></div>
 
@@ -934,11 +899,10 @@ in the same file but not entirely related. While writing tests for the new featu
 refactor tests to be cleaner, or to use context manager foobar, or etc.</p>
 <p>To illustrate: suppose you are on a branch called <code>feature</code> (created off of <code>master</code>) that consists of
 three sets of changes, DEF:</p>
-<div class="highlight"><pre><span></span>A - B - C (master)
+<div class="highlight"><pre><span></span><code>A - B - C (master)
     \
      D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
-</pre></div>
-
+</code></pre></div>
 
 <ul>
 <li>D corresponds to implementing the new feature and writing tests for it</li>
@@ -964,18 +928,16 @@ of changes in each new commit.</p>
 <h2 id="converting-a-set-of-commits-to-unstaged-changes">Converting a Set of Commits to Unstaged Changes</h2>
 <p>We are trying to untangle a set of unrelated changes into separate commits that group related
 changes together. For the example, we want to convert this:</p>
-<div class="highlight"><pre><span></span>A - B - C (master)
+<div class="highlight"><pre><span></span><code>A - B - C (master)
     \
      D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
-</pre></div>
-
+</code></pre></div>
 
 <p>to this:</p>
-<div class="highlight"><pre><span></span>A - B - C (master)
+<div class="highlight"><pre><span></span><code>A - B - C (master)
     \
      D - E - F (feature)
-</pre></div>
-
+</code></pre></div>
 
 <p>so that the changes in commits D, E, and F are simpler, more limited in scope, and easier to review.</p>
 <p>We cover three strategies for turning a sequence of commits like <code>D1-E1-...-E3</code> into a set of unstaged
@@ -984,12 +946,11 @@ changes. Then, particular changes can be selectively added to commits using <cod
 <h3 id="git-format-patch">git format-patch</h3>
 <p>To create a set of patches, one per commit, to edit them or apply them in various orders,
 you can use <code>git format-patch</code> with a commit range:</p>
-<div class="highlight"><pre><span></span>git format-patch D1..E3
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git format-patch D1..E3
+</code></pre></div>
 
 <p>This will create a series of patches like </p>
-<div class="highlight"><pre><span></span>patches/0001-the-D1-commit-message.patch
+<div class="highlight"><pre><span></span><code>patches/0001-the-D1-commit-message.patch
 patches/0001-the-E1-commit-message.patch
 patches/0001-the-D2-commit-message.patch
 patches/0001-the-F1-commit-message.patch
@@ -998,28 +959,24 @@ patches/0001-the-F2-commit-message.patch
 patches/0001-the-D3-commit-message.patch
 patches/0001-the-F3-commit-message.patch
 patches/0001-the-E3-commit-message.patch
-</pre></div>
-
+</code></pre></div>
 
 <p>Patches can be further split or modified, and can be applied in the desired order (although
 changes in line numbers happening out of order may confuse the program applying the patch).</p>
 <p>Start by creating a branch from the desired commit (commit <code>B</code> in the diagram above):</p>
-<div class="highlight"><pre><span></span>git checkout B
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git checkout B
+</code></pre></div>
 
 <p>(where <code>B</code> should be either the commit hash for commit B, or a tag or branch that is associated
 with commit B). Now create a branch that will start from that commit (we'll start with our branch
 for feature D here):</p>
-<div class="highlight"><pre><span></span>git checkout -b feature-d
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git checkout -b feature-d
+</code></pre></div>
 
 <p>Now apply patches to the new branch, which will start from commit <code>B</code>.</p>
 <p>To apply a patch, use <code>patch -p1</code>:</p>
-<div class="highlight"><pre><span></span>patch -p1 &lt; 0001-the-D1-commit-message.patch
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>patch -p1 &lt; 0001-the-D1-commit-message.patch
+</code></pre></div>
 
 <p>The <code>-p1</code> strips the prefix by 1 directory level, which is necessary with patches created
 by git. We use <code>patch</code> rather than <code>git am</code> to apply the patch, because we want to apply
@@ -1029,25 +986,22 @@ each patch for those commits, then staging all the changes from those patches in
 commit.</p>
 <p>As patches are applied, particular changes can be staged and commits can be crafted. Use 
 the <code>--edit</code> or <code>--patch</code> flags of <code>git add</code>:</p>
-<div class="highlight"><pre><span></span>git add --edit &lt;filename&gt;
+<div class="highlight"><pre><span></span><code>git add --edit &lt;filename&gt;
 git add --patch &lt;filename&gt;
-</pre></div>
-
+</code></pre></div>
 
 <p>This allows selective filtering of particular edits into the next commit, so that one patch
 (or any number of patches) can be applied, and selective changes can be staged into a commit.</p>
 <p>Once you are ready, just run</p>
-<div class="highlight"><pre><span></span>git commit
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git commit
+</code></pre></div>
 
 <p>without specifying the filename. (If you specify the filename, it will stage all changes,
 and ignore the crafting you've done.)</p>
 <p>As you create a commit or a set of commits specific to changeset D, you can work on a D branch.
 When you finish all commits related to D, you can start a new branch with</p>
-<div class="highlight"><pre><span></span>git checkout feature-e
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git checkout feature-e
+</code></pre></div>
 
 <p>that will start a new branch from where the d-branch left off. Chaining your
 changes together into several small branches that build on each other will 
@@ -1067,15 +1021,13 @@ help keep pull requests simpler too.</p>
 <h3 id="cherry-pick-and-unstage">cherry-pick and unstage</h3>
 <p>An alternative to the above workflow is to use <code>git cherry-pick</code> to apply the changes from particular
 commits, but to leave those changes unstaged using the <code>--no-commit</code> or <code>-n</code> flag:</p>
-<div class="highlight"><pre><span></span>git cherry-pick --no-commit &lt;commit-hash&gt;
+<div class="highlight"><pre><span></span><code>git cherry-pick --no-commit &lt;commit-hash&gt;
 git cherry-pick -n &lt;commit-hash&gt;
-</pre></div>
-
+</code></pre></div>
 
 <p>Alternatively, a range of commits can be used instead:</p>
-<div class="highlight"><pre><span></span>git cherry-pick -n &lt;commit-hash-start&gt;..&lt;commit-hash-end&gt;
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git cherry-pick -n &lt;commit-hash-start&gt;..&lt;commit-hash-end&gt;
+</code></pre></div>
 
 <p>This can help achieve a similar level of flexibility to the patch approach.</p>
 <h3 id="soft-reset-and-commit">soft reset and commit</h3>
@@ -1084,50 +1036,44 @@ into a single diff set, and pick the changes to split into commits D, E, and F.<
 <p>In that case, the easiest way might be to roll back all of the commits made, but preserve
 the changes that each commit made. This is precisely what a <em>soft reset</em> will do.</p>
 <p>For the git commit history</p>
-<div class="highlight"><pre><span></span>A - B - C (master)
+<div class="highlight"><pre><span></span><code>A - B - C (master)
     \
      D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
-</pre></div>
-
+</code></pre></div>
 
 <p>Run the command</p>
-<div class="highlight"><pre><span></span>git reset --soft B
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git reset --soft B
+</code></pre></div>
 
 <p>to move the HEAD pointer to commit B, while also <em>preserving</em> all changes made from the
 start of the feature branch <code>D1</code> to the tip of the feature branch <code>E3</code>, all added as
 staged changes (as though they had been <code>git add</code>-ed).</p>
 <p>The changes will be staged, but changes to files can be unstaged using</p>
-<div class="highlight"><pre><span></span>git restore --staged &lt;filename&gt;
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git restore --staged &lt;filename&gt;
+</code></pre></div>
 
 <p>Now add changes selectively using the <code>--edit</code> or <code>--patch</code> flags</p>
-<div class="highlight"><pre><span></span>git add --edit &lt;filename&gt;
+<div class="highlight"><pre><span></span><code>git add --edit &lt;filename&gt;
 git add --patch &lt;filename&gt;
-</pre></div>
-
+</code></pre></div>
 
 <p>If desired, those changes can be unstaged, and then re-staged using <code>git add --edit</code> or
 <code>git add --patch</code> to selectively add changes to particular commits.</p>
 <p>When done, run </p>
-<div class="highlight"><pre><span></span>git commit
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git commit
+</code></pre></div>
 
 <p>with no arguments to commit the changes you made.</p>
 <h1 id="refactoring-large-pull-requests">Refactoring Large Pull Requests</h1>
 <p>The approaches above can be useful for refactoring branches. The end result will look something like this:</p>
-<div class="highlight"><pre><span></span>A - B - C (master)
+<div class="highlight"><pre><span></span><code>A - B - C (master)
     \
      D (feature-d)
       \ 
        E (feature-e)
         \
          F (feature-f)
-</pre></div>
-
+</code></pre></div>
 
 <p>Now 3 pull requests can be made, one for each feature. Thanks to the refactoring above, each branch
 should be a more isolated set of changes that are all related, and therefore easier to review.</p>
@@ -1143,15 +1089,14 @@ like so:</p>
 from prior branches (D), resulting in messy and hard-to-review pull requests.)</p>
 <p>Pull requests are reviewed and discussed, and new commits will probably be added to fix things or incorporate
 feedback:</p>
-<div class="highlight"><pre><span></span>A - B - C (master)
+<div class="highlight"><pre><span></span><code>A - B - C (master)
     \
      D - DA - DB (feature-d)
       \ 
        E - EA - EB (feature-e)
         \
          F - FA - FB (feature-f)
-</pre></div>
-
+</code></pre></div>
 
 <h2 id="preparing-to-merge-a-large-pull-request">Preparing to Merge a Large Pull Request</h2>
 <p>All of your pull requests are approved and ready to merge. Now what?</p>
@@ -1163,26 +1108,23 @@ broken tests. Any changes made can be added to the <code>feature-f</code> branch
 they are part of the pull request, making the merge into <code>feature-e</code> go smoothly.</p>
 <p>To create a throwaway E-F integration branch, we start by creating a test integration branch from the tip of the
 <code>feature-f</code> branch, and we will merge branch <code>feature-e</code> into branch <code>feature-f</code>.</p>
-<div class="highlight"><pre><span></span>git checkout feature-f
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git checkout feature-f
+</code></pre></div>
 
 <p>Now we create a local E-F integration branch:</p>
-<div class="highlight"><pre><span></span>git checkout -b integration-e-f
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git checkout -b integration-e-f
+</code></pre></div>
 
 <p>Now we merge <code>feature-e</code> into <code>integration-e-f</code>, which is the same as <code>feature-f</code>:</p>
-<div class="highlight"><pre><span></span>git merge --no-ff feature-e
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git merge --no-ff feature-e
+</code></pre></div>
 
 <p>The <code>--no-ff</code> flag creates a separate merge commit, which is useful here to keep our commit history clean.</p>
 <p>If merge conflicts are encountered, those can be resolved in the usual manner, and the (conflict-free) new
 versions of each file, reflecting changes from <code>feature-f</code> and <code>feature-e</code>, will all be present after the
 merge commit.</p>
 <p>Further commits can also be made to make tests pass, with a resulting git diagram:</p>
-<div class="highlight"><pre><span></span>A - B - C (master)
+<div class="highlight"><pre><span></span><code>A - B - C (master)
     \
      D - DA - DB (feature-d)
       \ 
@@ -1191,41 +1133,36 @@ merge commit.</p>
          F - FA - FB - EF1 - EF2 (integration-e-f)
                               ^
                              HEAD
-</pre></div>
-
+</code></pre></div>
 
 <p>Once the <code>integration-e-f</code> branch is polished and passing tests, we can re-label it as <code>feature-f</code> and push
 the new commits to the remote. To re-label <code>integration-e-f</code> as <code>feature-f</code>, assuming we're at the tip of
 the <code>integration-e-f</code> branch (where we left off above):</p>
-<div class="highlight"><pre><span></span>git branch -D feature-f
+<div class="highlight"><pre><span></span><code>git branch -D feature-f
 git checkout -b feature-f
-</pre></div>
-
+</code></pre></div>
 
 <p>and push the new commits to the remote's <code>feature-f</code> branch, before you merge in the pull request (<code>feature-f</code>
 into <code>feature-e</code>):</p>
-<div class="highlight"><pre><span></span>git push origin feature-f
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git push origin feature-f
+</code></pre></div>
 
 <p>Now you are ready to merge pull request 3 (F into E).</p>
 <h2 id="rinse-and-repeat">Rinse and Repeat</h2>
 <p>Rinse and repeat for pull requests 2 and 1.</p>
 <p>For Pull Request 2, we start by creating a new <code>integration-d-e-f</code> branch from the tip of the
 <code>integration-e-f</code> branch, like so:</p>
-<div class="highlight"><pre><span></span>git checkout integration-d-e
+<div class="highlight"><pre><span></span><code>git checkout integration-d-e
 git checkout -b integration-d-e-f
-</pre></div>
-
+</code></pre></div>
 
 <p>and use the same approach of merging in the <code>feature-d</code> branch with an explicit merge commit:</p>
-<div class="highlight"><pre><span></span>git merge --no-ff feature-d
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git merge --no-ff feature-d
+</code></pre></div>
 
 <p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
 and you should now have a git commit history like this:</p>
-<div class="highlight"><pre><span></span>A - B - C (master)
+<div class="highlight"><pre><span></span><code>A - B - C (master)
     \
      D - DA - DB ----------------
       \                          \
@@ -1234,20 +1171,17 @@ and you should now have a git commit history like this:</p>
          F - FA - FB - EF1 - EF2 - DEF1 - DEF2 (integration-d-e-f)
                                             ^
                                            HEAD
-</pre></div>
-
+</code></pre></div>
 
 <p>Now re-label the <code>integration-d-e-f</code> branch as <code>feature-e</code>:</p>
-<div class="highlight"><pre><span></span>git branch -D feature-e &amp;&amp; git checkout -b feature-e
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git branch -D feature-e &amp;&amp; git checkout -b feature-e
+</code></pre></div>
 
 <p>Finally, push all new commits to the remote, including the new merge
 commit, which will make sure the pull request can be merged without
 any conflicts:</p>
-<div class="highlight"><pre><span></span>git push origin feature-e
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git push origin feature-e
+</code></pre></div>
 
 <p>Now PR 2 (E into D) can be merged.</p>
 <h2 id="final-merge-into-master">Final Merge into Master</h2>
@@ -1256,48 +1190,42 @@ branches into the master branch. We start with a <code>feature-d</code> branch
 that has several commits related to feature D, then several commits
 from merging the <code>feature-e</code> branch in (pull request 2, E into D),
 and the <code>feature-e</code> branch also had <code>feature-f</code> merged into it.</p>
-<div class="highlight"><pre><span></span>A - B - C (master)
+<div class="highlight"><pre><span></span><code>A - B - C (master)
      \
       D - D2 - DEF1 - DEF2 (feature-d)
-</pre></div>
-
+</code></pre></div>
 
 <p>Now we will create one more commit on the <code>feature-d</code> branch that is
 merging <code>master</code> into <code>feature-d</code>, which will help the merge happen
 smoothly for pull request 1 (D into master).</p>
 <p>But first we switch to an integration branch, in case things don't go
 smoothly and we want to throw away the merge commit:</p>
-<div class="highlight"><pre><span></span>git branch integration-def-master
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git branch integration-def-master
+</code></pre></div>
 
 <p>Create an explicit merge commit to merge <code>master</code> into <code>integration-def-master</code>:</p>
-<div class="highlight"><pre><span></span>git merge --no-ff master
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git merge --no-ff master
+</code></pre></div>
 
 <p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
 and you should now have a git commit history like this:</p>
-<div class="highlight"><pre><span></span>A - B - C (master)
+<div class="highlight"><pre><span></span><code>A - B - C (master)
      \   \---------------------
       \                        \
        D - D2 - DEF1 - DEF2 - DEF3 (integration-def-master)
-</pre></div>
-
+</code></pre></div>
 
 <p>where commit <code>DEF3</code> is the merge commit created with the <code>--no-ff</code> command.</p>
 <p>The merge commit will resolve any conflicts. When you're satisfied with the
 merge commit, you can switch out the <code>integration-def-master</code> branch with the
 <code>feature-d</code> branch like so:</p>
-<div class="highlight"><pre><span></span>git branch -D feature-d
+<div class="highlight"><pre><span></span><code>git branch -D feature-d
 git checkout -b feature-d
-</pre></div>
-
+</code></pre></div>
 
 <p>Now you can push the merge commit to the remote:</p>
-<div class="highlight"><pre><span></span>git push origin feature-d
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>git push origin feature-d
+</code></pre></div>
 
 <p>and you're now ready to merge your (conflict-free) pull request!</p></div>
 

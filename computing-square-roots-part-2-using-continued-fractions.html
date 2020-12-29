@@ -278,9 +278,10 @@ $$</div>
 <p>The numerator and denominator of the <span class="math">\(k^{th}\)</span> convergent are denoted <span class="math">\(P_k\)</span> and <span class="math">\(Q_k\)</span>, 
 respectively, and can be computed through the recurrence relation:</p>
 <div class="math">$$
-\dfrac{P_k}{Q_k} = \dfrac{a_k P_{k-1} + P_{k-2}}{a_k Q_{k-1} + Q_{k-2}}
+\dfrac{P_k}{Q_k} = \dfrac{P_{k-2} + a_k P_{k-1}}{Q_{k-2} + a_k Q_{k-1}}
 $$</div>
-<p>where the initial values are <span class="math">\(P_{-1} = 1, P_{-2} = 0, Q_{-1} = 0, Q_{-2} = 1\)</span>
+<p>where the initial values are <span class="math">\(P_{-2} = 0, P_{-1} = 1\)</span> for P and
+<span class="math">\(Q_{-2} = 1, Q_{-1} = 0\)</span> for Q
 (making the first convergent equal to <span class="math">\(\frac{a_0}{1}\)</span>).
 This can be used to compute successive approximations.
 Note that on a computational platform, you will quickly reach the end 
@@ -363,67 +364,64 @@ without arbitrary precision libraries.</p>
 <p>That being said, if you are only interested in the first 10 or so
 terms of the continued fraction representation, here is a 
 static Java method to compute them:</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** Find the (shorter than 10) continued fraction sequence for sqrt(n). </span>
+<div class="highlight"><pre><span></span><code>    <span class="cm">/** Find the (shorter than 10) continued fraction sequence for sqrt(n). </span>
 <span class="cm">     * This returns a list of integers, [a0, a1, a2, ...]</span>
 <span class="cm">     *</span>
 <span class="cm">     * @params n Number to compute the square root of.</span>
 <span class="cm">     */</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="nf">continuedFractionSqrt</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">if</span><span class="o">(</span><span class="n">isPerfectSquare</span><span class="o">(</span><span class="n">n</span><span class="o">))</span> <span class="o">{</span>
-            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalArgumentException</span><span class="o">(</span><span class="s">&quot;Error: n cannot be a perfect square.&quot;</span><span class="o">);</span>
-        <span class="o">}</span>
-        <span class="kt">int</span> <span class="n">niters</span> <span class="o">=</span> <span class="mi">10</span><span class="o">;</span> <span class="c1">// handbrake</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="nf">continuedFractionSqrt</span><span class="p">(</span><span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">isPerfectSquare</span><span class="p">(</span><span class="n">n</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Error: n cannot be a perfect square.&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="kt">int</span> <span class="n">niters</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span> <span class="c1">// handbrake</span>
 
-        <span class="kt">int</span> <span class="n">ai</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="kt">double</span> <span class="n">val</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="kt">double</span> <span class="n">remainder</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">coeffs</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;();</span>
+        <span class="kt">int</span> <span class="n">ai</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">double</span> <span class="n">val</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">double</span> <span class="n">remainder</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">coeffs</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span><span class="p">();</span>
 
         <span class="c1">// Fencepost</span>
-        <span class="n">remainder</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">Math</span><span class="o">.</span><span class="na">sqrt</span><span class="o">(</span><span class="n">n</span><span class="o">);</span>
+        <span class="n">remainder</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">Math</span><span class="p">.</span><span class="na">sqrt</span><span class="p">(</span><span class="n">n</span><span class="p">);</span>
 
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">niters</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">remainder</span><span class="o">;</span>
-            <span class="n">ai</span> <span class="o">=</span> <span class="n">floor</span><span class="o">(</span><span class="n">val</span><span class="o">);</span>
-            <span class="n">remainder</span> <span class="o">=</span> <span class="n">val</span> <span class="o">-</span> <span class="n">ai</span><span class="o">;</span>
-            <span class="n">coeffs</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">ai</span><span class="o">);</span>
-            <span class="k">if</span><span class="o">(</span><span class="n">coeffs</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">i</span><span class="o">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">*</span><span class="n">coeffs</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="mi">0</span><span class="o">))</span> <span class="o">{</span>
-                <span class="k">break</span><span class="o">;</span>
-            <span class="o">}</span>
-        <span class="o">}</span>
-        <span class="k">return</span> <span class="n">coeffs</span><span class="o">;</span>
-    <span class="o">}</span>
+        <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">niters</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">remainder</span><span class="p">;</span>
+            <span class="n">ai</span> <span class="o">=</span> <span class="n">floor</span><span class="p">(</span><span class="n">val</span><span class="p">);</span>
+            <span class="n">remainder</span> <span class="o">=</span> <span class="n">val</span> <span class="o">-</span> <span class="n">ai</span><span class="p">;</span>
+            <span class="n">coeffs</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="n">ai</span><span class="p">);</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">coeffs</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">*</span><span class="n">coeffs</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
+                <span class="k">break</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">coeffs</span><span class="p">;</span>
+    <span class="p">}</span>
 
     <span class="cm">/** Check if x is a perfect square. */</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">isPerfectSquare</span><span class="o">(</span><span class="kt">int</span> <span class="n">x</span><span class="o">)</span> <span class="o">{</span> 
-        <span class="kt">int</span> <span class="n">s</span> <span class="o">=</span> <span class="o">(</span><span class="kt">int</span><span class="o">)(</span><span class="n">Math</span><span class="o">.</span><span class="na">round</span><span class="o">(</span><span class="n">Math</span><span class="o">.</span><span class="na">sqrt</span><span class="o">(</span><span class="n">x</span><span class="o">)));</span>
-        <span class="k">return</span> <span class="n">x</span><span class="o">==(</span><span class="n">s</span><span class="o">*</span><span class="n">s</span><span class="o">);</span>
-    <span class="o">}</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">isPerfectSquare</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span> 
+        <span class="kt">int</span> <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">Math</span><span class="p">.</span><span class="na">round</span><span class="p">(</span><span class="n">Math</span><span class="p">.</span><span class="na">sqrt</span><span class="p">(</span><span class="n">x</span><span class="p">)));</span>
+        <span class="k">return</span> <span class="n">x</span><span class="o">==</span><span class="p">(</span><span class="n">s</span><span class="o">*</span><span class="n">s</span><span class="p">);</span>
+    <span class="p">}</span>
 
     <span class="cm">/** Find the floor of a double. */</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">floor</span><span class="o">(</span><span class="kt">double</span> <span class="n">j</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">return</span> <span class="o">(</span><span class="kt">int</span><span class="o">)(</span><span class="n">Math</span><span class="o">.</span><span class="na">floor</span><span class="o">(</span><span class="n">j</span><span class="o">));</span>
-    <span class="o">}</span>
-</pre></div>
-
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">floor</span><span class="p">(</span><span class="kt">double</span> <span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">Math</span><span class="p">.</span><span class="na">floor</span><span class="p">(</span><span class="n">j</span><span class="p">));</span>
+    <span class="p">}</span>
+</code></pre></div>
 
 <p>Here is a short program that uses this routine to compute 
 the continued fraction representation of <span class="math">\(\sqrt{14}\)</span>:</p>
-<div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SquareRootCF</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;sqrt(14) = &quot;</span><span class="o">+</span><span class="n">Convergents</span><span class="o">.</span><span class="na">continuedFractionSqrt</span><span class="o">(</span><span class="mi">14</span><span class="o">));</span>
-        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;sqrt(19) = &quot;</span><span class="o">+</span><span class="n">Convergents</span><span class="o">.</span><span class="na">continuedFractionSqrt</span><span class="o">(</span><span class="mi">19</span><span class="o">));</span>
-    <span class="o">}</span>
-<span class="o">}</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SquareRootCF</span> <span class="p">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;sqrt(14) = &quot;</span><span class="o">+</span><span class="n">Convergents</span><span class="p">.</span><span class="na">continuedFractionSqrt</span><span class="p">(</span><span class="mi">14</span><span class="p">));</span>
+        <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;sqrt(19) = &quot;</span><span class="o">+</span><span class="n">Convergents</span><span class="p">.</span><span class="na">continuedFractionSqrt</span><span class="p">(</span><span class="mi">19</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
 
 <p>and the corresponding output:</p>
-<div class="highlight"><pre><span></span>$ javac SquareRootCF.java &amp;&amp; java SquareRootCF
+<div class="highlight"><pre><span></span><code>$ javac SquareRootCF.java &amp;&amp; java SquareRootCF
 sqrt(14) = [3, 1, 2, 1, 6]
 sqrt(19) = [4, 2, 1, 3, 1, 2, 8]
-</pre></div>
-
+</code></pre></div>
 
 <p><a name="cf-example-convergents"></a></p>
 <h2 id="example-convergents-of-sqrt14">Example: Convergents of <span class="math">\(\sqrt{14}\)</span></h2>
@@ -432,17 +430,18 @@ which will yield successive rational numbers that are progressively better appro
 to <span class="math">\(\sqrt{14}\)</span>. </p>
 <p>We start with the expression given above for the <span class="math">\(k^{th}\)</span> convergent: </p>
 <div class="math">$$
-\dfrac{P_k}{Q_k} = \dfrac{a_k P_{k-1} + P_{k-2}}{a_k Q_{k-1} + Q_{k-2}}
+\dfrac{P_k}{Q_k} = \dfrac{P_{k-2} + a_k P_{k-1}}{Q_{k-2} + a_k Q_{k-1}}
 $$</div>
-<p>with initial values <span class="math">\(P_{-1} = 1, P_{-2} = 0, Q_{-1} = 0, Q_{-2} = 1\)</span>. This yields 
+<p>with initial values <span class="math">\(P_{-2} = 0, P_{-1} = 1\)</span> for P and
+<span class="math">\(Q_{-2} = 1, Q_{-1} = 0\)</span> for Q. This yields 
 the first "real" convergent:</p>
 <div class="math">$$
-\dfrac{P_1}{Q_1} = \dfrac{a_0 + 0}{0 + 1} = 4
+\dfrac{P_1}{Q_1} = \dfrac{1 + 1 \times a_0}{0 + a_1 \times 1} = \dfrac{1 + 3}{0 + 1} = \dfrac{4}{1}
 $$</div>
 <p>Successive approximations will use the values <span class="math">\(P_1\)</span> and <span class="math">\(Q_1\)</span> to compute
 the next convergents.</p>
 <div class="math">$$
-\dfrac{P_2}{Q_2} = \dfrac{P_1 a_1 + P_0}{Q_1 a_1 + Q_0} = \frac{11}{3}
+\dfrac{P_2}{Q_2} = \dfrac{P_0 + P_1 a_1}{Q_0 + Q_1 a_1} = \frac{11}{3}
 $$</div>
 <p>Continuing in this fashion gives:</p>
 <div class="math">$$
@@ -476,44 +475,44 @@ _ \sqrt{14} &amp;\approx&amp; 3 \\
 $$</div>
 <p>Here is a static method in Java that will compute the convergents
 of a square root:</p>
-<div class="highlight"><pre><span></span>    <span class="cm">/** </span>
+<div class="highlight"><pre><span></span><code>    <span class="cm">/** </span>
 <span class="cm">     * Compute the convergents (rational representation of</span>
 <span class="cm">     * continued fraction).</span>
 <span class="cm">     *</span>
 <span class="cm">     * This uses the recurrence relation:</span>
 <span class="cm">     *</span>
-<span class="cm">     * P_n     a_n P_n-1  + P_n-2</span>
+<span class="cm">     * P_n     P_n-2 + a_n P_n-1</span>
 <span class="cm">     * ---- = -----------------</span>
-<span class="cm">     *  Q_n    a_n Q_n-1  + Q_n-2</span>
+<span class="cm">     *  Q_n    Q_n-2 + a_n Q_n-1</span>
 <span class="cm">     */</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">long</span><span class="o">[]</span> <span class="nf">convergents</span><span class="o">(</span><span class="kt">int</span> <span class="n">n</span><span class="o">,</span> <span class="kt">int</span> <span class="n">nterms</span><span class="o">)</span> <span class="o">{</span>
-        <span class="kt">long</span><span class="o">[]</span> <span class="n">convergents</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">long</span><span class="o">[</span><span class="mi">2</span><span class="o">];</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">long</span><span class="o">[]</span> <span class="nf">convergents</span><span class="p">(</span><span class="kt">int</span> <span class="n">n</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nterms</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">long</span><span class="o">[]</span> <span class="n">convergents</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">long</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span><span class="p">;</span>
 
-        <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">cfrepr</span> <span class="o">=</span> <span class="n">continuedFractionSqrt</span><span class="o">(</span><span class="n">n</span><span class="o">);</span>
+        <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">cfrepr</span> <span class="o">=</span> <span class="n">continuedFractionSqrt</span><span class="p">(</span><span class="n">n</span><span class="p">);</span>
 
         <span class="c1">// Initial values for convergent recurrence relation</span>
-        <span class="kt">long</span> <span class="n">Pnm2</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="c1">// P_{n-2}</span>
-        <span class="kt">long</span> <span class="n">Pnm1</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span>
-        <span class="kt">long</span> <span class="n">Qnm2</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span>
-        <span class="kt">long</span> <span class="n">Qnm1</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="kt">long</span> <span class="n">P</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="kt">long</span> <span class="n">Q</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+        <span class="kt">long</span> <span class="n">Pnm2</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// P_{n-2}</span>
+        <span class="kt">long</span> <span class="n">Pnm1</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="kt">long</span> <span class="n">Qnm2</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="kt">long</span> <span class="n">Qnm1</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">long</span> <span class="n">P</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">long</span> <span class="n">Q</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
         <span class="c1">// Term 0 is the constant value a0.</span>
-        <span class="kt">int</span> <span class="n">accessindex</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;=</span><span class="n">nterms</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span> 
-            <span class="kt">int</span> <span class="n">an</span> <span class="o">=</span> <span class="n">cfrepr</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="n">accessindex</span><span class="o">);</span>
+        <span class="kt">int</span> <span class="n">accessindex</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;=</span><span class="n">nterms</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span> 
+            <span class="kt">int</span> <span class="n">an</span> <span class="o">=</span> <span class="n">cfrepr</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">accessindex</span><span class="p">);</span>
 
-            <span class="n">P</span> <span class="o">=</span> <span class="n">an</span> <span class="o">*</span> <span class="n">Pnm1</span> <span class="o">+</span> <span class="n">Pnm2</span><span class="o">;</span>
-            <span class="n">Q</span> <span class="o">=</span> <span class="n">an</span> <span class="o">*</span> <span class="n">Qnm1</span> <span class="o">+</span> <span class="n">Qnm2</span><span class="o">;</span>
+            <span class="n">P</span> <span class="o">=</span> <span class="n">Pnm2</span> <span class="o">+</span> <span class="n">an</span> <span class="o">*</span> <span class="n">Pnm1</span><span class="p">;</span>
+            <span class="n">Q</span> <span class="o">=</span> <span class="n">Qnm2</span> <span class="o">+</span> <span class="n">an</span> <span class="o">*</span> <span class="n">Qnm1</span><span class="p">;</span>
 
-            <span class="n">Pnm2</span> <span class="o">=</span> <span class="n">Pnm1</span><span class="o">;</span>
-            <span class="n">Pnm1</span> <span class="o">=</span> <span class="n">P</span><span class="o">;</span>
+            <span class="n">Pnm2</span> <span class="o">=</span> <span class="n">Pnm1</span><span class="p">;</span>
+            <span class="n">Pnm1</span> <span class="o">=</span> <span class="n">P</span><span class="p">;</span>
 
-            <span class="n">Qnm2</span> <span class="o">=</span> <span class="n">Qnm1</span><span class="o">;</span>
-            <span class="n">Qnm1</span> <span class="o">=</span> <span class="n">Q</span><span class="o">;</span>
+            <span class="n">Qnm2</span> <span class="o">=</span> <span class="n">Qnm1</span><span class="p">;</span>
+            <span class="n">Qnm1</span> <span class="o">=</span> <span class="n">Q</span><span class="p">;</span>
 
-            <span class="k">if</span><span class="o">(</span><span class="n">accessindex</span><span class="o">+</span><span class="mi">1</span><span class="o">&gt;=</span><span class="n">cfrepr</span><span class="o">.</span><span class="na">size</span><span class="o">())</span> <span class="o">{</span> 
+            <span class="k">if</span><span class="p">(</span><span class="n">accessindex</span><span class="o">+</span><span class="mi">1</span><span class="o">&gt;=</span><span class="n">cfrepr</span><span class="p">.</span><span class="na">size</span><span class="p">())</span> <span class="p">{</span> 
                 <span class="c1">// Ensure we keep repeating the sequence</span>
                 <span class="c1">// if the sequence has fewer terms than</span>
                 <span class="c1">// the user asks for.</span>
@@ -521,35 +520,33 @@ of a square root:</p>
                 <span class="c1">// approximations for numbers.</span>
                 <span class="c1">// This only works because the sequence</span>
                 <span class="c1">// is palindromic.</span>
-                <span class="n">accessindex</span> <span class="o">=</span> <span class="mi">1</span><span class="o">;</span>
-            <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
-                <span class="n">accessindex</span><span class="o">++;</span>
-            <span class="o">}</span>
-        <span class="o">}</span>
+                <span class="n">accessindex</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="n">accessindex</span><span class="o">++</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
 
-        <span class="n">convergents</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">=</span> <span class="n">P</span><span class="o">;</span>
-        <span class="n">convergents</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">=</span> <span class="n">Q</span><span class="o">;</span>
+        <span class="n">convergents</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">=</span> <span class="n">P</span><span class="p">;</span>
+        <span class="n">convergents</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">=</span> <span class="n">Q</span><span class="p">;</span>
 
-        <span class="k">return</span> <span class="n">convergents</span><span class="o">;</span>
-    <span class="o">}</span>
-</pre></div>
-
+        <span class="k">return</span> <span class="n">convergents</span><span class="p">;</span>
+    <span class="p">}</span>
+</code></pre></div>
 
 <p>Here is a simple driver program that prints out several
 convergents for <span class="math">\(\sqrt{14}\)</span>:</p>
-<div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SquareRootCF</span> <span class="o">{</span>
-    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">for</span><span class="o">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="o">;</span> <span class="n">i</span><span class="o">&lt;=</span><span class="mi">10</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
-            <span class="kt">long</span><span class="o">[]</span> <span class="n">conv</span> <span class="o">=</span> <span class="n">Convergents</span><span class="o">.</span><span class="na">convergents</span><span class="o">(</span><span class="mi">14</span><span class="o">,</span><span class="n">i</span><span class="o">);</span>
-            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Convergent &quot;</span><span class="o">+</span><span class="n">i</span><span class="o">+</span><span class="s">&quot;: &quot;</span><span class="o">+</span><span class="n">conv</span><span class="o">[</span><span class="mi">0</span><span class="o">]+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">conv</span><span class="o">[</span><span class="mi">1</span><span class="o">]);</span>
-        <span class="o">}</span>
-    <span class="o">}</span>
-<span class="o">}</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SquareRootCF</span> <span class="p">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;=</span><span class="mi">10</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kt">long</span><span class="o">[]</span> <span class="n">conv</span> <span class="o">=</span> <span class="n">Convergents</span><span class="p">.</span><span class="na">convergents</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="n">i</span><span class="p">);</span>
+            <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Convergent &quot;</span><span class="o">+</span><span class="n">i</span><span class="o">+</span><span class="s">&quot;: &quot;</span><span class="o">+</span><span class="n">conv</span><span class="o">[</span><span class="mi">0</span><span class="o">]+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">conv</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
 
 <p>and the corresponding console output:</p>
-<div class="highlight"><pre><span></span>$ javac SquareRootCF.java &amp;&amp; java SquareRootCF
+<div class="highlight"><pre><span></span><code>$ javac SquareRootCF.java &amp;&amp; java SquareRootCF
 Convergent 1: 4/1
 Convergent 2: 11/3
 Convergent 3: 15/4
@@ -560,8 +557,7 @@ Convergent 7: 449/120
 Convergent 8: 3027/809
 Convergent 9: 3476/929
 Convergent 10: 9979/2667
-</pre></div>
-
+</code></pre></div>
 
 <p><a name="cf-sqrt-refs"></a></p>
 <h1 id="references">References</h1>

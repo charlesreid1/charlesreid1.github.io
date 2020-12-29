@@ -143,10 +143,9 @@
 into a Makefile.</p>
 <p>This is useful for cases where terraform is being used to manage infrastructure.
 In the end you will be able to run a command like</p>
-<div class="highlight"><pre><span></span>make plan-infra
+<div class="highlight"><pre><span></span><code>make plan-infra
 make deploy-infra
-</pre></div>
-
+</code></pre></div>
 
 <p>and and have this call the corresponding terraform commands to plan and deploy your
 terraformed cloud infrastructure.</p>
@@ -162,7 +161,7 @@ terraformed cloud infrastructure.</p>
 <h1 id="step-0-directory-and-file-layout">Step 0: Directory and File Layout</h1>
 <p>This tutorial presumes you have a top level directory corresponding to a git repository.
 We will use the following directory structure for this example:</p>
-<div class="highlight"><pre><span></span>my-project/
+<div class="highlight"><pre><span></span><code>my-project/
     Readme.md
     environment
     Makefile
@@ -171,14 +170,13 @@ We will use the following directory structure for this example:</p>
         component-1/
             variables.tf
             main.tf
-</pre></div>
-
+</code></pre></div>
 
 <h2 id="environment-variables">Environment Variables</h2>
 <p>In order to keep track of environment variables used in the terraform
 process, we use the file <code>envronment</code> in the top level project directory
 to keep all environment variable values under version control.</p>
-<div class="highlight"><pre><span></span><span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span>
 <span class="k">while</span> <span class="o">[</span> -h <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span> <span class="o">]</span> <span class="p">;</span> <span class="k">do</span> <span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>readlink <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="p">;</span> <span class="k">done</span>
 <span class="nb">export</span> <span class="nv">PROJECT_HOME</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">cd</span> -P <span class="s2">&quot;</span><span class="k">$(</span>dirname <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span><span class="s2">&quot;</span>
 
@@ -197,28 +195,25 @@ to keep all environment variable values under version control.</p>
 <span class="nv">AWS_DEFAULT_OUTPUT</span><span class="o">=</span>json
 <span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span>us-east-1
 <span class="nb">set</span> +a
-</pre></div>
-
+</code></pre></div>
 
 <p>Optionally, a local environment file can contain environment variable values
 that are sensitive or should not be kept under version control, so add this
 to the bottom of the <code>environment</code> file too:</p>
-<div class="highlight"><pre><span></span><span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
     <span class="nb">source</span> <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span>
 <span class="k">fi</span>
-</pre></div>
-
+</code></pre></div>
 
 <h1 id="step-1-top-level-makefile">Step 1: Top Level Makefile</h1>
 <p>Start by creating the <code>plan-infra</code> and <code>deploy-infra</code> commands in your top-level
 Makefile. These commands will, in turn, call make commands defined in <code>infra/Makefile</code>:</p>
-<div class="highlight"><pre><span></span><span class="nf">plan-infra</span><span class="o">:</span>
+<div class="highlight"><pre><span></span><code><span class="nf">plan-infra</span><span class="o">:</span>
     <span class="k">$(</span>MAKE<span class="k">)</span> -C infra plan-all
 
 <span class="nf">deploy-infra</span><span class="o">:</span>
     <span class="k">$(</span>MAKE<span class="k">)</span> -C infra apply-all
-</pre></div>
-
+</code></pre></div>
 
 <p>The <code>-C infra</code> flag indicates make should use a Makefile in a subdirectory.</p>
 <h1 id="step-2-infra-level-makefile">Step 2: Infra Level Makefile</h1>
@@ -231,13 +226,12 @@ Makefile. These commands will, in turn, call make commands defined in <code>infr
 <p>We cover the Makefile from the bottom up.</p>
 <h2 id="fake-targets">Fake Targets</h2>
 <p>Start by defining "fake" targets or rules, that is, make rules whose names are not file names:</p>
-<div class="highlight"><pre><span></span><span class="nf">.PHONY</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
-</pre></div>
-
+<div class="highlight"><pre><span></span><code><span class="nf">.PHONY</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
+</code></pre></div>
 
 <h2 id="commands-for-single-components">Commands for Single Components</h2>
 <p>Next, above that, we define terraform commands for a single component:</p>
-<div class="highlight"><pre><span></span><span class="nf">init</span><span class="o">:</span>
+<div class="highlight"><pre><span></span><code><span class="nf">init</span><span class="o">:</span>
     rm -rf <span class="k">$(</span>COMPONENT<span class="k">)</span>/.terraform/*.tfstate
     ./build_deploy_config.py <span class="k">$(</span>COMPONENT<span class="k">)</span>
     <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> terraform init<span class="p">;</span>
@@ -253,8 +247,7 @@ Makefile. These commands will, in turn, call make commands defined in <code>infr
 
 <span class="nf">clean</span><span class="o">:</span>
     <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> rm -rf .terraform
-</pre></div>
-
+</code></pre></div>
 
 <p>Note that the <code>init</code> command is running a <code>build_deploy_config.py</code> script,
 which we will cover in a moment. This script creates the terraform variables
@@ -262,7 +255,7 @@ file <code>variables.tf</code> and populates the variable values using environme
 variables.</p>
 <h2 id="commands-for-all-components">Commands for All Components</h2>
 <p>Above that, we have commands to perform each action on all components:</p>
-<div class="highlight"><pre><span></span><span class="nf">all</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span>
+<div class="highlight"><pre><span></span><code><span class="nf">all</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span>
 
 <span class="nf">init-all</span><span class="o">:</span>
     @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
@@ -288,22 +281,20 @@ variables.</p>
     @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
         <span class="k">$(</span>MAKE<span class="k">)</span> clean <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
     <span class="k">done</span>
-</pre></div>
-
+</code></pre></div>
 
 <h2 id="variables">Variables</h2>
 <p>Last but not least, we define a few variables at the top of the Makefile:
 most importantly, the list of infrastructure components. This is created by
 extracting the names of subdirectories in <code>infra/</code> containing <code>*.tf</code> files:</p>
-<div class="highlight"><pre><span></span><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span> <span class="se">\;</span> <span class="p">|</span> sort --unique<span class="o">}</span>
+<div class="highlight"><pre><span></span><code><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span> <span class="se">\;</span> <span class="p">|</span> sort --unique<span class="o">}</span>
 <span class="nv">COMPONENTS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> for d in </span><span class="k">$(</span>DIRS<span class="k">)</span><span class="p">; do basename </span><span class="nv">$$d</span><span class="p">; done</span><span class="si">}</span>
-</pre></div>
-
+</code></pre></div>
 
 <h2 id="final-makefile">Final Makefile</h2>
 <p>Here is the final <code>infra/Makefile</code>:</p>
 <p><strong><code>infra/Makefile</code>:</strong></p>
-<div class="highlight"><pre><span></span><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span> <span class="se">\;</span> <span class="p">|</span> sort --unique<span class="o">}</span>
+<div class="highlight"><pre><span></span><code><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span> <span class="se">\;</span> <span class="p">|</span> sort --unique<span class="o">}</span>
 <span class="nv">COMPONENTS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> for d in </span><span class="k">$(</span>DIRS<span class="k">)</span><span class="p">; do basename </span><span class="nv">$$d</span><span class="p">; done</span><span class="si">}</span>
 
 <span class="nf">all</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span>
@@ -351,8 +342,7 @@ extracting the names of subdirectories in <code>infra/</code> containing <code>*
     <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> rm -rf .terraform
 
 <span class="nf">.PHONY</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
-</pre></div>
-
+</code></pre></div>
 
 <h1 id="step-3-writing-terraform-components">Step 3: Writing Terraform Components</h1>
 <p>As an example, we will consider an example of terraform-managed buckets.</p>
@@ -360,7 +350,7 @@ extracting the names of subdirectories in <code>infra/</code> containing <code>*
 files for creating and managing the buckets.</p>
 <p>We can create one file per cloud provider. As an example, here is <code>s3.tf</code>:</p>
 <p><strong><code>s3.tf</code></strong>:</p>
-<div class="highlight"><pre><span></span>data &quot;aws_caller_identity&quot; &quot;current&quot; {}
+<div class="highlight"><pre><span></span><code>data &quot;aws_caller_identity&quot; &quot;current&quot; {}
 
 locals {
   common_tags = &quot;${map(
@@ -387,14 +377,12 @@ resource aws_s3_bucket dss_s3_bucket {
   }
   tags = merge(local.common_tags, local.aws_tags)
 }
-</pre></div>
-
+</code></pre></div>
 
 <p>Note that this requires several environment variables to be
 defined in <code>environment</code> and requires the operator to run:</p>
-<div class="highlight"><pre><span></span>source environment
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>source environment
+</code></pre></div>
 
 <h1 id="step-4-initializing-terraform-components">Step 4: Initializing Terraform Components</h1>
 <p>The following script will automatically generate terraform files for
@@ -403,25 +391,23 @@ values.</p>
 <p>It is called <code>build_deploy_config.py</code>.</p>
 <p>Start with a simple argument parser that just accepts a single argument,
 the component to make terraform files for:</p>
-<div class="highlight"><pre><span></span><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">)</span>
 <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;component&quot;</span><span class="p">)</span>
 <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>Next, we define several terraform file templates using Python's
 bracket template syntax. Start with a template for defining a
 terraform variable:</p>
-<div class="highlight"><pre><span></span>terraform_variable_template = &quot;&quot;&quot;
+<div class="highlight"><pre><span></span><code>terraform_variable_template = &quot;&quot;&quot;
 variable &quot;{name}&quot; {{
   default = &quot;{val}&quot;
 }}
 &quot;&quot;&quot;
-</pre></div>
-
+</code></pre></div>
 
 <p>Next, define a template for the terraform backend buket:</p>
-<div class="highlight"><pre><span></span>terraform_backend_template = &quot;&quot;&quot;# Auto-generated during infra build process.
+<div class="highlight"><pre><span></span><code>terraform_backend_template = &quot;&quot;&quot;# Auto-generated during infra build process.
 # Please edit infra/build_deploy_config.py directly.
 terraform {{
   backend &quot;s3&quot; {{
@@ -432,22 +418,20 @@ terraform {{
   }}
 }}
 &quot;&quot;&quot;
-</pre></div>
-
+</code></pre></div>
 
 <p>Next define terraform cloud providers:</p>
-<div class="highlight"><pre><span></span>terraform_providers_template = &quot;&quot;&quot;# Auto-generated during infra build process.
+<div class="highlight"><pre><span></span><code>terraform_providers_template = &quot;&quot;&quot;# Auto-generated during infra build process.
 # Please edit infra/build_deploy_config.py directly.
 provider aws {{
   region = &quot;{aws_region}&quot;
 }}
 &quot;&quot;&quot;
-</pre></div>
-
+</code></pre></div>
 
 <p>Provide a list of environment variables that should also be defined as
 terraform variables:</p>
-<div class="highlight"><pre><span></span><span class="nv">env_vars_to_infra</span> <span class="o">=</span> <span class="o">[</span>
+<div class="highlight"><pre><span></span><code><span class="nv">env_vars_to_infra</span> <span class="o">=</span> <span class="o">[</span>
 <span class="nv">PROJECT_DEPLOYMENT_STAGE</span><span class="o">=</span><span class="s2">&quot;dev&quot;</span>
 
 <span class="c1"># bucket name</span>
@@ -469,17 +453,16 @@ terraform variables:</p>
     <span class="s2">&quot;PROJECT_INFRA_TAG_SERVICE&quot;</span>,
     <span class="s2">&quot;PROJECT_INFRA_TAG_OWNER&quot;</span>
 <span class="o">]</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>Finally, substitute environment variable values into the templates, and write
 the templated content to the appropriate <code>*.tf</code> file. First, the backend:</p>
-<div class="highlight"><pre><span></span><span class="c1"># Write backend.tf</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># Write backend.tf</span>
 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;backend.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
     <span class="n">caller_info</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;sts&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get_caller_identity</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">):</span>
         <span class="n">profile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">]</span>
-        <span class="n">profile_setting</span> <span class="o">=</span> <span class="n">f</span><span class="s1">&#39;profile = &quot;{profile}&quot;&#39;</span>
+        <span class="n">profile_setting</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;profile = &quot;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">profile_setting</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_backend_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
@@ -489,28 +472,25 @@ the templated content to the appropriate <code>*.tf</code> file. First, the back
         <span class="n">region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
         <span class="n">profile_setting</span><span class="o">=</span><span class="n">profile_setting</span><span class="p">,</span>
     <span class="p">))</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>Next, the <code>variables.tf</code> for the component:</p>
-<div class="highlight"><pre><span></span><span class="c1"># Write variables.tf</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># Write variables.tf</span>
 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;variables.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
     <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Auto-generated during infra build process.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
     <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Please edit infra/build_deploy_config.py directly.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">env_vars_to_infra</span><span class="p">:</span>
         <span class="n">val</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
         <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_variable_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">val</span><span class="p">))</span>
-</pre></div>
-
+</code></pre></div>
 
 <p>Finally, the cloud providers file <code>providers.tf</code>:</p>
-<div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;providers.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+<div class="highlight"><pre><span></span><code><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;providers.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
     <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_providers_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
         <span class="n">aws_region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
         <span class="n">gcp_project_id</span><span class="o">=</span><span class="n">GCP_PROJECT_ID</span><span class="p">,</span>
     <span class="p">))</span>
-</pre></div>
-
+</code></pre></div>
 
 <h1 id="workflow">Workflow</h1>
 <p>We now have a top-level Makefile that wraps the plan and apply commands directly,
@@ -521,9 +501,8 @@ and we have an infra-level Makefile with additional commands for managing infras
 environment variables into them, creating a new version of them with up-to-date values.</p>
 <p>The plan step (<code>make plan-infra</code>) calls the <code>build_deploy_config.py</code> script (detailed above)
 to regenerate the terraform files when environment variables are changed.</p>
-<div class="highlight"><pre><span></span>make plan-infra
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>make plan-infra
+</code></pre></div>
 
 <p>This script will iterate over each cloud infrastructure component in <code>infra/</code>, use terraform
 to plan the changes it would make to cloud resources, and print a summary of those changes
@@ -570,13 +549,12 @@ make deploy-infra</code></p>
 <p>As seen above, infrastructure components can be deleted with the <code>delete</code> command in the infra
 Makefile, and all infrastructure components can be deleted with the <code>delete-all</code> command.</p>
 <p>To delete a particular component:</p>
-<div class="highlight"><pre><span></span>make -C infra COMPONENT=buckets destroy
-</pre></div>
-
+<div class="highlight"><pre><span></span><code>make -C infra COMPONENT=buckets destroy
+</code></pre></div>
 
 <p>To destroy all infra:</p>
-<div class="highlight"><pre><span></span>make -C infra destroy-all
-</pre></div></div>
+<div class="highlight"><pre><span></span><code>make -C infra destroy-all
+</code></pre></div></div>
 
     </div>
 </div>
