@@ -396,7 +396,7 @@ $Q_{-2} = 1, Q_{-1} = 0$ for Q. This yields
 the first "real" convergent:
 
 $$
-\dfrac{P_1}{Q_1} = \dfrac{1 + 1 \times a_0}{0 + a_1 \times 1} = \dfrac{1 + 3}{0 + 1} = \dfrac{4}{1}
+\dfrac{P_1}{Q_1} = \dfrac{1 + 1 \times a_1}{0 + a_1 \times 1} = \dfrac{1 + 3}{0 + 1} = \dfrac{4}{1}
 $$
 
 Successive approximations will use the values $P_1$ and $Q_1$ to compute
@@ -411,7 +411,7 @@ Continuing in this fashion gives:
 $$
 \begin{array}
 \quad \dfrac{P_2}{Q_2} &=& \dfrac{15}{4} \\
-\dfrac{P_3}{Q_3} &=& \dfrac{11}{3}
+\dfrac{P_3}{Q_3} &=& \dfrac{101}{27}
 \end{array}
 $$
 

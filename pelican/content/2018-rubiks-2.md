@@ -14,7 +14,7 @@ You are currently reading Part 2 of this blog post: **Part 2: Permutations**
 
 See Part 3 of this blog post here: [Part 3: Factoring Permutations](https://charlesreid1.github.io/4x4-rubiks-cube-part-3-factoring-permutations.html)
 
-See Part 4 of this blog post here: [Part 4: Sequence Order](#)
+See Part 4 of this blog post here: [Part 4: Sequence Order](https://charlesreid1.github.io/4x4-rubiks-cube-part-4-sequence-order.html)
 
 
 # Table of Contents
@@ -104,7 +104,7 @@ We begin by considering a permutation of an $n$-tuple,
 which, in the last post, we resolved to denote 
 
 $$
-(2 3 4 \dots n 1)
+(2 \quad 3 \quad 4 \quad \dots \quad n \quad 1)
 $$
 
 Now, let us write this as two rows: the first row

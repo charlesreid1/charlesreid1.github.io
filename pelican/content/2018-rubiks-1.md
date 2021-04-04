@@ -14,7 +14,7 @@ See Part 2 of this blog post here: [Part 2: Permutations](https://charlesreid1.g
 
 See Part 3 of this blog post here: [Part 3: Factoring Permutations](https://charlesreid1.github.io/4x4-rubiks-cube-part-3-factoring-permutations.html)
 
-See Part 4 of this blog post here: [Part 4: Sequence Order](#)
+See Part 4 of this blog post here: [Part 4: Sequence Order](https://charlesreid1.github.io/4x4-rubiks-cube-part-4-sequence-order.html)
 
 # Table of Contents
 
