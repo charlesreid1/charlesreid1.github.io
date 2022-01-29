@@ -36,100 +36,136 @@ and some particular features of MediaWiki that we use in our zettelkasten.
 
 But first, a bit of history to cover how we got here.
 
-## In The Beginning
+## In The Beginning: Some History
 
 We first stumbled on the idea of a zettelkasten around May of 2020, and it immediately resonated.
 But our search for the perfect notetaking system had far predated this discovery. We have sampled
 our share of notetaking systems over the years, and each has had its pain points. Finding the
 perfect notetaking system requires discovering the pitfalls of many not-so-perfect notetaking systems.
 
-The Dark Ages:
+### The Dark Ages:
 
-* **Spiral notebooks**: back in the analog days, we kept several sets of spiral notebooks for different
-  subjects. We always valued the ability of this note-taking system to allow a context-switch by just
-  closing one notebook and opening another. And nothing beats the tactile sensation of paging through
-  a spiral notebook that is filled with writing.
+**Spiral notebooks**:
 
-* **Palm pilot**: as an early teenager, we got our hands on a used Palm Pilot, and it quickly became
-  a combination note-taking device and library. My notes were stuffed with abridged summaries of historical
-  facts, philosphy books, chemistry facts, and mathematical formulas. 
-  (It would take about a decade before internet on cellphones was commonplace, and you could easily
-  resolve an argument during a car trip about some historical trivia by looking something up on Wikipedia.
-  Come to mention it, Wikipedia was still in its infancy.)
+Back in the analog days, we kept several sets of spiral notebooks for different
+subjects. We always valued the ability of this note-taking system to allow a context-switch by just
+closing one notebook and opening another. And nothing beats the tactile sensation of paging through
+a spiral notebook that is filled with writing.
 
-* **Binders**: our spiral notebook system got upgraded into a binder system when we were taking college
-  courses and had to keep notes, homework, exams, and papers together. It mostly worked well, but you could
-  only carry two or three binders at a time. With a textbook or two, the backpack became a rucksack.
-  The portability/availability tradeoff was a constant and common tradeoff in the pre-cloud, pre-mobile internet 
-  days. As a younger person, you don't have your own office, so portability is particularly important.
+**Palm pilot**:
 
-* **Hipster PDA**: yes, we admit to adopting the [Hipster PDA](https://en.wikipedia.org/wiki/Hipster_PDA) at
-  one point. (What is a hipster PDA, you ask? Imagine a small stack of half-cut index cards, held together by a binder
-  clip or rubber band or box, small enough to slip into a pocket. That was essentially our hipster PDA.)
-  * We had a stack of white cards, plus different colored cards inserted to mark different sections.
-    The top section of cards were the calendar, with one card for each of the next 30 days or so; 
-    the back of those cards had brief notes or tasks for that day, or any important events.
-    There was a section for todo cards, which had a topic for the tasks on the front, and a list of tasks on the back.
-    There was a section for cards with information to study, perfect while waiting to catch a bus.
-  * No surprises, this method was just too inefficient to last long. The lack of space on the cards, and the
-    constant desire to rearrange the information on the cards, made it hard to strike the right balance.
-  * There are some things that are best done with paper, not digital tools. **CALENDARS ARE NOT ONE OF THOSE THINGS.**
+As a teenager, we got our hands on a used Palm Pilot, and it quickly became
+a combination note-taking device and library. My notes were stuffed with abridged summaries of historical
+facts, philosphy books, chemistry facts, and mathematical formulas. 
+(It would take about a decade before internet on cellphones was commonplace, and you could easily
+resolve an argument during a car trip about some historical trivia by looking something up on Wikipedia.
+Come to mention it, Wikipedia was still in its infancy.)
 
-The Renaissance: 
+**Binders**:
 
-* **Evernote**: Around the turn of 2010, we made heavy use of Evernote as a central place for
-  storing information and notes. We can say, with the benefit of hindsight, that we were trying to implement
-  something like a zettelkasten with Evernote.
-    * The way we used Evernote was by trying to implement the idea that Evernote could serve two purposes:
-    * First, it could be used to capture external information - ideas, links, books, a quote, a key reference.
-      (The Evernote Web Clipper, a browser extension that would save a website to Evernote, was invaluable.)
-      If you could get the text into Evernote, then it could be searched, and the search function
-      cold become a path to discovering connections between notes and topics.
-    * Second, if you created notes for each day, or for specific events or meetings on specific days,
-      you could use it as a journal, and start to create a cross-referenced record of what you did
-      on different days with different ideas. This could help with strengthening memory and recall.
-    * The Evernote train soured when Evernote began to hop on the commercialization train, leaving many
-      long-standing and basic user interface bugs unfixed, while developing a special pen and a special paper
-      that would remember what you wrote so you could NOBODY CARES
-    * Evernote's Achilles Heel was the fact that their application was a walled garden of content, in a format
-      that was complicated to export and in a custom XML format that had to be picked apart to get your stuff out.
-    * Combined with the UI bugs in the Evernote application, the prospect of sinking time and effort into organizing
-      my "external brain" in the form of notes in their walled garden application made no sense.
-    * We also discovered a problem with our method of capturing external information. If information is
-      simply dumped wholesale into a search engine, as the Web Clipper did, it created an enormous amount of
-      noise in search results. Nothing useful gets unearthed, no new connections are made.
-      Too much content leads to no meaning.
-    * Ideas need to be carefully extracted from their environment and placed in a fresh, empty note, with plenty of space to grow.
+Our spiral notebook system got upgraded into a binder system when we were taking college
+courses and had to keep notes, homework, exams, and papers together. It mostly worked well, but you could
+only carry two or three binders at a time. With a textbook or two, the backpack became a rucksack.
+The portability/availability tradeoff was a constant and common tradeoff in the pre-cloud, pre-mobile internet 
+days. As a younger person, you don't have your own office, so portability is particularly important.
 
-* **Github**: We have approximately one billion GitHub repositories and/or Gists accumulated from
-  our various side projects and distractions. Of these, several are just plain old readmes, because you can
-  make a Readme look like a million bucks by adding some lorem ipsum and some fake badges from badge.io,
-  and Markdown is a very convenient way to write up technical content (except math, but even that problem has solutions)
-  (get it).
+**Hipster PDA**:
 
-* **AMP (Apache + MySQL + PHP) and DynDNS**: In the early 2010s we discovered the wonder of hosting our own website
-  on our own machine, thanks to the now-defunct DynDNS service. By running this wonderful desktop widget 
-  you could turn a local server into a public website, and we began the time-honored tradtion of nerds everywhere
-  of using technology to document our adventures with technology, and to document the technology we were using to
-  run the technology used to document our adventures with technology. All gone now.
+Yes, we admit to adopting the [Hipster PDA](https://en.wikipedia.org/wiki/Hipster_PDA) at
+one point. (What is a hipster PDA, you ask? Imagine a small stack of half-cut index cards, held together by a binder
+clip or rubber band or box, small enough to slip into a pocket. That was essentially our hipster PDA.)
 
-The Enlightenment:
+We had a stack of white cards, plus different colored cards inserted to mark different sections.
+The top section of cards were the calendar, with one card for each of the next 30 days or so; 
+the back of those cards had brief notes or tasks for that day, or any important events.
+There was a section for todo cards, which had a topic for the tasks on the front, and a list of tasks on the back.
+There was a section for cards with information to study, perfect while waiting to catch a bus.
 
-* **Joplin**: A sensible alternative to Evernote that we wish we had discovered sooner.
-  A nice, easy-to-use, open-source application that implements the Evernote concept, but using Markdown,
-  simple flat text files, optional backup via cloud synchronization service, encryption, and many other features,
-  all wrapped in a handsome and simple UI. (Why... Why didn't we discover it sooner??)
+No surprises, this method was just too inefficient to last long. The lack of space on the cards, and the
+constant desire to rearrange the information on the cards, made it hard to strike the right balance.
 
-* **MediaWiki**: While we were learning about PHP, we discovered that MediaWiki, the software
-  that runs Wikipedia, is built on PHP, and we spun up our own wiki. We have maintained that same
-  wiki for over a decade at <https://charlesreid1.com/wiki/>
+Here is the most value lesson we learned from that entire experience, distilled down to its essence:
 
-The Modern Era:
+There are some things that are best done with paper, not digital tools. 
 
-* **Private MediaWiki Zettelkasten**: We have reached a point where we know both what we want and what technology
-  can provide it. MediaWiki is that technology. In the blog posts that follow, we will detail the reasons we think
-  MediaWiki is the best choice for Zettelkasten software, and how we've used MediaWiki features to supercharge
-  our notetaking, thinking, and information retention.
+**CALENDARS ARE NOT ONE OF THOSE THINGS.**
+
+### The Renaissance: 
+
+**Evernote**:
+
+Around the turn of 2010, we made heavy use of Evernote as a central place for
+storing information and notes. We can say, with the benefit of hindsight, that we were trying to implement
+something like a zettelkasten with Evernote.
+
+* The way we used Evernote was by trying to implement the idea that Evernote could serve two purposes:
+
+* First, it could be used to capture external information - ideas, links, books, a quote, a key reference.
+  (The Evernote Web Clipper, a browser extension that would save a website to Evernote, was invaluable.)
+  If you could get the text into Evernote, then it could be searched, and the search function
+  cold become a path to discovering connections between notes and topics.
+* Second, if you created notes for each day, or for specific events or meetings on specific days,
+  you could use it as a journal, and start to create a cross-referenced record of what you did
+  on different days with different ideas. This could help with strengthening memory and recall.
+
+Evernote soured on me when Evernote the company began to hop on the commercialization train, leaving many
+long-standing and basic user interface bugs unfixed while they spent all their time and effort developing
+and marketing products like digital pens and special paper that would convert handwritten notes into Evernote
+notes. It was absurd.
+
+Ultimately, the Achilles Heel was the fact that their application was a walled garden of content, in a format
+that was complicated to export and in a custom XML format that had to be picked apart to get your stuff out.
+
+Combined with the UI bugs in the Evernote application, the prospect of sinking time and effort into organizing
+my "external brain" in the form of notes in their walled garden application made no sense.
+
+We also discovered a problem with our method of capturing external information. If information is
+simply dumped wholesale into a search engine, as the Web Clipper did, it created an enormous amount of
+noise in search results. Nothing useful gets unearthed, no new connections are made.
+Too much content leads to no meaning.
+
+Ideas need to be carefully extracted from their environment and placed in a fresh, empty note, with plenty of space to grow.
+
+**Github**:
+
+We have approximately one billion GitHub repositories and/or Gists accumulated from
+our various side projects and distractions. Of these, several are just plain old readmes, because you can
+make a Readme look like a million bucks by adding some lorem ipsum and some fake badges from badge.io,
+and Markdown is a very convenient way to write up technical content (except math, but even that problem has solutions)
+(get it).
+
+**AMP (Apache + MySQL + PHP) and DynDNS**:
+
+In the early 2010s we discovered the wonder of hosting our own website
+on our own machine, thanks to the now-defunct DynDNS service. By running this wonderful desktop widget 
+you could turn a local server into a public website, and we began the time-honored tradtion of nerds everywhere
+of using technology to document our adventures with technology, and to document the technology we were using to
+run the technology used to document our adventures with technology. All gone now, but some of the pages live on
+somewhere on <https://charlesreid1.com/wiki>.
+
+### The Enlightenment:
+
+**Joplin**: 
+
+A sensible alternative to Evernote that we wish we had discovered sooner.
+A nice, easy-to-use, open-source application that implements the Evernote concept, but using Markdown,
+simple flat text files, optional backup via cloud synchronization service, encryption, and many other features,
+all wrapped in a handsome and simple UI. (Why... Why didn't we discover it sooner??)
+
+**MediaWiki**: 
+
+While we were learning about PHP, we discovered that MediaWiki, the software
+that runs Wikipedia, is built on PHP, and we spun up our own wiki. We have maintained that same
+wiki for over a decade at <https://charlesreid1.com/wiki/>
+
+### The Modern Era:
+
+**Private MediaWiki Zettelkasten**:
+
+We have reached a point where we know both what we want and what technology
+can provide it. MediaWiki is that technology. In the blog posts that follow, we will detail the reasons we think
+MediaWiki is the best choice for Zettelkasten software, and how we've used MediaWiki features to supercharge
+our notetaking, thinking, and information retention.
 
 ## Zettelkasten Is Not A Public Wiki
 
