@@ -102,6 +102,351 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Graphs for Bioinformatics, Part 1: de Bruijn Graphs, Hamiltonian Paths, and Eulerian Paths
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-05-02T19:00:00-07:00" pubdate>Thursday 05/02/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#the-context-rosalindinfo">The Context: Rosalind.info</a></li>
+<li><a href="#graphs-for-bioinformatics">Graphs for Bioinformatics</a><ul>
+<li><a href="#building-a-k-mer-graph-the-wrong-graph">Building a K-mer Graph (The Wrong Graph)</a></li>
+<li><a href="#building-a-de-bruijn-graph-the-right-graph">Building a De Bruijn Graph (The Right Graph)</a></li>
+<li><a href="#transform-the-problem-hamiltonian-paths-to-eulerian-paths">Transform the Problem: Hamiltonian Paths to Eulerian Paths</a></li>
+</ul>
+</li>
+<li><a href="#an-example">An Example</a></li>
+<li><a href="#back-to-dna">Back to DNA</a></li>
+</ul>
+</div>
+<h1 id="the-context-rosalindinfo">The Context: Rosalind.info</h1>
+<p>To provide a bit of context for a discussion of Euler paths and Euler cycles:
+starting around December, a group of us in the <a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology (DIB Lab)</a>
+started working through the textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
+and the associated website, <a href="https://rosalind.info">Rosalind.info</a>.</p>
+<p>Rosalind.info is a site that is similar in style to <a href="https://projecteuler.net/">Project Euler</a>,
+a <a href="https://charlesreid1.github.io/tag/project-euler.html">familiar topic on this blog</a>.
+Project Euler poses computationally challenging problems in the domain of mathematics.</p>
+<p>Like Project Euler, the visitor is given one small example input and the corresponding 
+correct output, and one large example input and corresponding output. Also like Project
+Euler, the problems vary in how much computer science versus domain expertise is needed,
+but they are largely focused on writing algorithms rather than on the science behind the
+computations.</p>
+<p>Unlike Project Euler, however, Rosalind.info does give plenty of hints (via the textbook,
+if you have a copy), and sometimes even gives pseudocode for the algorithm. <strong>The book is
+required to get enough context to answer some of the Rosalind.info problems.</strong></p>
+<h1 id="graphs-for-bioinformatics">Graphs for Bioinformatics</h1>
+<p>The textbook focuses on different problems in each chapter. For example, Chapter 1 uses
+the example of a string of DNA that marks where replication begins to introduce some
+basic bioinformatics concepts and algorithms. Chapter 2 uses the concept of molecular
+clocks to introduce motifs and motif-finding, the focus of most of the problems in
+Chapter 2.</p>
+<p>Chapter 3 focuses on the problem of genome assembly - how we assemble an entire genome
+from short segments alone. In particular, the chapter focuses on de Bruijn graphs, 
+which are graphs that, given a sequence of symbols drawn from an alphabet, are composed 
+of edges (one for each <strong>k-mer</strong>, that is, a chunk of the sequence of length k),
+and vertices (one for each k-mer prefix and k-mer suffix, connected by a directed edge
+of the k-mer). We will cover more of the details of these graphs shortly.</p>
+<h2 id="building-a-k-mer-graph-the-wrong-graph">Building a K-mer Graph (The Wrong Graph)</h2>
+<p>The Bioinformatics Algorithm book starts with a general discussion of how to 
+represent a sequence of DNA nucleotides using a graph. The idea they discuss 
+initially (which is an obvious, but not necessarily good, one) is splitting
+the sequence into k-mer chunks, like so:</p>
+<div class="highlight"><pre><span></span><code><span class="err">      Sequence:   TAATGCCATGGGATGTT</span>
+<span class="err">      Pieces:     TAA </span>
+<span class="err">                   AAT</span>
+<span class="err">                    ATG </span>
+<span class="err">                     TGC</span>
+<span class="err">                      GCC </span>
+<span class="err">                       CCA</span>
+<span class="err">                        CAT </span>
+<span class="err">                         ATG</span>
+<span class="err">                          TGG </span>
+<span class="err">                           GGG</span>
+<span class="err">                            GGA </span>
+<span class="err">                             GAT</span>
+<span class="err">                              ATG </span>
+<span class="err">                               TGT</span>
+<span class="err">                                GTT</span>
+</code></pre></div>
+
+<p>and letting one k-mer be represented by one vertex. Then the sequence
+above could be turned into the graph:</p>
+<div class="highlight"><pre><span></span><code><span class="err">TAA -&gt; AAT -&gt; ATG -&gt; TGC -&gt; GCC -&gt; CCA -&gt; CAT -&gt; ATG -&gt; TGG -&gt; GGG -&gt; GGA -&gt; GAT -&gt; ATG -&gt; TGT -&gt; GTT</span>
+</code></pre></div>
+
+<p>On this graph, every edge has the property that the first (k-1)
+nucleotides of the destination match the last (k-1) nucleotides
+of the source. </p>
+<p>If we did not know this sequence in advance, we could draw <em>every</em>
+edge with that property - every time the last (k-1) characters of
+a k-mer match the first (k-1) characters of another k-mer, an edge
+is drawn between those two vertices. </p>
+<p>That graph would result in <em>many</em> more edges than the graph shown above.</p>
+<p>Furthermore, in theory, if each read sequence came from a single genome
+and we had the entire genome covered by read sequences, a path through
+the graph that visits every vertex (every k-mer) would yield the full
+genome.</p>
+<p>A path through a graph that visits every vertex once is called a 
+<strong>Hamiltonian path</strong>.</p>
+<p>Why is this hard? Because the problem of proving a Hamiltonian
+path exists, let alone finding it, becomes very difficult for
+large graphs.</p>
+<h2 id="building-a-de-bruijn-graph-the-right-graph">Building a De Bruijn Graph (The Right Graph)</h2>
+<p>Nicolaas de Bruijn introduced (in 1946, in a paper entitled simply
+<a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>)
+a new way of representing a sequence with a graph. He split a given
+sequence into k-mers, as before, but instead of representing
+each k-mer as a <em>vertex</em> on the graph, he represented each 
+k-mer as an <em>edge</em> on the graph.</p>
+<p>This type of graph is called a <strong>de Bruijn graph</strong>.</p>
+<p>Specifically, for a DNA sequence, each k-mer from the sequence is
+represented by an edge, where the source vertex
+is that k-mer's (k-1)-nucleotide suffix and the destination vertex
+is that k-mer's (k-1)-nucleotide prefix.</p>
+<div class="highlight"><pre><span></span><code><span class="err">      Sequence:   TAATGCCATGGGATGTT</span>
+<span class="err">      Pieces:     TA  </span>
+<span class="err">                   AA</span>
+<span class="err">                    AT </span>
+<span class="err">                     TG</span>
+<span class="err">                      GC </span>
+<span class="err">                       CC</span>
+<span class="err">                        CA </span>
+<span class="err">                         AT</span>
+<span class="err">                          TG </span>
+<span class="err">                           GG</span>
+<span class="err">                            GG </span>
+<span class="err">                             GA </span>
+<span class="err">                              AT  </span>
+<span class="err">                               TG </span>
+<span class="err">                                GT </span>
+<span class="err">                                 TT</span>
+</code></pre></div>
+
+<p>Now this sequence is written as the graph:</p>
+<div class="highlight"><pre><span></span><code><span class="err">TA -&gt; AA -&gt; AT -&gt; TG -&gt; GC -&gt; CC -&gt; CA -&gt; AT -&gt; TG -&gt; GG -&gt; GG -&gt; GA -&gt; AT -&gt; TG -&gt; GT -&gt; TT</span>
+</code></pre></div>
+
+<p>so that the original breakup of the sequence into k-mers is still
+represented, but now as edges rather than as vertices. That is, the 
+k-mer <code>TAA</code> is represented by the edge <code>TA -&gt; AA</code>.</p>
+<h2 id="transform-the-problem-hamiltonian-paths-to-eulerian-paths">Transform the Problem: Hamiltonian Paths to Eulerian Paths</h2>
+<p>The change in the problem representation (k-mers as vertices to k-mers
+as edges) changes the problem of finding the <strong>Hamiltonian path</strong> 
+(a path through the graph that visits every <em>vertex</em> exactly once) 
+into the problem of finding the <strong>Eulerian path</strong>
+(a path through the graph that visits every <em>edge</em> exactly once).</p>
+<h1 id="an-example">An Example</h1>
+<p>Let's look at a slightly simpler example - the one de Bruijn was
+originally considering - so we can see de Bruijn graphs in action
+in a slightly simpler case.</p>
+<p>In his 1946 paper <a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>,
+de Bruijn describes the problem thus:</p>
+<blockquote>
+<p>Some years ago Ir. K. Posthumus stated an interesting conjecture
+concerning certain cycles of digits 0 or 1, which we shall call
+<span class="math">\(P_n\)</span> cycles. For <span class="math">\(n = 1, 2, 3, \dots\)</span>, a <span class="math">\(P_n\)</span> cycle be an ordered
+cycle of <span class="math">\(2^n\)</span> digits 0 or 1, such that the <span class="math">\(2^n\)</span> possible ordered
+sets of <span class="math">\(n\)</span> consecutive digits of that cycle are all different.
+As a consequence, any ordered set of <span class="math">\(n\)</span> digits 0 or 1 occurs exactly
+once in that cycle.</p>
+<p>For example, a <span class="math">\(P_3\)</span> cycle is <span class="math">\(00010111\)</span>, respectively showing the
+triples 000, 001, 010, 011, 111, 100, 100, which are all the possible
+triples indeed.</p>
+</blockquote>
+<p>In this case, de Bruijn is discussing <em>complete</em> de Bruijn graphs - he
+constructs a de Bruijn graph of all possible 3-mers (our k-mers, <span class="math">\(k = 3\)</span>),
+and constructs a path through the graph that visits every edge of the
+graph. Here is the sequence broken down as above:</p>
+<div class="highlight"><pre><span></span><code><span class="err">      Sequence:   00010111</span>
+<span class="err">      Pieces:     00  </span>
+<span class="err">                   00</span>
+<span class="err">                    01</span>
+<span class="err">                     10</span>
+<span class="err">                      01</span>
+<span class="err">                       11</span>
+<span class="err">                        11</span>
+</code></pre></div>
+
+<p>The alphabet here is binary: 0 and 1. </p>
+<p>This (seemingly simple) example is a bit confusing, but here's
+what's going on: we have four vertices on the de Bruijn graph,
+consisting of the 2-mers:</p>
+<div class="highlight"><pre><span></span><code><span class="err">00</span>
+<span class="err">01</span>
+<span class="err">10</span>
+<span class="err">11</span>
+</code></pre></div>
+
+<p>Now, if we draw an edge for every possible 3-mer, we would 
+start with the 3-mer <code>000</code>, which is actually represented
+by a self-edge from vertex <code>00</code> to vertex <code>00</code>, because the
+prefix matches the suffix.</p>
+<p>Similarly, the 3-mer <code>111</code> is represented by a self-edge
+from vertex <code>11</code> to vertex <code>11</code>.</p>
+<p>The other 3-mers are represented by their corresponding edges:
+<code>001</code> is represented by the edge <code>00 -&gt; 01</code>, <code>010</code> by the edge
+<code>01 -&gt; 10</code>, etc.</p>
+<p>By drawing <strong>every possible edge</strong> (to represent every possible
+3-mer), we assemble the <strong>complete de Bruijn graph</strong> (that is,
+the de Bruijn graph containing vertices for all possible
+2-mers connected by edges representing every possible 3-mer
+in the given alphabet).</p>
+<p>The sequence de Bruijn gives in his paper is an Euler path
+through the <em>complete</em> (de Bruijn) graph (that is, a path 
+through the de Bruijn graph that visits every edge exactly 
+once):</p>
+<div class="highlight"><pre><span></span><code><span class="n">Sequence</span><span class="o">:</span> <span class="mi">00010111</span>
+
+<span class="mi">00</span> <span class="o">-&gt;</span> <span class="mi">00</span> <span class="o">-&gt;</span> <span class="mi">01</span> <span class="o">-&gt;</span> <span class="mi">10</span> <span class="o">-&gt;</span> <span class="mi">01</span> <span class="o">-&gt;</span> <span class="mi">11</span> <span class="o">-&gt;</span> <span class="mi">11</span>
+</code></pre></div>
+
+<h1 id="back-to-dna">Back to DNA</h1>
+<p>Now the utility of the de Bruijn methodology is more clear:
+if we can come up with fast, efficient algorithms to find
+Euler paths on large graphs, we can transform the assembly 
+problem (given fragments of a long sequence, reconstruct
+the sequence) into the problem of finding an Eulerian path,
+which is tractable even for large graphs.</p>
+<p>Compare this with string matching algorithms utilizing
+dynamic programming, which can cost <span class="math">\(O(N^2)\)</span> and make
+genome assembly computationally infeasible.</p>
+<p>Part 1 (this post) has covered the basic idea behind 
+assembling DNA sequences using de Bruijn graphs. In
+Part 2 of this post, we will move on to a discussion
+of the "real world" problem, warts and all, and how 
+we can relax some of the strict assumptions (like assuming
+perfect coverage of the original sequence and assuming
+that all reads are perfect).</p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 The Git-Commit-Ectomy
             </b></h1>
         
@@ -837,503 +1182,6 @@ grab the next open spot in the circle.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                The Josephus Problem: Part 2: Two Examples
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-03-20T14:00:00-07:00" pubdate>Wednesday 03/20/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is Part 2 of an N-part series.</p>
-<ul>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html">The Josephus Problem: Part 1: The Problem</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">The Josephus Problem: Part 2: Two Examples</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">The Josephus Problem: Part 3: Solving the Double Step Case</a></li>
-</ul>
-<div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#two-examples">Two Examples</a></li>
-<li><a href="#n-8-m-4">n = 8, m = 4</a><ul>
-<li><a href="#step-by-step-removal-for-n-8">Step by Step Removal for n = 8</a></li>
-<li><a href="#writing-the-solution-permutation-two-row-notation">Writing the Solution Permutation: Two Row Notation</a></li>
-<li><a href="#writing-the-solution-permutation-cycle-notation">Writing the Solution Permutation: Cycle Notation</a></li>
-<li><a href="#visual-representation-of-solution-permutation">Visual Representation of Solution Permutation</a></li>
-</ul>
-</li>
-<li><a href="#n-11-m-2">n = 11, m = 2</a><ul>
-<li><a href="#step-by-step-removal-for-n-11">Step by Step Removal for n = 11</a></li>
-<li><a href="#two-row-notation">Two Row Notation</a></li>
-<li><a href="#cycle-notation">Cycle Notation</a></li>
-<li><a href="#circle-permutation-diagram">Circle Permutation Diagram</a></li>
-</ul>
-</li>
-<li><a href="#next-steps-solve">Next Steps: Solve!</a></li>
-</ul>
-</div>
-<h2 id="two-examples">Two Examples</h2>
-<p>In this blog post we'll walk through two examples
-of a Josephus problem:</p>
-<div class="math">$$
-n = 8, m = 4
-$$</div>
-<p>and</p>
-<div class="math">$$
-n = 11, m = 2
-$$</div>
-<p>We will simulate the Josephus process and
-show how the solution is expressed using both 
-permutation notation and cycle notation.</p>
-<h2 id="n-8-m-4">n = 8, m = 4</h2>
-<p>We begin with the example that Knuth gives in his
-problem statement, <span class="math">\(n = 8, m = 4\)</span>, along with its
-solution, <span class="math">\(54613872\)</span>.</p>
-<p>Here is the Josephus circle for this case, and the
-corresponding removal index on the right (the red dot
-indicates the starting point for the process):</p>
-<table>
-<tr>
-<td>
-<b>Circle index:</b><br />
-<img alt="indexed by circle location order" 
-src="images/josephus_8_4_circleix.png" width="350px" />
-</td>
-<td>
-<b>Removal index:</b><br />
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_removalix.png" width="350px" />
-</td>
-</tr>
-</table>
-
-<h3 id="step-by-step-removal-for-n-8">Step by Step Removal for n = 8</h3>
-<p>Starting at the red dot, we proceed <span class="math">\(m-1\)</span> points forward
-through the circle (<span class="math">\(m\)</span> if we include the starting
-point), skipping items that have already been removed,
-and remove an item from the circle.</p>
-<p>We indicate the starting point with a red dot in Step 0,
-then indicate the removal index with a red dot and the
-corresponding removal index.</p>
-<table>
-
-<tr>
-<td><b>Step 0: Starting Point
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step0R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 1:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step1R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 2:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step2R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 3:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step3R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 4:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step4R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 5:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step5R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 6:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step6R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 7:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step7R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 8:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step8R.png" width="350px" />
-</td>
-</tr>
-
-</table>
-
-<h3 id="writing-the-solution-permutation-two-row-notation">Writing the Solution Permutation: Two Row Notation</h3>
-<p>As mentioned in Part 1, we can think about the final removal order
-of sushi plates (or mice, or soldiers) as a special permutation, 
-the Josephus permutation. If we want to write the Josephus permutation
-using the standard two-row notation for permutations, we would write
-the circle order (the index of items around the circle) on the top row,
-and the removal order (the index of items as they are removed) on the 
-bottom row. This gives:</p>
-<div class="math">$$
-\bigl(\begin{smallmatrix}
-    1 &amp; 2 &amp; 3 &amp; 4 &amp; 5 &amp; 6 &amp; 7 &amp; 8 \\
-    5 &amp; 4 &amp; 6 &amp; 1 &amp; 3 &amp; 8 &amp; 7 &amp; 2
-\end{smallmatrix}\bigr)
-$$</div>
-<p>While this notation is more intuitive (makes it easier to answer
-a variety of questions), it is also inconvenient notation, since
-there are many equivalent ways of writing a single permutation.</p>
-<h3 id="writing-the-solution-permutation-cycle-notation">Writing the Solution Permutation: Cycle Notation</h3>
-<p>In Part 1 we also introduced cycles and cycle notation. Writing a
-permutation as a cycle is a unique representation of that permutation.
-By tracing which elements are permuted with other elements, we can
-turn the two-row representation into a cycle representation.</p>
-<p>Here is the Josephus permutation for <span class="math">\(n = 8, m = 4\)</span> 
-in cycle notation:</p>
-<div class="math">$$
-\left( 1 \, 5 \, 3 \, 6 \, 8 \, 2 \, 4 \right) \left( 7 \right)
-$$</div>
-<h3 id="visual-representation-of-solution-permutation">Visual Representation of Solution Permutation</h3>
-<p>To represent the Josephus permutation graphically, we draw lines 
-connecting the edges that permute and form cycles:</p>
-<p><img alt="circle with undirected permutation paths" 
-src="images/josephus_8_4_circ.png" width="350px" /></p>
-<p>This is a visual representation of the Josephus permutation
-for <span class="math">\(n = 8, m = 4\)</span>.</p>
-<p><a name="n--11-m--2"></a></p>
-<h2 id="n-11-m-2">n = 11, m = 2</h2>
-<p>Next is an example with a step size of two, which
-is a special case of the Josephus problem with a 
-slightly easier solution procedure.</p>
-<p>Here is the final Josephus permutation on a circle,
-which is what our procedure below will yield:</p>
-<table>
-<tr>
-<td>
-<b>Circle index:</b><br />
-<img alt="indexed by circle location order" 
-src="images/josephus_11_2_circleix.png" width="350px" />
-</td>
-<td>
-<b>Removal index:</b><br />
-<img alt="indexed by removal order" 
-src="images/josephus_11_2_removalix.png" width="350px" />
-</td>
-</tr>
-</table>
-
-<h3 id="step-by-step-removal-for-n-11">Step by Step Removal for n = 11</h3>
-<p>As before, we proceed from the red dot, moving
-forward <span class="math">\(m-1\)</span> items and removing the <span class="math">\(m^{th}\)</span>
-item.</p>
-<p>We indicate the starting point with a red dot in Step 0,
-then indicate the removal index with a red dot and the
-corresponding removal index.</p>
-<table>
-
-<tr>
-<td><b>Step 0: Starting Point
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 0"
-src="images/josephus_11_2_step0R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 1:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 1"
-src="images/josephus_11_2_step1R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 2:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 2"
-src="images/josephus_11_2_step2R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 3:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 3"
-src="images/josephus_11_2_step3R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 4:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 4"
-src="images/josephus_11_2_step4R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 5:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 5"
-src="images/josephus_11_2_step5R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 6:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 6"
-src="images/josephus_11_2_step6R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 7:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 7"
-src="images/josephus_11_2_step7R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 8:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 8"
-src="images/josephus_11_2_step8R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 9:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 9"
-src="images/josephus_11_2_step9R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 10:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 10"
-src="images/josephus_11_2_step10R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 11:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 11"
-src="images/josephus_11_2_step11R.png" width="350px" />
-</td>
-</tr>
-
-</table>
-
-<h3 id="two-row-notation">Two Row Notation</h3>
-<p>Here is the two-row representation:</p>
-<div class="math">$$
-\bigl(\begin{smallmatrix}
-     1 &amp;  2 &amp;  3 &amp;  4 &amp;  5 &amp;  6 &amp;  7 &amp;  8 &amp;  9 &amp; 10 &amp; 11 \\
-     6 &amp;  1 &amp;  9 &amp;  2 &amp;  7 &amp;  3 &amp; 11 &amp;  4 &amp;  8 &amp;  5 &amp; 10
-\end{smallmatrix}\bigr)
-$$</div>
-<h3 id="cycle-notation">Cycle Notation</h3>
-<p>When factored into a cycle, this gives:</p>
-<div class="math">$$
-\left( 1 \, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
-\left( 5 \, 7 \, 11 \, 10 \right)
-$$</div>
-<h3 id="circle-permutation-diagram">Circle Permutation Diagram</h3>
-<p>To represent the Josephus permutation graphically, we draw lines 
-connecting the edges that permute and form cycles:</p>
-<p><img alt="circle with undirected permutation paths" 
-src="images/josephus_11_2_circ.png" width="350px" /></p>
-<p>This is a visual representation of the Josephus permutation
-for <span class="math">\(n = 11, m = 2\)</span>.</p>
-<h2 id="next-steps-solve">Next Steps: Solve!</h2>
-<p>Our next steps are simple: solve it! </p>
-<p>In <strong><a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">Part 3</a></strong> we will show the solution of the
-special case of <span class="math">\(m = 2\)</span> (the double-step case).</p>
-<p>In <strong><a href="#">Part 4</a></strong> we will show several ways to solve
-the general case, and walk through some examples
-where we apply the solution procedure.</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/puzzles.html">puzzles</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/josephus.html">josephus</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/latex.html">latex</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1363,6 +1211,19 @@ where we apply the solution procedure.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>January 2022</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/using-mediawiki-as-a-zettelkasten-or-external-brain.html">Using MediaWiki as a Zettelkasten or External Brain</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
