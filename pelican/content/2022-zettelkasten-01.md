@@ -39,9 +39,9 @@ But first, a bit of history to cover how we got here.
 ## In The Beginning: Some History
 
 We first stumbled on the idea of a zettelkasten around May of 2020, and it immediately resonated.
-But our search for the perfect notetaking system had far predated this discovery. We have sampled
-our share of notetaking systems over the years, and each has had its pain points. Finding the
-perfect notetaking system requires discovering the pitfalls of many not-so-perfect notetaking systems.
+But our search for the perfect note-taking system had far predated this discovery. We have sampled
+our share of note-taking systems over the years, and each has had its pain points. Finding the
+perfect note-taking system requires discovering the pitfalls of many not-so-perfect note-taking systems.
 
 ### The Dark Ages:
 
@@ -56,7 +56,7 @@ a spiral notebook that is filled with writing.
 
 As a teenager, we got our hands on a used Palm Pilot, and it quickly became
 a combination note-taking device and library. My notes were stuffed with abridged summaries of historical
-facts, philosphy books, chemistry facts, and mathematical formulas. 
+facts, philosophy books, chemistry facts, and mathematical formulas. 
 (It would take about a decade before internet on cellphones was commonplace, and you could easily
 resolve an argument during a car trip about some historical trivia by looking something up on Wikipedia.
 Come to mention it, Wikipedia was still in its infancy.)
@@ -138,7 +138,7 @@ and Markdown is a very convenient way to write up technical content (except math
 
 In the early 2010s we discovered the wonder of hosting our own website
 on our own machine, thanks to the now-defunct DynDNS service. By running this wonderful desktop widget 
-you could turn a local server into a public website, and we began the time-honored tradtion of nerds everywhere
+you could turn a local server into a public website, and we began the time-honored tradition of nerds everywhere
 of using technology to document our adventures with technology, and to document the technology we were using to
 run the technology used to document our adventures with technology. All gone now, but some of the pages live on
 somewhere on <https://charlesreid1.com/wiki>.
@@ -164,8 +164,8 @@ wiki for over a decade at <https://charlesreid1.com/wiki/>
 
 We have reached a point where we know both what we want and what technology
 can provide it. MediaWiki is that technology. In the blog posts that follow, we will detail the reasons we think
-MediaWiki is the best choice for Zettelkasten software, and how we've used MediaWiki features to supercharge
-our notetaking, thinking, and information retention.
+MediaWiki is the best choice for zettelkasten software, and how we've used MediaWiki features to supercharge
+our note-taking, thinking, and information retention.
 
 ## Zettelkasten Is Not A Public Wiki
 
@@ -175,7 +175,7 @@ public wiki <https://charlesreid1.com/wiki> as the zettelkasten - we have a tota
 serving that role.
 
 (That being said, a lot of the patterns we developed for using our public wiki for note-taking, studying, and side
-proejcts ended up being very helpful for the private wiki.)
+projects ended up being very helpful for the private wiki.)
 
 ## Private Wiki Details
 

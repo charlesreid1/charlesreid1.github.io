@@ -17,7 +17,7 @@ talking about! But basically:
   a network of connected notes that aid in discovery and memory.
 
 * MediaWiki (the software that runs Wikipedia) is a mature PHP software package
-  for creating a wiki, that has many built-in featurs that make it very amenable
+  for creating a wiki, that has many built-in features that make it very amenable
   for use as a zettelkasten.
 
 ## The Daily Page Pattern
@@ -100,12 +100,12 @@ We have given some thought to this problem, and have a few thoughts:
   but we do have some thoughts on that.
 
 * In our experience, the weekly pages create a complication in naming - there isn't a good way to conveniently
-  know, in advance, which weekly page to go to for a given date. If figuring tht out isn't a problem,
+  know, in advance, which weekly page to go to for a given date. If figuring that out isn't a problem,
   then this would be a good option - a week is a good timeframe for a single page of notes.
   Enough time for ideas to persist and stew, but not so long that the page gets stale.
 
 * We feel that a monthly page is too long a time period to organize notes on a single page - after just a few days,
-  the page's content can begin to feel stale, the page may lack the room for accomodating a new idea, or it may
+  the page's content can begin to feel stale, the page may lack the room for accommodating a new idea, or it may
   just feel like all the old ideas are distracting from coming up with new ideas. Whatever it is, we don't
   think the monthly page pattern works well.
 
