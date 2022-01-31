@@ -102,6 +102,512 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Incorporating Terraform Commands into Makefiles
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2020-02-15T12:00:00-08:00" pubdate>Saturday 02/15/2020</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/terraform.html">Terraform</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/incorporating-terraform-commands-into-makefiles.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#step-0-directory-and-file-layout">Step 0: Directory and File Layout</a><ul>
+<li><a href="#environment-variables">Environment Variables</a></li>
+</ul>
+</li>
+<li><a href="#step-1-top-level-makefile">Step 1: Top Level Makefile</a></li>
+<li><a href="#step-2-infra-level-makefile">Step 2: Infra Level Makefile</a><ul>
+<li><a href="#fake-targets">Fake Targets</a></li>
+<li><a href="#commands-for-single-components">Commands for Single Components</a></li>
+<li><a href="#commands-for-all-components">Commands for All Components</a></li>
+<li><a href="#variables">Variables</a></li>
+<li><a href="#final-makefile">Final Makefile</a></li>
+</ul>
+</li>
+<li><a href="#step-3-writing-terraform-components">Step 3: Writing Terraform Components</a></li>
+<li><a href="#step-4-initializing-terraform-components">Step 4: Initializing Terraform Components</a></li>
+<li><a href="#workflow">Workflow</a><ul>
+<li><a href="#plan">Plan</a></li>
+<li><a href="#deploy">Deploy</a></li>
+<li><a href="#update">Update</a></li>
+<li><a href="#destroy">Destroy</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h1 id="summary">Summary</h1>
+<p>This blog post covers a useful pattern for incorporating terraform commands
+into a Makefile.</p>
+<p>This is useful for cases where terraform is being used to manage infrastructure.
+In the end you will be able to run a command like</p>
+<div class="highlight"><pre><span></span><code>make plan-infra
+make deploy-infra
+</code></pre></div>
+
+<p>and and have this call the corresponding terraform commands to plan and deploy your
+terraformed cloud infrastructure.</p>
+<p>The post is divided into a few steps:</p>
+<ul>
+<li>Directory and file layout - how we lay out the files for this tutorial</li>
+<li>Top level Makefile - make commands to add to the top level Makefile</li>
+<li>Infra level Makefile - make commands to add to the infra level Makefile</li>
+<li>Writing Terraform component - how to write a configurable component that is ready to terraform</li>
+<li>Initializing Terraform component - script to initialize terraform components</li>
+<li>Workflow - plan, deploy, update, destroy</li>
+</ul>
+<h1 id="step-0-directory-and-file-layout">Step 0: Directory and File Layout</h1>
+<p>This tutorial presumes you have a top level directory corresponding to a git repository.
+We will use the following directory structure for this example:</p>
+<div class="highlight"><pre><span></span><code>my-project/
+    Readme.md
+    environment
+    Makefile
+    infra/
+        Makefile
+        component-1/
+            variables.tf
+            main.tf
+</code></pre></div>
+
+<h2 id="environment-variables">Environment Variables</h2>
+<p>In order to keep track of environment variables used in the terraform
+process, we use the file <code>envronment</code> in the top level project directory
+to keep all environment variable values under version control.</p>
+<div class="highlight"><pre><span></span><code><span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">while</span> <span class="o">[</span> -h <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span> <span class="o">]</span> <span class="p">;</span> <span class="k">do</span> <span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>readlink <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="p">;</span> <span class="k">done</span>
+<span class="nb">export</span> <span class="nv">PROJECT_HOME</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">cd</span> -P <span class="s2">&quot;</span><span class="k">$(</span>dirname <span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span> <span class="o">&amp;&amp;</span> <span class="nb">pwd</span><span class="k">)</span><span class="s2">&quot;</span>
+
+<span class="nb">set</span> -a
+<span class="nv">PROJECT_DEPLOYMENT_STAGE</span><span class="o">=</span><span class="s2">&quot;dev&quot;</span>
+
+<span class="c1"># bucket name</span>
+<span class="nv">PROJECT_S3_BUCKET</span><span class="o">=</span><span class="s2">&quot;my-organization-my-project-my-bucket&quot;</span>
+
+<span class="c1"># aws tags</span>
+<span class="nv">PROJECT_INFRA_TAG_PROJECT</span><span class="o">=</span><span class="s2">&quot;my-project&quot;</span>
+<span class="nv">PROJECT_INFRA_TAG_SERVICE</span><span class="o">=</span><span class="s2">&quot;my-service&quot;</span>
+<span class="nv">PROJECT_INFRA_TAG_OWNER</span><span class="o">=</span><span class="s2">&quot;whoami@email.com&quot;</span>
+
+<span class="c1"># aws settings</span>
+<span class="nv">AWS_DEFAULT_OUTPUT</span><span class="o">=</span>json
+<span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span>us-east-1
+<span class="nb">set</span> +a
+</code></pre></div>
+
+<p>Optionally, a local environment file can contain environment variable values
+that are sensitive or should not be kept under version control, so add this
+to the bottom of the <code>environment</code> file too:</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="o">[[</span> -f <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+    <span class="nb">source</span> <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span>
+<span class="k">fi</span>
+</code></pre></div>
+
+<h1 id="step-1-top-level-makefile">Step 1: Top Level Makefile</h1>
+<p>Start by creating the <code>plan-infra</code> and <code>deploy-infra</code> commands in your top-level
+Makefile. These commands will, in turn, call make commands defined in <code>infra/Makefile</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">plan-infra</span><span class="o">:</span>
+    <span class="k">$(</span>MAKE<span class="k">)</span> -C infra plan-all
+
+<span class="nf">deploy-infra</span><span class="o">:</span>
+    <span class="k">$(</span>MAKE<span class="k">)</span> -C infra apply-all
+</code></pre></div>
+
+<p>The <code>-C infra</code> flag indicates make should use a Makefile in a subdirectory.</p>
+<h1 id="step-2-infra-level-makefile">Step 2: Infra Level Makefile</h1>
+<p>Next we define <code>infra/Makefile</code>. This Makefile will have two parts:</p>
+<ul>
+<li>terraform commands for a single component (example: init, plan, apply, destroy)</li>
+<li>wrapper commands to run the above commands for every component (example: for each component,
+  run the plan terraform command)</li>
+</ul>
+<p>We cover the Makefile from the bottom up.</p>
+<h2 id="fake-targets">Fake Targets</h2>
+<p>Start by defining "fake" targets or rules, that is, make rules whose names are not file names:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">.PHONY</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
+</code></pre></div>
+
+<h2 id="commands-for-single-components">Commands for Single Components</h2>
+<p>Next, above that, we define terraform commands for a single component:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">init</span><span class="o">:</span>
+    rm -rf <span class="k">$(</span>COMPONENT<span class="k">)</span>/.terraform/*.tfstate
+    ./build_deploy_config.py <span class="k">$(</span>COMPONENT<span class="k">)</span>
+    <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> terraform init<span class="p">;</span>
+
+<span class="nf">plan</span><span class="o">:</span> <span class="n">init</span>
+    <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> terraform plan -detailed-exitcode
+
+<span class="nf">apply</span><span class="o">:</span> <span class="n">init</span>
+    <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> terraform apply
+
+<span class="nf">destroy</span><span class="o">:</span> <span class="n">init</span>
+    <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> terraform destroy
+
+<span class="nf">clean</span><span class="o">:</span>
+    <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> rm -rf .terraform
+</code></pre></div>
+
+<p>Note that the <code>init</code> command is running a <code>build_deploy_config.py</code> script,
+which we will cover in a moment. This script creates the terraform variables
+file <code>variables.tf</code> and populates the variable values using environment
+variables.</p>
+<h2 id="commands-for-all-components">Commands for All Components</h2>
+<p>Above that, we have commands to perform each action on all components:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">all</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span>
+
+<span class="nf">init-all</span><span class="o">:</span>
+    @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
+        <span class="k">$(</span>MAKE<span class="k">)</span> init <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
+    <span class="k">done</span>
+
+<span class="nf">plan-all</span><span class="o">:</span>
+    @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
+        <span class="k">$(</span>MAKE<span class="k">)</span> plan <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
+    <span class="k">done</span>
+
+<span class="nf">apply-all</span><span class="o">:</span>
+    @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
+        <span class="k">$(</span>MAKE<span class="k">)</span> apply <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
+    <span class="k">done</span>
+
+<span class="nf">destroy-all</span><span class="o">:</span>
+    @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
+        <span class="k">$(</span>MAKE<span class="k">)</span> destroy <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
+    <span class="k">done</span>
+
+<span class="nf">clean-all</span><span class="o">:</span>
+    @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
+        <span class="k">$(</span>MAKE<span class="k">)</span> clean <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
+    <span class="k">done</span>
+</code></pre></div>
+
+<h2 id="variables">Variables</h2>
+<p>Last but not least, we define a few variables at the top of the Makefile:
+most importantly, the list of infrastructure components. This is created by
+extracting the names of subdirectories in <code>infra/</code> containing <code>*.tf</code> files:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span> <span class="se">\;</span> <span class="p">|</span> sort --unique<span class="o">}</span>
+<span class="nv">COMPONENTS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> for d in </span><span class="k">$(</span>DIRS<span class="k">)</span><span class="p">; do basename </span><span class="nv">$$d</span><span class="p">; done</span><span class="si">}</span>
+</code></pre></div>
+
+<h2 id="final-makefile">Final Makefile</h2>
+<p>Here is the final <code>infra/Makefile</code>:</p>
+<p><strong><code>infra/Makefile</code>:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span> <span class="se">\;</span> <span class="p">|</span> sort --unique<span class="o">}</span>
+<span class="nv">COMPONENTS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> for d in </span><span class="k">$(</span>DIRS<span class="k">)</span><span class="p">; do basename </span><span class="nv">$$d</span><span class="p">; done</span><span class="si">}</span>
+
+<span class="nf">all</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span>
+
+<span class="nf">init-all</span><span class="o">:</span>
+    @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
+        <span class="k">$(</span>MAKE<span class="k">)</span> init <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
+    <span class="k">done</span>
+
+<span class="nf">plan-all</span><span class="o">:</span>
+    @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
+        <span class="k">$(</span>MAKE<span class="k">)</span> plan <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
+    <span class="k">done</span>
+
+<span class="nf">apply-all</span><span class="o">:</span>
+    @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
+        <span class="k">$(</span>MAKE<span class="k">)</span> apply <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
+    <span class="k">done</span>
+
+<span class="nf">destroy-all</span><span class="o">:</span>
+    @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
+        <span class="k">$(</span>MAKE<span class="k">)</span> destroy <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
+    <span class="k">done</span>
+
+<span class="nf">clean-all</span><span class="o">:</span>
+    @for c in <span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span> <span class="k">do</span> <span class="se">\</span>
+        <span class="k">$(</span>MAKE<span class="k">)</span> clean <span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span> <span class="se">\</span>
+    <span class="k">done</span>
+
+<span class="nf">plan</span><span class="o">:</span> <span class="n">init</span>
+    <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> terraform plan -detailed-exitcode
+
+<span class="nf">apply</span><span class="o">:</span> <span class="n">init</span>
+    <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> terraform apply
+
+<span class="nf">destroy</span><span class="o">:</span> <span class="n">init</span>
+    <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> terraform destroy
+
+<span class="nf">init</span><span class="o">:</span>
+    rm -rf <span class="k">$(</span>COMPONENT<span class="k">)</span>/.terraform/*.tfstate
+    ./build_deploy_config.py <span class="k">$(</span>COMPONENT<span class="k">)</span>
+    <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> terraform init<span class="p">;</span>
+
+<span class="nf">clean</span><span class="o">:</span>
+    <span class="nb">cd</span> <span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span> rm -rf .terraform
+
+<span class="nf">.PHONY</span><span class="o">:</span> <span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
+</code></pre></div>
+
+<h1 id="step-3-writing-terraform-components">Step 3: Writing Terraform Components</h1>
+<p>As an example, we will consider an example of terraform-managed buckets.</p>
+<p>Start by creating a directory called <code>infra/buckets/</code> to store terraform
+files for creating and managing the buckets.</p>
+<p>We can create one file per cloud provider. As an example, here is <code>s3.tf</code>:</p>
+<p><strong><code>s3.tf</code></strong>:</p>
+<div class="highlight"><pre><span></span><code>data &quot;aws_caller_identity&quot; &quot;current&quot; {}
+
+locals {
+  common_tags = &quot;${map(
+    &quot;project&quot;   , &quot;${var.PROJECT_INFRA_TAG_PROJECT}&quot;,
+    &quot;env&quot;       , &quot;${var.PROJECT_DEPLOYMENT_STAGE}&quot;,
+    &quot;service&quot;   , &quot;${var.PROJECT_INFRA_TAG_SERVICE}&quot;
+  )}&quot;
+  aws_tags = &quot;${map(
+  &quot;Name&quot;      , &quot;${var.PROJECT_INFRA_TAG_SERVICE}-s3-storage&quot;,
+  &quot;owner&quot;     , &quot;${var.PROJECT_INFRA_TAG_OWNER}&quot;,
+  &quot;managedBy&quot; , &quot;terraform&quot;
+  )}&quot;
+}
+
+resource aws_s3_bucket dss_s3_bucket {
+  count = length(var.PROJECT_S3_BUCKET) &gt; 0 ? 1 : 0
+  bucket = var.PROJECT_S3_BUCKET
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = &quot;AES256&quot;
+      }
+    }
+  }
+  tags = merge(local.common_tags, local.aws_tags)
+}
+</code></pre></div>
+
+<p>Note that this requires several environment variables to be
+defined in <code>environment</code> and requires the operator to run:</p>
+<div class="highlight"><pre><span></span><code>source environment
+</code></pre></div>
+
+<h1 id="step-4-initializing-terraform-components">Step 4: Initializing Terraform Components</h1>
+<p>The following script will automatically generate terraform files for
+our component that are populated with the correct environment variable
+values.</p>
+<p>It is called <code>build_deploy_config.py</code>.</p>
+<p>Start with a simple argument parser that just accepts a single argument,
+the component to make terraform files for:</p>
+<div class="highlight"><pre><span></span><code><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;component&quot;</span><span class="p">)</span>
+<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Next, we define several terraform file templates using Python's
+bracket template syntax. Start with a template for defining a
+terraform variable:</p>
+<div class="highlight"><pre><span></span><code>terraform_variable_template = &quot;&quot;&quot;
+variable &quot;{name}&quot; {{
+  default = &quot;{val}&quot;
+}}
+&quot;&quot;&quot;
+</code></pre></div>
+
+<p>Next, define a template for the terraform backend buket:</p>
+<div class="highlight"><pre><span></span><code>terraform_backend_template = &quot;&quot;&quot;# Auto-generated during infra build process.
+# Please edit infra/build_deploy_config.py directly.
+terraform {{
+  backend &quot;s3&quot; {{
+    bucket = &quot;{bucket}&quot;
+    key = &quot;{comp}-{stage}.tfstate&quot;
+    region = &quot;{region}&quot;
+    {profile_setting}
+  }}
+}}
+&quot;&quot;&quot;
+</code></pre></div>
+
+<p>Next define terraform cloud providers:</p>
+<div class="highlight"><pre><span></span><code>terraform_providers_template = &quot;&quot;&quot;# Auto-generated during infra build process.
+# Please edit infra/build_deploy_config.py directly.
+provider aws {{
+  region = &quot;{aws_region}&quot;
+}}
+&quot;&quot;&quot;
+</code></pre></div>
+
+<p>Provide a list of environment variables that should also be defined as
+terraform variables:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">env_vars_to_infra</span> <span class="o">=</span> <span class="o">[</span>
+<span class="nv">PROJECT_DEPLOYMENT_STAGE</span><span class="o">=</span><span class="s2">&quot;dev&quot;</span>
+
+<span class="c1"># bucket name</span>
+<span class="nv">PROJECT_S3_BUCKET</span><span class="o">=</span><span class="s2">&quot;my-organization-my-project-my-bucket&quot;</span>
+
+<span class="c1"># aws tags</span>
+<span class="nv">PROJECT_INFRA_TAG_PROJECT</span><span class="o">=</span><span class="s2">&quot;my-project&quot;</span>
+<span class="nv">PROJECT_INFRA_TAG_SERVICE</span><span class="o">=</span><span class="s2">&quot;my-service&quot;</span>
+<span class="nv">PROJECT_INFRA_TAG_OWNER</span><span class="o">=</span><span class="s2">&quot;whoami@email.com&quot;</span>
+
+<span class="c1"># aws settings</span>
+<span class="nv">AWS_DEFAULT_OUTPUT</span><span class="o">=</span>json
+<span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span>us-east-1
+
+    <span class="s2">&quot;AWS_DEFAULT_REGION&quot;</span>,
+    <span class="s2">&quot;PROJECT_DEPLOYMENT_STAGE&quot;</span>,
+    <span class="s2">&quot;PROJECT_S3_BUCKET&quot;</span>,
+    <span class="s2">&quot;PROJECT_INFRA_TAG_PROJECT&quot;</span>,
+    <span class="s2">&quot;PROJECT_INFRA_TAG_SERVICE&quot;</span>,
+    <span class="s2">&quot;PROJECT_INFRA_TAG_OWNER&quot;</span>
+<span class="o">]</span>
+</code></pre></div>
+
+<p>Finally, substitute environment variable values into the templates, and write
+the templated content to the appropriate <code>*.tf</code> file. First, the backend:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Write backend.tf</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;backend.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">caller_info</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;sts&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get_caller_identity</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">):</span>
+        <span class="n">profile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">]</span>
+        <span class="n">profile_setting</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;profile = &quot;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">profile_setting</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_backend_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">bucket</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DSS_TERRAFORM_BACKEND_BUCKET_TEMPLATE&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">account_id</span><span class="o">=</span><span class="n">caller_info</span><span class="p">[</span><span class="s1">&#39;Account&#39;</span><span class="p">]),</span>
+        <span class="n">comp</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span>
+        <span class="n">stage</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DSS_DEPLOYMENT_STAGE&#39;</span><span class="p">],</span>
+        <span class="n">region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
+        <span class="n">profile_setting</span><span class="o">=</span><span class="n">profile_setting</span><span class="p">,</span>
+    <span class="p">))</span>
+</code></pre></div>
+
+<p>Next, the <code>variables.tf</code> for the component:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Write variables.tf</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;variables.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Auto-generated during infra build process.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Please edit infra/build_deploy_config.py directly.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">env_vars_to_infra</span><span class="p">:</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_variable_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">val</span><span class="p">))</span>
+</code></pre></div>
+
+<p>Finally, the cloud providers file <code>providers.tf</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;providers.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_providers_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">aws_region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
+        <span class="n">gcp_project_id</span><span class="o">=</span><span class="n">GCP_PROJECT_ID</span><span class="p">,</span>
+    <span class="p">))</span>
+</code></pre></div>
+
+<h1 id="workflow">Workflow</h1>
+<p>We now have a top-level Makefile that wraps the plan and apply commands directly,
+and we have an infra-level Makefile with additional commands for managing infrastructure
+(plan, apply, destroy).</p>
+<h2 id="plan">Plan</h2>
+<p>The terraform plan step assembles the various templated terraform files and substitutes
+environment variables into them, creating a new version of them with up-to-date values.</p>
+<p>The plan step (<code>make plan-infra</code>) calls the <code>build_deploy_config.py</code> script (detailed above)
+to regenerate the terraform files when environment variables are changed.</p>
+<div class="highlight"><pre><span></span><code>make plan-infra
+</code></pre></div>
+
+<p>This script will iterate over each cloud infrastructure component in <code>infra/</code>, use terraform
+to plan the changes it would make to cloud resources, and print a summary of those changes
+to the screen.</p>
+<p><strong>The <code>make plan-infra</code> command does not change any cloud infra.</strong></p>
+<h2 id="deploy">Deploy</h2>
+<p>The terraform deploy step makes the changes summarized in the <code>make plan-infra</code> step. This
+command automates the terraform commands, but still requires interactive "yes" responses
+to commands.</p>
+<h2 id="update">Update</h2>
+<p>Using the <code>make plan-infra</code> command will remake the terraform files using environment variable
+values, and will display any changes that will be made to cloud infra. This includes updates to
+existing infrastructure.</p>
+<p>When you finish deploying infrastructure, store the version of your <code>environment</code> file in version
+control and tag it as the current deployed infra. This will make it easier to delete infra later.</p>
+<p>If you need to rename infra, use the following workflow:</p>
+<ol>
+<li>
+<p>Source the old <code>environment</code> file</p>
+</li>
+<li>
+<p>Destroy the old infra with the old names using:</p>
+<p><code>text
+make -C infra COMPONENT=buckets destroy</code></p>
+<p>Or destroy all infra with the <code>destroy-all</code> command:</p>
+<p><code>text
+make -C infra destroy-all</code></p>
+</li>
+<li>
+<p>Update the environment file with the new names, and source the new <code>environment</code> file</p>
+</li>
+<li>
+<p>Plan the new infra with</p>
+<p><code>text
+make plan-infra</code></p>
+</li>
+<li>
+<p>Deploy the new infra with</p>
+<p><code>text
+make deploy-infra</code></p>
+</li>
+</ol>
+<h2 id="destroy">Destroy</h2>
+<p>As seen above, infrastructure components can be deleted with the <code>delete</code> command in the infra
+Makefile, and all infrastructure components can be deleted with the <code>delete-all</code> command.</p>
+<p>To delete a particular component:</p>
+<div class="highlight"><pre><span></span><code>make -C infra COMPONENT=buckets destroy
+</code></pre></div>
+
+<p>To destroy all infra:</p>
+<div class="highlight"><pre><span></span><code>make -C infra destroy-all
+</code></pre></div></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/terraform.html">terraform</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/makefile.html">makefile</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/make.html">make</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Automatically Generating Up-To-Date requirements.txt for Python Projects
             </b></h1>
         
@@ -751,488 +1257,6 @@ git checkout -b feature-d
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Git Workflows, Part 2: Crafting Commits
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-11-14T20:00:00-08:00" pubdate>Thursday 11/14/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/git-workflows-part-2-crafting-commits.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#summary">Summary</a></li>
-<li><a href="#what-is-a-commit">What is a commit</a><ul>
-<li><a href="#git-add">git add</a></li>
-<li><a href="#git-commit">git commit</a></li>
-<li><a href="#git-rebase">git rebase</a></li>
-<li><a href="#git-fetch-and-git-pull">git fetch and git pull</a><ul>
-<li><a href="#rebase-merge-branch-pass">rebase, merge, branch, pass</a></li>
-</ul>
-</li>
-<li><a href="#git-push">git push</a></li>
-<li><a href="#force-pushing">force pushing</a></li>
-</ul>
-</li>
-<li><a href="#commit-workflow">Commit Workflow</a><ul>
-<li><a href="#principles">Principles</a></li>
-<li><a href="#making-small-commits">Making Small Commits</a><ul>
-<li><a href="#git-add-patch-mode">git add patch mode</a></li>
-<li><a href="#git-add-editor-mode">git add editor mode</a></li>
-</ul>
-</li>
-<li><a href="#modifying-commits">Modifying Commits</a><ul>
-<li><a href="#git-rebase_1">git rebase</a><ul>
-<li><a href="#rebasing-a-range-of-commits">rebasing a range of commits</a></li>
-<li><a href="#rebasing-onto-another-branch">rebasing onto another branch</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#rearranging-commits">Rearranging Commits</a></li>
-<li><a href="#combining-commits">Combining Commits</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<h1 id="summary">Summary</h1>
-<ul>
-<li>
-<p>Make your commits small and atomic, and recombine them into
-  larger commits later; it's easier to combine smaller commits
-  than to split large commits.</p>
-</li>
-<li>
-<p>Make use of <code>git add -p</code> and <code>git add -e</code> to stage
-  changes selectively and atomically.</p>
-</li>
-<li>
-<p>Make use of <code>git rebase</code> and <code>git cherry-pick</code> to edit your
-  commits and assemble them in the order you want.</p>
-</li>
-<li>
-<p>Once commits have been combine and the history is satisfactory,
-  push to a remote to share the work.</p>
-</li>
-<li>
-<p>Think about ordering your commits to "tell a story". (What that
-  means will depend on the people you are collaborating with!)</p>
-</li>
-</ul>
-<h1 id="what-is-a-commit">What is a commit</h1>
-<p>Before we get into the good stuff, let's talk about the
-anatomy of a git commit.</p>
-<p>When you add files to your git repository, it's a two-step
-process: <code>git add</code> and <code>git commit</code>. The first step <em>stages</em>
-your changes, the second step memorializes those staged changes
-into a commit that can now be shared with others by pushing it
-to git remotes.</p>
-<h2 id="git-add">git add</h2>
-<p>It is important to know that git does not keep track of changes at
-the file level, it keeps track of changes at the character/line level.</p>
-<p>What that means is, when you modify a line in a file that is in your
-git repository, and run <code>git add</code> to stage your change, git has created
-an object under the hood called a <em>blob</em> to represent that one line change.</p>
-<p>If you change two lines in two different parts of a file, and stage those
-changes using <code>git add</code>, git will treat this as two separate changes, and
-represent the changes with two different blobs.</p>
-<h2 id="git-commit">git commit</h2>
-<p>As you use <code>git add</code> to prepare your changes, the changes are added to
-a <em>staging area</em>. Think of this staging area as a draft commit. Each change
-being added to the staging area changes how the commit will look. When the
-changes are complete and the user runs <code>git commit</code>, it turns the staging
-area into a real commit, creates the metadata, and calculates hashes.</p>
-<p>When a commit is created, it receives a name, which is the hash of the
-contents of the commit. The hash is computed from the contents of the
-blobs, plus the metadata about the commit, plus the hash of the prior
-commits. Changing a commit changes its hash, and will change the hashes
-of all subsequent commits.</p>
-<p>Commits in your local repository can be easily rewritten and edited, and
-their hashes changed. A common workflow is to make many small commits,
-and recombine them later.</p>
-<p>Because the commit hash is how the commit is named, modifying commits
-after you've shared them is bad practice and will create extra work for
-your collaborators. For that reason, don't <code>git push</code> until you're ready
-to share your work.</p>
-<h2 id="git-rebase">git rebase</h2>
-<p>The <code>git rebase</code> command allows you to edit your commit history. We will
-cover some usage patterns in the sections below.</p>
-<h2 id="git-fetch-and-git-pull">git fetch and git pull</h2>
-<p>Before pushing changes to the remote, first check if there have been any
-commits since you began your branch.</p>
-<h3 id="rebase-merge-branch-pass">rebase, merge, branch, pass</h3>
-<p>If a feature branch is created off of the master branch, and some time passes,
-the feature branch base commit may grow far out of sync with the master branch.
-(Note that <code>master</code> indicates the primary branch.)</p>
-<p>This leaves the developer of the feature branch (which is out of sync with master) with a few choices:</p>
-<ul>
-<li>
-<p><strong>rebase</strong> - continue to rebase all commits on the feature branch from the
-  (old) original feature branch base commit onto the (new) head commit of the master 
-  branch.</p>
-<ul>
-<li>Pros: clean history, easy for one-branch-one-developer workflow</li>
-<li>Cons: requires continual force-pushes, requires coordination between developers
-  to prevent squashing others' work, not scalable, some people hate this method</li>
-</ul>
-</li>
-<li>
-<p><strong>merge</strong> - occasionally merge work from the master branch into the feature branch.</p>
-<ul>
-<li>Pros: simple to understand, simple to carry out, low cognitive load</li>
-<li>Cons: any changes added to the branch via the merge commit will show up in the PR
-  as new code, cluttering PR reviews by mixing features with merged changes; can also
-  make the commit history messy and harder to understand.</li>
-</ul>
-</li>
-<li>
-<p><strong>branch</strong> - by making heavy use of throwaway branches and integration branches,
-  it is easier to test out how the integration of a feature branch based on an old
-  commit on <code>master</code> will do when merging it in with a newer version of <code>master</code>.
-  Use throwaway integration branches to test out merging the two branches together,
-  testing its functionality, etc. You can also rebase or cherry pick commits onto
-  the throwaway integration branch, and figure out how to arrange the commits on a
-  branch to "rebuild" it into a working, mergeable branch.</p>
-<ul>
-<li>Pros: easy to do, encourages local use of throwaway branches</li>
-<li>Cons: clutters branches, integration process has to be repeated (can be mitigated
-  with <code>git rerere</code>), merge commits must wait until PR is approved</li>
-</ul>
-</li>
-<li>
-<p><strong>pass</strong> - best combined with the branch approach mentioned above, the pass approach
-  is to leave the branch history clean, avoid force-pushes, and rely on throwaway
-  branches to test out merge strategies once the inevitable PR merge needs to happen.
-  It can also be useful to wait for code reviews to finish, then create a merge commit
-  to make the merge happen smoothly.</p>
-<ul>
-<li>Pros: easy to do</li>
-<li>Cons: merge commits must wait until PR is approved</li>
-</ul>
-</li>
-</ul>
-<h2 id="git-push">git push</h2>
-<p>Once you run <code>git push</code>, all of the commits on the branch that you pushed
-will end up on the remote, where others can access them. The purpose
-of a <code>git push</code> is to share commits, so generally you don't push branches
-until they are ready to share. This also allows more flexibility in crafting,
-rewriting, and combining commits.</p>
-<h2 id="force-pushing">force pushing</h2>
-<p>If you pushed a branch (which is a collection of commits) to a remote,
-and then you have edited those commits, you will run into a problem when
-you try and <code>git push</code> the new, edited versions of the commits to the same
-remote. The remote will detect that there are conflicting versions of
-the branch and will reject the changes.</p>
-<p>That's where <code>git push --force</code> comes in. The <code>--force</code> flag tells the
-remote to discard its version of the branch and use the version of the
-branch that you are pushing.</p>
-<p>We will cover more about force pushing - when to do it, when not to, and
-why some people hate it - in a later post. For now, we will only say
-that you should not force push often, since you can risk deleting others' work
-and creating additional confusion and work for all of your collaborators.</p>
-<h1 id="commit-workflow">Commit Workflow</h1>
-<h2 id="principles">Principles</h2>
-<p>Here are some principles for your <code>git commit</code> workflow:</p>
-<ul>
-<li>
-<p>Commit small changes often.</p>
-</li>
-<li>
-<p>Don't sweat the commit messages - they can be fixed up later.</p>
-</li>
-<li>
-<p>Related - nobody will see your commits until you push your branch,
-  so think of your branch as a scratch space. You have the ultimate
-  freedom to use it however you want.</p>
-</li>
-<li>
-<p>Branches are easy to create, so make liberal use of branches!</p>
-</li>
-<li>
-<p>Be wary of force pushing, and of rewriting history.</p>
-</li>
-</ul>
-<h2 id="making-small-commits">Making Small Commits</h2>
-<p>Two essential git commands to help with making small commits are
-git add (patch mode) and git add (interactive mode).</p>
-<h3 id="git-add-patch-mode">git add patch mode</h3>
-<p>How to use:</p>
-<div class="highlight"><pre><span></span><code>git add -p &lt;name-of-file&gt;
-</code></pre></div>
-
-<p>The <code>git add -p</code> command allows the user to interactively stage
-individual changes made (in what is called patch mode). This means
-users can stage certain changes for one commit, then stage other
-changes for a different commit.</p>
-<p>This solves the problem of making a long sequence of changes
-to a single file that should be logically separated into
-different steps. (For example, changing the <code>import</code> statements
-versus changing the name of a variable throughout a file).</p>
-<p>For example, suppose we have the following changes to a file named <code>doit.sh</code>:</p>
-<div class="highlight"><pre><span></span><code>$ git diff doit.sh
-diff --git a/doit.sh b/doit.sh
-index 3b938a1..6c1aec8 100644
---- a/doit.sh
-+++ b/doit.sh
-@@ -1,6 +1,6 @@
- #!/bin/bash
- #
--# This script lists the 40 largest files in the git repo history
-+# This script lists the 50 largest files in the git repo history
-
- $ git rev-list --all --objects | \
-      sed -n $(git rev-list --objects --all | \
-@@ -9,9 +9,9 @@ $ git rev-list --all --objects | \
-      grep blob | \
-      sort -n -k 3 | \
-      \
--     tail -n40 | \
-+     tail -n50 | \
-      \
-      while read hash type size; do
-           echo -n &quot;-e s/$hash/$size/p &quot;;
-      done) | \
--     sort -n -r -k1
-+     sort -nru -k1
-</code></pre></div>
-
-<p>There are two related changes and one unrelated change, respectively:
-the two related changes are the change to the comment and the change
-to the <code>tail</code> command; the unrelated change is adding the <code>-u</code> flag
-to the <code>sort</code> command.</p>
-<p>We can split these changes into two commits using <code>git add -p doit.sh</code>,
-which will walk through each change in the file and ask if we want to
-stage it:</p>
-<div class="highlight"><pre><span></span><code>$ git add -p doit.sh
-diff --git a/doit.sh b/doit.sh
-index 3b938a1..6c1aec8 100644
---- a/doit.sh
-+++ b/doit.sh
-@@ -1,6 +1,6 @@
- #!/bin/bash
- #
--# This script lists the 40 largest files in the git repo history
-+# This script lists the 50 largest files in the git repo history
-
- $ git rev-list --all --objects | \
-      sed -n $(git rev-list --objects --all | \
-Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? y
-
-@@ -9,9 +9,9 @@ $ git rev-list --all --objects | \
-      grep blob | \
-      sort -n -k 3 | \
-      \
--     tail -n40 | \
-+     tail -n50 | \
-      \
-      while read hash type size; do
-Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? y
-
-@@ -14,14 +14,14 @@        echo -n &quot;-e s/$hash/$size/p &quot;;
-      done) | \
--     sort -n -r -k1
-+     sort -nru -k1
-Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? n
-</code></pre></div>
-
-<p>Now the two related changes are staged, and the unrelated change is not staged.
-This is reflected in <code>git status</code>:</p>
-<div class="highlight"><pre><span></span><code>$ git status
-On branch master
-Your branch is ahead of &#39;gh/master&#39; by 2 commits.
-  (use &quot;git push&quot; to publish your local commits)
-
-Changes to be committed:
-  (use &quot;git restore --staged &lt;file&gt;...&quot; to unstage)
-    modified:   doit.sh
-
-Changes not staged for commit:
-  (use &quot;git add &lt;file&gt;...&quot; to update what will be committed)
-  (use &quot;git restore &lt;file&gt;...&quot; to discard changes in working directory)
-    modified:   doit.sh
-</code></pre></div>
-
-<p>Now <code>git commit</code> will commit only the staged portions.</p>
-<p>Do not provide any filenames to <code>git commit</code>, so that git will only commit the staged changes.</p>
-<p>To use this in your workflow, think about how you can group different changes together into
-different commits. If you get a portion of a feature working, you can commit the changes in
-groups so that related changes get committed together.</p>
-<p>Also remember that if your commit history ends up being excessively long or overly detailed,
-you can always examine what changes different commits made with <code>git diff</code>, and reorder them
-with <code>git cherry-pick</code> or modify/combine them with <code>git rebase</code>.</p>
-<h3 id="git-add-editor-mode">git add editor mode</h3>
-<p>How to use:</p>
-<div class="highlight"><pre><span></span><code>git add -e &lt;name-of-file&gt;
-</code></pre></div>
-
-<p>Like the interactive patch mode, <code>git add -e</code> allows you to selectively
-stage certain changes in a file. But it's much better for keyboard jockeys
-and those that love their text editor, because you can choose which changes
-to stage or not using the text editor.</p>
-<p>A sidebar:</p>
-<p>If you have not yet set the text editor that git uses, you should
-do that now. Modify your git configuration with this command:</p>
-<div class="highlight"><pre><span></span><code>git config --global core.editor vim
-</code></pre></div>
-
-<p>Alternatively, put the following in your <code>~/.gitconfig</code>:</p>
-<div class="highlight"><pre><span></span><code>[core]
-    editor = vim
-</code></pre></div>
-
-<p>(Or, you know, whatever your text editor of choice is.)</p>
-<p>End of sidebar.</p>
-<p>When you pass the <code>-e</code> flag to git add, it will open a new editor window with the full diff:</p>
-<div class="highlight"><pre><span></span><code>diff --git a/doit.sh b/doit.sh
-index 326273c..14e4059 100644
---- a/doit.sh
-+++ b/doit.sh
-@@ -1,17 +1,17 @@
- #!/bin/bash
- #
--# This script lists the 50 largest files in the git repo history
-+# This script lists the 10 largest files in the git repo history
-
- $ git rev-list --all --objects | \
-      sed -n $(git rev-list --objects --all | \
-      cut -f1 -d&#39; &#39; | \
-      git cat-file --batch-check | \
-      grep blob | \
-      sort -n -k 3 | \
-      \
--     tail -n50 | \
-+     tail -n10 | \
-      \
-      while read hash type size; do
-           echo -n &quot;-e s/$hash/$size/p &quot;;
-      done) | \
--     sort -nru -k1
-+     sort -nr -k1
-</code></pre></div>
-
-<p><strong>Editing this file requires some care!</strong></p>
-<p>Fortunately there is a section in the documentation for
-<a href="https://git-scm.com/docs/git-add">git add</a> called
-<a href="https://git-scm.com/docs/git-add#_editing_patches">Editing Patches</a>.</p>
-<p>Two things to remember:</p>
-<ul>
-<li>
-<p>Lines starting with <code>+</code> indicate new, added content. To prevent this
-  content from being added, delete the line.</p>
-</li>
-<li>
-<p>Lines starting with <code>-</code> indicate removed content. To keep this content,
-  replace <code>-</code> with a space (<code></code>).</p>
-</li>
-</ul>
-<p>Once you are finished, make sure you review the changes that are staged,
-particularly if this is the first time seeing patch files or the diff
-syntax.</p>
-<h2 id="modifying-commits">Modifying Commits</h2>
-<p>There is always some reason or another to modify the commit history of a repository -
-perhaps someone's work was lost, or the wrong issue or pull request number was referenced,
-or a username was misspelled.</p>
-<p>You can always modify a commit, but it will also modify every commit that came after it.
-Think of it like replaying the changes recorded in each commit onto the new branch. The
-contents of each commit changes slightly, so the hash (the name) of every commit changes.</p>
-<h3 id="git-rebase_1">git rebase</h3>
-<p>To do a git rebase, an interactive rebase (the <code>-i</code> flag) is recommended.</p>
-<p>The rebase action takes two commits, and will replay the commits.</p>
-<p><strong>IMPORTANT:</strong> The first commit given (the start commit) is <em>not</em> included
-in the rebase. To include it, add <code>~1</code> to the start commit. (For example,
-<code>0a1b2c3d~1</code> refers to the commit before commit <code>0a1b2c3d</code>.</p>
-<h4 id="rebasing-a-range-of-commits">rebasing a range of commits</h4>
-<p>To rebase from the start commit hash to the end commit hash, and include the start commit
-in the rebase, the rebase command is:</p>
-<div class="highlight"><pre><span></span><code>git rebase -i START_COMMIT_HASH~1 END_COMMIT_HASH
-</code></pre></div>
-
-<p>This does not indicate a destination branch. The default behavior is for the branch to move
-and the new pile of commits to retain the same branch name.</p>
-<h4 id="rebasing-onto-another-branch">rebasing onto another branch</h4>
-<p>To rebase a range of commits onto a different branch (for example, onto a <code>master</code> branch
-that has the latest changes from the remote), use the <code>--onto</code> flag:</p>
-<div class="highlight"><pre><span></span><code>git rebase -i START_COMMIT_HASH END_COMMIT_HASH --onto TARGET_BRANCH
-</code></pre></div>
-
-<p><strong>IMPORTANT:</strong> The above rebase commands will leave your repo in a headless state - unlike
-the behavior of the prior command, the branch label will not move with you to the new pile
-of commits.</p>
-<p>Run <code>git checkout -b &lt;branchname&gt;</code> to give your new rebased branch a meaningful name.
-This creates a branch wherever HEAD is, which is pointing to the top of the pile of rebased
-commits.</p>
-<p>If you want the old branch label to move to the new pile of commits, it requires a bit of branch
-housekeeping - you have to delete the old branch, then create a new branch from where
-HEAD is (the end of the rebase), then check out that branch.</p>
-<div class="highlight"><pre><span></span><code>git branch -D &lt;branchname&gt; &amp;&amp; git checkout -b &lt;branchname&gt;
-</code></pre></div>
-
-<h2 id="rearranging-commits">Rearranging Commits</h2>
-<p>Where rebasing allows for editing commits en masse, cherry picking allows the changes made in
-individual commits to be applied anywhere - including other branches. This makes the atomic
-commit principle from the beginning of this post much easier - groups of related commits that
-happened out of order can be rearranged by cherry picking them onto a new branch, and the new
-branch is a better "story".</p>
-<h2 id="combining-commits">Combining Commits</h2>
-<p>The cherry pick operation can also be combined with a rebase - once multiple small commits are
-arranged together chronologically, a git rebase operation enables squashing those tiny commits
-into a small number of larger commits, all carrying related changes.</p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1268,6 +1292,9 @@ into a small number of larger commits, all carrying related changes.</p></div>
 
             <h2>January 2022</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/mediawiki-patterns-for-a-zettelkasten-monthly-template-pattern.html">MediaWiki Patterns for a Zettelkasten: Monthly Template Pattern</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/mediawiki-patterns-for-a-zettelkasten-daily-page-pattern.html">MediaWiki Patterns for a Zettelkasten: Daily Page Pattern</a>
             </p>

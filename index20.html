@@ -102,6 +102,424 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                CSE 143 Final Project: Hilbert Sort: 2. The Solution Algorithm
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-06-27T11:00:00-07:00" pubdate>Tuesday 06/27/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/cse-143-final-project-hilbert-sort-2-the-solution-algorithm.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
+<p>This is the second in a series of three posts 
+detailing the Hilbert Sort problem,
+its solution, and its implementation.
+This post solves the problem.</p>
+<ul>
+<li><a href="#hilbert2-problem">Hilbert Sort Problem</a></li>
+<li><a href="#hilbert2-space">Space Is The Place</a></li>
+<li><a href="#hilbert2-reflections">The Reflections</a><ul>
+<li><a href="#hilbert2-quad">Reflected Quadrants</a></li>
+<li><a href="#hilbert2-scaling">Scaling</a></li>
+<li><a href="#hilbert2-reflection">Reflection</a></li>
+</ul>
+</li>
+<li><a href="#hilbert2-reflection-solution">Solving the Reflection Problem</a></li>
+<li><a href="#hilbert2-procedure">Procedure</a></li>
+<li><a href="#hilbert2-references">References</a></li>
+</ul>
+<p><a name="hilbert2-problem"></a></p>
+<h1 id="hilbert-sort-problem">Hilbert Sort Problem</h1>
+<p>In the prior post, we covered the Hilbert Sort problem, 
+but we state it once more succinctly here before 
+detailing a solution to the problem.</p>
+<p>The Hilbert Sort problem asks the following: 
+given a set of labeled <span class="math">\((x,y)\)</span> points,
+how can we sort the points according to 
+the order in which they are visited 
+by a space-filling Hilbert curve?</p>
+<p>Revisiting the example input and output provided, the input provides 
+the number of points and size of the grid on the first line, 
+followed by each point's coordinates and label.</p>
+<div class="highlight"><pre><span></span><code><span class="n">Input</span><span class="o">:</span>
+    <span class="mi">14</span> <span class="mi">25</span>
+    <span class="mi">5</span> <span class="mi">5</span> <span class="n">Honolulu</span>
+    <span class="mi">5</span> <span class="mi">10</span> <span class="n">PugetSound</span>
+    <span class="mi">5</span> <span class="mi">20</span> <span class="n">Victoria</span>
+    <span class="mi">10</span> <span class="mi">5</span> <span class="n">Berkeley</span>
+    <span class="mi">10</span> <span class="mi">10</span> <span class="n">Portland</span>
+    <span class="mi">10</span> <span class="mi">15</span> <span class="n">Seattle</span>
+    <span class="mi">10</span> <span class="mi">20</span> <span class="n">Vancouver</span>
+    <span class="mi">15</span> <span class="mi">5</span> <span class="n">LasVegas</span>
+    <span class="mi">15</span> <span class="mi">10</span> <span class="n">Sacramento</span>
+    <span class="mi">15</span> <span class="mi">15</span> <span class="n">Kelowna</span>
+    <span class="mi">15</span> <span class="mi">20</span> <span class="n">PrinceGeorge</span>
+    <span class="mi">20</span> <span class="mi">5</span> <span class="n">Phoenix</span>
+    <span class="mi">20</span> <span class="mi">10</span> <span class="n">SaltLakeCity</span>
+    <span class="mi">20</span> <span class="mi">20</span> <span class="n">Calgary</span>
+
+<span class="n">Output</span><span class="o">:</span>
+    <span class="n">Honolulu</span>
+    <span class="n">Berkeley</span>
+    <span class="n">Portland</span>
+    <span class="n">PugetSound</span>
+    <span class="n">Victoria</span>
+    <span class="n">Vancouver</span>
+    <span class="n">Seattle</span>
+    <span class="n">Kelowna</span>
+    <span class="n">PrinceGeorge</span>
+    <span class="n">Calgary</span>
+    <span class="n">SaltLakeCity</span>
+    <span class="n">Sacramento</span>
+    <span class="n">LasVegas</span>
+    <span class="n">Phoenix</span>
+</code></pre></div>
+
+<p><a name="hilbert2-space"></a></p>
+<h1 id="space-is-the-place">Space is the Place</h1>
+<p>To solve the Hilbert Sort problem, we have to avoid the temptation
+to think about the Hilbert curve and the way that it is constructed.
+While we spent quite a bit of time talking about the Hilbert curve
+and how it is constructed, the curve itself is not what we are 
+interested in - we are interested in the order in which the points
+are visited. </p>
+<p>Also remember, the motivation of solving the Hilbert Sort problem is to 
+arrange spatial <span class="math">\((x,y)\)</span> points so closer points are nearer together.</p>
+<p>No matter how many iterations of the Hilbert curve we end up drawing,
+we always apply the same procedure: cut the square into four quadrants, 
+reflect the southwest corner about the bottom left to top right diagonal,
+and reflect the southeast corner about the bottom right to top left diagonal.</p>
+<p>We will always visit points in the southwest quadrant before we visit 
+points in the northwest quadrant; we will always visit points in the northwest
+corner before we visit points in the northeast corner; etc.</p>
+<p><a name="hilbert2-reflections"></a></p>
+<h1 id="the-reflections">The Reflections</h1>
+<p>The trickiest part of the Hilbert Sort problem is the reflection that happens 
+to the lower left and lower right quadrants.</p>
+<p><a name="hilbert2-quad"></a></p>
+<h2 id="reflected-quadrants">Reflected Quadrants</h2>
+<p>Start with the first step of the Hilbert sort - take a square with points contained in it. 
+Split the square into four quadrants (with the intention of creating four sub-problems).
+However, to conform to the Hilbert Curve construction process,
+the lower left and lower right squares must be reflected.
+The lower left square is reflected about the bottom left to upper right diagonal,
+while the lower right square is reflected about the bottom right to upper left diagonal.</p>
+<p>Convince yourself of this by studying the curve construction procedure as illustrated
+by Hilbert himself in his 1890 paper (a.k.a., Hilbert Illustrates A Hilbert Curve):</p>
+<p><img alt="Hilbert Illustrates Construction of Hilbert Curve" src="/images/HilbertCurve-OriginalPaper.png"></p>
+<p>We are working toward a recursive method - and recursive methods call themselves repeatedly,
+apply to subproblems that are trivially similar. However, to translate this into a recursive 
+problem, we have to deal with the rotations within the current recursive step, 
+in such a way that we don't need to know the orientation of the prior square 
+to know the order in which to visit the squares - it is always southwest, northwest, notheast, southwest.</p>
+<p>After we split the squares into quadrants, 
+after we toss out any quadrants with no points, 
+we walk through each of the four quadrants in order 
+(southwest, northwest, northeast, southwest).
+If there is a single point in the quadrant,
+we add it to the priority queue.</p>
+<p>It is here that we take care of the rotation - 
+before we recursively call the Hilbert sort method
+on the quadrant itself.</p>
+<p><a name="hilbert2-scaling"></a></p>
+<h2 id="scaling">Scaling</h2>
+<p>We have a prescribed order for the four quadrants 
+in the current recursive level, and the current recursive level
+is working its way through each of those four quadrants.
+But remember, our algorithm only cares about the order of points.
+It does not care about the <span class="math">\((x,y)\)</span> location. 
+So we can ireflect <span class="math">\((x,y)\)</span> points by changing their 
+<span class="math">\((x,y)\)</span> coordinate locations. Ultimately
+we are only changing the program's internal representation
+of each point, not the original data on disk, 
+so we can think of <span class="math">\((x,y)\)</span> as mutable for our purposes.</p>
+<p>This is an important part of our solution:
+scaling (and reflecting) each quadrant before 
+recursively calling the Hilbert sort method 
+on the points contained in it.</p>
+<p>If we are considering a single quadrant 
+of dimensions <span class="math">\(\frac{S}{2} \times \frac{S}{2}\)</span>,
+containing points <span class="math">\((x,y)\)</span>, we may be able to 
+pass in the corners of our square, plus the 
+<span class="math">\((x,y)\)</span> points contained in it.
+However, as our squares get smaller,
+the distance between points gets smaller as well,
+so this has an upper limit as to how many points 
+it can sort.</p>
+<p>On the other hand, we can avoid passing all that information around
+and using doubles, by just rescaling everything to the given
+quadrant. We want each recursive level to completely forget 
+about where in the recursive stack it is, how large its square is
+relative to the original, etc. All it should be doing is 
+solving the same problem repeatedly - which is what recursion
+is best at. If we double the sides of the square, we get 
+a shape with original size <span class="math">\(S \times S\)</span>. To keep the points 
+shifted correctly we double their <span class="math">\((x,y)\)</span> coordinates 
+to <span class="math">\((2x, 2y)\)</span>.</p>
+<p>Once this transformation is performed, we are ready to call
+the Hilbert Sort function recursively - for the 
+northwest and northeast quadrants only. The southwest and 
+southeast quadrants still have a ways to go.</p>
+<p><a name="hilbert2-reflection"></a></p>
+<h2 id="reflection">Reflection</h2>
+<p>In addition to the scale-up transformation, southwest and southeast 
+qaudrant points must be reflected about their diagonals.</p>
+<p>Here's an example of what the process looks like in action:</p>
+<p><img alt="Hilbert Sort Poster Flowchart" src="/images/hilbert-poster.png"></p>
+<p><a name="hilbert2-reflection-solution"></a></p>
+<h1 id="solving-the-reflection-problem">Solving the Reflection Problem</h1>
+<p>The above section described where in the process the reflection 
+of the <span class="math">\((x,y)\)</span> points should happen. The process of applying the 
+reflection differs between the southwest and southeast quadrants.</p>
+<p>In the southwest quadrant, points are being reflected about the 
+diagonal line <span class="math">\(y=x\)</span>, so the reflection of <span class="math">\((x,y)\)</span> points in the 
+southwest quadrant can be performed by swapping the 
+<span class="math">\(x\)</span> and <span class="math">\(y\)</span> values of all of the points in that quadrant.</p>
+<p>In the southeast quadrant, the points are refelected about the 
+diagonal <span class="math">\(y = -x\)</span>, but it is not quite <span class="math">\(y = -x\)</span>, given that there is
+an offset of a half-quadrant width on the left. </p>
+<p>After an <span class="math">\((x,y)\)</span> point is transformed, it has a height equal to
+the distance from the point's x coordinate to the start of the qudarant.
+In equations,</p>
+<div class="math">$$
+y = S - x
+$$</div>
+<p>Further, after an <span class="math">\((x,y)\)</span> point is transformed, the distance from the 
+top of the bounding box to the former y coordinate 
+is the new x coordinate, </p>
+<div class="math">$$
+x = \frac{S}{2} - y
+$$</div>
+<p>The relative x coordinates of each point 
+(relative meaning, 0 starts at the beginning of the curent square,
+rather than the whole square) are 
+the x coordinates minus the half-quadrant width.</p>
+<p>Once these reflections are performed, we pass the 
+resulting <span class="math">\((x,y)\)</span> points on to a new Hilbert sort.
+The new Hilbert sort will be operating on an <span class="math">\(S x S\)</span> 
+square, as before. Importantly, the <span class="math">\((x,y)\)</span> points have been
+transformed in such a way that the order in which the Hilbert
+curve visits each point has not been affected.</p>
+<p><a name="hilbert2-procedure"></a></p>
+<h1 id="hilbert-sort-procedure">Hilbert Sort Procedure</h1>
+<p>The implementation strategy is, obviously, recursive. What we want to do at each level is:
+* Start with a square and points contained in the square. 
+* Cut the square under consideration into four quadrants.
+* Apply a transformation to each square so that it is re-oriented in a manner that matches our original Hilbert curve.</p>
+<p>Once each of those squares goes through all of its respective recursive calls, 
+it will return a sorted list of points. Then we will know what to do - 
+we collect each of the sorted points from each of the four quadrants in order, 
+maintain that order, and return those sorted quadrants.</p>
+<p>To nail down the details, treat the square under consideration as ranging from 
+<span class="math">\((0,0)\)</span> to <span class="math">\((S,S)\)</span>.</p>
+<p>Each time we cut a square into quadrants, we re-orient ourselves as to where 
+<span class="math">\((0,0)\)</span> is located and which quadrants will be visited in which order.
+If we are in the lower left quadrant, <span class="math">\(x\)</span> is below <span class="math">\(\frac{S}{2}\)</span> and 
+<span class="math">\(y\)</span> is below <span class="math">\(\frac{S}{2}\)</span>, so we rotate and reflect by swapping x and y:</p>
+<div class="highlight"><pre><span></span><code>        X -&gt; Y
+        Y -&gt; X
+</code></pre></div>
+
+<p>If we are in the upper left quadrant, x is below <span class="math">\(\frac{S}{2}\)</span>, y is above <span class="math">\(\frac{S}{2}\)</span>, 
+so subtract <span class="math">\(\frac{S}{2}\)</span> from y and we're done.</p>
+<div class="highlight"><pre><span></span><code>        X -&gt; X
+        Y -&gt; Y-(S/2)
+</code></pre></div>
+
+<p>If we are in the upper right quadrant, x is above <span class="math">\(\frac{S}{2}\)</span>, y is above <span class="math">\(\frac{S}{2}\)</span>, 
+so subtract <span class="math">\(\frac{S}{2}\)</span> from both</p>
+<div class="highlight"><pre><span></span><code>        X -&gt; X - S/2
+        Y -&gt; Y - S/2
+</code></pre></div>
+
+<p>If we are in the lower right quadrant, our x and y values are now 
+relative to the quadrant bounding box. The distance to the top of the 
+bounding box to the y coordinate becomes our new x coordinate, while the 
+distance from the right of the bounding box S to the x coordinate becomes 
+our new y coordinate:</p>
+<div class="highlight"><pre><span></span><code>        X -&gt; S/2 - Y
+        Y -&gt; S - X
+</code></pre></div>
+
+<p>Recursion always requires a base case and a recursive case. Our "base case" is the 
+simple comparison of one or no points in each of our four quadrants. If we get to 
+this base case, we know the order in which the Hilbert Curve will visit each of 
+those points.</p>
+<p>If we are not at the base case, if we have a large number of points to sort, 
+we can bin together all the points in a given quadrant, and consider the order
+in which those points go with an additional level of finer granularity. </p>
+<p><a name="hilbert2-pseudocode"></a></p>
+<h1 id="pseudocode">Pseudocode</h1>
+<div class="highlight"><pre><span></span><code><span class="k">set</span> <span class="n">square</span> <span class="n">dimension</span> <span class="n">S</span>
+
+<span class="k">create</span> <span class="n">unsorted</span> <span class="n">queue</span>
+<span class="k">load</span> <span class="n">points</span> <span class="k">into</span> <span class="n">unsorted</span> <span class="n">queue</span>
+
+<span class="k">create</span> <span class="n">sorted</span> <span class="n">queue</span>
+<span class="n">sorted</span> <span class="n">queue</span> <span class="o">=</span> <span class="n">hilbert_sort</span><span class="p">(</span> <span class="n">unsorted</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span> <span class="p">)</span>
+</code></pre></div>
+
+<p>Now here is the Hilbert sort function:</p>
+<div class="highlight"><pre><span></span><code><span class="n">define</span> <span class="n">hilbert_sort</span><span class="p">(</span> <span class="n">unsorted</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span> <span class="p">):</span>
+    <span class="k">create</span> <span class="n">southwest</span> <span class="n">queue</span>
+    <span class="k">create</span> <span class="n">northwest</span> <span class="n">queue</span>
+    <span class="k">create</span> <span class="n">northeast</span> <span class="n">queue</span>
+    <span class="k">create</span> <span class="n">southeast</span> <span class="n">queue</span>
+    <span class="k">for</span> <span class="k">each</span> <span class="n">point</span><span class="p">:</span>
+        <span class="k">if</span> <span class="k">in</span> <span class="n">southwest</span><span class="p">:</span>
+            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="n">Y</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="n">X</span>
+            <span class="k">add</span> <span class="k">to</span> <span class="n">southwest</span> <span class="n">queue</span>
+        <span class="k">if</span> <span class="k">in</span> <span class="n">northwest</span><span class="p">:</span>
+            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">Y</span> <span class="o">-</span> <span class="n">S</span>
+            <span class="k">add</span> <span class="k">to</span> <span class="n">northwest</span> <span class="n">queue</span>
+        <span class="k">if</span> <span class="k">in</span> <span class="n">northeast</span><span class="p">:</span>
+            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">X</span> <span class="o">-</span> <span class="n">S</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">Y</span> <span class="o">-</span> <span class="n">S</span>
+            <span class="k">add</span> <span class="k">to</span> <span class="n">northeast</span> <span class="n">queue</span>
+        <span class="k">if</span> <span class="k">in</span> <span class="n">southeast</span><span class="p">:</span>
+            <span class="k">create</span> <span class="k">new</span> <span class="n">point</span> <span class="k">using</span> <span class="n">X</span> <span class="o">-&gt;</span> <span class="n">S</span> <span class="o">-</span> <span class="mi">2</span><span class="n">Y</span><span class="p">,</span> <span class="n">Y</span> <span class="o">-&gt;</span> <span class="mi">2</span><span class="n">S</span> <span class="o">-</span> <span class="mi">2</span><span class="n">X</span>
+            <span class="k">add</span> <span class="k">to</span> <span class="n">southeast</span> <span class="n">queue</span>
+
+        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">southwest</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
+        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">northwest</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
+        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">northeast</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
+        <span class="n">hilbertsort</span><span class="p">(</span><span class="n">southeast</span> <span class="n">queue</span><span class="p">,</span> <span class="n">square</span> <span class="n">dimension</span><span class="p">)</span>
+
+        <span class="k">create</span> <span class="k">new</span> <span class="n">results</span> <span class="n">queue</span>
+        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">southwest</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
+        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">northwest</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
+        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">northeast</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
+        <span class="k">add</span> <span class="n">points</span> <span class="k">from</span> <span class="n">southeast</span> <span class="k">into</span> <span class="n">results</span> <span class="n">queue</span>
+        <span class="k">return</span> <span class="n">results</span> <span class="n">queue</span>
+</code></pre></div>
+
+<p><a name="hilbert2-refs"></a></p>
+<h1 id="references">References</h1>
+<ol>
+<li>
+<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
+&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
+</li>
+<li>
+<p>"Über die stetige Abbildung einer Linie auf ein Flächenstück." D. Hilbert. 
+<strong>Mathematische Annalen</strong> 38 (1891), 459–460. <a href="/files/HilbertCurve.pdf">(pdf)</a></p>
+</li>
+<li>
+<p>"Hilbert Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 29 April 2017. Accessed 23 June 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Hilbert_curve">https://en.wikipedia.org/wiki/Hilbert_curve</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hilbert-sort.html">hilbert sort</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 CSE 143 Final Project: Hilbert Sort: 1. The Problem
             </b></h1>
         
@@ -863,365 +1281,6 @@ using "middle" in place of the empty stack.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                CSE 143 Final Project: Checkers
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-06-19T11:00:00-07:00" pubdate>Monday 06/19/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/cse-143-final-project-checkers.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
-<ul>
-<li><a href="#checkers-intro">The Problem</a><ul>
-<li><a href="#checkers-problem">Problem Description: Checkers</a></li>
-<li><a href="#checkers-input">Input File</a></li>
-<li><a href="#checkers-output">Output</a></li>
-</ul>
-</li>
-<li><a href="#checkers-solution">The Solution</a><ul>
-<li><a href="#checkers-kiss">Keep It Simple</a></li>
-<li><a href="#checkers-parity">Solution Analysis: Parity</a></li>
-<li><a href="#checkers-euler">Solution Analysis: Graphs and Euler Tours</a></li>
-<li><a href="#checkers-algo">Solution Algorithm</a></li>
-<li><a href="#checkers-pseudocode">Solution Pseudocode</a></li>
-<li>Solution Code</li>
-</ul>
-</li>
-<li><a href="#checkers-refs">References</a></li>
-</ul>
-<p><a name="checkers-intro"></a></p>
-<h1 id="the-problem">The Problem</h1>
-<p>This is a programming challenge that was assigned to some of my CSE 143 students 
-as a final project for their class.</p>
-<p>The origin of this problem was the Association of Computing Machinery (ACM)'s 
-International Collegiate Programming Competition (ICPC),
-in particular the Pacific Northwest Regional Competition, Division 1 challenges from 2015.</p>
-<p><a href="http://acmicpc-pacnw.org/">Link to Pacific NW ACM ICPC page.</a></p>
-<p><a name="checkers-problem"></a></p>
-<h2 id="problem-description-checkers">Problem Description: Checkers</h2>
-<p>In the Checkers problem, you are presented with a checkerboard consisting of 
-black and white squares. The boards follow a normal checkers layout, that is,
-all of the pieces occupy only the light or dark squares on the board.</p>
-<p>There are several white and black pieces arranged on the checkerboard.
-Your goal is to answer the following question: can any one single 
-black piece be used to jump and capture all of the white pieces 
-in a single move? This assumes that each of the black pieces are 
-"king" pieces and can jump in either direction.</p>
-<p>For example, the following 7x7 board configuration has one black piece 
-that can jump all of the white pieces on the board with a single sequence
-of moves. The black piece at B2 jumps to D4, then to F2.</p>
-<p><img alt="Checkerboard 1 - demonstrate solution" src="/images/checkers1.png"></p>
-<p>If an additional white piece is added, there is no sequence of moves
-that will allow any black piece to jump all of the white pieces.</p>
-<p><img alt="Checkerboard 2 - demonstrate no solution" src="/images/checkers2.png"></p>
-<p><a name="checkers-input"></a></p>
-<h2 id="input-file">Input File</h2>
-<p>The input file consists of one line with a single integer, 
-representing the size of the (square) board. 
-Following are characters representing the board state.</p>
-<p><code>.</code> represents a square that pieces cannot occupy - the off-color squares.</p>
-<p><code>_</code> represents an unoccupied but valid square.</p>
-<p><code>B</code> represents a black piece. <code>W</code> represents a white piece.</p>
-<p>Example:</p>
-<div class="highlight"><pre><span></span><code><span class="err">8</span>
-<span class="na">._._._._</span>
-<span class="nf">_._._._.</span>
-<span class="na">.W._.B._</span>
-<span class="nf">_.W.W._.</span>
-<span class="na">.W.B._._</span>
-<span class="nf">_._._._.</span>
-<span class="na">.W._.W._</span>
-<span class="nf">_._._._.</span>
-</code></pre></div>
-
-<p><a name="checkers-output"></a></p>
-<h2 id="output">Output</h2>
-<p>The output is simple: simply state which of the black checkers is capable of 
-jumping each of the white checkers. If none, say "None". If multiple, say "Multiple".</p>
-<p><a name="checkers-solution"></a></p>
-<h1 id="the-solution">The Solution</h1>
-<p><a name="checkers-kiss"></a></p>
-<h2 id="keep-it-simple">Keep It Simple</h2>
-<p>To successfully solve the checkers problem, it is important to <strong>keep it simple</strong>. 
-There are different ways of representing the checkers problem abstractly,
-but the best representation in a program is the simplest one - 
-use a 2D array of chars to represent the board.</p>
-<p>Also as usual with permutations of arrangements on boards of fixed size,
-recursion will be useful here.</p>
-<p><a name="checkers-parity"></a></p>
-<h2 id="solution-analysis-parity">Solution Analysis: Parity</h2>
-<p>We can begin our analysis of the checkers problem with a few observations.</p>
-<p>First, we know that the valid squares for checkers are squares that are off by two.
-But we know further that the black checkers must only move in jumps, which mean that
-a piece at <span class="math">\((i,j)\)</span> can only reach squares indexed by 
-<span class="math">\((i + 4m, j + 4m)\)</span> or <span class="math">\((i + 4m + 2, j + 4n + 2)\)</span>, 
-where <span class="math">\(m, n\)</span> are positive/negative integers.</p>
-<p>That is, the checker pieces can make jumps of 2 squares at a time.  For example, if a checker
-starts at the square <span class="math">\((3,3)\)</span> and jumps a white piece down and to the right, it moves
-to square <span class="math">\((5,5)\)</span> or <span class="math">\((3+2, 3+2)\)</span>. If it jumps another white piece up and to the right,
-it moves to square <span class="math">\((3, 7)\)</span> or <span class="math">\((3, 3 + 4)\)</span>.</p>
-<p>Further, we know that a black checker can only jump checkers at 
-squares of the form <span class="math">\((a + 2m + 1, b + 2n + 1)\)</span>. Thus, black checkers either
-have the correct parity to jump all of the white checkers, or they have
-the same parity as the white checkers (in which case they can be ignored).</p>
-<p>If a black checker does not have the correct parity to jump white checkers, 
-we can save ourselves time by not checking it.</p>
-<p>For example, in the checkerboard below, there are four black checkers,
-but only one (row 2, column 3) has the correct parity to jump each of the 
-white pieces. The other three are </p>
-<p>The other three 
-has the correct parity, while the black checker in the right do not.</p>
-<p><img alt="Checkerboard 3 - illustrate parity" src="/images/checkers3.png"></p>
-<p><a name="checkers-euler"></a></p>
-<h2 id="solution-analysis-graphs-and-euler-tours">Solution Analysis: Graphs and Euler Tours</h2>
-<p>If we examine the squares with correct parity, we can translate the board
-into a graph representation. Squares with the "jump" parity are nodes
-on the graph that can perform jumps. (No whites should have jump parity,
-otherwise the board is impossible.) </p>
-<p>Squares with the "jumped" (i.e., white pieces) parity are nodes that are 
-being jumped. These nodes form the edges between jump parity nodes,
-and these edges must be occupied by a white piece for a black piece
-to be able to pass through them. In this way, we can think of white pieces
-as "bridges" between jump parity squares.</p>
-<p>This representation leads to thinking about the tour the black checker takes
-through the checkerboard as an Euler tour across the graph. </p>
-<p>An Euler Tour, made famous by the 
-<a href="https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg">Seven Bridges of Königsberg</a>
-problem solved by Euler in 1736, 
-is a path that visits each node of the graph, traversing 
-each edge once and only once.</p>
-<p>Euler showed that an Euler path visiting each edge of the graph
-depends on the degree of each node in the graph.
-For an Euler path to exist, the graph must be connected
-and there must be exactly zero or two nodes of 
-odd degree.</p>
-<p>If we walk through the checker board and construct the graph
-(or assemble the information that the graph would have told us), 
-we can determine whether an Euler tour exists, and find the Euler tour.</p>
-<p>The example above shows a checkerboard with two white pieces
-forming two edges. The first white piece connects a jump parity square 
-with a black piece on it to a jump parity square that is empty.
-The second white piece connects two empty jump parity squares.</p>
-<p>The black "entrance" node has an odd degree (1).
-The second, unoccupied node has an even degree (2).
-The third, unoccupied node has an odd degree (1).
-Therefore the graph has two nodes of odd degree, so an Euler tour exists. </p>
-<p>If we modify this example to add one additional white checker piece
-on a square with correct parity, the Euler Path analysis identifies this 
-as a board with no solution:</p>
-<p><img alt="Checkerboard 4 - illustrate no Euler tour" src="/images/checkers4.png"></p>
-<p>This is because three of the nodes have degree 1 and one node has degree 3,
-for a total of 4 nodes with odd degree. The requirements for an Euler Tour 
-to exist (equivalent to saying a solution to the Checkers problem can be found
-for a given black checker) are violated, so no solution can be found.</p>
-<p>If we were to add a second black checker piece two squares away,
-an alternate graph (highlighted in blue) can be constructed, 
-and an alternate Euler path through the graph is available.</p>
-<p><img alt="Checkerboard 5 - illustrate alternate Euler tour" src="/images/checkers5.png"></p>
-<p>On the red graph, each node has an odd degree, so the number of nodes with odd degree is not 0 or 2.
-On the blue graph, only the start and end nodes have an odd degree (1), while the rest of the nodes 
-have a degree of 2 (one input and one output). This means an Euler Tour exists on the blue graph.</p>
-<p>In practice, a given black piece has a given graph connecting squares on the checkerboard - 
-we can ask each node on that graph for its degree, and the degree of its neighbors,
-and if a black piece results in an invalid number of odd nodes, we can abandon it.</p>
-<p><a name="checkers-algo"></a></p>
-<h2 id="solution-algorithm">Solution Algorithm</h2>
-<p>The algorithm to find solutions to this problem very roughly follows this pattern:
-* First, perform a parity check to determine if a solution is impossible.
-* Loop over each square of the board, looking for black pieces
-* For each black piece:
-    * Look at each neighbor:
-        * Determine if there is a square to jump to if neighbor is white 
-        * Determine number of odd neighbors
-    * Fail if more than 2 odd neighbors, or 2 odd neighbors and odd self
-    * Backtracking: explore neighbors, determine if all whites can be jumped</p>
-<p><a name="checkers-pseudocode"></a></p>
-<h2 id="solution-pseudocode">Solution Pseudocode</h2>
-<p>The solution code has three basic parts (four, including the input parser):
-* Initialize and parse the board
-* Loop over each square, checking if black piece is a solution
-* Function to check if black piece is a solution piece 
-* (Recursive backtracking) function to jump each white piece possible to jump.</p>
-<p>Start with the initialization of the board and looping over each 
-black piece to check if it is a solution piece:</p>
-<div class="highlight"><pre><span></span><code><span class="k">initialize</span> <span class="n">solutions</span> <span class="n">counter</span>
-<span class="k">initialize</span> <span class="n">board</span>
-
-<span class="k">for</span> <span class="k">each</span> <span class="n">s</span> <span class="k">in</span> <span class="n">squares</span><span class="p">:</span>
-    <span class="k">if</span> <span class="n">s</span> <span class="k">is</span> <span class="n">black</span> <span class="n">piece</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">s</span> <span class="k">is</span> <span class="n">solution</span> <span class="n">piece</span><span class="p">:</span>
-            <span class="k">increment</span> <span class="n">solutions</span> <span class="n">counter</span>
-            <span class="n">save</span> <span class="k">location</span>
-
-<span class="n">print</span> <span class="n">summary</span>
-</code></pre></div>
-
-<p>Now we just need to implement functions that can (a) check if a square
-contains a black piece (easy) and (b) check if a black piece is a 
-solution piece (uh... kind of what the whole problem boils down to, no?)</p>
-<p>We break that functionality into a separate function. Here is the 
-pseudocode to check if a black piece in a particular square 
-is a solution piece. This function iterates over squares 
-with jump parity - that means this function traverses the 
-<strong>nodes only</strong> in the graph representation of the checkerboard.</p>
-<p>This function enforces the requirement that no node can have more than 2 odd neighbors,
-or be odd if it has more than 2 odd neighbors, since a graph must have 0 or 2 nodes
-with odd degree in the graph for an Euler Tour to exist. </p>
-<p>While we're at it, we also check if there are any white checker pieces
-without a square to land in when they are jumped (i.e., landing square blocked 
-by another black piece or at edge of board).</p>
-<div class="highlight"><pre><span></span><code>function is solution piece:
-    for each square of similar &quot;jump&quot; parity:
-        for each neighbor:
-            check if neighbor is odd 
-            if a neighbor square is white:
-                if next square is not empty:
-                    fail fast
-
-    if more than 2 odd neighbors, or 2 neighbors and odd:
-        fail fast
-
-    # we have a viable solution
-
-    recursively count number of jumped white checkers 
-
-    if number of jumped white checkers equals number of white checkers on board:
-        return true
-</code></pre></div>
-
-<p>Finding squares of similar jump parity is as easy as looping over each row and column, 
-and checking if it is off by 2 with the row/column of the black checker piece that we are
-currently checking. Checking if a neighbor is odd is as straightforward as counting its degree - 
-checking each of its four neighbors and determining which ones are open.
-This leaves finding the number of jumped white checkers as the only functionality left to define.</p>
-<div class="highlight"><pre><span></span><code><span class="err">define number of jumped white checkers:</span>
-<span class="err">    initialize white checkers jumped counter</span>
-<span class="err">    for each neighbor:</span>
-<span class="err">        if white piece, unvisited, with an empty place to jump to:</span>
-<span class="err">            visit white piece</span>
-<span class="err">            increment white checkers jumped</span>
-<span class="err">            call number of jumped white checkers on next next neighbor</span>
-<span class="err">            # this should be the empty space</span>
-<span class="err">    return number white checkers jumped</span>
-</code></pre></div>
-
-<p><a name="checkers-refs"></a></p>
-<h2 id="references">References</h2>
-<ol>
-<li>"ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
-&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1257,6 +1316,9 @@ This leaves finding the number of jumped white checkers as the only functionalit
 
             <h2>January 2022</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/mediawiki-patterns-for-a-zettelkasten-monthly-template-pattern.html">MediaWiki Patterns for a Zettelkasten: Monthly Template Pattern</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/mediawiki-patterns-for-a-zettelkasten-daily-page-pattern.html">MediaWiki Patterns for a Zettelkasten: Daily Page Pattern</a>
             </p>
