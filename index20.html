@@ -102,6 +102,380 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                CSE 143 Final Project: Hilbert Sort: 1. The Problem
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-06-23T16:30:00-07:00" pubdate>Friday 06/23/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/cse-143-final-project-hilbert-sort-1-the-problem.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
+<p>This is the first in a series of three posts 
+detailing the Hilbert Sort problem,
+its solution, and its implementation.
+This post sets up the problem.</p>
+<ul>
+<li><a href="#hilbert-motivation">Hilbert Sort: Motivation</a></li>
+<li><a href="#hilbert-spacefilling">Hilbert, Peano, and Space-Filling Curves</a></li>
+<li><a href="#hilbert-curve">Constructing a Hilbert Curve</a></li>
+<li><a href="#hilbert-sort">Performing a Hilbert Sort</a></li>
+<li><a href="#hilbert-problem">Problem Statement</a></li>
+<li><a href="#hilbert-refs">References</a></li>
+</ul>
+<p><a name="hilbert-motivation"></a></p>
+<h1 id="hilbert-sort-motivation">Hilbert Sort: Motivation</h1>
+<p>In the next few series of posts, we will cover the Hilbert Sort problem,
+how it works, and how to implement it.<br>
+However, before we describe the problem further, 
+let's start with some motivation for solving this problem.</p>
+<p>Suppose we're dealing with a very large number of independent objects
+on a 2D coordinate grid, each with a coordinate location <span class="math">\((x,y)\)</span>.
+(For example, a large population of particles moving in a fluid, or a large number 
+of characters on a map in a game.) </p>
+<p>Here is our box of particles:</p>
+<p><img alt="Box of Particles" src="/images/hilbert1a.png"></p>
+<p>Now, suppose that we have more data than can be handled by a single computer,
+and we want to arrange the data on different computers. However, we want to 
+arrange the data in such a way that we preserve the spatial characteristics
+of the data.</p>
+<p>If we implement a naive sort method for Cartesian points that sorts points by
+x coordinate value, breaking ties with the y coordinate value, 
+we end up with points that are neighbors in space, but far away 
+in the data container's storage (like an array). 
+This is particularly true if there are large crowds of points in the grid.</p>
+<p>Here is an illustration of a set of points and their resulting 
+storage schema in an array that sorts points by x coordinate.
+It shows two purple particles, close by in space, but with<br>
+several green particles further away distance-wise but 
+not with respect to the x coordinate. The spatial locality
+of points is not preserved in the data container, 
+so clearly, a better method of sorting and organizing points is needed.</p>
+<p><img alt="Bad Schema" src="/images/hilbert1b.png"></p>
+<p>An alternative to this schema that yields better locality properties,
+but that leads to a much higher cost for sorting points, involves 
+iterating over each point, and for each point, finding the closest points to it
+in space. However, this itself requires iterating over each point.
+This approach ends up walking over each point (the point whose nearest neighbors we are finding),
+and doing a second nested walk over each point (checking if a point is a nearest neighbor
+to this one). The overall cost of doing this is <span class="math">\(O(N^2)\)</span>.</p>
+<p>It is a deceptively tricky problem: how to organize a large group of points 
+in a way that preserves spatial locality?</p>
+<p>But first, we'll cover the topic of space filling curves, then return to this topic.</p>
+<p><a name="hilbert-spacefilling"></a></p>
+<h1 id="space-filling-curves">Space Filling Curves</h1>
+<p>Mathematician Giuseppe Peano was a prolific teacher and researcher known for many things,
+but one of his more curious ideas is known as the Peano Curve. Peano was attempting to
+answer the question of whether a continuous curve could be bounded by a finite space,
+and he invented a counter-example: a recipe for breaking a curve into parts
+that can be replicated and repeated and applied to the copies as many times as 
+desired, and always result in a continuous curve.</p>
+<p>The way that space-filling curves in general are constructed is to 
+create a pattern, then scale it down and repeat it, 
+attaching subsequent scaled-down, repeated curves.
+Peano simply invented the first curve; there are many variations 
+on the original space-filling curve idea (including the Hilbert Curve - 
+more on that in a moment).</p>
+<p>The <a href="/files/PeanoCurve.pdf">original 1890 paper by Giuseppe Peano</a> is entitled "Sur une courbe,
+qui remplit toute une aire plane", published in 1890 in Mathematische Annalen I, 
+Issue 36. Unfortunately, it has no pictures, but here is a rendering from 
+Wikimedia Commons:</p>
+<p><img alt="Peano Curve" src="/images/PeanoCurve-Many.png"></p>
+<p><a href="https://commons.wikimedia.org/wiki/File:Peano_curve.png">(Link to original on Mediawiki Commons)</a></p>
+<p>Now, the Peano curve was nice, but it had some mathematical properties 
+that made it difficult to deal with. So in 1890,
+<a href="/files/HilbertCurve.pdf">David Hilbert published a follow-up paper</a> 
+in Mathematische Annalen I Issue 38, entitled 
+"Ueber die stetige Abbildung einer Linie auf ein Flächenstück",
+which slightly modified the recipe to create a curve with more 
+elegant mathematical properties. </p>
+<p>Also, he included pictures.</p>
+<p>Here is the first set of figures from Hilbert's 
+<a href="/files/HilbertCurve.pdf">original 1890 paper</a>:</p>
+<p><img alt="Hilbert Curve" src="/images/HilbertCurve-OriginalPaper.png"></p>
+<p>And here is a slightly cleaner rendering of the Hilbert Curve pattern 
+repeated six times:</p>
+<p><img alt="Hilbert Curve" src="/images/HilbertCurve-Many.png"></p>
+<p><a href="https://commons.wikimedia.org/wiki/File:Hilbert_curve.svg">(Link to original on Wikimedia Commons)</a></p>
+<p>From the abstract of Hilbert's paper:</p>
+<blockquote>
+Peano has recently shown in the Mathematical Annals, 2 by an arithmetical observation, 
+how the points of a line can be mapped continuously to the points of a surface part. 
+The functions required for such a mapping can be produced more clearly by using the 
+following geometrical view. Let us divide the line to be represented-about a straight 
+line of the length 1-into four equal parts 1, 2, 3, 4, and the surface which we assume 
+in the form of a square of the side length 1 Straight into 4 equal squares 1, 2, 3, 4 
+(Fig. 1). Secondly, we divide each of the partial sections 1, 2, 3, 4 again into 4 equal
+parts so that we obtain on the straight the 16 partial sections 1, 2, 3, ..., 16; At the 
+same time, each of the 4 squares 1, 2, 3, 4 is divided into 4 equal squares, and the numbers 
+1, 2, ..., 16 are then written to the resulting 16 squares, That each successive square 
+follows the previous one with one side (Fig. 2). If we think of this method, as shown in 
+Fig. 3, the next step, it is easy to see how to assign a single definite point of the 
+square to any given point of the line. It is only necessary to determine the partial 
+stretches of the line to which the given point falls. The squares indicated by the same 
+numbers are necessarily in one another and include a certain point of the surface piece 
+in the boundary. This is the point assigned to the given point. The image thus found is 
+unambiguous and continuous, and vice versa, each point of the square corresponds to 
+one, two, or four points of the line. Moreover, it appears remarkable that, by a 
+suitable modification of the partial lines in the squares, a clear and continuous 
+representation can easily be found, the reversal of which is nowhere more than 
+three-fold.
+
+<br />
+
+- David Hilbert, "Über die stetige Abbildung einer Linie auf ein Flächenstück", Mathematische Annalen Vol 38 
+
+</blockquote>
+
+<p>Thanks to Google Translate for an incredible job.</p>
+<p><a name="hilbert-curve"></a></p>
+<h1 id="constructing-a-hilbert-curve">Constructing a Hilbert Curve</h1>
+<p>To construct a Hilbert curve, you just have to follow the recipe.
+It doesn't matter what your square contains so far,
+or how many levels in you are, whether it's the first curve
+or the five hundredth:</p>
+<ol>
+<li>
+<p>First, take yer square. </p>
+</li>
+<li>
+<p>Second, quadruple yer square. That means, make four copies, that all make a square.</p>
+</li>
+<li>
+<p>Now rotate the bottom left and bottom right via diagonal reflection.</p>
+</li>
+<li>
+<p>Fourth step is, you're done - that's you're new square!</p>
+</li>
+</ol>
+<p><a name="hilbert-sort"></a></p>
+<h1 id="performing-a-hilbert-sort">Performing a Hilbert Sort</h1>
+<p>We will omit a proof of the statement, but given a set of unique (x,y) points,
+we can always construct a minimal-size Hilbert Curve that visits each point only
+once. </p>
+<p>Points can be sorted, then, according to when they would be visited by 
+said Hilbert Curve. And this ordering provides better preservation of spatial 
+locality and structure of points when aligning them in memory, because 
+these space-filling curves are recursive and preserve spatial locality
+in a top-down fashion.</p>
+<p>For example, if we have two points in our square, one in the lower left 
+and one in the lower right, and we are sorting them via a Hilbert Sort,
+we definitely know that a Hilbert curve constructed to visit both of these points
+will definitely visit the lower left point (the quadrant where the Hilbert curve starts)
+before it visits the lower right point (in the quadrant where the Hilbert curve stops).</p>
+<p>This requires thinking about <span class="math">\((x,y)\)</span> points in the box in terms of quadrants, 
+and the order in which the Hilbert curve will visit each quadrant or region,
+rather than thinking in terms of the explicit Hilbert curve that will visit each 
+particular <span class="math">\((x,y)\)</span> point:</p>
+<p><img alt="Box of Particles, Divided Into Quadrants" src="/images/hilbert2a.png"></p>
+<p>This is a subtle shift in the thinking about this problem, but it is crucial
+to a successful implementation of a Hilbert sort. The problem that will follow,
+which asks to implement the Hilbert sort, has many distracting details, 
+including the Hilbert curve itself. </p>
+<p><strong>Remember, in Hilbert sort, the end goal is not the curve itself, but the sort order.</strong></p>
+<p>Here is how the quadrant-by-quadrant partitioning to sort elements ends up looking 
+when applied repeatedly: </p>
+<p><img alt="Repeated Applications" src="/images/hilbert2b.png"></p>
+<p>It is important to note that the two diagonal reflections happening in the corners
+are the trickiest part of this problem. We will cover this operation in greater detail
+in the solution blog post.</p>
+<p><a name="hilbert-problem"></a></p>
+<h1 id="problem-statement">Problem Statement</h1>
+<p>Following is a paraphrased problem statement from the <a href="/files/HilbertSort.pdf">original
+ACM ICPC Regional Programming Competition
+problem statement</a> that this problem and its solution was based on.</p>
+<p>"If points <span class="math">\((x,y)\)</span> are sorted primarily by x, breaking ties by y, then points that are 
+adjacent in memory will have similar x coordinates but not necessarily similar y,
+potentially placing them far apart on the grid. To better preserve distances, we may 
+sort the data along a continuous space-filling curve.</p>
+<p>"We consider one such space-filling curve called the Hilbert curve...</p>
+<p>"Given some locations of interest, you are asked to sort them according to when the 
+Hilbert curve visits them. Note that while the curve intersects itself at 
+infinitely many places, e.g., at <span class="math">\((\frac{S}{2}, \frac{S}{2})\)</span>, making S odd 
+guarantees all integer points are visited just once."</p>
+<p>Here is an example input file, giving a set of points 
+on an <span class="math">\(M \times N\)</span> grid:</p>
+<div class="highlight"><pre><span></span><code><span class="err">    14 25</span>
+<span class="err">    5 5 Honolulu</span>
+<span class="err">    5 10 PugetSound</span>
+<span class="err">    5 20 Victoria</span>
+<span class="err">    10 5 Berkeley</span>
+<span class="err">    10 10 Portland</span>
+<span class="err">    10 15 Seattle</span>
+<span class="err">    10 20 Vancouver</span>
+<span class="err">    15 5 LasVegas</span>
+<span class="err">    15 10 Sacramento</span>
+<span class="err">    15 15 Kelowna</span>
+<span class="err">    15 20 PrinceGeorge</span>
+<span class="err">    20 5 Phoenix</span>
+<span class="err">    20 10 SaltLakeCity</span>
+<span class="err">    20 20 Calgary</span>
+</code></pre></div>
+
+<p>The corresponding output can be verified intuitively,
+assuming the coordinates given above are accurate!
+Here is the output. Indeed, the order in which each
+city is visited is what we would expect if we drew
+a space-filling Hilbert curve over a map of the western
+United States and Canada.</p>
+<div class="highlight"><pre><span></span><code><span class="err">    Honolulu</span>
+<span class="err">    Berkeley</span>
+<span class="err">    Portland</span>
+<span class="err">    PugetSound</span>
+<span class="err">    Victoria</span>
+<span class="err">    Vancouver</span>
+<span class="err">    Seattle</span>
+<span class="err">    Kelowna</span>
+<span class="err">    PrinceGeorge</span>
+<span class="err">    Calgary</span>
+<span class="err">    SaltLakeCity</span>
+<span class="err">    Sacramento</span>
+<span class="err">    LasVegas</span>
+<span class="err">    Phoenix</span>
+</code></pre></div>
+
+<p>Now that we've used up all of our space here describing the problem,
+in a follow-up post we will go into greater detail about
+how to solve the problem conceptually, and come up with some 
+pseudocode for a recursive method (since this is a recursive task).
+Then, a third post will go into greater detail about the 
+final Java code to perform this task.</p>
+<p><a name="hilbert-refs"></a></p>
+<h1 id="references">References</h1>
+<ol>
+<li>
+<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
+&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
+</li>
+<li>
+<p>"Sur une courbe, qui remplit toute une aire plane." G. Peano. 
+<strong>Mathematische Annalen</strong> 36 (1890), 157–160. <a href="/files/PeanoCurve.pdf">(pdf)</a></p>
+</li>
+<li>
+<p>"Über die stetige Abbildung einer Linie auf ein Flächenstück." D. Hilbert. 
+<strong>Mathematische Annalen</strong> 38 (1891), 459–460. <a href="/files/HilbertCurve.pdf">(pdf)</a></p>
+</li>
+<li>
+<p>"Hilbert Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 29 April 2017. Accessed 23 June 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Hilbert_curve">https://en.wikipedia.org/wiki/Hilbert_curve</a>&gt;</p>
+</li>
+<li>
+<p>"Peano Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 16 October 2016. Accessed 23 June 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Peano_curve">https://en.wikipedia.org/wiki/Peano_curve</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hilbert-sort.html">hilbert sort</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 CSE 143 Final Project: Classy
             </b></h1>
         
@@ -848,383 +1222,6 @@ This leaves finding the number of jumped white checkers as the only functionalit
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Teaching Recursion with the N Queens Problem
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-05-16T18:00:00-07:00" pubdate>Tuesday 05/16/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/teaching-recursion-with-the-n-queens-problem.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>Table of Contents:</p>
-<ul>
-<li>
-<p><a href="#8q-gentle-intro">A Gentle Introduction to Recursion</a></p>
-</li>
-<li>
-<p><a href="#8q-backtrack">Recursive Backtracking</a></p>
-</li>
-<li>
-<p><a href="#8q-decision">Paring Down the Decision Tree</a></p>
-</li>
-<li>
-<p><a href="#8q-pseudocode">The Pseudocode</a></p>
-</li>
-<li>
-<p><a href="#8q-diag">Accounting for Diagonal Attacks</a></p>
-</li>
-<li>
-<p><a href="#8q-why">Why the N Queens Problem?</a></p>
-</li>
-</ul>
-<p><a name="8q-gentle-intro"></a></p>
-<h2 id="a-gentle-introduction-to-recursion">A Gentle Introduction to Recursion</h2>
-<p>Recursion, particularly recursive backtracking, is far and away the most challenging topic 
-I cover when I teach the CSE 143 (Java Programming II) course at South Seattle College.
-Teaching the concept of recursion, on its own, is challenging: 
-the concept is a hard one to encounter in everyday life, making it unfamiliar, 
-and that creates a lot of friction when students try to understand how to apply recursion. </p>
-<p>The key, as I tell students from day one of the recursion unit,
-is to always think in terms of the base case and the recursive case.
-The base case gives your brain a "trapdoor" to exit out of an otherwise 
-brain-bending infinite conceptual loop. It helps recursion feel more manageable.
-But most importantly: it enables thinking about recursion 
-in terms of its inputs and outputs. </p>
-<p>More specifically, to understand recursion requires (no, not recursion)
-thinking about two things: <strong>where you enter the function</strong> 
-and <strong>when you stop calling the function</strong>.
-These are the two <em>least</em> complicated cases, and they 
-also happen to be the two <em>most</em> important cases.</p>
-<p>College courses move at an artificially inflated pace, 
-ill-suited for most community college students,
-and the material prescribed must be presented at the given pace
-mostly independent of any real difficulties the students face
-(there is only minimal room for adjustment, <em>at most</em> 2-3 lectures).</p>
-<p>This means that, before the students have had an opportunity to get comfortable 
-with the concept of recursion, and really nail it down, they're introduced to yet another
-mind-bending topic: recursive backtracking algorithms. </p>
-<p>These bring a whole new set of complications to the table.
-Practice is crucial to students' understanding, and all too often,
-the only way to get students to practice (particularly with difficult subject matter 
-like recursion) is to spend substantial amounts of time in class.
-My recursion lectures routinely throw my schedule off by nearly a week,
-because even the simplest recursion or backtracking exercise can eat up
-an hour or more.</p>
-<p><a name="8q-backtrack"></a></p>
-<h2 id="recursive-backtracking">Recursive Backtracking</h2>
-<p>Backtracking is an approach for exploring problems that involve
-making choices from a set of possible choices. A classic example of 
-backtracking is the 8 Queens problem, which asks: "How many ways are there
-of placing 8 queens on a chessboard, such that no queen attacks any other queen?"</p>
-<p>The problem is deceptively simple; solving it requires some mental gymnastics.
-(By the way, most people who have actually heard of the problem are computer scientists
-who were exposed to it <strong>in the process of learning how to solve it</strong>, 
-leading to the hipster effect - it's often dismissed by computer scientists as 
-an "easy" problem. The curse of knowledge at work.)</p>
-<p>The recursive backtracking algorithm requires thinking about the squares on which 
-to place the 8 queens in question as the set of choices to be made. </p>
-<p>The naive approach ignores the constraints, and makes all 8 choices of where to place
-the 8 queens before ever checking if the queen placements are valid. Thus, we could start
-by placing all 8 queens in one single row on the top, or along one single column on the left.
-Using this approach, we have 64 possibilities (64 open squares) for the first queen,
-then 63 possibilities for the second queen, then 62 possibilities for the third queen,
-and so on. This gives a total number of possible combinations of:</p>
-<div class="math">$$
-\dfrac{64!}{(64-8)!} = 178,462,987,637,760
-$$</div>
-<p>(By the way, for those of you following along at home, you can do this calculation with Python:)</p>
-<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">math</span><span class="o">.</span><span class="n">factorial</span><span class="p">(</span><span class="mi">64</span><span class="p">)</span><span class="o">/</span><span class="n">math</span><span class="o">.</span><span class="n">factorial</span><span class="p">(</span><span class="mi">64</span><span class="o">-</span><span class="mi">8</span><span class="p">)</span>
-<span class="il">178462987637760L</span>
-</code></pre></div>
-
-<p>Even for someone without a sense of big numbers, like someone in Congress, 
-that's still a pretty big number. Too many for a human being to actually try 
-in a single lifetime.</p>
-<p><a name="8q-decision"></a></p>
-<h2 id="paring-down-the-decision-tree">Paring Down the Decision Tree</h2>
-<p>But we can do better - we can utilize the fact that the queen, in chess,
-attacks horizontally and vertically, by doing two things:</p>
-<ul>
-<li>
-<p>Limit the placement of queens so that there is one queen per column;</p>
-</li>
-<li>
-<p>Limit the placement of queens so that there is one queen per row.</p>
-</li>
-</ul>
-<p>(Note that this is ignoring diagonal attacks; we'll get there in a minute.)</p>
-<p>This limits the number of solutions as follows: the first queen placed on the board
-must go in the first column, and has 8 possible squares in which it can go.
-The second queen must go in the second column, and has 7 possible squares in which 
-it can go - ignoring the square corresponding to the row that would be attacked
-by the first queen. The third queen goes into the third column, which has 6 open
-squares (ignoring the two rows attacked by the two queens already placed).</p>
-<p>That leads to far fewer solutions:</p>
-<div class="math">$$
-8! = 40,320
-$$</div>
-<p>and for those following along at home in Python:</p>
-<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">math</span><span class="o">.</span><span class="n">factorial</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
-<span class="mi">40320</span>
-</code></pre></div>
-
-<p>To visualize how this utilization of information
-helps reduce the problem space, I often make use of 
-a decision tree, to get the students to think about
-recursive backtracking as a depth-first tree
-traversal. </p>
-<p>(By the way, this is a strategy whose usefulness 
-extends beyond the 8 queens problem, or even 
-recursive backtracking problems. For example,
-the problem of finding cycles in a directed graph
-can be re-cast in terms of trees.)</p>
-<p><img src="images/8-queens-decision-tree.png" width="500px" /></p>
-<p>So far, we have used two of the three directions of attack for queens.
-This is also enough information to begin an implementation of an algorithm - 
-a backtracking algorithm can use the fact that we place one queen per column,
-and one queen per row, to loop over each row, and steadily march through each 
-column sequentially (or vice-versa).</p>
-<p><a name="8q-pseudocode"></a></p>
-<h2 id="the-pseudocode">The Pseudocode</h2>
-<p>There is still a bit more to do to cut down on the problem space
-that needs to be explored, but before we do any of that,
-we should first decide on an approach and sketch out the psuedocode.</p>
-<p>The structure of the explore method pseudocode thus looks like:</p>
-<div class="highlight"><pre><span></span><code><span class="err">explore(column):</span>
-<span class="err">    if last column:</span>
-<span class="err">        # base case</span>
-<span class="err">        add to solutions</span>
-<span class="err">    else:</span>
-<span class="err">        # recursive case</span>
-<span class="err">        for each row:</span>
-<span class="err">            if this is a safe row:</span>
-<span class="err">                place queen on this row</span>
-<span class="err">                explore(column+1)</span>
-<span class="err">                remove queen from this row</span>
-</code></pre></div>
-
-<h2 id="the-actual-code">The Actual Code</h2>
-<p>Over at <a href="https://git.charlesreid1.com/charlesreid1/n-queens">git.charlesreid1.com/charlesreid1/n-queens</a> 
-I have several implementations of the N Queens problem:</p>
-<ul>
-<li>
-<p><a href="https://git.charlesreid1.com/charlesreid1/n-queens/src/master/java/NQueens.java">Java solution</a></p>
-</li>
-<li>
-<p><a href="https://git.charlesreid1.com/charlesreid1/n-queens/src/master/perl/nqueens.pl">Perl solution</a></p>
-</li>
-<li>
-<p><a href="https://git.charlesreid1.com/charlesreid1/n-queens/src/master/python/nqueens.py">Python solution</a></p>
-</li>
-<li>
-<p><a href="https://git.charlesreid1.com/charlesreid1/n-queens/src/master/cpp/nqueens.cpp">C++ solution</a></p>
-</li>
-</ul>
-<h2 id="row-column-and-diagonal-attacks">Row, Column, and Diagonal Attacks</h2>
-<p>We have already utilized knowledge that there will only be one queen 
-per column, and one queen per row. But one last bit of information we can
-utilize is the fact that queens attack diagonally. 
-This allows us to eliminate any squares that are along the diagonals
-of queens that have already been placed on the board.</p>
-<p>How to eliminate the diagonals? It basically boils down to two approaches:</p>
-<ol>
-<li>
-<p>Use a Board class to abstract away details (and the Board class will implement "magic" like an <code>isValid()</code> method).</p>
-</li>
-<li>
-<p>Hack the index - implement some index-based math to eliminate 
-   any rows that are on the diagonals of queens already on the board.</p>
-</li>
-</ol>
-<p>The first approach lets you abstract away the details,
-possibly even using <a href="http://www.buildingjavaprograms.com/code-files/4ed/ch12/Board.java">a Board class written by a textbook</a>,
-which is <s>lazy</s> fine, if you are working on a practical problem
-and need some elbow grease, but not so much if you are a computer science
-student learning the basic principles of software design.</p>
-<p>The second approach requires some deep thinking about how the locations of 
-the N (or 8) queens are being represented in the program.</p>
-<p><a name="8q-diag"></a></p>
-<h2 id="accounting-for-diagonal-attacks">Accounting for Diagonal Attacks</h2>
-<p>At some point, when you use the above pseudocode, 
-you are going to want to know the answer to the following question:
-<strong>for a given column k, what rows are invalid because they are on 
-diagonals of already-placed queens?</strong></p>
-<p>To answer this, think about where the diagonal indices of 
-chess board squares are located, and how to find the diagonals on column X 
-attacked by a queen placed in column Y.</p>
-<p>The following diagram shows a queen on row 3 of column 2, and the diagonal
-attack vectors of that queen. Each of the squares along those diagonal
-vectors can be ruled out as possible squares to place a queen. 
-When selecting a square for the third queen, which goes in the third column, 
-the second and fourth rows can both be ruled out due to the diagonals.
-(The third row, of course, can also be ruled out, due to the one-queen-per-row rule.)</p>
-<p>However, the effect of the already-placed queen propagates forward, 
-and affects the choice of possible squares for each queen after it. 
-If we jump ahead in the recursive algorithm, to say, queen number 6, 
-being placed on column number 6 (highlighted in blue), the queen in column 2 (row 3) 
-still affects the choice of squares for that column (as do all queens previously
-placed on the board).  In the case pictured in the figure, 
-the seventh row (as well as an off-the-board row) of column 6 
-can be ruled out as possible squares for the placement of the 
-6th queen.</p>
-<p><img src="images/8-queens-diag.png" width="500px" /></p>
-<p>Accounting for these diagonal attacks can lead to substantial speed-ups: 
-each queen that is placed can eliminate up to two additional squares per column,
-which means the overall decision tree for the N queens problem becomes a lot less
-dense, and faster to explore. </p>
-<p><a name="8q-why"></a></p>
-<h2 id="why-the-n-queens-problem">Why the N Queens Problem?</h2>
-<p>Invariably, some students will deal with this difficult problem
-by questioning the premise of the question - a reasonable 
-thing to wonder. </p>
-<p>This leads to a broader, more important question: 
-why do computer scientists focus so much on <em>games</em>?</p>
-<p>Games, like computers, are self-contained universes, 
-they are abstract systems, they remove messy details and complications.
-They allow you to start, from scratch, by setting up a board,
-a few rules, a few pieces - things that are easy to implement 
-in a computer.</p>
-<p>Mazes, crossword puzzles, card games, checkers, chess, 
-are all systems with a finite, small number of elements 
-that interact in finite, small numbers of ways.
-The beauty of games is that those small rule sets
-can result in immensely complex systems, so that there
-are more <a href="https://en.wikipedia.org/wiki/Shannon_number">branches in the chess decision tree</a>
-(the Shannon number, <span class="math">\(10^{120}\)</span>) than there are 
-<a href="https://en.wikipedia.org/wiki/Eddington_number">protons in the universe</a>
-(the Eddington number, <span class="math">\(10^{80}\)</span>).</p>
-<p>That simplicity is important in computer science.
-Any real-world problem is going to have to be broken down,
-eventually, into pieces, into rules, into a finite representation,
-so that anything we try to model with a computer, 
-any problem we attempt to solve computationally,
-no matter how complex, will always have a game-like representation.</p>
-<p>(Side note: much of the literature in systems operations research,
-which studies the application of mathematical optimization to
-determine the best way to manage resources, 
-came out of work on war games - which were 
-themselves game-ified, simplified representations
-of real, complex systems. Econometrics, or 
-"computational economics," is another field where 
-game theory has gained much traction and finds many 
-practical applications.)</p>
-<p>Recursion, too, is a useful concept in and of itself,
-one that shows up in sorting and searching algorithms,
-computational procedures, and even in nature. </p>
-<p>But it isn't just knowing <strong>where</strong> to look - 
-it's knowing what you're looking for in the first place. </p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/n-queens.html">n-queens</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1260,6 +1257,9 @@ it's knowing what you're looking for in the first place. </p>
 
             <h2>January 2022</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/mediawiki-patterns-for-a-zettelkasten-daily-page-pattern.html">MediaWiki Patterns for a Zettelkasten: Daily Page Pattern</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/using-mediawiki-as-a-zettelkasten-or-external-brain.html">Using MediaWiki as a Zettelkasten or External Brain</a>
             </p>

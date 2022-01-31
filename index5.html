@@ -102,6 +102,438 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Git Workflows, Part 1: Supercharging your Git Config
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-10-07T20:00:00-07:00" pubdate>Monday 10/07/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/git-workflows-part-1-supercharging-your-git-config.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#source">Source</a></li>
+<li><a href="#user-section">User Section</a></li>
+<li><a href="#bash-aliases">Bash Aliases</a><ul>
+<li><a href="#the-best-one-letter-alias-ever">The Best One Letter Alias Ever</a></li>
+<li><a href="#ending-bad-habits">Ending Bad Habits</a></li>
+</ul>
+</li>
+<li><a href="#alias-section">Alias section</a><ul>
+<li><a href="#log-utils">Log Utils</a></li>
+<li><a href="#status-utils">Status Utils</a></li>
+<li><a href="#fetching">Fetching</a></li>
+<li><a href="#branch-utils">Branch Utils</a><ul>
+<li><a href="#branch-and-checkout">Branch and Checkout</a></li>
+</ul>
+</li>
+<li><a href="#remote-utils">Remote Utils</a></li>
+<li><a href="#commit-utils">Commit Utils</a><ul>
+<li><a href="#committing-all-changes">Committing All Changes</a></li>
+<li><a href="#fixing-commits">Fixing Commits</a></li>
+</ul>
+</li>
+<li><a href="#miscellaneous-utils">Miscellaneous Utils</a><ul>
+<li><a href="#rebasing-shortcuts">Rebasing shortcuts</a></li>
+<li><a href="#diff-shortcuts">Diff shortcuts</a></li>
+<li><a href="#pull-shortcuts">Pull shortcuts</a></li>
+<li><a href="#clone-shortcuts">Clone shortcuts</a></li>
+<li><a href="#contributor-shortcuts">Contributor shortcuts</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#core-section">Core section</a></li>
+<li><a href="#color-section">Color section</a></li>
+<li><a href="#url-section">Url section</a></li>
+</ul>
+</div>
+<h1 id="source">Source</h1>
+<p>Most of the good stuff is from
+<a href="https://github.com/mathiasbynens/dotfiles">https://github.com/mathiasbynens/dotfiles</a>!</p>
+<h1 id="user-section">User Section</h1>
+<p>Start off easy - here's how you set your email and name for commits:</p>
+<div class="highlight"><pre><span></span><code>[user]
+    email = foo@bar.com
+    name = Foo Bar
+</code></pre></div>
+
+<h1 id="bash-aliases">Bash Aliases</h1>
+<h2 id="the-best-one-letter-alias-ever">The Best One Letter Alias Ever</h2>
+<p>Start supercharging how you use git by creating a one-letter alias.</p>
+<p>Add this to your <code>~/.bashrc</code> file:</p>
+<div class="highlight"><pre><span></span><code>alias g=&quot;git&quot;
+</code></pre></div>
+
+<p>You're already saving yourself a bunch of keystrokes, and we're just getting started!</p>
+<h2 id="ending-bad-habits">Ending Bad Habits</h2>
+<p>This is a nice trick for getting yourself out of bad habits.
+My first time using a "sophisticated" branch worklow in git
+(i.e., not just committing and pushing to master all the time),
+I got in trouble for committing directly to master with a
+<code>git push origin master</code> (instead of making a feature branch
+and opening a pull request).</p>
+<p>To get myself out of the habit of typing <code>git push origin master</code>,
+I wanted to map it to an alias that told me no. I did that by
+defining <code>git</code> to be a bash function (this works because functions
+take precedence over a binary named <code>git</code> on your path).</p>
+<p>The git function checks the arguments that are passed to it.
+If the arguments are <code>push origin master</code>, it means I'm typing
+<code>git push origin master</code>, and I get a slap on the wrist.</p>
+<p>Otherwise, it passes the arguments through to the <code>git</code> binary.</p>
+<p>You can also put this in <code>~/.bashrc</code>.</p>
+<div class="highlight"><pre><span></span><code>git<span class="o">()</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$@</span> <span class="o">==</span> <span class="s2">&quot;push origin master&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
+        <span class="nb">echo</span> <span class="s2">&quot;nope&quot;</span>
+    <span class="k">else</span>
+        <span class="nb">command</span> git <span class="s2">&quot;</span><span class="nv">$@</span><span class="s2">&quot;</span>
+    <span class="k">fi</span>
+<span class="o">}</span>
+</code></pre></div>
+
+<h1 id="alias-section">Alias section</h1>
+<p>In the <code>~/.gitconfig</code> file, aliases specific to git can be
+defined in a section beginning with alias.</p>
+<h2 id="log-utils">Log Utils</h2>
+<p>Let's start with some utilities for viewing git logs.</p>
+<p>(You can never have too many ways to look at a git log.)</p>
+<p>Note that we'll assume the alias bit in the following git config excerpts.</p>
+<div class="highlight"><pre><span></span><code>[alias]
+    # courtesy of https://stackoverflow.com/a/34467298
+    lg = !&quot;git lg1&quot;
+    lg1 = !&quot;git lg1-specific --all&quot;
+    lg2 = !&quot;git lg2-specific --all&quot;
+    lg3 = !&quot;git lg3-specific --all&quot;
+
+    lg1-specific = log --graph --abbrev-commit --decorate --format=format:&#39;%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)&#39;
+    lg2-specific = log --graph --abbrev-commit --decorate --format=format:&#39;%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n&#39;&#39;          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)&#39;
+    lg3-specific = log --graph --abbrev-commit --decorate --format=format:&#39;%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset) %C(bold cyan)(committed: %cD)%C(reset) %C(auto)%d%C(reset)%n&#39;&#39;          %C(white)%s%C(reset)%n&#39;&#39;          %C(dim white)- %an &lt;%ae&gt; %C(reset) %C(dim white)(committer: %cn &lt;%ce&gt;)%C(reset)&#39;
+</code></pre></div>
+
+<p>The <code>git lgX</code> shortcuts give similar views of the log, but with increasing vertical spacing.
+<code>git lg1</code> is the most compact, while <code>git lg3</code> is the most comfortable to read, as far as vertical whitespace.
+Same with the <code>-specific</code> commands.</p>
+<p>This is one more nice short log command:</p>
+<div class="highlight"><pre><span></span><code>    # View abbreviated SHA, description, and history graph of the latest 20 commits
+    l = log --pretty=oneline -n 20 --graph --abbrev-commit
+</code></pre></div>
+
+<p>Remember to use this with the <code>g</code> alias for super short log:</p>
+<div class="highlight"><pre><span></span><code>$ g l
+* 4357b28 (HEAD -&gt; source) update mocking aws post
+* 063ad78 (gh/source, gh/HEAD) add mocking post
+* a5f1adc add init keras cnn post
+* fb911ec add keras cnn draft
+* 3549d35 add rosalind (euler paths) part 7 draft
+
+$ g lg1
+* 4357b28 - (67 minutes ago) update mocking aws post - Charles Reid (HEAD -&gt; source)
+* 063ad78 - (2 weeks ago) add mocking post - Charles Reid (gh/source, gh/HEAD)
+* a5f1adc - (4 months ago) add init keras cnn post - C Reid
+* fb911ec - (5 months ago) add keras cnn draft - C Reid
+* 3549d35 - (5 months ago) add rosalind (euler paths) part 7 draft - C Reid
+...
+</code></pre></div>
+
+<h2 id="status-utils">Status Utils</h2>
+<p>The git status command is one of my most frequently used commands, so I made a few shortcuts:</p>
+<div class="highlight"><pre><span></span><code>    # View the current working tree status using the short format
+    s = status -s
+    ss = status
+</code></pre></div>
+
+<p>This makes checking the short or long status of a git repo easy:</p>
+<div class="highlight"><pre><span></span><code>$ g s
+AM pelican/content/git-workflows-1-config.md
+AM pelican/content/git-workflows-2-teams.md
+
+$ g ss
+On branch source
+Your branch is ahead of &#39;gh/source&#39; by 1 commit.
+  (use &quot;git push&quot; to publish your local commits)
+
+Changes to be committed:
+  (use &quot;git restore --staged &lt;file&gt;...&quot; to unstage)
+    new file:   pelican/content/git-workflows-1-config.md
+    new file:   pelican/content/git-workflows-2-teams.md
+
+Changes not staged for commit:
+  (use &quot;git add &lt;file&gt;...&quot; to update what will be committed)
+  (use &quot;git restore &lt;file&gt;...&quot; to discard changes in working directory)
+    modified:   pelican/content/git-workflows-1-config.md
+    modified:   pelican/content/git-workflows-2-teams.md
+</code></pre></div>
+
+<h2 id="fetching">Fetching</h2>
+<p>Fetching is handy to do, since it just fetches changes from a remote and doesn't actually
+change anything or try to merge anything (unlike a <code>git pull</code> command).</p>
+<p>The most useful fetch command (<code>git fetch --all</code>) is aliased to <code>g f</code> with the following
+bit in the aliases section of the <code>~/.gitconfig</code> file:</p>
+<div class="highlight"><pre><span></span><code>    f = fetch --all
+</code></pre></div>
+
+<h2 id="branch-utils">Branch Utils</h2>
+<p>The only command I might use more than the status command are branch commands,
+so here are several branch aliases:</p>
+<div class="highlight"><pre><span></span><code>    b = branch -v
+    bv = branch -v
+    bb = branch -v
+
+    ba = branch -a
+    bb = branch -v -a
+</code></pre></div>
+
+<p>In a similar way, you can get a summary view using <code>g b</code>:</p>
+<div class="highlight"><pre><span></span><code>$ g b
+  master 4c828cd [behind 84] update with awsome day notes
+* source b18adfd add two git workflow posts
+
+$ g b
+  master 940ee98 update mocking post
+* source b18adfd add two git workflow posts
+</code></pre></div>
+
+<p>and a little bit more information with <code>g bb</code>:</p>
+<div class="highlight"><pre><span></span><code>$ g bb
+  master            940ee98 update mocking post
+* source            b18adfd add two git workflow posts
+  remotes/gh/HEAD   -&gt; gh/source
+  remotes/gh/master 940ee98 update mocking post
+  remotes/gh/source b18adfd add two git workflow posts
+</code></pre></div>
+
+<h3 id="branch-and-checkout">Branch and Checkout</h3>
+<p>Sometimes if you are creaing a branch with a long branch name, it can be
+inconvenient to have to first create the branch with <code>git branch &lt;branch-name&gt;</code>
+and then check it out with <code>git checkout &lt;branch-name&gt;</code>.</p>
+<p>To resolve this you can define a <code>git go</code> alias that creates the branch and
+then switches to that branch:</p>
+<div class="highlight"><pre><span></span><code>    # Switch to a branch, creating it
+    # from the current branch if necessary
+    go = &quot;!f() { git checkout -b \&quot;$1\&quot; 2&gt; /dev/null || git checkout \&quot;$1\&quot;; }; f&quot;
+</code></pre></div>
+
+<p>Careful you don't mistype the branch name.</p>
+<h2 id="remote-utils">Remote Utils</h2>
+<p>Another useful git command is the remote command, so here are a few
+remote aliases:</p>
+<div class="highlight"><pre><span></span><code>    r = remote -v
+    rv = remote -v
+    ra = remote -v
+</code></pre></div>
+
+<h2 id="commit-utils">Commit Utils</h2>
+<p>Sometimes you have changes that you've staged using <code>git add</code>, but you
+want to see the changes that you've staged, before you commit them.</p>
+<p>Normally you'd have to use the inconvenient <code>git diff --cached &lt;files&gt;</code>,
+but this can be aliased to <code>cdiff</code>, so that you can use <code>git diff</code> to see
+unstaged changes and <code>git cdiff</code> to see staged changes.</p>
+<p>Even better, you can define the alias <code>g cd</code> to run <code>git cdiff</code>...!</p>
+<p>Here's the relevant bit in the aliases section:</p>
+<div class="highlight"><pre><span></span><code>    cdiff = diff --cached
+    cd = diff --cached
+</code></pre></div>
+
+<h3 id="committing-all-changes">Committing All Changes</h3>
+<div class="highlight"><pre><span></span><code>    # Commit all changes
+    ca = !git add -A &amp;&amp; git commit -av
+</code></pre></div>
+
+<h3 id="fixing-commits">Fixing Commits</h3>
+<p>Some common operations for repairing commit history before pushing:</p>
+<div class="highlight"><pre><span></span><code>    # Amend the currently staged files to the latest commit
+    amend = commit --amend --reuse-message=HEAD
+
+    # Oops
+    fix = commit --amend --reuse-message=HEAD --edit
+</code></pre></div>
+
+<h2 id="miscellaneous-utils">Miscellaneous Utils</h2>
+<p>There are a few other actions that are useful to add to the aliases section
+of the <code>~/.gitconfig</code>:</p>
+<h3 id="rebasing-shortcuts">Rebasing shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    # Interactive rebase with the given number of latest commits
+    reb = &quot;!r() { git rebase -i HEAD~$1; }; r&quot;
+</code></pre></div>
+
+<h3 id="diff-shortcuts">Diff shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    # Show the diff between the latest commit and the current state
+    d = !&quot;git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat&quot;
+
+    # `git di $number` shows the diff between the state `$number` revisions ago and the current state
+    di = !&quot;d() { git diff --patch-with-stat HEAD~$1; }; git diff-index --quiet HEAD -- || clear; d&quot;
+</code></pre></div>
+
+<h3 id="pull-shortcuts">Pull shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    p = &quot;!f() { git pull $1 $2; }; f&quot;
+</code></pre></div>
+
+<h3 id="clone-shortcuts">Clone shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    # Clone a repository including all submodules
+    c = clone --recursive
+</code></pre></div>
+
+<h3 id="contributor-shortcuts">Contributor shortcuts</h3>
+<p>This last one is convenient for getting a summary of contributors:</p>
+<div class="highlight"><pre><span></span><code>    # List contributors with number of commits
+    contributors = shortlog --summary --numbered
+</code></pre></div>
+
+<p>An example for <a href="https://github.com/aws/chalice">https://github.com/aws/chalice</a>:</p>
+<div class="highlight"><pre><span></span><code>$ cd chalice/
+$ g contributors
+  1053  James Saryerwinnie
+   120  John Carlyle
+    94  stealthycoin
+    42  kyleknap
+    35  jcarlyl
+    19  Kyle Knapp
+    12  Atharva Chauthaiwale
+</code></pre></div>
+
+<h1 id="core-section">Core section</h1>
+<p>Because it's the best text editor:</p>
+<div class="highlight"><pre><span></span><code>[core]
+    editor = vim
+</code></pre></div>
+
+<p>I have some other stuff I've collected, many of them from
+<a href="https://github.com/mathiasbynens/dotfiles">https://github.com/mathiasbynens/dotfiles</a>:</p>
+<div class="highlight"><pre><span></span><code>    # Use custom `.gitignore` and `.gitattributes`
+    excludesfile = ~/.gitignore
+    attributesfile = ~/.gitattributes
+
+    # Treat spaces before tabs and all kinds of trailing whitespace as an error
+    # [default] trailing-space: looks for spaces at the end of a line
+    # [default] space-before-tab: looks for spaces before tabs at the beginning of a line
+    whitespace = space-before-tab,-indent-with-non-tab,trailing-space
+
+    # Make `git rebase` safer on macOS
+    # More info: &lt;http://www.git-tower.com/blog/make-git-rebase-safe-on-osx/&gt;
+    ###trustctime = false
+
+    # Prevent showing files whose names contain non-ASCII symbols as unversioned.
+    # http://michael-kuehnel.de/git/2014/11/21/git-mac-osx-and-german-umlaute.html
+    precomposeunicode = false
+
+    # Speed up commands involving untracked files such as `git status`.
+    # https://git-scm.com/docs/git-update-index#_untracked_cache
+    untrackedCache = true
+</code></pre></div>
+
+<h1 id="color-section">Color section</h1>
+<p>Make some nice beautiful colors that are easy to understand:</p>
+<div class="highlight"><pre><span></span><code>[color]
+
+    # Use colors in Git commands that are capable of colored output when
+    # outputting to the terminal. (This is the default setting in Git ≥ 1.8.4.)
+    ui = auto
+
+[color &quot;branch&quot;]
+
+    current = yellow reverse
+    local = yellow
+    remote = green
+
+[color &quot;diff&quot;]
+
+    meta = yellow bold
+    frag = magenta bold # line info
+    old = red # deletions
+    new = green # additions
+
+[color &quot;status&quot;]
+
+    added = yellow
+    changed = green
+    untracked = cyan
+</code></pre></div>
+
+<h1 id="url-section">Url section</h1>
+<p>This makes some Github-related URLs easier and shorter to type:</p>
+<div class="highlight"><pre><span></span><code>[url &quot;git@github.com:&quot;]
+
+    insteadOf = &quot;gh:&quot;
+    pushInsteadOf = &quot;github:&quot;
+    pushInsteadOf = &quot;git://github.com/&quot;
+
+[url &quot;git@gist.github.com:&quot;]
+
+    insteadOf = &quot;gst:&quot;
+    pushInsteadOf = &quot;gist:&quot;
+    pushInsteadOf = &quot;git://gist.github.com/&quot;
+
+[url &quot;git://gist.github.com/&quot;]
+
+    insteadOf = &quot;gist:&quot;
+</code></pre></div>
+
+<p>Now, instead of</p>
+<div class="highlight"><pre><span></span><code>$ git clone git@github.com:org-name/repo-name
+</code></pre></div>
+
+<p>you can do the much simpler</p>
+<div class="highlight"><pre><span></span><code>$ g c gh://org-name/repo-name
+</code></pre></div>
+
+<p>Voila! Start integrating these alises into your daily workflow,
+and you'll find yourself using a lot fewer keystrokes!</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Mocking AWS in Unit Tests
             </b></h1>
         
@@ -699,496 +1131,6 @@ binding sites.  </p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Graphs for Bioinformatics, Part 2: Finding Eulerian Paths
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-05-07T16:00:00-07:00" pubdate>Tuesday 05/07/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-2-finding-eulerian-paths.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#the-context-de-bruijn-graphs">The Context: de Bruijn Graphs</a></li>
-<li><a href="#assembling-the-de-bruijn-graph">Assembling the de Bruijn Graph</a><ul>
-<li><a href="#directed-graph-representation-adjacency-list">Directed Graph Representation: Adjacency List</a></li>
-<li><a href="#a-quick-example">A Quick Example</a></li>
-<li><a href="#python-vs-go">Python vs Go</a></li>
-<li><a href="#directed-graph-class-python-implementation">Directed Graph Class: Python Implementation</a></li>
-</ul>
-</li>
-<li><a href="#checking-for-eulerian-paths-and-cycles">Checking for Eulerian Paths and Cycles</a></li>
-<li><a href="#algorithm-building-blocks">Algorithm Building Blocks</a><ul>
-<li><a href="#depth-first-search">Depth First Search</a></li>
-<li><a href="#kosarajus-algorithm-connected-components">Kosaraju's Algorithm: Connected Components</a></li>
-</ul>
-</li>
-<li><a href="#to-be-continued">To Be Continued...</a></li>
-</ul>
-</div>
-<h1 id="the-context-de-bruijn-graphs">The Context: de Bruijn Graphs</h1>
-<p>In <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Part 1 of this post</a>
-we discussed a data structure called a de Bruijn graph and covered its application
-to genome assembly. To summarize, a de Bruijn graph is a type of graph that represents
-a set of k-mers as a set of directed edges on a graph, connecting the k-mer's (k-1)-mer prefix
-(the source vertex) to the k-mer's (k-1)-mer suffix (the destination vertex).</p>
-<p>As an example, if <span class="math">\(k = 5\)</span>, we can represent the k-mer "AAGCT" as an edge connecting the vertex
-<code>AAGC</code> to the vertex <code>AGCT</code>.</p>
-<p>The de Bruijn graph is used to solve a set of problems on <a href="https://rosalind.info">Rosalind.info</a>,
-a website with bioinformatics programming challenges, as part of working through the
-textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
-and its associated website (<a href="https://rosalind.info">Rosalind.info</a>).</p>
-<h1 id="assembling-the-de-bruijn-graph">Assembling the de Bruijn Graph</h1>
-<p>The problems from Rosalind.info that require the use of a de Bruijn graph come from
-Chapter 3. These problems generally give the user either a list of k-mers (to assemble
-into a de Bruijn graph, as in problem <a href="http://rosalind.info/problems/ba3e/">BA3E</a>) 
-or a long sequence of DNA (which can be turned into a list of
-k-mers and assembled into a de Bruijn graph, as in problem <a href="http://rosalind.info/problems/ba3d/">BA3D</a>).</p>
-<p>If we are starting with a long string of DNA, we can run through the entire string
-and extract k-mers using a sliding window. For a string of DNA of length <span class="math">\(d\)</span>, this procedure
-will create <span class="math">\(d - k + 1\)</span> k-mers.</p>
-<h2 id="directed-graph-representation-adjacency-list">Directed Graph Representation: Adjacency List</h2>
-<p>The de Bruijn graph is a directed graph. To represent this
-graph in memory, we utilize an adjacency list data structure.
-An adjacency list is a key-value lookup table (implemented using
-a hash map) wherein each <em>source vertex</em> in the graph is a key 
-in the lookup table, and the corresponding value is a list of
-all <em>destination vertices</em> (all vertices that have a directed
-edge starting from the source vertex and ending at that vertex).</p>
-<p>A Python dictionary can be used to implement the adjacency list
-hash table. The dictionary keys are the source vertices (or rather,
-their string labels), and the dictionary values are a list of 
-destination vertices (a list of their string labels).</p>
-<p>Thus, the graph <code>AA -&gt; BB -&gt; CC -&gt; DD</code> would be represented with
-the hash table:</p>
-<div class="highlight"><pre><span></span><code><span class="err">adjacency_list[&#39;AA&#39;] = [&#39;BB&#39;]</span>
-<span class="err">adjacency_list[&#39;BB&#39;] = [&#39;CC&#39;]</span>
-<span class="err">adjacency_list[&#39;CC&#39;] = [&#39;DD&#39;]</span>
-</code></pre></div>
-
-<p>(Notice from this example that the keys of the adjacency list
-gives a list of <em>source vertices only</em>, to get all vertices we
-need to look at the values of the adjacency list too.)</p>
-<h2 id="a-quick-example">A Quick Example</h2>
-<p>As a simple example, consider the de Bruijn graph formed from
-the DNA string <code>AAGATTCTCTAC</code> and <span class="math">\(k = 4\)</span>.</p>
-<p>This is first turned into a bag of <span class="math">\(d - k + 1 = 9\)</span> 
-4-mers (our edges):</p>
-<div class="highlight"><pre><span></span><code><span class="n">Sequence</span><span class="o">:</span>   <span class="n">AAGATTCTCTAC</span>
-<span class="mi">4</span><span class="o">-</span><span class="n">mers</span><span class="o">:</span>     <span class="n">AAGA</span>
-             <span class="n">AGAT</span>
-              <span class="n">GATT</span>
-               <span class="n">ATTC</span>
-                <span class="n">TTCT</span>
-                 <span class="n">TCTC</span>
-                  <span class="n">CTCT</span>
-                   <span class="n">TCTA</span>
-                    <span class="n">CTAC</span>
-</code></pre></div>
-
-<p>Next, we also create a bag of <span class="math">\(d - k + 1 = 10\)</span> 
-3-mers (vertices):</p>
-<div class="highlight"><pre><span></span><code><span class="n">Sequence</span><span class="o">:</span>   <span class="n">AAGATTCTCTAC</span>
-<span class="mi">3</span><span class="o">-</span><span class="n">mers</span><span class="o">:</span>     <span class="n">AAG</span>
-             <span class="n">AGA</span>
-              <span class="n">GAT</span>
-               <span class="n">ATT</span>
-                <span class="n">TTC</span>
-                 <span class="n">TCT</span>
-                  <span class="n">CTC</span>
-                   <span class="n">TCT</span>
-                    <span class="n">CTA</span>
-                     <span class="n">TAC</span>
-</code></pre></div>
-
-<p>Now we can iterate over every 4-mer edge, find its
-prefix 3-mer and suffix 3-mer, and create a corresponding
-entry in the adjacency list hash table.</p>
-<p>The list of edges looks like this:</p>
-<div class="highlight"><pre><span></span><code><span class="err">AAG -&gt; AGA</span>
-<span class="err">AGA -&gt; GAT</span>
-<span class="err">ATT -&gt; TTC</span>
-<span class="err">CTA -&gt; TAC</span>
-<span class="err">CTC -&gt; TCT</span>
-<span class="err">GAT -&gt; ATT</span>
-<span class="err">TCT -&gt; CTA,CTC</span>
-<span class="err">TTC -&gt; TCT</span>
-</code></pre></div>
-
-<p>The corresponding dictionary should look like this:</p>
-<div class="highlight"><pre><span></span><code><span class="err">adjacency_list[&#39;AAG&#39;] = [&#39;AGA&#39;]</span>
-<span class="err">adjacency_list[&#39;AGA&#39;] = [&#39;GAT&#39;]</span>
-<span class="err">adjacency_list[&#39;ATT&#39;] = [&#39;TTC&#39;]</span>
-<span class="err">adjacency_list[&#39;CTA&#39;] = [&#39;TAC&#39;]</span>
-<span class="err">adjacency_list[&#39;CTC&#39;] = [&#39;TCT&#39;]</span>
-<span class="err">adjacency_list[&#39;GAT&#39;] = [&#39;ATT&#39;]</span>
-<span class="err">adjacency_list[&#39;TCT&#39;] = [&#39;CTA&#39;,&#39;CTC&#39;]</span>
-<span class="err">adjacency_list[&#39;TTC&#39;] = [&#39;TCT&#39;]</span>
-</code></pre></div>
-
-<h2 id="python-vs-go">Python vs Go</h2>
-<p>Now that we're ready to implement a directed graph object
-and populate it using the data given in the problem, we 
-have to make the difficult choice of what language we
-want to use to implement the directed graph.</p>
-<p>We have covered our use of the Go programming language 
-for Rosalind.info problems before (we have previously 
-covered recursion for Chapter 2 problems in 
-<a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1</a>,
-<a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">Part 2</a>,
-and <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Part 3</a>
-of another post, and we also wrote <a href="https://charlesreid1.github.io/learning-bioinformatics-with-go-and-rosalind.html">this post</a>
-on our impression of Go and its usefulness in
-bioinformatics.</p>
-<p>We are also implementing all of the solutions to the
-Rosalind.info problems in our Go libarary, <a href="https://github.com/charlesreid1/go-rosalind">go-rosalind</a>
-(see <a href="https://godoc.org/github.com/charlesreid1/go-rosalind/rosalind">corresponding documentation on godoc.org</a>).</p>
-<p><strong>However,</strong> we have learned the hard way that Go requires
-a lot of boilerplate code (boilerplate code that is necessary,
-mind you, because all of that boilerplate will eventually
-morph into something problem-specific).</p>
-<p>This all means that Go is a very cumbersome language to use
-to get an algorithm prototype up and running.</p>
-<p>Python, on the other hand, is a very easy language for
-prototyping and has plenty of handy built-in functions
-and modules that make prototyping an algorithm far 
-easier and faster than doing it in Go.</p>
-<p>Our strategy, therefore, is to prototype our algorithm
-and corresponding graph object in Python, get the
-algorithm working and tested, then convert the code 
-to Go when we are finished.</p>
-<h2 id="directed-graph-class-python-implementation">Directed Graph Class: Python Implementation</h2>
-<p>Note that while we could simply use the dictionary object
-itself as the graph data structure, this is somewhat
-inelegant, and we would like instead to define a class
-to bundle related behavior and data together.</p>
-<p>We implement the directed graph by defining an <code>AdjacencyGraph</code>
-class. This is just a glorified wrapper around the ajacency
-list dictionary, with some extra methods.</p>
-<p>We start by defining the class (it inherits from <code>object</code> so
-it has no parent type):</p>
-<div class="highlight"><pre><span></span><code><span class="err">class AdjacencyGraph(object):</span>
-<span class="err">    &quot;&quot;&quot;Directed graph stored using an adjacency list&quot;&quot;&quot;</span>
-<span class="err">    def __init__(self):</span>
-<span class="err">        &quot;&quot;&quot;Constructor&quot;&quot;&quot;</span>
-<span class="err">        self.adj = {}</span>
-<span class="err">        self.dfs_started = False</span>
-</code></pre></div>
-
-<p>The constructor just initializes an empty adjacency list dictionary.</p>
-<p>We also define two built-in methods for convenience:
-<code>__str__</code> for the string representation of the graph 
-(so we can pass the graph object to <code>print()</code>), and
-<code>__len__</code> for getting the number of (source) vertices 
-on the graph.</p>
-<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">__str__</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-<span class="w">        </span><span class="ss">&quot;&quot;&quot;String representation&quot;&quot;&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">[]</span><span class="w"></span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">source</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="p">.</span><span class="n">keys</span><span class="p">()</span><span class="err">:</span><span class="w"></span>
-<span class="w">            </span><span class="n">sinks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="o">[</span><span class="n">source</span><span class="o">]</span><span class="w"></span>
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">sink</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nl">sinks</span><span class="p">:</span><span class="w"></span>
-<span class="w">                </span><span class="n">m</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ss">&quot;%s -&gt; %s\n&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">source</span><span class="p">,</span><span class="n">sink</span><span class="p">)</span><span class="w"></span>
-<span class="w">                </span><span class="n">s</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="w"></span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="ss">&quot;&quot;</span><span class="p">.</span><span class="k">join</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">__len__</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-<span class="w">        </span><span class="ss">&quot;&quot;&quot;Number of vertices on graph&quot;&quot;&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">set</span><span class="p">()</span><span class="w"></span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">source</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="p">.</span><span class="n">keys</span><span class="p">()</span><span class="err">:</span><span class="w"></span>
-<span class="w">            </span><span class="n">s</span><span class="p">.</span><span class="k">add</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">sink</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="o">[</span><span class="n">k</span><span class="o">]</span><span class="err">:</span><span class="w"></span>
-<span class="w">                </span><span class="n">s</span><span class="p">.</span><span class="k">add</span><span class="p">(</span><span class="n">sink</span><span class="p">)</span><span class="w"></span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nf">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w"></span>
-</code></pre></div>
-
-<p>Next, we define some basic functionality useful for all graphs:</p>
-<ul>
-<li>Getting the in-degree and out-degree of a vertex</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">in_degree</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="n">u</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-<span class="w">        </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="p">.</span><span class="n">keys</span><span class="p">()</span><span class="err">:</span><span class="w"></span>
-<span class="w">            </span><span class="n">sinks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="o">[</span><span class="n">v</span><span class="o">]</span><span class="w"></span>
-<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nl">sinks</span><span class="p">:</span><span class="w"></span>
-<span class="w">                </span><span class="n">n</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">n</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">out_degree</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="n">u</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="p">.</span><span class="n">keys</span><span class="p">()</span><span class="err">:</span><span class="w"></span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="nf">len</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="o">[</span><span class="n">u</span><span class="o">]</span><span class="p">)</span><span class="w"></span>
-<span class="w">        </span><span class="k">else</span><span class="err">:</span><span class="w"></span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
-</code></pre></div>
-
-<p>We also define a generator for creating vertices:</p>
-<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">vertices</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-<span class="w">        </span><span class="n">vertices</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">set</span><span class="p">()</span><span class="w"></span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="p">.</span><span class="n">keys</span><span class="p">()</span><span class="err">:</span><span class="w"></span>
-<span class="w">            </span><span class="n">vertices</span><span class="p">.</span><span class="k">add</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="o">[</span><span class="n">k</span><span class="o">]</span><span class="err">:</span><span class="w"></span>
-<span class="w">                </span><span class="n">vertices</span><span class="p">.</span><span class="k">add</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="w"></span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nl">vertices</span><span class="p">:</span><span class="w"></span>
-<span class="w">            </span><span class="n">yield</span><span class="w"> </span><span class="n">v</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">n_vertices</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nf">len</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">n_edges</span><span class="p">(</span><span class="n">self</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-<span class="w">        </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">source</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="p">.</span><span class="n">keys</span><span class="p">()</span><span class="err">:</span><span class="w"></span>
-<span class="w">            </span><span class="k">try</span><span class="err">:</span><span class="w"></span>
-<span class="w">                </span><span class="n">n</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nf">len</span><span class="p">(</span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="o">[</span><span class="n">source</span><span class="o">]</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="ow">except</span><span class="err">:</span><span class="w"></span>
-<span class="w">                </span><span class="err">#</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="k">case</span><span class="w"> </span><span class="k">value</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">None</span><span class="w"></span>
-<span class="w">                </span><span class="n">pass</span><span class="w"></span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">n</span><span class="w"></span>
-
-<span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">get_neighbors</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="n">u</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-<span class="w">        </span><span class="ss">&quot;&quot;&quot;Get all neighbors of node u&quot;&quot;&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="err">#</span><span class="w"> </span><span class="nl">Note</span><span class="p">:</span><span class="w"> </span><span class="n">neighbors</span><span class="w"> </span><span class="k">are</span><span class="w"> </span><span class="n">stored</span><span class="w"> </span><span class="ow">in</span><span class="w"></span>
-<span class="w">        </span><span class="err">#</span><span class="w"> </span><span class="n">sorted</span><span class="w"> </span><span class="k">order</span><span class="w"></span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="p">.</span><span class="n">keys</span><span class="p">()</span><span class="err">:</span><span class="w"></span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="o">[</span><span class="n">u</span><span class="o">]</span><span class="w"></span>
-<span class="w">        </span><span class="k">else</span><span class="err">:</span><span class="w"></span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="err">[]</span><span class="w"></span>
-</code></pre></div>
-
-<p>Finally, we add a method <code>add_edge()</code> that allows us
-to create an edge from vertex u to vertex v (and add
-the vertices to the graph if either do not yet exist
-on the graph).</p>
-<p>For convenience, we maintain the adjacency list values
-(the list of destination vertices) in lexicographic
-order.</p>
-<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="n">def</span><span class="w"> </span><span class="n">add_edge</span><span class="p">(</span><span class="n">self</span><span class="p">,</span><span class="w"> </span><span class="n">u</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="err">:</span><span class="w"></span>
-<span class="w">        </span><span class="ss">&quot;&quot;&quot;Add an edge from u to v&quot;&quot;&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="err">#</span><span class="w"> </span><span class="k">For</span><span class="w"> </span><span class="k">each</span><span class="w"> </span><span class="n">source</span><span class="w"> </span><span class="nl">vertex</span><span class="p">:</span><span class="w"></span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="p">.</span><span class="n">keys</span><span class="p">()</span><span class="err">:</span><span class="w"></span>
-
-<span class="w">            </span><span class="err">#</span><span class="w"> </span><span class="k">Get</span><span class="w"> </span><span class="n">existing</span><span class="w"> </span><span class="n">sink</span><span class="w"> </span><span class="n">list</span><span class="w"></span>
-<span class="w">            </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="o">[</span><span class="n">u</span><span class="o">]</span><span class="w"></span>
-
-<span class="w">            </span><span class="err">#</span><span class="w"> </span><span class="n">Append</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">it</span><span class="w"></span>
-<span class="w">            </span><span class="n">t</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="w"></span>
-
-<span class="w">            </span><span class="err">#</span><span class="w"> </span><span class="n">Keep</span><span class="w"> </span><span class="n">list</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">sinks</span><span class="w"> </span><span class="n">sorted</span><span class="w"></span>
-<span class="w">            </span><span class="err">#</span><span class="w"> </span><span class="p">(</span><span class="n">lexicographic</span><span class="w"> </span><span class="n">string</span><span class="w"> </span><span class="n">sorting</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="n">t</span><span class="p">.</span><span class="n">sort</span><span class="p">()</span><span class="w"></span>
-
-<span class="w">            </span><span class="err">#</span><span class="w"> </span><span class="k">Create</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">edge</span><span class="w"> </span>
-<span class="w">            </span><span class="err">#</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">source</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">sink</span><span class="w"></span>
-<span class="w">            </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="o">[</span><span class="n">u</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t</span><span class="w"></span>
-
-<span class="w">        </span><span class="k">else</span><span class="err">:</span><span class="w"></span>
-<span class="w">            </span><span class="err">#</span><span class="w"> </span><span class="k">Initialize</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">list</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">sinks</span><span class="w"> </span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="err">#</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">given</span><span class="w"> </span><span class="n">source</span><span class="w"> </span><span class="p">(</span><span class="n">u</span><span class="p">)</span><span class="w"></span>
-<span class="w">            </span><span class="n">self</span><span class="p">.</span><span class="n">adj</span><span class="o">[</span><span class="n">u</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[</span><span class="n">v</span><span class="o">]</span><span class="w"></span>
-</code></pre></div>
-
-<p>Now, to assemble the de Bruijn graph, we can iterate
-over every k-mer edge, form the prefix and suffix vertices,
-and call the <code>add_edge()</code> function on the graph.</p>
-<h1 id="checking-for-eulerian-paths-and-cycles">Checking for Eulerian Paths and Cycles</h1>
-<p>To recap Eulerian paths versus Eulerian cycles (discussed in
-<a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Part 1 of this post</a>:</p>
-<ul>
-<li>An Eulerian path is a path that visits every edge of a given graph exactly once.</li>
-<li>An Eulerian cycle is an Eulerian path that begins and ends at the ''same vertex''.</li>
-</ul>
-<p>According to Steven Skienna's <u>Algorithm Design Handbook</u>,
-there are two conditions that must be met for an Eulerian path or
-cycle to exist. These conditions are different for undirected graphs
-versus directed graphs.</p>
-<p><strong>Undirected graphs:</strong> </p>
-<ul>
-<li>
-<p>An undirected graph contains an Euler <strong>cycle</strong> iff
-  (1) it is connected, and (2) each vertex is of even
-  degree.</p>
-</li>
-<li>
-<p>An undirected graph contains an Euler <strong>path</strong> iff (1)
-  it is connected, and all but two vertices are of even
-  degree. These two vertices will be the start and end
-  vertices for the Eulerian path.</p>
-</li>
-</ul>
-<p><strong>Directed graphs:</strong></p>
-<ul>
-<li>
-<p>A directed graph contains an Euler cycle iff (1) it is
-  strongly-connected, and (2) each vertex has the same
-  in-degree as out-degree</p>
-</li>
-<li>
-<p>A directed graph contains an Euler path iff (1) it is
-  connected, and (2) all vertices except two (x,y) have
-  the same in-degree as out-degree, and (x,y) are
-  vertices with in-degree one less than and one more
-  than out-degree</p>
-</li>
-</ul>
-<h1 id="algorithm-building-blocks">Algorithm Building Blocks</h1>
-<p>Algorithm to find Eulerian paths/cycles consists of several steps using several algorithms.</p>
-<p>Undirected graphs are the simpler case; directed graphs are more complicated.</p>
-<h2 id="depth-first-search">Depth First Search</h2>
-<p>To perform a DFS on a directed graph, implement two functions:</p>
-<ol>
-<li>
-<p>Write a DFS function that takes a graph as an input argument and that visits each node of the
-   graph in a depth-first search.</p>
-</li>
-<li>
-<p>Write a visitation function that takes a node as an input argument and that performs some action
-   on the node. This visitation function is called by the DFS function on each node that it visits.</p>
-</li>
-</ol>
-<h2 id="kosarajus-algorithm-connected-components">Kosaraju's Algorithm: Connected Components</h2>
-<p>On an undirected graph, can use Fleury's Algorithm
-to follow edges (classify edges as bridge or non-bridge,
-then leave bridges for last).</p>
-<p>On a directed graph, we have twice the amount of work:
-we are not just checking that all vertices are reachable
-from a given vertex, we are also checking that all vertices
-can also reach that vertex.</p>
-<h1 id="to-be-continued">To Be Continued...</h1>
-<p>In the next part of this post, we will start with the slightly simpler case of finding an Euler cycle
-(which has no start or end vertices). Then we will show how finding the Euler path is actually a special
-case of finding the Euler cycle.</p>
-<p>First, we will use <a href="https://charlesreid1.com/wiki/Graphs/Euler_Circuit#Directed_Graphs:_Hierholzer.27s_Algorithm">Hierholzer's
-Algorithm</a>
-to find Euler cycles (this is the simpler case). Order does not matter because it is a cycle;
-Hierholzer's algorithm is used to find the Euler cycle.</p>
-<p>Next, we will modify the above algorithm to find Euler paths. This requires keeping track of
-the start and end candidate nodes. We verify only one each; we complete the cycle by adding an edge.
-Once we find the cycle, we remove the edge. Finally, we rearrange the cycle to have the correct
-start and end nodes.</p>
-<p>Stay tuned for Part 3...</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1224,6 +1166,9 @@ start and end nodes.</p>
 
             <h2>January 2022</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/mediawiki-patterns-for-a-zettelkasten-daily-page-pattern.html">MediaWiki Patterns for a Zettelkasten: Daily Page Pattern</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/using-mediawiki-as-a-zettelkasten-or-external-brain.html">Using MediaWiki as a Zettelkasten or External Brain</a>
             </p>
