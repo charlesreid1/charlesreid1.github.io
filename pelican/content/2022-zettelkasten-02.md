@@ -9,7 +9,7 @@ This post is part 2 of a series.
 
 ## What is a Zettelkasten?
 
-See [Part 1](#) of this series for a little more background on what we're
+See [Part 1](https://charlesreid1.github.io/using-mediawiki-as-a-zettelkasten-or-external-brain.html) of this series for a little more background on what we're
 talking about! But basically:
 
 * A zettelkasten is a system of note-taking, where notes are kept simple
@@ -57,6 +57,13 @@ automated using bots!) A daily page contains the following:
 Of course, not every day is spent in front of a computer, and sometimes days must be retroactively logged,
 but those days can be back-filled with notes.
 
+## Example Daily Page
+
+We've set up an example daily page on our public wiki (which is not a zettelkasten!) from a hypothetical January 1,
+2016: <https://charlesreid1.com/wiki/20160101>
+
+Seeing the daily page in action might help this post make a little more sense.
+
 ## Advantages of the Daily Page Pattern
 
 The daily page pattern has several advantages. Here are a few:
@@ -71,7 +78,7 @@ The daily page pattern has several advantages. Here are a few:
   pages networked and easy to navigate.
 
 * The daily page pattern is flexible in terms of the time scales it can handle. A zettelkasten that's started in
-  2022 can still be used to create detailed notes in the past; if I have a note from July 1, 2007, I can make a new
+  2022 can still be used to create detailed notes in the past; if we have a note from July 1, 2007, we can make a new
   page `[[20070701]]` and add the information there. (As mentioned above, adding a category like
   `[[Category:2007]]` to that page can make it easier to find again.)
 
