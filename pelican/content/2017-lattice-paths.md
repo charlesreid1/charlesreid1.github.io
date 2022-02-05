@@ -3,21 +3,8 @@ Date: 2017-07-18 08:00
 Category: Mathematics
 Tags: computer science, mathematics, combinatorics, permutations, lattice paths, puzzles, project euler
 
-## Table of Contents
+[TOC]
 
-* [The Lattice Paths Problem](#multiset-lattice)
-* [Problem Formulation: Permutations](#multiset-permutations)
-	* [Permutations of Unique Items (Factorial)](#multiset-permutations-unique)
-	* [Permutations of Items with Duplicates (Multichoose)](#multiset-permutations-dupes)
-	* [Example](#multiset-permutations-example)
-* [Solving 2D Rectangular Lattice](#multiset-2d-rectangular)
-	* [More Examples](#multiset-2d-examples)
-* [Solving 2D Square Lattice (Special Case)](#multiset-2d-square)
-* [Solving 3D Cuboid Lattice](#multiset-3d-rectangular)
-* [Solving 3D Cube Lattice (Special Case)](#multiset-3d-square)
-* [Solving N-Dimensional Square Lattice (N-Dimensional Multisets)](#multiset-ndim)
-
-<a name="multiset-lattice"></a>
 ## The Lattice Paths Problem
 
 I first came across the lattice paths problem in [Project Euler problem 15](https://projecteuler.net/problem=15). 
@@ -35,26 +22,24 @@ But this is an interesting problem that goes beyond the Project Euler question -
 a combinatorics problem that is maddeningly simple, yet surprisingly difficult to formulate - the problem 
 of **multisets**.
 
-<a name="multiset-permutations"></a>
 ## Problem Formulation: Permutations
 
 Thinking through the 2x2 grid, we already stated that the shortest path must consist of 2 right moves and 2 down moves - 
 the number of paths is simply a question of the order in which these moves are made. Let us represent the path 
 that moves right twice, then down twice, using the string
 
-```
+```plain
 RRDD
 ```
 
 Now we have a way of representing paths through the lattice - and we've turned our very specific lattice problem 
 into a much more general combinatorics problem. How many unique permutations of the above path/string can we find?
 
-<a name="multiset-permutations-unique"></a>
 ### Permutations of Unique Items (Factorial)
 
 Let's suppose we have a string consisting of unique characters:
 
-```
+```plain
 ABCDEFG
 ```
 
@@ -72,7 +57,6 @@ Our situation is complicated by the fact that some of our permutations are repea
 as D1 and D2, we can choose the first move as D1 and the second move as D2, or the first move as D2 and the second move as D1 - the two are equivalent. 
 This will eliminate some of the permutations.
 
-<a name="multiset-permutations-dupes"></a>
 ### Permutations of Items with Duplicates (Multichoose)
 
 Our case is slightly different: we have items with duplicates. This fits into a general combinatorics framework called 
@@ -84,7 +68,7 @@ k-1 bar characters.
 For example, if we are adding 5 components to a circuit board, and they can be any one of 9 possible components, we can represent this as
 the partitioning of 5 stars among 9 bins, or 8 bars. Here are some possibilities:
 
-```
+```plain
 ||||||||        <-- No choices made yet (9 bins, 8 partitions)
 *|*||*||*|*||   <-- Mix of different components
 ||*|*||*|*||*   <-- Mix of different components
@@ -106,12 +90,11 @@ On the 20x20 grid, we are going to make 20 right moves, and we can distribute ou
 Thus, our n items, the 20 down moves, are being placed between the 20 right moves, which are the 20 bars that create 
 21 bins (21 locations to place the down moves).
 
-<a name="multiset-permutations-example"></a>
 ### Example
 
 Considering the smaller 2x2 example, and replacing bars with R, we have, for a 2x2 lattice, six possibilities:
 
-```
+```plain
 RR    <-- No choices made yet
 **RR  <-- all on left
 *R*R  <-- distributed... etc...
@@ -123,7 +106,7 @@ RR**
 
 To enumerate the number of possibilities, we use the multichoose function, denoted "n multichoose k". This counts the number of ways
 to place n objects (D) into $k$ bins (created by $k-1$ other objects, R). The multichoose function is defined as
-(see [https://en.wikipedia.org/wiki/Multiset#Counting_multisets](multisets) wikipedia page for proper Latex notation - 
+(see <https://en.wikipedia.org/wiki/Multiset#Counting_multisets> Wikipedia page for proper Latex notation - 
 it looks like the binomial coefficient but with 2 parentheses):
 
 $$
@@ -146,14 +129,13 @@ $$
 
 which is indeed the number of paths through the lattice.
 
-<a name="multiset-2d-rectangular"></a>
 ## Solving 2D Rectangular Lattice
 
 To generalize, on a lattice of width $W$ and height $H$, we have $W$ right moves that form $W+1$ partitions,
 in which we are placing H items. The number of possible paths through the lattice is therefore 
 equivalent to permutations of the string:
 
-```
+```plain
 RRRR...(W times)...RRRDDDD...(H times)...DDDD
 ```
 
@@ -169,7 +151,6 @@ $$
 (H) \mbox{  multichoose  } (W+1) = \binom{W+1+H-1}{H} = \binom{W+H}{H}
 $$
 
-<a name="multiset-2d-examples"></a>
 ### More Examples
 
 The number of minimal paths through a 4 x 2 lattice (identical to the number of paths 
@@ -204,7 +185,6 @@ $$
 
 where $D$ is the dimension of the square grid. 
 
-<a name="multiset-3d-rectangular"></a>
 ## Solving 3D Cuboid Lattice 
 
 (Note: [cuboids](https://en.wikipedia.org/wiki/Cuboid) are the 3D analogue of 2D rectangles.)
@@ -221,7 +201,7 @@ through the lattice, from one corner to the other?
 This can be re-cast, as we did above, as the problem of counting
 unique permutations of a string of the form:
 
-```
+```plain
 UURRBB
 ```
 
@@ -247,14 +227,14 @@ $$
 
 These form a path through a 3D lattice of size $4 \times 4 \times 6$:
 
-```
+```plain
 UUUURRRRBBBBBB
 ```
 
 The number of unique permutations can be computed by breaking this into sub-problems.
 Start by asking how many permutations there are of the string:
 
-```
+```plain
 UUUUXXXXXXXXXX
 ```
 
@@ -283,7 +263,6 @@ $$
 P = \binom{14}{4} \cdot \binom{10}{4} = 210,210
 $$
 
-<a name="multiset-3d-square"></a>
 ## Solving 3D Cubic Lattice (Special Case)
 
 If we have the special case of a perfect cubic lattice, the formula above reduces to the nice and symmetric:
@@ -292,7 +271,6 @@ $$
 \dfrac{(3n)!}{(n!)^3}
 $$
 
-<a name="multiset-ndim"></a>
 ## Solving N-Dimensional Square Lattice (N-Dimensional Multisets) 
 
 Let's look at the example of a traversal of a 4D lattice, 
@@ -323,7 +301,7 @@ $$
 
 A path on this 4D lattice has the form:
 
-```
+```plain
 UUURRRRBBBBBWWW
 ```
 
