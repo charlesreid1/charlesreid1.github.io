@@ -524,7 +524,7 @@ to check if a word is a palindrome:
 
 [palindromes.py](https://github.com/charlesreid1/five-letter-words/blob/master/palindromes.py)
 
-```
+```python
 def is_palindrome(word):
     test1 = word[0]==word[4]
     test2 = word[1]==word[3]
@@ -535,7 +535,7 @@ def is_palindrome(word):
 
 and the main driver method, which actually runs the function on each word:
 
-```
+```python
 if __name__=="__main__":
     words = get_words()
 
@@ -602,7 +602,7 @@ the second word:
 
 [palindromes.py](https://github.com/charlesreid1/five-letter-words/blob/master/palindromes.py)
 
-```
+```python
 def is_palindrome_pair(word1,word2):
     test0 = word1[0]==word2[4]
     test1 = word1[1]==word2[3]
@@ -782,7 +782,7 @@ distance from one another.
 
 Here is the code for finding near-palindromes:
 
-```
+```python
 """
 near_palindromes.py
 
