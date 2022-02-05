@@ -33,10 +33,12 @@ MARKDOWN = {
         'markdown.extensions.toc': {
             'title': 'Table of Contents'
         },
-
         # The rest of this dictionary is the default value
         # http://docs.getpelican.com/en/stable/settings.html
-        'markdown.extensions.codehilite': {'css_class': 'highlight'},
+        'markdown.extensions.codehilite': {
+            'css_class': 'highlight', 
+            'guess_lang': False,
+        },
         'markdown.extensions.extra': {},
         'markdown.extensions.meta': {},
     },
