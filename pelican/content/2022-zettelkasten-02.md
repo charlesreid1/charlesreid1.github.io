@@ -90,6 +90,8 @@ pattern can tend to make pages feel barren and empty.
 When there is too much information coming in, a blank canvas can help things feel more calm.
 But when there is only a trickle of information coming in, the blank canvas an feel like it is swallowing work.
 
+## Overcoming the Disadvantages
+
 We have given some thought to this problem, and have a few thoughts:
 
 * One useful general principle is persistence - having lists or chunks of text that persist across days, so it
