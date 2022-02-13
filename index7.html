@@ -102,6 +102,496 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Graphs for Bioinformatics, Part 2: Finding Eulerian Paths
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-05-07T16:00:00-07:00" pubdate>Tuesday 05/07/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-2-finding-eulerian-paths.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#the-context-de-bruijn-graphs">The Context: de Bruijn Graphs</a></li>
+<li><a href="#assembling-the-de-bruijn-graph">Assembling the de Bruijn Graph</a><ul>
+<li><a href="#directed-graph-representation-adjacency-list">Directed Graph Representation: Adjacency List</a></li>
+<li><a href="#a-quick-example">A Quick Example</a></li>
+<li><a href="#python-vs-go">Python vs Go</a></li>
+<li><a href="#directed-graph-class-python-implementation">Directed Graph Class: Python Implementation</a></li>
+</ul>
+</li>
+<li><a href="#checking-for-eulerian-paths-and-cycles">Checking for Eulerian Paths and Cycles</a></li>
+<li><a href="#algorithm-building-blocks">Algorithm Building Blocks</a><ul>
+<li><a href="#depth-first-search">Depth First Search</a></li>
+<li><a href="#kosarajus-algorithm-connected-components">Kosaraju's Algorithm: Connected Components</a></li>
+</ul>
+</li>
+<li><a href="#to-be-continued">To Be Continued...</a></li>
+</ul>
+</div>
+<h1 id="the-context-de-bruijn-graphs">The Context: de Bruijn Graphs</h1>
+<p>In <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Part 1 of this post</a>
+we discussed a data structure called a de Bruijn graph and covered its application
+to genome assembly. To summarize, a de Bruijn graph is a type of graph that represents
+a set of k-mers as a set of directed edges on a graph, connecting the k-mer's (k-1)-mer prefix
+(the source vertex) to the k-mer's (k-1)-mer suffix (the destination vertex).</p>
+<p>As an example, if <span class="math">\(k = 5\)</span>, we can represent the k-mer "AAGCT" as an edge connecting the vertex
+<code>AAGC</code> to the vertex <code>AGCT</code>.</p>
+<p>The de Bruijn graph is used to solve a set of problems on <a href="https://rosalind.info">Rosalind.info</a>,
+a website with bioinformatics programming challenges, as part of working through the
+textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
+and its associated website (<a href="https://rosalind.info">Rosalind.info</a>).</p>
+<h1 id="assembling-the-de-bruijn-graph">Assembling the de Bruijn Graph</h1>
+<p>The problems from Rosalind.info that require the use of a de Bruijn graph come from
+Chapter 3. These problems generally give the user either a list of k-mers (to assemble
+into a de Bruijn graph, as in problem <a href="http://rosalind.info/problems/ba3e/">BA3E</a>) 
+or a long sequence of DNA (which can be turned into a list of
+k-mers and assembled into a de Bruijn graph, as in problem <a href="http://rosalind.info/problems/ba3d/">BA3D</a>).</p>
+<p>If we are starting with a long string of DNA, we can run through the entire string
+and extract k-mers using a sliding window. For a string of DNA of length <span class="math">\(d\)</span>, this procedure
+will create <span class="math">\(d - k + 1\)</span> k-mers.</p>
+<h2 id="directed-graph-representation-adjacency-list">Directed Graph Representation: Adjacency List</h2>
+<p>The de Bruijn graph is a directed graph. To represent this
+graph in memory, we utilize an adjacency list data structure.
+An adjacency list is a key-value lookup table (implemented using
+a hash map) wherein each <em>source vertex</em> in the graph is a key 
+in the lookup table, and the corresponding value is a list of
+all <em>destination vertices</em> (all vertices that have a directed
+edge starting from the source vertex and ending at that vertex).</p>
+<p>A Python dictionary can be used to implement the adjacency list
+hash table. The dictionary keys are the source vertices (or rather,
+their string labels), and the dictionary values are a list of 
+destination vertices (a list of their string labels).</p>
+<p>Thus, the graph <code>AA -&gt; BB -&gt; CC -&gt; DD</code> would be represented with
+the hash table:</p>
+<div class="highlight"><pre><span></span><code>adjacency_list[&#39;AA&#39;] = [&#39;BB&#39;]
+adjacency_list[&#39;BB&#39;] = [&#39;CC&#39;]
+adjacency_list[&#39;CC&#39;] = [&#39;DD&#39;]
+</code></pre></div>
+
+<p>(Notice from this example that the keys of the adjacency list
+gives a list of <em>source vertices only</em>, to get all vertices we
+need to look at the values of the adjacency list too.)</p>
+<h2 id="a-quick-example">A Quick Example</h2>
+<p>As a simple example, consider the de Bruijn graph formed from
+the DNA string <code>AAGATTCTCTAC</code> and <span class="math">\(k = 4\)</span>.</p>
+<p>This is first turned into a bag of <span class="math">\(d - k + 1 = 9\)</span> 
+4-mers (our edges):</p>
+<div class="highlight"><pre><span></span><code>Sequence:   AAGATTCTCTAC
+4-mers:     AAGA
+             AGAT
+              GATT
+               ATTC
+                TTCT
+                 TCTC
+                  CTCT
+                   TCTA
+                    CTAC
+</code></pre></div>
+
+<p>Next, we also create a bag of <span class="math">\(d - k + 1 = 10\)</span> 
+3-mers (vertices):</p>
+<div class="highlight"><pre><span></span><code>Sequence:   AAGATTCTCTAC
+3-mers:     AAG
+             AGA
+              GAT
+               ATT
+                TTC
+                 TCT
+                  CTC
+                   TCT
+                    CTA
+                     TAC
+</code></pre></div>
+
+<p>Now we can iterate over every 4-mer edge, find its
+prefix 3-mer and suffix 3-mer, and create a corresponding
+entry in the adjacency list hash table.</p>
+<p>The list of edges looks like this:</p>
+<div class="highlight"><pre><span></span><code>AAG -&gt; AGA
+AGA -&gt; GAT
+ATT -&gt; TTC
+CTA -&gt; TAC
+CTC -&gt; TCT
+GAT -&gt; ATT
+TCT -&gt; CTA,CTC
+TTC -&gt; TCT
+</code></pre></div>
+
+<p>The corresponding dictionary should look like this:</p>
+<div class="highlight"><pre><span></span><code>adjacency_list[&#39;AAG&#39;] = [&#39;AGA&#39;]
+adjacency_list[&#39;AGA&#39;] = [&#39;GAT&#39;]
+adjacency_list[&#39;ATT&#39;] = [&#39;TTC&#39;]
+adjacency_list[&#39;CTA&#39;] = [&#39;TAC&#39;]
+adjacency_list[&#39;CTC&#39;] = [&#39;TCT&#39;]
+adjacency_list[&#39;GAT&#39;] = [&#39;ATT&#39;]
+adjacency_list[&#39;TCT&#39;] = [&#39;CTA&#39;,&#39;CTC&#39;]
+adjacency_list[&#39;TTC&#39;] = [&#39;TCT&#39;]
+</code></pre></div>
+
+<h2 id="python-vs-go">Python vs Go</h2>
+<p>Now that we're ready to implement a directed graph object
+and populate it using the data given in the problem, we 
+have to make the difficult choice of what language we
+want to use to implement the directed graph.</p>
+<p>We have covered our use of the Go programming language 
+for Rosalind.info problems before (we have previously 
+covered recursion for Chapter 2 problems in 
+<a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1</a>,
+<a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">Part 2</a>,
+and <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Part 3</a>
+of another post, and we also wrote <a href="https://charlesreid1.github.io/learning-bioinformatics-with-go-and-rosalind.html">this post</a>
+on our impression of Go and its usefulness in
+bioinformatics.</p>
+<p>We are also implementing all of the solutions to the
+Rosalind.info problems in our Go libarary, <a href="https://github.com/charlesreid1/go-rosalind">go-rosalind</a>
+(see <a href="https://godoc.org/github.com/charlesreid1/go-rosalind/rosalind">corresponding documentation on godoc.org</a>).</p>
+<p><strong>However,</strong> we have learned the hard way that Go requires
+a lot of boilerplate code (boilerplate code that is necessary,
+mind you, because all of that boilerplate will eventually
+morph into something problem-specific).</p>
+<p>This all means that Go is a very cumbersome language to use
+to get an algorithm prototype up and running.</p>
+<p>Python, on the other hand, is a very easy language for
+prototyping and has plenty of handy built-in functions
+and modules that make prototyping an algorithm far 
+easier and faster than doing it in Go.</p>
+<p>Our strategy, therefore, is to prototype our algorithm
+and corresponding graph object in Python, get the
+algorithm working and tested, then convert the code 
+to Go when we are finished.</p>
+<h2 id="directed-graph-class-python-implementation">Directed Graph Class: Python Implementation</h2>
+<p>Note that while we could simply use the dictionary object
+itself as the graph data structure, this is somewhat
+inelegant, and we would like instead to define a class
+to bundle related behavior and data together.</p>
+<p>We implement the directed graph by defining an <code>AdjacencyGraph</code>
+class. This is just a glorified wrapper around the ajacency
+list dictionary, with some extra methods.</p>
+<p>We start by defining the class (it inherits from <code>object</code> so
+it has no parent type):</p>
+<div class="highlight"><pre><span></span><code>class AdjacencyGraph(object):
+    &quot;&quot;&quot;Directed graph stored using an adjacency list&quot;&quot;&quot;
+    def __init__(self):
+        &quot;&quot;&quot;Constructor&quot;&quot;&quot;
+        self.adj = {}
+        self.dfs_started = False
+</code></pre></div>
+
+<p>The constructor just initializes an empty adjacency list dictionary.</p>
+<p>We also define two built-in methods for convenience:
+<code>__str__</code> for the string representation of the graph 
+(so we can pass the graph object to <code>print()</code>), and
+<code>__len__</code> for getting the number of (source) vertices 
+on the graph.</p>
+<div class="highlight"><pre><span></span><code>    def __str__(self):
+        &quot;&quot;&quot;String representation&quot;&quot;&quot;
+        s = []
+        for source in self.adj.keys():
+            sinks = self.adj[source]
+            for sink in sinks:
+                m = &quot;%s -&gt; %s\n&quot;%(source,sink)
+                s.append(m)
+        return &quot;&quot;.join(s)
+
+    def __len__(self):
+        &quot;&quot;&quot;Number of vertices on graph&quot;&quot;&quot;
+        s = set()
+        for source in self.adj.keys():
+            s.add(source)
+            for sink in self.adj[k]:
+                s.add(sink)
+        return len(s)
+</code></pre></div>
+
+<p>Next, we define some basic functionality useful for all graphs:</p>
+<ul>
+<li>Getting the in-degree and out-degree of a vertex</li>
+</ul>
+<div class="highlight"><pre><span></span><code>    def in_degree(self,u):
+        n = 0
+        for v in self.adj.keys():
+            sinks = self.adj[v]
+            if u in sinks:
+                n += 1
+        return n
+
+    def out_degree(self,u):
+        if u in self.adj.keys():
+            return len(self.adj[u])
+        else:
+            return 0
+</code></pre></div>
+
+<p>We also define a generator for creating vertices:</p>
+<div class="highlight"><pre><span></span><code>    def vertices(self):
+        vertices = set()
+        for k in self.adj.keys():
+            vertices.add(k)
+            for m in self.adj[k]:
+                vertices.add(m)
+        for v in vertices:
+            yield v
+
+    def n_vertices(self):
+        return len(self)
+
+    def n_edges(self):
+        n = 0
+        for source in self.adj.keys():
+            try:
+                n += len(self.adj[source])
+            except:
+                # in case value is None
+                pass
+        return n
+
+    def get_neighbors(self,u):
+        &quot;&quot;&quot;Get all neighbors of node u&quot;&quot;&quot;
+        # Note: neighbors are stored in
+        # sorted order
+        if u in self.adj.keys():
+            return self.adj[u]
+        else:
+            return []
+</code></pre></div>
+
+<p>Finally, we add a method <code>add_edge()</code> that allows us
+to create an edge from vertex u to vertex v (and add
+the vertices to the graph if either do not yet exist
+on the graph).</p>
+<p>For convenience, we maintain the adjacency list values
+(the list of destination vertices) in lexicographic
+order.</p>
+<div class="highlight"><pre><span></span><code>    def add_edge(self, u, v):
+        &quot;&quot;&quot;Add an edge from u to v&quot;&quot;&quot;
+        # For each source vertex:
+        if u in self.adj.keys():
+
+            # Get existing sink list
+            t = self.adj[u]
+
+            # Append to it
+            t.append(v)
+
+            # Keep list of sinks sorted
+            # (lexicographic string sorting)
+            t.sort()
+
+            # Create the new edge 
+            # from source to sink
+            self.adj[u] = t
+
+        else:
+            # Initialize the list of sinks (v)
+            # for the given source (u)
+            self.adj[u] = [v]
+</code></pre></div>
+
+<p>Now, to assemble the de Bruijn graph, we can iterate
+over every k-mer edge, form the prefix and suffix vertices,
+and call the <code>add_edge()</code> function on the graph.</p>
+<h1 id="checking-for-eulerian-paths-and-cycles">Checking for Eulerian Paths and Cycles</h1>
+<p>To recap Eulerian paths versus Eulerian cycles (discussed in
+<a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Part 1 of this post</a>:</p>
+<ul>
+<li>An Eulerian path is a path that visits every edge of a given graph exactly once.</li>
+<li>An Eulerian cycle is an Eulerian path that begins and ends at the ''same vertex''.</li>
+</ul>
+<p>According to Steven Skienna's <u>Algorithm Design Handbook</u>,
+there are two conditions that must be met for an Eulerian path or
+cycle to exist. These conditions are different for undirected graphs
+versus directed graphs.</p>
+<p><strong>Undirected graphs:</strong> </p>
+<ul>
+<li>
+<p>An undirected graph contains an Euler <strong>cycle</strong> iff
+  (1) it is connected, and (2) each vertex is of even
+  degree.</p>
+</li>
+<li>
+<p>An undirected graph contains an Euler <strong>path</strong> iff (1)
+  it is connected, and all but two vertices are of even
+  degree. These two vertices will be the start and end
+  vertices for the Eulerian path.</p>
+</li>
+</ul>
+<p><strong>Directed graphs:</strong></p>
+<ul>
+<li>
+<p>A directed graph contains an Euler cycle iff (1) it is
+  strongly-connected, and (2) each vertex has the same
+  in-degree as out-degree</p>
+</li>
+<li>
+<p>A directed graph contains an Euler path iff (1) it is
+  connected, and (2) all vertices except two (x,y) have
+  the same in-degree as out-degree, and (x,y) are
+  vertices with in-degree one less than and one more
+  than out-degree</p>
+</li>
+</ul>
+<h1 id="algorithm-building-blocks">Algorithm Building Blocks</h1>
+<p>Algorithm to find Eulerian paths/cycles consists of several steps using several algorithms.</p>
+<p>Undirected graphs are the simpler case; directed graphs are more complicated.</p>
+<h2 id="depth-first-search">Depth First Search</h2>
+<p>To perform a DFS on a directed graph, implement two functions:</p>
+<ol>
+<li>
+<p>Write a DFS function that takes a graph as an input argument and that visits each node of the
+   graph in a depth-first search.</p>
+</li>
+<li>
+<p>Write a visitation function that takes a node as an input argument and that performs some action
+   on the node. This visitation function is called by the DFS function on each node that it visits.</p>
+</li>
+</ol>
+<h2 id="kosarajus-algorithm-connected-components">Kosaraju's Algorithm: Connected Components</h2>
+<p>On an undirected graph, can use Fleury's Algorithm
+to follow edges (classify edges as bridge or non-bridge,
+then leave bridges for last).</p>
+<p>On a directed graph, we have twice the amount of work:
+we are not just checking that all vertices are reachable
+from a given vertex, we are also checking that all vertices
+can also reach that vertex.</p>
+<h1 id="to-be-continued">To Be Continued...</h1>
+<p>In the next part of this post, we will start with the slightly simpler case of finding an Euler cycle
+(which has no start or end vertices). Then we will show how finding the Euler path is actually a special
+case of finding the Euler cycle.</p>
+<p>First, we will use <a href="https://charlesreid1.com/wiki/Graphs/Euler_Circuit#Directed_Graphs:_Hierholzer.27s_Algorithm">Hierholzer's
+Algorithm</a>
+to find Euler cycles (this is the simpler case). Order does not matter because it is a cycle;
+Hierholzer's algorithm is used to find the Euler cycle.</p>
+<p>Next, we will modify the above algorithm to find Euler paths. This requires keeping track of
+the start and end candidate nodes. We verify only one each; we complete the cycle by adding an edge.
+Once we find the cycle, we remove the edge. Finally, we rearrange the cycle to have the correct
+start and end nodes.</p>
+<p>Stay tuned for Part 3...</p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Graphs for Bioinformatics, Part 1: de Bruijn Graphs, Hamiltonian Paths, and Eulerian Paths
             </b></h1>
         
@@ -561,627 +1051,6 @@ out and get you feeling right as rain.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                The Josephus Problem: Part 3: Solving the Double Step Case
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-03-22T14:00:00-07:00" pubdate>Friday 03/22/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is Part 3 of an N-part series.</p>
-<ul>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html">The Josephus Problem: Part 1: The Problem</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">The Josephus Problem: Part 2: Two Examples</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">The Josephus Problem: Part 3: Solving the Double Step Case</a></li>
-</ul>
-<div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#solving-the-double-step-case">Solving the Double Step Case</a></li>
-<li><a href="#algorithm-d-using-doubling-permutation">Algorithm D: Using Doubling Permutation</a><ul>
-<li><a href="#the-algorithm">The Algorithm</a></li>
-<li><a href="#write-the-doubling-permutation">Write the Doubling Permutation</a></li>
-<li><a href="#table-method">Table Method</a></li>
-<li><a href="#reverse-the-doubling-permutation">Reverse the Doubling Permutation</a></li>
-<li><a href="#trim-the-reversed-doubling-permutation">Trim the Reversed Doubling Permutation</a></li>
-</ul>
-</li>
-<li><a href="#why-does-algorithm-d-work">Why Does Algorithm D Work?</a><ul>
-<li><a href="#an-important-observation">An Important Observation</a></li>
-<li><a href="#three-facts">Three Facts</a></li>
-<li><a href="#power-of-two-example">Power of Two Example</a></li>
-<li><a href="#not-a-power-of-two-example">Not a Power of Two Example</a></li>
-<li><a href="#the-power-of-two-shortcut">The Power of Two Shortcut</a></li>
-</ul>
-</li>
-<li><a href="#algorithm-d-summary">Algorithm D Summary</a></li>
-</ul>
-</div>
-<h2 id="solving-the-double-step-case">Solving the Double Step Case</h2>
-<p>The Josephus Problem for a step size of <span class="math">\(m = 2\)</span>
-can be solved two ways:</p>
-<ul>
-<li>Algorithm D: Doubling Permutation Algorithm</li>
-<li>Algorithm S: Label Skipped Nodes Algorithm</li>
-</ul>
-<p>In this blog post we cover Algorithm D, which makes 
-use of a doubling permutation. </p>
-<p>In the first section (<a href="#algorithm-d-using-doubling-permutation">Algorithm D: Using Doubling Permutation</a>)
-we start by showing the recipe as applied 
-to the case of <span class="math">\(n = 11, m = 2\)</span>. </p>
-<p>The recipe is straightforward to apply, but it is not
-at all clear how it works. We start by introducing the
-algorithm, then carrying it out for the case of <span class="math">\(n = 11, m = 2\)</span>
-(this is a familiar case that we have covered in 
-prior posts).</p>
-<p>We make observations about the procedure by comparing
-the case of <span class="math">\(n = 8, m = 2\)</span> (a special
-case where the circle size is a power of two) before
-returning to the example of <span class="math">\(n = 11, m = 2\)</span> to make
-generalizations and give a shortcut method for
-the general double-step case.</p>
-<h2 id="algorithm-d-using-doubling-permutation">Algorithm D: Using Doubling Permutation</h2>
-<p>In Exercise 29, Knuth asks a question that lays out
-a solution procedure for the special case of <span class="math">\(m = 2\)</span>,
-and asks the reader to prove it:</p>
-<blockquote>
-<p>Prove: the cycle form of the Josephus permutation
-when <span class="math">\(m = 2\)</span> can be obtained by expressing 
-the "doubling permutation" of <span class="math">\(\{1, 2, \dots, 2n\}\)</span>,
-which takes <span class="math">\(j\)</span> into <span class="math">\((2j) \mod (2n+1)\)</span> into
-cycle form, then <strong>reversing</strong> L and R, 
-and erasing all numbers larger than <span class="math">\(n\)</span>.</p>
-</blockquote>
-<p>Fortunately, we don't have to work out the solution
-procedure for ourselves; unfortunately, it is not 
-at all obvious why the solution procedure works, so
-once we have seen how to apply it, we have to do a
-bit more work before we can understand it.</p>
-<h3 id="the-algorithm">The Algorithm</h3>
-<p>Given an input size <span class="math">\(n\)</span>, the algorithm steps are:</p>
-<ol>
-<li>
-<p>Write the doubling permutation (in table form)</p>
-</li>
-<li>
-<p>Factor the doubling permutation into cycles</p>
-</li>
-<li>
-<p>Reverse each cycle and remove values larger than n</p>
-</li>
-</ol>
-<p>The result will be the Josephus permutation cycles.</p>
-<h3 id="write-the-doubling-permutation">Write the Doubling Permutation</h3>
-<p>As mentioned above, we will start with the concrete example of
-<span class="math">\(n = 11, m = 2\)</span>.</p>
-<p>We start by writing the doubling permutation for
-the integers <span class="math">\(1 \dots 2n\)</span>:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 32 \, \dots \right)
-$$</div>
-<p>When a number is greater than <span class="math">\(2n+1\)</span>, it is
-reduced <span class="math">\(\mod (2n+1)\)</span>, so the next few terms of the
-doubling permutation written out and reduced modulo
-<span class="math">\(2n+1\)</span> are:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 32 \, 64 \, 128 \, 256 \, 512 \, 1024 \right)
-$$</div>
-<p>which reduces modulo <span class="math">\(2n+1\)</span> to:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
-$$</div>
-<p>After 12, we reach 1 again, the starting value, so further 
-doublings will result in repetition of the elements we have
-so far. </p>
-<p>Next, continue the process with the remaining elements.
-Start with the smallest element not included in the 
-cycle found above, which is 5, and continue the operation
-of doubling and reducing modulo <span class="math">\(2n+1\)</span>. Doing this results in
-the terms:</p>
-<div class="math">$$
-\left( 5 \, 10 \, 20 \, 40 \, 80 \, \dots \right)
-$$</div>
-<p>which reduces modulo <span class="math">\(2n+1\)</span> to:</p>
-<div class="math">$$
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, \dots \right)
-$$</div>
-<p>Repeating this until the first element repeats
-yields all of the remaining elements:</p>
-<div class="math">$$
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
-<p>Now the final doubling permutation can be written as the 
-product of the two cycles:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
-<p>We now have the cycles of the doubling permutation! Step 2 finished.</p>
-<h3 id="table-method">Table Method</h3>
-<p>Slightly more convenient than writing out the cycles the way we did above
-is to create a table, with a column for <span class="math">\(j = 1 \dots 2n\)</span>, a column for
-<span class="math">\(2j\)</span>, and a column for <span class="math">\((2j) \mod (2n+1)\)</span>.</p>
-<div class="highlight"><pre><span></span><code> j   |  2j  |  2j mod 2n+1
------|------|---------------
-  1  |   2  |        2
-  2  |   4  |        4
-  3  |   6  |        6
-  4  |   8  |        8
-  5  |  10  |       10
-  6  |  12  |       12
-  7  |  14  |       14
-  8  |  16  |       16
-  9  |  18  |       18
- 10  |  20  |       20
- 11  |  22  |       22
- 12  |  24  |        1
- 13  |  26  |        3
- 14  |  28  |        5
- 15  |  30  |        7
- 16  |  32  |        9
- 17  |  34  |       11
- 18  |  36  |       13
- 19  |  38  |       15
- 20  |  40  |       17
- 21  |  42  |       19
- 22  |  44  |       21
-</code></pre></div>
-
-<p>Now the cycles can be constructed by starting with the <span class="math">\(j\)</span> column of the 
-first row in the table (1), reading off the corresponding entry (2) in the 
-<span class="math">\((2j) \mod (2n+1)\)</span> column, adding the pair <span class="math">\(1 \rightarrow 2\)</span> to the cycle,
-and moving to the row of the table with that corresponding <span class="math">\(j\)</span> value.</p>
-<p>The next step takes us to row 2 of the table, where we read off the value 4
-from the right column, add the pair <span class="math">\(2 \rightarrow 4\)</span> to the cycle, and keep
-moving.</p>
-<p>Eventually, the procedure will complete the first cycle and take us back to 1.
-Since there are still rows in the table left, repeat the procedure, starting
-with the first available row of the table (5), and keep going until all entries
-of the table are gone. This will yield the same cycles as the process described 
-above, but the bookkeeping is slightly easier:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
-<h3 id="reverse-the-doubling-permutation">Reverse the Doubling Permutation</h3>
-<p>The next step is to reverse the permutation from left to right,
-which means we step through all cycles from left to right,
-and step through each cycle from left to right.</p>
-<p>Starting with the doubling permutation:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
-<p>We obtain the reverse:</p>
-<div class="math">$$
-\left( 14 \, 7 \, 15 \, 19 \, 21 \, 22 \, 11 \, 17 \, 20 \, 10 \, 5 \right)
-\left( 12 \, 6 \, 3 \, 13 \, 18 \, 9 \, 16 \, 8 \, 4 \, 2 \, 1 \right)
-$$</div>
-<h3 id="trim-the-reversed-doubling-permutation">Trim the Reversed Doubling Permutation</h3>
-<p>Now we eliminate any numbers from the reversed doubling permutation
-that are larger than <span class="math">\(n = 11\)</span>, to get the trimmed permutation:</p>
-<div class="math">$$
-\left( 7 \, 11 \, 10 \, 5 \right)
-\left( 6 \, 3 \, 9 \, 8 \, 4 \, 2 \, 1 \right)
-$$</div>
-<p>This is the final Josephus permutation. The one remaining step is to
-rewrite the cycles in standard "sorted" order:</p>
-<div class="math">$$
-\left( 1 \, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
-\left( 5 \, 7 \, 11 \, 10 \right)
-$$</div>
-<p>Congratulations! You just solved the problem.</p>
-<p><br />
-<br /></p>
-<hr>
-<p><br />
-<br /></p>
-<h2 id="why-does-algorithm-d-work">Why Does Algorithm D Work?</h2>
-<p>If at this point you are scratching your head in wonder
-at the seeming black magic involved in this algorithm,
-then welcome to <u>The Art of Computer Programming</u>!
-(Seriously, the exercises are chock full of questions
-like this one.)</p>
-<p>To understand why Algorithm D works, it is instructive
-to consider a case where <span class="math">\(n\)</span> is a power of two, and make
-some observations and generalizations to uncover the pattern
-at work in Algorithm D. </p>
-<h3 id="an-important-observation">An Important Observation</h3>
-<p>Start with an important observation: each time we complete one 
-circuit of the circle, we have reduced the number of items 
-in the circle by </p>
-<div class="math">$$
-\left\lfloor{ \frac{n}{2} }\right\rfloor
-$$</div>
-<p>If our circle size is even, that means we cut our circle
-size in half each time through the circle.</p>
-<p>The halving operation means the Josephus problem is
-intimately linked with powers of 2 (or, base 2 logs),
-so that's where the powers of 2 will come from.</p>
-<h3 id="three-facts">Three Facts</h3>
-<p>Now we use this observation about halving to
-state 3 facts about the case:</p>
-<p><br /></p>
-<p><strong>Fact 1: If we are considering an item at an odd-numbered
-location in the circle, we have already been
-through the circle at least once.</strong></p>
-<p>(Explanation: The first time through the circle, 
-all of the items in the circle at even-numbered 
-locations will be removed, so only items at 
-odd-numbered locations around the circle are left
-after the first pass.)</p>
-<p><br /></p>
-<p><strong>Fact 2: When the circle size is a power of 2,
-the first item in the circle is the last item removed.</strong></p>
-<p>(Explanation: If we have a circle the size of a power of 2,
-we will always remove the last item in the circle when we
-complete a circuit (because we will always reach it using 
-two-steps), which means we always skip item 1 if the circle
-size is a power of 2.)</p>
-<p>(Addendum: If a circle size starts as a power of 2,
-going through the circle once and removing elements will
-exactly halve the circle size, and preserve the property
-that the circle size is a power of 2.)</p>
-<p><br /></p>
-<p><strong>Fact 3: When the circle size is not a power of 2, the
-size will eventually be reduced to a power of 2. Then
-the item at the starting position in that round will be
-the last item removed.</strong></p>
-<p>(Explanation: Combining Fact 1 and Fact 2, we can see
-that eventually we will always reach the special case
-of the circle size being a power of 2, since with each
-step, we reduce the circle size by 1. For example,
-for a circle size of 22, we must carry out 6 removal
-operations to reach a circle size of 16, at which point
-the item at the starting position will be the last item
-to be removed from the circle.)</p>
-<p><br /></p>
-<p>Now we will use these 3 facts to understand Algorithm D.</p>
-<h3 id="power-of-two-example">Power of Two Example</h3>
-<p>Let's run through a Josephus solution for an example
-where <span class="math">\(n\)</span> is a power of two, specifically, <span class="math">\(n = 8, m = 2\)</span>.</p>
-<p>We start by creating the doubling permutation table,
-with columns for <span class="math">\(j\)</span>, <span class="math">\(2j\)</span>, and <span class="math">\((2j) \mod (2n+1)\)</span>:</p>
-<div class="highlight"><pre><span></span><code> j   |  2j  |  2j mod 2n+1
------|------|---------------
-  1  |   2  |        2
-  2  |   4  |        4
-  3  |   6  |        6
-  4  |   8  |        8
-  5  |  10  |       10
-  6  |  12  |       12
-  7  |  14  |       14
-  8  |  16  |       16
-  9  |  18  |        1
- 10  |  20  |        3
- 11  |  22  |        5
- 12  |  24  |        7
- 13  |  26  |        9
- 14  |  28  |       11
- 15  |  30  |       13
- 16  |  32  |       15
-</code></pre></div>
-
-<p>The variable <span class="math">\(j\)</span> takes on <span class="math">\(2n\)</span> values, 
-<span class="math">\(j = 1 \dots 2n\)</span>, each of which
-are doubled and reduced modulo <span class="math">\(2n+1\)</span>.</p>
-<p>From column 3 we can see why the doubling permutation
-requires us to consider <span class="math">\(2n\)</span> items instead of <span class="math">\(n\)</span>
-items: because the first <span class="math">\(n\)</span> items are always even
-(cuz, uh, we're doubling),
-and what we want is coverage of odds <em>and</em> evens in
-the range <span class="math">\(1 \dots n\)</span>. This is also why we reduce
-<span class="math">\(\mod (2n + 1)\)</span>, which is guaranteed to be odd - 
-if we reduced <span class="math">\(\mod 2n\)</span> we would run into the same
-problem of wrapping back garound to the even integers.</p>
-<p>If we step through the doubling permutation to factor it
-into its cycles, we start at 1 and connect it to 2. 
-This states that item 2 is removed 1st, so we write
-<code>1 -&gt; 2</code> for the doubling permutation cycle, and keep
-in mind that it will be reversed to <code>2 -&gt; 1</code> when we
-write the final Josephus permutation cycle.</p>
-<p>The next step is to move to 2, and connect it to 4,
-so <code>2 -&gt; 4</code> (also recognizing that this means the
-opposite connection <code>4 -&gt; 2</code>, that item 4 is removed
-second, in the final Josephus permutation.)</p>
-<p>Now we would expect to see <code>3 -&gt; 6</code>, since we know that
-item 6 is removed 3rd with the same certainty that we know
-item 4 is removed 2nd. But the problem is that it doesn't
-fit into the existing cycle, so it may belong later in the
-cycle or in another cycle altogether. We can't be certain.</p>
-<p>This is why we multiply our step size by 2 each time (2, 4, 8, 16),
-instead of incrementing it by 2 each time (2, 4, 6, 8, 10).</p>
-<p><strong>Fact 1</strong> stated that any items at even-numbered 
-positions are eliminated on the first pass - we can
-see that manifest as we write the doubling cycle.
-Once we reach 16 (double the size of the circle), 
-the integers begin to loop back around through the 
-odd numbers (also thanks to the choice of the odd
-modulus <span class="math">\(2n+1\)</span>):</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \ 16 \, 15 \, 13 \, 9 \right)
-$$</div>
-<p>Consider the <span class="math">\(16 \rightarrow 15\)</span> connection. Stepping through
-the (doubled) circle the first time through, we end
-on 16. The next doubling takes us 16 more steps forward,
-but that's 1 less than the size of the circle (again due 
-to the choice of an odd modulus <span class="math">\(2n+1\)</span>), so we end up
-at <span class="math">\(2n - 1\)</span>. 15 is larger than the size of the circle, 
-so it will be excluded in the final Josephus cycle.</p>
-<p>Continuing to follow this through, we reach 9, which will
-also be excluded from the Josephus cycle, and 9 returns 
-back to 1 and completes the cycle.</p>
-<p>Now we continue the process with the remaining items in
-the table, starting with the smallest, which is 3.
-Doubling 3, we see the <code>3 -&gt; 6</code> connection we mentioned
-earlier, which we expected to see since it indicates the
-known fact that item 6 will be removed 3rd. </p>
-<div class="math">$$
-\left( 3 \, 6 \, 12 \, 17 \, 14 \, 11 \, 5 \, 10 \right)
-$$</div>
-<p>Finally, reversing and trimming the values larger than 8:</p>
-<div class="math">$$
-\left( 5 \, 7 \, 6 \, 3 \right)
-\left( 8 \, 4 \, 2 \, 1 \right)
-$$</div>
-<p>and writing in sorted order:</p>
-<div class="math">$$
-\left( 1 \, 8 \, 4 \, 2 \right)
-\left( 3 \, 5 \, 7 \, 6 \right)
-$$</div>
-<p><strong>Fact 2</strong> tells us that the item in position 1 is the
-last to be removed, since the size of the circle <span class="math">\(n = 8 = 2^3\)</span>.<br>
-We confirm the cycle does contain <span class="math">\(1 \rightarrow 8\)</span> 
-(meaning, the item in position 1 will be removed 
-eighth).</p>
-<h3 id="not-a-power-of-two-example">Not a Power of Two Example</h3>
-<p>Now that we've looked at an example where the size of
-the circle is a power of 2, let's return to the original
-example that we presented in <a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">Part 2</a>
-and the beginning of this blog post,
-namely, <span class="math">\(n = 11, m = 2\)</span>.</p>
-<p>Here is the doubling permutation table again: </p>
-<div class="highlight"><pre><span></span><code> j   |  2j  |  2j mod 2n+1
------|------|---------------
-  1  |   2  |        2
-  2  |   4  |        4
-  3  |   6  |        6
-  4  |   8  |        8
-  5  |  10  |       10
-  6  |  12  |       12
-  7  |  14  |       14
-  8  |  16  |       16
-  9  |  18  |       18
- 10  |  20  |       20
- 11  |  22  |       22
- 12  |  24  |        1
- 13  |  26  |        3
- 14  |  28  |        5
- 15  |  30  |        7
- 16  |  32  |        9
- 17  |  34  |       11
- 18  |  36  |       13
- 19  |  38  |       15
- 20  |  40  |       17
- 21  |  42  |       19
- 22  |  44  |       21
-</code></pre></div>
-
-<p>As before, the last column splits into odd and even,
-with all the evens coming first, so we consider
-<span class="math">\(2n\)</span> elements to cover all <span class="math">\(n\)</span> odd and even items,
-and use an odd modulus to ensure we don't wrap back
-around to the even numbers the second time through.</p>
-<p>We follow the entries of the table to factor this 
-permutation into cycles, as above, yielding the two
-cycles:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9 \, 18 \, 13 \, 3 \, 6 \, 12 \right)
-$$</div>
-<p>and </p>
-<div class="math">$$
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
-<p>Finally, we reverse these and eliminate the numbers larger
-than <span class="math">\(n\)</span>, giving the Josephus permutation cycle:</p>
-<div class="math">$$
-\left( 6 \, 3 \, 9 \, 8 \, 4 \, 2 \, 1 \right)
-\left( 7 \, 11 \, 10 \, 5 \right)
-$$</div>
-<p>or, rearranging into sorted order:</p>
-<div class="math">$$
-\left( 1\, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
-\left( 5 \, 7 \, 11 \, 10 \right)
-$$</div>
-<p>However, there is a faster way to figure out the last
-item in the circle that will be removed that only
-requires us to carry out 3 steps.</p>
-<h3 id="the-power-of-two-shortcut">The Power of Two Shortcut</h3>
-<p>Unlike the circle whose size was a power of two,
-we don't know ahead of time who goes last. 
-However, <strong>Fact 3</strong> tells us that eventually
-our circle will reach the size of a power of two.
-For this case it only takes 3 steps (11 - 8).
-At that point, the circle item at the starting point
-for the next step will be the last item removed.</p>
-<p>Here is the diagram for the third removal operation
-(left labels show removal indices, right labels show
-circle position indices):</p>
-<table>
-<tr>
-<td>
-<img alt="step 3 of josephus circle n = 11 m = 2 labeled by removal order" 
-src="images/josephus_11_2_step3R.png" height="350px" width="350px" />
-</td>
-
-<td>
-<img alt="josephus circle n = 11 m = 2 labeled by circle location" 
-src="images/josephus_11_2_labonly.png" height="350px" width="350px" />
-</td>
-</tr>
-</table>
-
-<p><strong>Fact 3</strong> is in effect here, because after the third item 
-is removed, our starting "cursor" is on item 7 in the circle,
-and the circle is of size <span class="math">\(2^3\)</span>, so from <strong>Fact 2</strong> we know
-that 7 will be the last item removed from the circle. </p>
-<p>We can see from the final permutation that <span class="math">\(7 \rightarrow 11\)</span>,
-so indeed, this holds true.</p>
-<p>To translate this into mathematical terms, we are 
-carrying out <span class="math">\(r\)</span> operations, where</p>
-<div class="math">$$
-r = n - 2^{ \left\lfloor{ \lg{n} }\right\rfloor }
-$$</div>
-<p>and at the conclusion of those <span class="math">\(r\)</span> operations, we mark the
-starting item for the next round. That item will be the 
-last item to be removed.</p>
-<h2 id="algorithm-d-summary">Algorithm D Summary</h2>
-<p>To summarize what we covered in this blog post:</p>
-<p>This post covers a method for solving the Josephus
-problem for the special case of a step size of two,
-<span class="math">\(m = 2\)</span>.</p>
-<p>We started by covering the recipe for Algorithm D,
-which uses a doubling permutation to obtain the
-Josephus permutation in cycle form. We illustrated
-the three steps of the recipe (populate the table,
-write the doubling permutation cycles, then 
-filter and reverse) using an example case.</p>
-<p>Then we got into the question of <em>why</em> Algorithm D 
-works, by making an observation and building upon
-it. We deduced several facts that allowed us to 
-come up with a shortcut for the <span class="math">\(m = 2\)</span> case.</p>
-<p>Our final solution technique (making use of the 
-above-mentioned shortcut) is as follows:</p>
-<ol>
-<li>
-<p>Carry out as many removal operations as needed
-   to make the circle the size of a power of 2
-   (see formula for <span class="math">\(r\)</span> above)</p>
-</li>
-<li>
-<p>The starting item for the next round (where our
-   "removal cursor" will start counting) will be
-   the last item removed from the circle.</p>
-</li>
-</ol>
-<p>So if you find yourself being rounded up in some
-sort of weird mass execution scheme that happens
-to be a Josephus problem with a step size of 2,
-the key to surviving is to remember your powers
-of 2, to carry out <span class="math">\(r = n - 2^{ \left\lfloor{ \lg{n} }\right\rfloor }\)</span>
-removal operations, and to
-grab the next open spot in the circle.</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/puzzles.html">puzzles</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/josephus.html">josephus</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/latex.html">latex</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1238,6 +1107,19 @@ grab the next open spot in the circle.</p>
             </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/using-mediawiki-as-a-zettelkasten-or-external-brain.html">Using MediaWiki as a Zettelkasten or External Brain</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>July 2020</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/applied-gitflow.html">Applied Gitflow</a>
             </p>
 
         </div>
