@@ -102,6 +102,896 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Five Letter Words: Part 2: More Five-Word Algorithms
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-09-02T21:00:00-07:00" pubdate>Saturday 09/02/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/five-letter-words-part-2-more-five-word-algorithms.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><em>NOTE: The code covered in this post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
+but the author would encourage any user of Python 2 to "put on your big kid pants" and 
+make the switch to Python 3. Let's all make this painful, drawn-out switch from Python 2 
+to Python 3 a thing of the past, shall we?</em></p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#five2-intro">Introduction</a></li>
+<li><a href="#five2-distinct">Five-Letter Words with k Distinct Letters</a><ul>
+<li><a href="#five2-variation">Examining a Variation</a></li>
+</ul>
+</li>
+<li><a href="#five2-lex">Lexicographic Ordering of Letters</a><ul>
+<li><a href="#five2-lexicographic">Five-Letter Words with Lexicographically Ordered Letters</a></li>
+<li><a href="#five2-rlexicographic">Five-Letter Words with Lexicographically Reversed Letters</a></li>
+</ul>
+</li>
+<li><a href="#five2-findpalindromes">Finding Palindromes</a><ul>
+<li><a href="#five2-palindromes">Palindromes</a></li>
+<li><a href="#five2-palindromepairs">Palindrome Pairs</a></li>
+<li><a href="#five2-nearpalindromes">Near Palindromes</a></li>
+</ul>
+</li>
+<li><a href="#five2-references">References</a></li>
+</ul>
+<p><a name="five2-intro"></a></p>
+<h2 id="introduction">Introduction</h2>
+<p>As mentioned in <a href="http://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html">Five Letter Words: Part 1</a>,
+we covered Donald Knuth's list of five letter words, one of the data sets in the 
+<a href="http://www3.cs.stonybrook.edu/~algorith/implement/graphbase/implement.shtml">Stanford Graph Base</a>
+that is covered in greater detail in Knuth's coverage of graph theory in Volume 4, Fascicle 0
+of his magnum opus, <u>The Art of Computer Programming</u>.</p>
+<p>In the section where Knuth introduces the set of words, he also gives readers 
+several exercises to get to know the list of words. This multi-part series of posts
+(also see <a href="http://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html">Five Letter Words: Part 1</a>)
+is covering some of the solutions to these exercises, and expanding on them 
+to illustrate some of the interesting and surprising properties of this data set.</p>
+<p><a name="five2-distinct"></a></p>
+<h2 id="five-letter-words-with-k-distinct-letters">Five-Letter Words with k Distinct Letters</h2>
+<p>In Exercise 27, Knuth asks the reader to make a list of words composed of 
+a specific number of distinct letters (1, 2, 3, 4, or 5). </p>
+<p>In the list of five-letter words, there are 0 words composed of a single letter,
+4 words with two distinct letters (0.07%), 
+163 words with three distinct letters (2.8%), 
+1756 words with four distinct letters (30.5%), 
+and 3834 words with five distinct letters (66.5%).</p>
+<p>Here are a few examples:
+* Two distinct letters: mamma, ahhhh, esses, ohhhh
+* Three distinct letters: added, seems, sense, level, teeth
+* Four distinct letters: which, there, these, where, three
+* Five distinct letters: their, about, would, other, words</p>
+<p>To find these, we can design an algorithm that does the following:
+split each string into characters,
+add them to a set data type (a set discards any duplicates), 
+and get the size of the set. 
+This will give us the number of unique letters in a given word,
+and we can use a list of lists to store all words with 
+a specified number of unique letters. </p>
+<p>Once again, we're using our <code>get_words</code> function,
+which we covered in <a href="http://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html">Part 1</a>.
+See <a href="https://github.com/charlesreid1/five-letter-words/blob/master/get_words.py">get_words.py</a>
+for that script.</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/distinct.py">distinct.py</a></p>
+<div class="highlight"><pre><span></span><code>&quot;&quot;&quot;
+distinct.py
+
+Donald Knuth, Art of Computer Programming, Volume 4 Fascicle 0
+Exercise #27
+
+How many SGB words contain exactly k distinct letters, for 1 &lt;= k &lt;= 5?
+&quot;&quot;&quot;
+from pprint import pprint
+from get_words import get_words
+
+if __name__==&quot;__main__&quot;:
+    words = get_words()
+
+    lengths = [[] for i in range(5+1)]
+
+    for word in words:
+        k = len(set(word))
+        lengths[k].append(word)
+
+    for i in range(1,5+1):
+        print(&quot;-&quot;*40)
+        print(&quot;Number of words with {0:d} letters: {1:d}&quot;.format(i, len(lengths[i])))
+        print(&quot;, &quot;.join(lengths[i][0:5]))
+</code></pre></div>
+
+<p>The principal operation here is the statement that gets the length, k:</p>
+<div class="highlight"><pre><span></span><code>k = len(set(word))
+lengths[k].append(word)
+</code></pre></div>
+
+<p>The operation of turning a word into a set is <span class="math">\(O(M)\)</span>, where M is the number of 
+letters in the word, and the algorithm performs this operation on each word in sequence,
+so overall, the algorithm is <span class="math">\(O(N)\)</span>, where N is the number of words.</p>
+<p>The storage space used by the algorithm is also <span class="math">\(O(N)\)</span>, since for each word,
+the number of distinct letters <span class="math">\(k \in \{ 0 \dots 5 \}\)</span>.</p>
+<p>If we were dealing with a lot of words, and needed to save some space,
+we could represent the list of words with <span class="math">\(k\)</span> distinct letters using five bit vectors,
+where each bit vector represents the words that are composed of <span class="math">\(k\)</span> distinct 
+letters, and has a length of <span class="math">\(N\)</span>, the number of words. A 0 would indicate the word is 
+not in the set (is not composed of <span class="math">\(k\)</span> letters), and a 1 would indicate the opposite.</p>
+<p>But here, we keep it simple, since we have a small, known set of words.</p>
+<p><a name="first2-variation"></a></p>
+<h3 id="examining-a-variation">Examining a Variation</h3>
+<p>While that's essentially all there is to this algorithm, 
+and it takes all of 10 seconds to come up with the idea,
+there are some nuances and some bookkeeping details, 
+as there are with the design of any algorithm.</p>
+<p>For example, compare the following two approaches;
+Approach 1 is used in the program, Approach 2 is a less efficient approach:</p>
+<div class="highlight"><pre><span></span><code>    # Approach 1:
+    for word in words:
+        k = len(set(word))
+        lengths[k].append(word)
+
+
+    # Approach 2:
+    for k in range(1,5+1):
+        if(len(set(word))==k):
+            lengths[k].append(word)
+</code></pre></div>
+
+<p>While these are both <span class="math">\(O(N)\)</span> runtime, the latter approach is inefficient:
+we loop over each word five times, and each time we perform the same operation
+(turning the letters of a word into a set). </p>
+<p>Is there ever a case where we would want an approach like #2?</p>
+<p>The short answer is, never.</p>
+<p>To give a longer answer, let's consider a case where approach #2 might provide an advantage.
+Suppose we were considering a case where <span class="math">\(k\)</span> could be larger - 
+a list of 15-letter words, for example, so k could be up to 15 - 
+and we were only interested in a particular value, or small set of values, of <span class="math">\(k\)</span>, like 3 and 4.<br>
+Approach 1 would store unnecessary intermediate results (the values of k for all words)
+and therefore use extra space, compared with approach #2 where we could change the 
+for loop to <code>for k in [3,4]:</code>.</p>
+<p>Even here, though, approach #2 results in unnecessary work, because approach #1
+is still computationally more efficient by looping over the list of words only once,
+compared with approach #2, which would loop over the list of words twice.</p>
+<p>We may further consider a case where approach #2 would give us an advantage,
+and that is the case where we are copying data into the list <code>lengths</code>, instead of 
+just storing a reference to a string. 
+Because we only deal with references in Python, we aren't making copies in the 
+code given above. But because strings are immutable, we could conceivably be 
+making copies if we stored <code>word.upper()</code> instead of <code>word</code>.
+Approach #2 would use less space, because it only considers the values of k 
+that are of interest.</p>
+<p>But even here, approach #1 requires only a small modification to wipe out
+the space advantage of approach #2: add an if statement before calling the 
+append function: <code>if k in [3,4]</code>. Now the calculation of turning a word
+into a set of characters is performed only once for approach #1, 
+and we don't end up storing unnecessary intermediate results.</p>
+<p>The take-home lesson: even if the core idea behind an algorithm is
+straightforward, there are still many ways to do it better or worse. </p>
+<p><a name="five2-lex"></a></p>
+<h2 id="lexicographic-ordering-of-letters">Lexicographic Ordering of Letters</h2>
+<p>Knuth points out that the word "first" contains letters that occur
+in lexicograhpic order. Exercise #30 of <a href="https://charlesreid1.com/wiki/AOCP">AOCP</a>
+Volume 4 Fascicle 0 asks us to find the first and last such word that occurs 
+in Knuth's set of five letter words.</p>
+<p>To do this, we'll take each word and turn it into a list of characters.
+We'll then sort the characters, and turn the sorted list of characters 
+back into a string. If the string constructed from sorted characters
+equals the original string, we have our word, formed from lexicographically 
+ordered letters.</p>
+<p>We can also perform the reverse - search for words whose letters are 
+in reverse lexicographic order. One such word is "spied". 
+Implementing this task requires a bit more care, 
+because of the fact that Python 3 returns generators where Python 2 
+would return lists, but we can get around this with the <code>list()</code> function, 
+as we shall see shortly.</p>
+<p><a name="five2-lexicographic"></a></p>
+<h3 id="five-letter-words-with-lexicographically-ordered-letters">Five-Letter Words with Lexicographically Ordered Letters</h3>
+<p>Exercise 30 asks us to find the first and last word in the set of 
+five letter words whose letters occur in sorted lexicographic order.
+We begin by sorting all of the words, and we find the first such word
+is "abbey", while the last such word is "pssst".</p>
+<p>There are 105 total words that fit this description. 
+As we might expect, a majority of them begin with 
+letters at the beginning of the alphabet:</p>
+<ul>
+<li>abbey</li>
+<li>abbot</li>
+<li>abhor</li>
+<li>abort</li>
+<li>abuzz</li>
+<li>achoo</li>
+<li>adder</li>
+<li>adept</li>
+<li>adios</li>
+<li>adopt</li>
+<li>aegis</li>
+<li>affix</li>
+<li>afoot</li>
+<li>aglow</li>
+<li>ahhhh</li>
+<li>allot</li>
+<li>allow</li>
+<li>alloy</li>
+<li>ammos</li>
+<li>annoy</li>
+<li>beefs</li>
+<li>beefy</li>
+<li>beeps</li>
+<li>beers</li>
+<li>beery</li>
+<li>befit</li>
+<li>begin</li>
+<li>begot</li>
+<li>bells</li>
+<li>belly</li>
+<li>below</li>
+<li>berry</li>
+<li>bills</li>
+<li>billy</li>
+<li>bitty</li>
+<li>blowy</li>
+<li>boors</li>
+<li>boost</li>
+<li>booty</li>
+<li>bossy</li>
+<li>ceils</li>
+<li>cello</li>
+<li>cells</li>
+</ul>
+<p>The full output is here:</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/output/lexico">lexico output</a></p>
+<p>The code to find these words is given below:</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/lexico.py">lexico.py</a></p>
+<div class="highlight"><pre><span></span><code>&quot;&quot;&quot;
+lexico.py
+
+Donald Knuth, Art of Computer Programming, Volume 4 Fascicle 0
+Exercise #30
+
+Each letter of the word &quot;first&quot; appears in correct lexicographic order.
+Find the first and last such words in the SGB words.
+&quot;&quot;&quot;
+from get_words import get_words
+
+def in_sorted_order(word):
+    chars = list(word)
+    if(str(chars)==str(sorted(chars))):
+        return True
+    else:
+        return False
+
+if __name__==&quot;__main__&quot;:
+
+    words = get_words()
+    words = sorted(words)
+
+    count = 0
+    print(&quot;-&quot;*40)
+    print(&quot;ALL lexicographically sorted words:&quot;)
+    for word in words:
+        if(in_sorted_order(word)):
+            print(word)
+            count += 1
+    print(&quot;{0:d} total.&quot;.format(count))
+
+    print(&quot;-&quot;*40)
+    for word in words:
+        if(in_sorted_order(word)):
+            print(&quot;First lexicographically sorted word:&quot;)
+            print(word)
+            break
+
+    words.reverse()
+
+    print(&quot;-&quot;*40)
+    for word in words:
+        if(in_sorted_order(word)):
+            print(&quot;Last lexicographically sorted word:&quot;)
+            print(word)
+            break
+</code></pre></div>
+
+<p>The heart of the method here is the <code>in_sorted_order()</code> method:
+this performs the task, as described above. We take the word 
+passed to the function (a string), and turn it into a list 
+using the <code>list()</code> function. We then turn this list 
+back into a string (which is the same as the variable <code>word</code>),
+and compare it to the <em>sorted</em> list of characters, turned back 
+into a string, using the call <code>str(sorted(chars))</code>.</p>
+<p>If the two match, we have not affected the order of characters
+by sorting them in lexicographic (alphabetic) order,
+and therefore the original string was in sorted order,
+and we return True. Otherwise, we return False.</p>
+<p>Here's that method one more time:</p>
+<div class="highlight"><pre><span></span><code>def in_sorted_order(word):
+    chars = list(word)
+    if(str(chars)==str(sorted(chars))):
+        return True
+    else:
+        return False
+</code></pre></div>
+
+<p><a name="five2-lexicographic"></a></p>
+<h3 id="five-letter-words-with-lexicographically-reversed-letters">Five-Letter Words with Lexicographically Reversed Letters</h3>
+<p>There are significantly fewer five-letter words whose letters are in 
+<em>reverse</em> lexicographic order - 37, compared to the 105 in sorted order.
+Here is the full list:</p>
+<ul>
+<li>mecca</li>
+<li>offed</li>
+<li>ohhhh</li>
+<li>plied</li>
+<li>poked</li>
+<li>poled</li>
+<li>polka</li>
+<li>skied</li>
+<li>skiff</li>
+<li>sniff</li>
+<li>soled</li>
+<li>solid</li>
+<li>sonic</li>
+<li>speed</li>
+<li>spied</li>
+<li>spiff</li>
+<li>spoke</li>
+<li>spoof</li>
+<li>spook</li>
+<li>spool</li>
+<li>spoon</li>
+<li>toked</li>
+<li>toned</li>
+<li>tonic</li>
+<li>treed</li>
+<li>tried</li>
+<li>troll</li>
+<li>unfed</li>
+<li>upped</li>
+<li>urged</li>
+<li>vroom</li>
+<li>wheee</li>
+<li>wooed</li>
+<li>wrong</li>
+<li>yoked</li>
+<li>yucca</li>
+<li>zoned</li>
+</ul>
+<p>The code to do this requires only minor modifications to the original, sorted order code.</p>
+<p>To reverse the procedure, we just need to modify the <code>in_sorted_order()</code> function
+to reverse the sorted list of characters before we reassemble it into a string.
+We can feed the output of the call to <code>sorted()</code> to the <code>reversed()</code> function.
+However, in Python 3, this returns a generator object, which is lazy - 
+it does not automatically enumerate every character. Unless, of course, 
+we force it to.</p>
+<p>That's where the call to <code>list()</code> comes in handy - by passing a generator 
+to <code>list()</code>, we force Python to enumerate the output of the reversed, sorted list 
+generator. Then we turn the reversed, sorted list into a reversed, sorted string:</p>
+<div class="highlight"><pre><span></span><code>def in_reverse_sorted_order(word):
+    chars = list(word)
+    # Note: reversed returns a generator,
+    # so we have to pass it to list()
+    # to explicitly enumerate the reversed results.
+    if(str(chars)==str(list(reversed(sorted(chars))))):
+        return True
+    else:
+        return False
+</code></pre></div>
+
+<p>Meanwhile, the rest of the script can stay virtually the same.</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/reverse_lexico.py">reverse_lexico.py</a></p>
+<div class="highlight"><pre><span></span><code>&quot;&quot;&quot;
+reverse_lexico.py
+
+Donald Knuth, Art of Computer Programming, Volume 4 Fascicle 0
+Variation on Exercise #30
+
+Each letter of the word &quot;spied&quot; appears in reversed lexicographic order.
+Find more words whose letters appear in reverse lexicographic order.
+&quot;&quot;&quot;
+from get_words import get_words
+
+def in_reverse_sorted_order(word):
+    chars = list(word)
+    # Note: reversed returns a generator, 
+    # so we have to pass it to list() 
+    # to explicitly enumerate the reversed results.
+    if(str(chars)==str(list(reversed(sorted(chars))))):
+        return True
+    else:
+        return False
+
+if __name__==&quot;__main__&quot;:
+
+    words = get_words()
+    words = sorted(words)
+
+    count = 0
+    print(&quot;-&quot;*40)
+    print(&quot;ALL lexicographically reversed words:&quot;)
+    for word in words:
+        if(in_reverse_sorted_order(word)):
+            print(word)
+            count += 1
+    print(&quot;{0:d} total.&quot;.format(count))
+
+    print(&quot;-&quot;*40)
+    for word in words:
+        if(in_reverse_sorted_order(word)):
+            print(&quot;First reverse lexicographically sorted word:&quot;)
+            print(word)
+            break
+
+    words.reverse()
+
+    print(&quot;-&quot;*40)
+    for word in words:
+        if(in_reverse_sorted_order(word)):
+            print(&quot;Last lexicographically sorted word:&quot;)
+            print(word)
+            break
+</code></pre></div>
+
+<p><a name="five2-findpalindromes"></a></p>
+<h2 id="finding-palindromes">Finding Palindromes</h2>
+<p>Palindromes are words or sets of words that have a reflective property,
+namely, they spell the same thing forward and reverse (e.g., "race car",
+or "Ere I was able, I saw Malta", or "Doc, note I dissent - a fast never prevents a fatness. I diet on cod.").</p>
+<p>In Exercise 29, Knuth asks the reader to perform a straightforward task - 
+find the palindromes in the list of five letter words. (An example of one such
+word is "kayak".) But Knuth goes further, and points out that palindromes 
+can <em>also</em> be formed from pairs of words.  He gives the example "regal lager".
+He asks the reader to find all palindrome pairs as well.</p>
+<p>When working on these exercises, we became curious about palindromic near-misses.
+How many words are <em>almost</em> palindromes? (Example: "going" is very close to a 
+palindrome, if we just changed the n to an o or vice-versa.)
+In fact, we already have all the tools we need at our disposal,
+as we already covered a script to perform a Euclidean distance calculation.</p>
+<p>We will cover Python code to find words that fit into each of these categories,
+and provide some interesting examples. (One of the most surprising things
+to us was just how many words meet these criteria!)</p>
+<p><a name="five2-palindromes"></a></p>
+<h3 id="palindromes">Palindromes</h3>
+<p>The first task is finding palindromes in the set of five letter words.
+There are 18 such words. They are given below:</p>
+<ul>
+<li>level</li>
+<li>refer</li>
+<li>radar</li>
+<li>madam</li>
+<li>rotor</li>
+<li>civic</li>
+<li>sexes</li>
+<li>solos</li>
+<li>sagas</li>
+<li>kayak</li>
+<li>minim</li>
+<li>tenet</li>
+<li>shahs</li>
+<li>stats</li>
+<li>stets</li>
+<li>kaiak</li>
+<li>finif</li>
+<li>dewed </li>
+</ul>
+<p>The code to check if a word is a palindrome consists of two simple logical test:
+Is the character at position 0 equal to the character at position 4?
+Is the character at position 1 equal to the character at position 3?
+If both of these are true, the word is a palindrome. Here's the Python function
+to check if a word is a palindrome:</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/palindromes.py">palindromes.py</a></p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">is_palindrome</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+    <span class="n">test1</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="n">word</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+    <span class="n">test2</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="n">word</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">test1</span> <span class="ow">and</span> <span class="n">test2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+</code></pre></div>
+
+<p>and the main driver method, which actually runs the function on each word:</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">get_words</span><span class="p">()</span>
+
+    <span class="n">kp</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">palindromes</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Check for palindromes</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)):</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">is_palindrome</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">])):</span>
+            <span class="n">kp</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">palindromes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">40</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Palindromes: </span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">palindromes</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;There are </span><span class="si">{0:d}</span><span class="s2"> palindromes.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">kp</span><span class="p">))</span>
+</code></pre></div>
+
+<p><a name="five2-palindromepairs"></a></p>
+<h3 id="palindrome-pairs">Palindrome Pairs</h3>
+<p>There are 34 palindromic pairs, if we disallow palindromes from being
+considered palindromic pairs with themselves. These are:</p>
+<ul>
+<li>parts, strap</li>
+<li>lived, devil</li>
+<li>speed, deeps</li>
+<li>sleep, peels</li>
+<li>straw, warts</li>
+<li>faced, decaf</li>
+<li>spots, stops</li>
+<li>fires, serif</li>
+<li>lever, revel</li>
+<li>smart, trams</li>
+<li>ports, strop</li>
+<li>pools, sloop</li>
+<li>stool, loots</li>
+<li>draws, sward</li>
+<li>mined, denim</li>
+<li>spins, snips</li>
+<li>alley, yella</li>
+<li>loops, spool</li>
+<li>sleek, keels</li>
+<li>repel, leper</li>
+<li>snaps, spans</li>
+<li>depot, toped</li>
+<li>timed, demit</li>
+<li>debut, tubed</li>
+<li>laced, decal</li>
+<li>stink, knits</li>
+<li>regal, lager</li>
+<li>tuber, rebut</li>
+<li>remit, timer</li>
+<li>pacer, recap</li>
+<li>snoot, toons</li>
+<li>namer, reman</li>
+<li>hales, selah</li>
+<li>tarps, sprat</li>
+</ul>
+<p>The code to check for palindrome pairs is a little more involved,
+but also consists of a few logical tests to see if letters in 
+one position of the first word match letters in another position of 
+the second word:</p>
+<p><a href="https://github.com/charlesreid1/five-letter-words/blob/master/palindromes.py">palindromes.py</a></p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">is_palindrome_pair</span><span class="p">(</span><span class="n">word1</span><span class="p">,</span><span class="n">word2</span><span class="p">):</span>
+    <span class="n">test0</span> <span class="o">=</span> <span class="n">word1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="n">word2</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+    <span class="n">test1</span> <span class="o">=</span> <span class="n">word1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="n">word2</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">test2</span> <span class="o">=</span> <span class="n">word1</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">==</span><span class="n">word2</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">test3</span> <span class="o">=</span> <span class="n">word1</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">==</span><span class="n">word2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">test4</span> <span class="o">=</span> <span class="n">word1</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">==</span><span class="n">word2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">test0</span> <span class="ow">and</span> <span class="n">test1</span> <span class="ow">and</span> <span class="n">test2</span> <span class="ow">and</span> <span class="n">test3</span> <span class="ow">and</span> <span class="n">test4</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+</code></pre></div>
+
+<p>and the main driver method:</p>
+<div class="highlight"><pre><span></span><code>if __name__==&quot;__main__&quot;:
+    words = get_words()
+
+    kpp = 0
+    palindrome_pairs = []
+
+    # Check for palindrome pairs
+    for i in range(len(words)):
+        for j in range(i,len(words)):
+            if(is_palindrome_pair(words[i],words[j])):
+                # Palindromes shouldn&#39;t count as palindrome pairs
+                if(words[i] is not words[j]):
+                    kpp += 1
+                    palindrome_pairs.append((words[i],words[j]))
+
+    print(&quot;-&quot;*40)
+    print(&quot;Palindrome Pairs: \n&quot;)
+    for pair in palindrome_pairs:
+        print(&quot;, &quot;.join(pair))
+    print(&quot;There are {0:d} palindrome pairs.&quot;.format(kpp))
+</code></pre></div>
+
+<p><a name="five2-nearpalindromes"></a></p>
+<h3 id="near-palindromes">Near Palindromes</h3>
+<p>A near-palindrome is a word that would be a palindrome,
+if one of its letters were slightly modified. We use a 
+"tolerance" parameter to specify how much modification 
+we are willing to live with to consider a word a 
+near-palindrome.</p>
+<p>There are several ways to do this, but we'll keep it simple:
+we consider the totla number of changes to all characters in the word
+required to make a word a palindrome, and test whether the changes
+required to make the word a palindrome are less than or equal to 
+a specified parameter, tolerance.</p>
+<p>For example, if our tolerance were 1, we would consider the 
+words "going" and "moron" to be near-palindromes; 
+if our tolerance were 2, we would consider the words
+"tsars" and "jewel" to be near-palindromes.</p>
+<p>Here is the list of 37 off-by-one palindromes:</p>
+<ul>
+<li>going</li>
+<li>seeds</li>
+<li>tight</li>
+<li>trust</li>
+<li>suits</li>
+<li>sends</li>
+<li>plump</li>
+<li>slums</li>
+<li>sighs</li>
+<li>erase</li>
+<li>serfs</li>
+<li>soaps</li>
+<li>sewer</li>
+<li>soups</li>
+<li>sever</li>
+<li>slams</li>
+<li>scabs</li>
+<li>moron</li>
+<li>ceded</li>
+<li>scads</li>
+<li>suets</li>
+<li>fugue</li>
+<li>seder</li>
+<li>tryst</li>
+<li>educe</li>
+<li>twixt</li>
+<li>tutus</li>
+<li>shags</li>
+<li>slims</li>
+<li>abaca</li>
+<li>anima</li>
+<li>celeb</li>
+<li>selfs</li>
+<li>scuds</li>
+<li>tikis</li>
+<li>topos</li>
+<li>rajas</li>
+</ul>
+<p>and the list of off-by-two palindromes:</p>
+<ul>
+<li>often</li>
+<li>stars</li>
+<li>sight</li>
+<li>visit</li>
+<li>towns</li>
+<li>climb</li>
+<li>flame</li>
+<li>reads</li>
+<li>sings</li>
+<li>hatch</li>
+<li>tends</li>
+<li>naval</li>
+<li>robot</li>
+<li>reeds</li>
+<li>cocoa</li>
+<li>stout</li>
+<li>spins</li>
+<li>onion</li>
+<li>sinks</li>
+<li>edged</li>
+<li>spurs</li>
+<li>jewel</li>
+<li>snaps</li>
+<li>silks</li>
+<li>nasal</li>
+<li>theft</li>
+<li>pagan</li>
+<li>reefs</li>
+<li>stirs</li>
+<li>snips</li>
+<li>tufts</li>
+<li>truss</li>
+<li>strut</li>
+<li>spans</li>
+<li>smelt</li>
+<li>spars</li>
+<li>flake</li>
+<li>rusts</li>
+<li>skims</li>
+<li>sways</li>
+<li>runts</li>
+<li>tsars</li>
+<li>tress</li>
+<li>feted</li>
+<li>rends</li>
+<li>romps</li>
+<li>cilia</li>
+<li>ephod</li>
+<li>fluke</li>
+<li>reset</li>
+<li>farad</li>
+<li>peter</li>
+<li>natal</li>
+<li>thugs</li>
+<li>newel</li>
+<li>paean</li>
+<li>emend</li>
+<li>snoot</li>
+<li>fiche</li>
+<li>porno</li>
+<li>flume</li>
+<li>toons</li>
+<li>roans</li>
+<li>offen</li>
+<li>klunk</li>
+<li>feued</li>
+<li>nihil</li>
+<li>pavan</li>
+<li>relet</li>
+<li>heigh</li>
+<li>revet</li>
+<li>sicks</li>
+<li>spoor</li>
+</ul>
+<p>The check for near-palindromes follows the palindrome test 
+fairly closely, except instead of checking if letters in two positions
+are equal, we check of those two letters are a certain specified 
+distance from one another.</p>
+<p>Here is the code for finding near-palindromes:</p>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">near_palindromes.py</span>
+
+<span class="sd">Donald Knuth, Art of Computer Programming, Volume 4 Fascicle 0</span>
+<span class="sd">Variation on Exercise #29</span>
+
+<span class="sd">Find SGB words that are near-palindromes</span>
+<span class="sd">(edit distance of one or two letters away from a palindrome).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">get_words</span> <span class="kn">import</span> <span class="n">get_words</span>
+<span class="kn">from</span> <span class="nn">euclidean_distance</span> <span class="kn">import</span> <span class="n">euclidean_distance</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+
+<span class="k">def</span> <span class="nf">is_near_palindrome</span><span class="p">(</span><span class="n">word</span><span class="p">,</span><span class="n">lo</span><span class="p">,</span><span class="n">hi</span><span class="p">):</span>
+    <span class="n">d1</span> <span class="o">=</span> <span class="n">euclidean_distance</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">word</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+    <span class="n">d2</span> <span class="o">=</span> <span class="n">euclidean_distance</span><span class="p">(</span><span class="n">word</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">word</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+
+    <span class="k">if</span><span class="p">(</span> <span class="p">(</span><span class="n">d1</span><span class="o">+</span><span class="n">d2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">lo</span> <span class="ow">and</span> <span class="p">(</span><span class="n">d1</span><span class="o">+</span><span class="n">d2</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">hi</span> <span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">return</span> <span class="kc">False</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">words</span> <span class="o">=</span> <span class="n">get_words</span><span class="p">()</span>
+
+    <span class="n">knp</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">near_palindromes</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Euclidean distance tolerance</span>
+    <span class="n">lo</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">hi</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)):</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">is_near_palindrome</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">lo</span><span class="p">,</span><span class="n">hi</span><span class="p">)):</span>
+            <span class="n">knp</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">near_palindromes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">words</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="o">*</span><span class="mi">40</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Near Palindromes: </span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">near_palindromes</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The number of near-palindromes is </span><span class="si">{0:d}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">near_palindromes</span><span class="p">)))</span>
+</code></pre></div>
+
+<p><a name="five2-references"></a></p>
+<h2 id="references">References</h2>
+<ol>
+<li>
+<p>Knuth, Donald. <u>The Art of Computer Programming</u>. Upper Saddle River, NJ: Addison-Wesley, 2008.</p>
+</li>
+<li>
+<p>Knuth, Donald. <u>The Stanford GraphBase: A Platform for Combinatorial Computing</u>. New York: ACM Press, 1994. 
+&lt;<a href="http://www-cs-faculty.stanford.edu/~knuth/sgb.html">http://www-cs-faculty.stanford.edu/~knuth/sgb.html</a>&gt;</p>
+</li>
+<li>
+<p>"Five Letter Words." Git repository, git.charlesreid1.com. Charles Reid. Updated 1 September 2017.
+&lt;<a href="http://git.charlesreid1.com/cs/five-letter-words">http://git.charlesreid1.com/cs/five-letter-words</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/art-of-computer-programming.html">art of computer programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/knuth.html">knuth</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/five-letter-words.html">five letter words</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Five Letter Words: Part 1: Getting Familiar With The List
             </b></h1>
         
@@ -993,314 +1883,6 @@ $$</div>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Mad Combinatoric Castles
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-07-25T18:00:00-07:00" pubdate>Tuesday 07/25/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/mad-combinatoric-castles.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
-<ul>
-<li><a href="#castles-problem">Overview: The Problem</a></li>
-<li><a href="#polyominoes">Polyominoes</a><ul>
-<li><a href="#castle-rules">Castle Rules for Polynominoes</a></li>
-</ul>
-</li>
-<li><a href="#castles-enumerate">Don't Generate - Enumerate!</a></li>
-</ul>
-<p><a name="castles-problem"></a></p>
-<h1 id="overview-the-problem">Overview: The Problem</h1>
-<p>In an earlier post, I mentioned <a href="https://charlesreid1.com/wiki/Project_Euler">my efforts on Project Euler problems</a>
-and the wide variety of problems there that can offer some profound mathematical insights.</p>
-<p>Given that the first post covered Project Euler problem 1, I thought it would be nice
-if the next problem cranked up the difficulty factor by an order of magnitude.
-<a href="https://projecteuler.net/problem=502">Project Euler Problem 502</a> is a very hairy combinatorics problem that required me to learn about 
-a wide variety of combinatorial enumeration techniques.</p>
-<p>Let's start with the problem statement.</p>
-<h2 id="building-castles">Building Castles</h2>
-<p>Problem 502 is about building castles. The problem gives an <span class="math">\(M \times N\)</span> rectangular grid,
-and asks us to count how many "castles" can be built on the rectangular grid, given its maximum
-height. </p>
-<p>Here is how the game works:</p>
-<p>First, start by defining a block as a rectangle of height 1, and an integer-valued length.
-A castle is a configuation of stacked blocks.</p>
-<p>For a game grid of size <span class="math">\(M \times N\)</span>, we can construct castles according to
-the following rules:</p>
-<ul>
-<li>Blocks can be placed on top of other blocks, but no sticking out past edge</li>
-<li>All blocks aligned to grid</li>
-<li>Two neighboring blocks must have 1 unit of space between them</li>
-<li>Maximum achieved height of castle is EXACTLY M</li>
-<li>Castle is made from even number of blocks</li>
-</ul>
-<p>Here is an example W = 8, H = 5 castle given in more compact notation:</p>
-<div class="highlight"><pre><span></span><code>  #   # 
-  #   ##
- ## # ##
-##### ##
-########
-</code></pre></div>
-
-<p>We can also build more complicated castles, like this 10 by 100 castle:</p>
-<div class="highlight"><pre><span></span><code>X       X      XX    X     XX   XX X X                          X XX          XX   XX  X     X   XXX
-X       X      XX    X     XX X XX X X     X     X             XX XX          XX   XX  X     X   XXX
-X      XX      XX    X     XX X XXXX X     X     X             XX XX          XX   XX  X     X   XXX
-X      XX      XX    X     XX X XXXX X     X     X XXX         XX XX          XX X XX  X     X   XXX
-X      XX     XXX    X     XX X XXXX X  X  X     X XXX X X     XX XX          XX X XX  X  X  X   XXX
-X      XX  X  XXX  X X     XXXX XXXX X  XX X    XX XXX X X   X XX XX          XX XXXX  X XX XX  XXXX
-X  XX  XX  X  XXX  X X     XXXX XXXX XX XX XX XXXX XXX X XXX X XX XX    X     XX XXXXX X XX XX XXXXX
-X  XX  XXX X  XXX  X X   X XXXX XXXX XX XX XX XXXX XXXXX XXX XXXX XX  X X     XX XXXXX X XX XXXXXXXX
-X XXXXXXXX X XXXXXXX X XXXXXXXX XXXXXXX XX XX XXXXXXXXXXXXXX XXXX XX XX X  XX XX XXXXXXXXXX XXXXXXXX
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-</code></pre></div>
-
-<p>Our objective in this problem is to enumerate all possible castles. Let <span class="math">\(F(x,y)\)</span> denote the number of 
-unique castles with a width of x and a height of exactly y. The problem gives use the trivial number
-<span class="math">\(F(4,2) = 10\)</span>. The problem also gives <span class="math">\(F(13,10)\)</span> and <span class="math">\(F(10,13)\)</span>, both of which are absolutely enormous numbers.</p>
-<p>This should be your first giant red flag that manual enumeration through a traversal of combinatoric space 
-is absolutely, positively out of the question. We'll explain why in more detail below, but suffice to say,
-there is a combinatoric explosion that occurs for castles larger than 10, so castles with a width of 
-1 trillion are going to get STUPID big.</p>
-<p>Then we're given <span class="math">\(F(100,100)\)</span>, which is so enormous it has to be reported mod 1,000,000,007.</p>
-<p>Finally, the problem asks us the following whopper of a question:</p>
-<p>What is <span class="math">\(F(10^{12},100) + F(10^4, 10^4) + F(100,10^{12}) mod 1,000,000,007\)</span>? </p>
-<p>Whew.</p>
-<h2 id="the-scale-of-the-problem">The Scale of the Problem</h2>
-<p>For solving this problem it is important to take a step back and think through
-the size of the combinatoric space being searched, and what methods we have for 
-carving out that space.</p>
-<p>As already mentioned, the size of this problem - the actual number of 
-castles - is surely larger than the <a href="https://charlesreid1.com/wiki/Eddington_Number">Eddington numer</a>,
-the number of protons in the known universe. The numbers of combinations are 
-STUPID big. There's no way for the mind to fully wrap itself around the concept.</p>
-<p>The huge numbers involved means, we must have a closed-form expression for <span class="math">\(F(x,y)\)</span> that we can
-evaluate once to get each of the <span class="math">\(F(10^{12},100), F(10^4,10^4), F(100,10^{12})\)</span> required by the answer.
-Doing so much as counting to 1 trillion takes minutes on modern computers, so if you're doing anything else
-1 trillion times, you'll end up waiting a loooong time.</p>
-<h2 id="generating-functions">Generating Functions</h2>
-<p>As it turns out, there is indeed a combinatorial enumeration method that does
-not require explicitly finding or generating each permutation in order to count
-all permutations.  I have covered <a href="https://charlesreid1.com/wiki/Generating_Functions">generating
-functions</a> on the
-charlesreid1.com wiki.  The principal idea behind generating functions is the
-observation that we can rearrange the infinite series:</p>
-<div class="math">$$
-G(z) = 1 + z + z^2 + z^3 + \dots
-$$</div>
-<p>into the equation </p>
-<div class="math">$$
-G(z) = \dfrac{1}{1-z}
-$$</div>
-<p>This single identity leads to a whole family of solution techniques for generating functions.
-The basic idea is to start by writing the rules of your system (see above), 
-then write a generating function that varies with characteristic variables of the problem 
-(width and height in this case, possibly others),
-and last, combine the generating functions of different rules or objects into a single generating function.</p>
-<p><a name="polyominoes"></a></p>
-<h1 id="overview-of-polyominoes">Overview of Polyominoes</h1>
-<p>Let us begin by considering a two-dimensional grid <span class="math">\(\pi\)</span> of points at positive integer coordinates,
-<span class="math">\(\pi = \mathbb{N} \times \mathbb{N}\)</span>. </p>
-<p>Let a polyomino denote a two-dimensional shape formed by connecting contiguous unit square tiles
-together, all of which align to the 2D grid of integers <span class="math">\(\pi\)</span>. </p>
-<p>(Granted, this definition sounds a bit pedantic, as we're just describing stackable squares,
-but we need to keep the definition general because there are many kinds of polyomonioes,
-and many rules that we can set for how we arrange them.)</p>
-<p>If you have played <a href="https://en.wikipedia.org/wiki/Tetris">Tetris</a> before, or 
-John Conway's <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Game of Life</a>, you will recognize
-polyominoes from those contexts.</p>
-<p>Now, we set up our generating function in terms of characteristics of the problem.</p>
-<p>It is very important to note that, while most of the rules are fairly straightforward to translate into
-a polyomonio type of framework, Rule 6 is not. In fact, it is probably Rule 6 that makes Problem 502
-so challenging. Were it not for Rule 6, this would be a nearly-trivial problem.</p>
-<p>Let's review our castle construction rules and translate them into polyomino equivalents.</p>
-<p><a name="castle-rules"></a></p>
-<h2 id="castle-rules-for-polyominoes">Castle Rules for Polyominoes</h2>
-<h3 id="generating-function-variables">Generating Function Variables</h3>
-<p>We want to construct a multivariate ordinary generating function for our castles, since we have 
-several variables we want to change, and get back a total count of castles.</p>
-<p>The two most obvious variable choices for our generating function independent variables 
-are width <span class="math">\(x\)</span> and height <span class="math">\(y\)</span>. Surely, these must be in the final generating function.</p>
-<p>However, this still doesn't give us enough information about the construction process 
-from step to step. Imagine that we place the first block on row 1.</p>
-<p>Then we may place as many blocks as we would like along row 2, wherever we would like 
-(level 2 is the least restricted layer of the castle).</p>
-<p>Now, when we get to row 3, we are only allowed to keep building where there is already 
-an existing tower from the prior row. This means, we have to pass along information 
-from the prior row - where the bricks are located and how many - so that we know where
-the next level may build towers.</p>
-<p>This will remain an open question until we cover a few other representations of 
-Problem 502 and ways of modeling it. Then we will cover what additional
-variables our generating function might need.</p>
-<h3 id="rule-1-no-overhangs">Rule 1: No Overhangs</h3>
-<p>Rule 1 stipulates that blocks can be placed on top of
-other blocks as long as nothing sticks out past the end
-or hags out.</p>
-<p>This ensures that the resulting polyomino is column
-convex. Column convexity is the property that we can
-draw a vertical line through any column of the
-polyomino, and we only intersect the polyomino in two
-places. (No internal breaks.)</p>
-<p>This rule stipulates what kind of polyomino
-constructions are allowed.</p>
-<h3 id="rule-2-snap-to-grid">Rule 2: Snap to Grid</h3>
-<p>This rule is just saying that the unit squares in the
-castle problem match the unit squares of polyominoes,
-ensuring the problems are interchangeable.</p>
-<h3 id="rule-3-neighbor-blocks-need-space">Rule 3: Neighbor Blocks Need Space</h3>
-<p>Rule 3 is crucial for being able to count blocks. If two
-side-by-side contiguous unit squares could be either one
-or two blocks, this would make the final count of
-solutions much, much, much, much, much bigger than it
-should be.</p>
-<h3 id="rule-4-bottom-row-is-one-block">Rule 4: Bottom Row is One Block</h3>
-<p>This is more of an accounting-based rule, but we define
-our castle construction process such that it begins with
-a completed row. This means that the number of blocks
-that we add on top of that single block must be odd
-overall.</p>
-<h3 id="rule-5-maximum-height-is-exactly-h">Rule 5: Maximum Height is Exactly H</h3>
-<p>As it turns out, the last two rules are the toughest -
-in a sense, because they are <strong>global</strong> conditions on
-the combinatoric solution that is being counted.  In
-other words, we will use generating functions to
-"construct" our combinatoric objects in a methodical
-way, and the challenge is on setting global conditions
-on the generating function's counted solutions.</p>
-<h3 id="rule-6-even-number-of-blocks">Rule 6: Even Number of Blocks</h3>
-<p>Rule 6 is definitely what makes this problem difficult. </p>
-<p>Our approach is going to involve coming up with a 
-counting function - but this rule tells us that the
-counting function will need to have some way of
-accounting for the total number of blocks, and
-divide by or subtract a factor that accounts for
-castles with an odd number of blocks.</p>
-<p><a name="castles-enumerate"></a></p>
-<h2 id="dont-generate-enumerate">Don't Generate - Enumerate!</h2>
-<p>We mentioned above that the number of possibilities
-here is huge, so this combinatorics problem falls 
-squarely in the realm of enumerating, not generating.</p>
-<p>That being said, and keeping in mind that the problem
-size blows up rapidly, it can still be useful to write
-an algorithm to generate castles for small values of
-width and height, to test formulas for these small
-values (and uncover corner cases!).</p>
-<p>See <a href="https://charlesreid1.com/wiki/Project_Euler/502">Project Euler/502</a>
-on the charlesreid1.com wiki for continued work on
-this problem. </p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/factors.html">factors</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sequences.html">sequences</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1336,6 +1918,9 @@ this problem. </p>
 
             <h2>February 2022</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/mediawiki-patterns-for-a-zettelkasten-todo-lists.html">MediaWiki Patterns for a Zettelkasten: Todo Lists</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/mediawiki-patterns-for-a-zettelkasten-organizing-pages.html">MediaWiki Patterns for a Zettelkasten: Organizing Pages</a>
             </p>

@@ -102,18 +102,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                First Post of the Fall, Part 2: Flaskadillo
+                Enigma Cipher Implementation: Part 1: How It Works
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2018-10-30T16:00:00-07:00" pubdate>Tuesday 10/30/2018</time>
+                <time datetime="2017-03-21T20:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                <a href="https://charlesreid1.github.io/category/enigma.html">Enigma</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/first-post-of-the-fall-part-2-flaskadillo.html">permalink</a>
+                <a href="https://charlesreid1.github.io/enigma-cipher-implementation-part-1-how-it-works.html">permalink</a>
             </span>
             </p>
         </div>
@@ -130,226 +130,174 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><h2 id="flask-illo-flaskadillo">Flask + ILLO = Flaskadillo</h2>
-<p>On October 15, 2018, I had the opportunity to 
-offer an in-lab learning opportunity (ILLO) at the 
-<a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology</a>.
-The ILLO focused on Flask, a useful Python library
-for creating and running web servers. This
-library is useful because it has a very low
-learning curve, but also has the complexity to
-handle complicated, real-world projects.</p>
-<p>As a part of this in-lab learning opportunity, 
-I created repository with five simple Flask examples
-to highlight five useful capabilities of Flask.</p>
-<p>The repository is called flaskadillo and it is 
-available on <a href="https://git.charlesreid1.com/charlesreid1/flaskadillo/">git.charlesreid1.com</a>
-or on <a href="https://github.com/charlesreid1/flaskadillo">github.com</a>.</p>
-<p>The five capabilities covered by the examples in 
-flaskadillo are listed below:</p>
+        <div class="entry-content"><p>This is the first of several posts that will walk through an implementation of the Enigma cipher in code.</p>
+<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
+detailed, accurate information entirely free of graduate level mathematics, 
+and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
+<p>There is also a Wikipedia article offering detailed information about the mathematical cryptanalysis of the Enigma,
+and covering some of the strengths and weaknesses of the machine: <a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">Cryptanalysis of the Enigma</a>.</p>
+<h2 id="background">Background</h2>
+<p>The Enigma machine was a device used by the German military to encrypt communications during World War II.
+The machine was essentially a large electronic circuit implementing a black-box encrypt/decrypt function.
+By design, the circuitry of the machine could be used for both encryption and decryption. </p>
+<p>The Enigma played an important role in the development of the first electronic computer. 
+Alan Turing led a team at Bletchley Park, in England, that constructed machines that could crack the Enigma code.
+This led to the development of the conceptual Turing machine and the creation of the first electronic computers.
+By narrowing the space of possible keys using Enigma's weaknesses, 
+these electronic computers could be used to explore the remaining key space.</p>
+<p>There were several variations of the Enigma. Each operated on the same basic principle:
+the operator entered a letter, which was transformed into a signal. 
+That signal was passed through several components of the Enigma machine,
+and underwent a series of linear transformations until its ciphertext was output.
+The encrypted output character would light up on a second keyboard, and the operator could transcribe the message.</p>
+<h2 id="black-box-representation">Black Box Representation</h2>
+<p>The following diagram lays out the Enigma circuitry using black boxes. 
+The signal starts at the keyboard, where the operator types a letter.
+That letter is transformed into an electrical signal, which is sent through a series of components.
+First is the switchboard in the front, which swaps a few letter pairs.
+Next, the signal passes through three rotor wheels, each of which scrambles the alphabet.
+The signal is then passed into a reflector, which swaps every character with some other character.
+The reflector made the Enigma a symmetric machine. The signal was sent out of the reflector and passed through each rotor in reverse order.
+Finally, the signal passed through the switchboard at the front, and the resulting letter lit up, allowing the operator to transcribe the message.</p>
+<p><img alt="Image: Enigma Black Box Representation" src="/images/enigma_blackbox.jpg"></p>
+<h2 id="components">Components</h2>
+<p>There were three principal components of the machine: a <strong>switchboard</strong>, a set of <strong>rotor wheels</strong>, and a <strong>reflector</strong>.</p>
+<h3 id="switchboard">Switchboard</h3>
+<p>When the operator entered a key on the input keyboard, the key pressed was transformed into a signal.
+On the front of the Enigma machine was a set of plugs, one for each letter. Operators would connect
+pairs of letters using plugs, which would swap letters. If an operator connected the A and K ports, 
+and typed "A" on the keyboard, the signal representing "A" would travel to the switchboard, 
+where it would be transformed into the signal representing "K". </p>
+<p>Typically the Enigma operators would only connect 7-10 pairs of letters, with the remaining 6-12 letters untransformed by the switchboard. 
+The switchboard led to a huge number of possible encryption schemes, and was the single component that made the Enigma diffficult to crack.
+Commercial versions of the Enigma, without the plugboard, were sold to banks and other entities in Germany, but without the plugboard,
+the key space was reduced dramatically, making these codes "easy" to crack.</p>
+<p><img alt="Enigma switchboard illustration" src="/images/enigma_switchboard.jpg"></p>
+<p>The image above illustrates how a switchboard would work for a simple 8-symbol alphabet "ABCDEFGH". 
+Only 3 of 4 pairings are made in this example. </p>
+<h3 id="rotor-wheels">Rotor Wheels</h3>
+<p>The rotor wheels were a set of interchangeable wheels that would perform a substitution cipher. 
+Each wheel corresponded to a particular alphabet in scrambled order (these rotors were not performing simple shift Caesar ciphers).
+Based on the order of the wheels, the signal, representing the letter the operator typed on the keyboard, 
+that came out of the switchboard would undergo three alphabet scrambles (also called affine ciphers).</p>
+<p>Because the wheels rotated with each keypress, the actual Affine cipher used by each wheel changed at each step.</p>
+<p>To complicate the way the rotors turned, the designer of the Enigma added clasps and notches to each rotor at different letters.
+When the notch of one rotor and the clasp of the rotor to the left matched, they would turn together. 
+The right-most wheel rotated once each key press, the center wheel rotated once every 26 key presses, and the left wheel rotated once every 676 key presses.
+Although these rates remained the same due to the number of notches, the exact locations of the notches dictated the timing of the rotations.
+The ordering of the wheels and their initial settings were therefore important to how the message was encrypted or decrypted.</p>
+<p>The German military distributed code books that contained daily settings for the Enigma machines, so that all Enigma operators had the same settings.
+These code books specified which wheels to load into the Enigma (three out of five possible rotors I II III IV and V), as well as the initial rotation to apply to each.</p>
+<p><img alt="Enigma rotor wheels illustration" src="/images/enigma_rotor.jpg"></p>
+<p>The image above shows how the rotor would work for the 8-character alphabet "ABCDEFGH".
+The wheel has a set arrangement of scrambled letters, but the scramble shifts each time the rotor is advanced.
+This allows 1 wheel to provide as many different scrambles as there are symbols in the alphabet.</p>
+<h3 id="reflector">Reflector</h3>
+<p>Having passed through the three rotor wheels, each scrambling the original character signal input by the operator into the keyboard, the signal then entered the reflector. 
+It did precisely what the name suggests - it reflected a signal back through the machine. 
+Its design was very similar to the switchboard in the front of the machine, except it created 13 pairs of letters, so that every letter was paired with some other letter.
+The reflector, like the rotor wheels, was removable and could be selected from a set. </p>
+<p>The reflector is a curious part of the Enigma design, because it represents an attempt at convenience, which led to a gaping security flaw that Bletchley Park was able to exploit. 
+The nature of the reflector is that it is symmetric: it pairs each letter with some other letter, and the pairings are mutual. 
+If the reflector turns every "P" into "H", it also turns every "H" into "P". 
+This symmetry gives the Enigma the property that you no longer need an "encrypt" or "decrypt" mode: if you take a plaintext message and run it through the Enigma machine once, you'll get the cipher text back. 
+If you run it through the Enigma machine twice, you'll get the same plaintext back. 
+This obviated the need for a switch on the Enigma, to go between "encrypt" and "decrypt" modes.</p>
+<p>However, this property also means that no letter can ever be encoded as itself - a property called derangement. 
+While the switch board at the front and the rotor wheel scrambles would sometimes encode a letter as itself 
+(for example, Rotor I encodes "S" as "S", Rotor II encodes "A" as "A" and "Q" as "Q", and Rotor III encodes "N" as "N"),
+the reflector would never do so. 
+Thus, despite an astronomical number of possible settings, and complicated machinery and circuitry, 
+no matter what the Enigma's settings, no letter would ever be encoded as itself.
+This property can be exploited to rule out the location of certain words or phrases at certain locations in the message,
+which is precisely how Bletchley Park attacked the Enigma cipher.</p>
+<p><img alt="Enigma reflector illustration" src="/images/enigma_reflector.jpg"></p>
+<p>The image above illustrates a reflector for the 8-symbol alphabet "ABCDEFGH".
+Each of the 4 possible pairings are made, so no letter will be encoded to itself by the reflector.</p>
+<p>Had the middle rotor wheels remained stationary, multiple wheels would have been redundant - 
+any arbitrary sequence of alphabet scrambles can be collapsed into a single scramble.
+However, the wheels were designed to rotate at various rates. Each time the wheels rotated,
+it changed the scramble provided by the wheel that had rotated. </p>
+<p>This means the Enigma worked by using a totally different scramble for each character in a message,
+with the scrambles constantly changing, each character, over and over. 
+Because the number of possible scrambles with a 26 character alphabet is <span class="math">\(26! = 403,291,461,126,605,635,584,000,000\)</span>,
+which is a trillion trillions.</p>
+<h2 id="the-enigma-and-random-number-generators">The Enigma and Random Number Generators</h2>
+<p>By using a mechanical device with the same construction and the same common initial settings, 
+operators were able to generate random keys from an astronomical range of permutations, 
+but in a mechanically reproducible way. </p>
+<p>This makes Enigmas much like a random number generator, with the initial settings being the seed.
+If there are 32 or 64 bits used to store a number, that's 32 or 64 bits of randomness. 
+Large numbers of combinations indeed.</p>
+<h2 id="sources">Sources</h2>
 <ol>
 <li>
-<p>hello - hello world flask server</p>
+<p>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</p>
 </li>
 <li>
-<p>api - a simple API server</p>
+<p>Copeland, B.J. "Alan Turing". Encyclopedia Britannica, Inc. Published 23 February 2016. Accessed 18 March 2017.</p>
 </li>
 <li>
-<p>jinja - a simple Flask server that makes use of Jinja templates</p>
-</li>
-<li>
-<p>package - a simple demonstration of how to package flask apps</p>
-</li>
-<li>
-<p>tests - a simple demonstration of how to write Flask tests</p>
+<p>"Cryptanalysis of the Enigma". Wikipedia: The Free Encyclopedia. Wikimedia Foundation, Inc. Edited 11 January 2017. Accessed 18 March 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma</a>&gt;</p>
 </li>
 </ol>
-<h2 id="example-1-hello-world">Example 1: Hello World</h2>
-<p>We'll just cover example 1 here, but similar materials
-are available for all five examples.</p>
-<p>Example 1 consists of a simple flask app, <code>simple.py</code>:</p>
-<div class="highlight"><pre><span></span><code>from flask import Flask
-app = Flask(__name__)
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
 
-@app.route(&quot;/&quot;)
-def hello():
-    return &quot;Hello World!&quot;
-</code></pre></div>
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
 
-<p>The <a href="https://git.charlesreid1.com/charlesreid1/flaskadillo/src/branch/master/hello">hello</a>
-directory of the flaskadillo repo covers how to 
-install the necessary packages and run the Flask
-application.</p>
-<p>There is also a unit test, <code>test_simple.py</code>, which demonstrates
-how to write tests for Flask applications. To run the unit
-test, run:</p>
-<div class="highlight"><pre><span></span><code>pytest
-</code></pre></div>
-
-<h2 id="more-information">More Information</h2>
-<p>For instructions on each of the 5 examples, 
-visit each of the 5 directories in the 
-<a href="https://github.com/charlesreid1/flaskadillo">flaskadillo repository</a>.</p>
-<h3 id="why-flaskadillo">Why flaskadillo?</h3>
-<p>Because armadillo.</p>
-<h3 id="why-armadillo">Why armadillo?</h3>
-<p>The word armadillo means "little armoured one" in Spanish.</p>
-<p>Armadillos are related to anteaters and sloths (all are in the Xenartha superorder).</p>
-<p>The Aztecs called them turtle-rabbits.</p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/github.html">Github</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/software.html">Software</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">Python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/flask.html">Flask</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                First Post of the Fall, Part 1: Data Commons
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2018-10-27T19:00:00-07:00" pubdate>Saturday 10/27/2018</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/centillion.html">Centillion</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/first-post-of-the-fall-part-1-data-commons.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2 id="background-a-bit-about-the-data-commons">Background: a bit about the Data Commons</h2>
-<p>It has been a productive but busy summer at the
-<a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology</a>.</p>
-<p>As part of my job, I am supporting a lot of websites
-and infrastructure for the <a href="https://public.nihdatacommons.us">Data Commons Pilot Phase
-Consortium (DCPPC)</a>,
-which wrapped up Phase 1 this month.</p>
-<p>The Data Commons is a large-scale effort to establish
-a community-driven set of standards for interoperability
-for biological data and computation, a massive effort and
-a broad mandate that has the potential to enable breakthrough
-research that is currently impossible because data and computations
-cannot inter-operate between the data, compute resources, and 
-domain expertise that are provided by universities, hospitals, 
-research institutes, companies, nonprofits, and citizen 
-scientists.</p>
-<h2 id="informationally-challenged-data-commons-growing-pains">Informationally challenged: Data Commons growing pains</h2>
-<p>An important part of defining a community-driven set of standards is defining a
-community, and toward that end the collective members of the Data Commons 
-met at monthly face-to-face workshops to iterate tightly on a set of
-technologies and standards that will allow each institution's different compute
-platforms or data banks to use other institutions' platforms or data banks.
-Doing this requirs fostering community and creating the right environment
-for people to work through the issues. </p>
-<p>One of the biggest challenges we faced in fostering a community
-that could develop and implement a set of standards across such 
-a large and diverse group of experts and institutes was coordinating
-information. Specifically, making sure that decisions were properly
-communicated to the appropriate parties, that important documents
-made their way to the entire consortium, and that documents that were
-created and edited also be findable and sharable.</p>
-<p>This problem began, back in April, as a very small trash fire.
-People were getting used to the Github workflow and did not know
-how to find the appropriate repository for the information they
-needed to contribute, and consortium members were universally annoyed
-that Google Drive's search functionality was so terrible.</p>
-<p>In June we rolled out a trial document-tagging system to the consortium,
-to deafening silence - no one was impressed or satisfied with the tagging
-system. The real problem was with search.</p>
-<p>Toward that end, I implemented a full-fledged search engine for the Data
-Commons that utilized various third-party APIs (Github, Google Drive,
-Groups.io, etc.) to index content related to the project, and make it
-full-text-searchable.</p>
-<p>The result was <a href="https://github.com/charlesreid1/centillion">centillion</a>,
-the Data Commons search engine. This search engine provides a portal
-to search for Data Commons-related Google Drive documents, Github issues,
-Github pull requests, Github files, Groups.io email threads, and more.</p>
-<p>Our story picks up with centillion.</p>
-<h2 id="presenting-centillion-the-data-commons-search-engine">Presenting centillion, the Data Commons search engine</h2>
-<p>One of the tools I have made heavy use of in support of
-web infrastructure for the DCPPC project is Flask, a Python
-library for running a web server. Flask is a very powerful
-library, but it starts with a relatively simple premise:
-Flask lets you create a web appplication that will bind
-to a particular port, and you can then add "routes" 
-that are endpoints a user can visit, like <code>/hello/world</code>,
-and link those routes to Python functions.</p>
-<p>On Monday 2018-10-28 the DIB Lab's weekly lab meeting featured
-yours truly covering the topic of <a href="https://github.com/charlesreid1/centillion">centillion</a>,
-the Data Commons search engine.</p>
-<p>centillion makes use of the Python library
-<a href="https://whoosh.readthedocs.io/en/latest/intro.html">whoosh</a>
-under the hood, to provide search functionality, while the web 
-front-end uses Flask to connect Python functions to a website 
-that users can interact with.</p>
-<p><img alt="Screen shot of the centillion search engine (2018-10-27)." src="images/centillion.png"></p>
-<p><strong>Screen shot of the centillion search engine (2018-10-27).</strong></p>
-<h2 id="centillion-architecture-the-short-version">centillion architecture: the short version</h2>
-<p>As of version 1.7, centillion is packaged as a Python package.
-The centillion package consists of two submodules, corresponding
-to the Flask frontend and Whoosh backend, respectively: <code>webapp</code>
-and <code>search</code>.</p>
-<h3 id="webapp-submodule">webapp submodule</h3>
-<p><code>centillion.webapp</code> implements the Flask app and defines all
-routes. When the user runs a search, it passes the query string
-on to a <code>Search</code> object from the <code>search</code> submodule. The <code>webapp</code>
-submodule does not know anything about the details of the 
-search engine or search index.</p>
-<p>This submodule is located in <code>src/webapp/</code> in the 
-<a href="https://github.com/charlesreid1/centillion">centillion repo</a>.</p>
-<h3 id="search-submodule">search submodule</h3>
-<p><code>centillion.search</code> implements a search engine using Whoosh,
-a programming library for building search engines. Whoosh does not
-implement any kind of front end, so its role is restricted entirely
-to the back end.</p>
-<p>The search submodule also handles interfacing with the Github, Google,
-and Groups.io APIs and translating the results of API calls from these
-services into documents whose contents can be extracted and indexed 
-by Whoosh.</p>
-<p>This submodule is located in <code>src/search/</code> in the 
-<a href="https://github.com/charlesreid1/centillion">centillion repo</a>.</p></div>
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
 
     </div>
 </div>
@@ -361,159 +309,11 @@ by Whoosh.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/dcppc.html">DCPPC</a>
+                    <a href="https://charlesreid1.github.io/tag/ciphers.html">ciphers</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/data-commons.html">Data Commons</a>
+                    <a href="https://charlesreid1.github.io/tag/enigma.html">enigma</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/github.html">Github</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/community.html">Community</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/science.html">Science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/centillion.html">Centillion</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Current Projects
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2018-05-12T15:00:00-07:00" pubdate>Saturday 05/12/2018</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/general.html">General</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/current-projects.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>A list of various ongoing projects:</p>
-<ul>
-<li>pandocs and panflute - <a href="http://pages.charlesreid1.com/how-do-i-pandoc">how do i pandoc</a></li>
-<li><a href="https://pages.charlesreid1.com/b-captain-hook">captain hook</a></li>
-</ul>
-<p>The Git College of Surgery:</p>
-<ul>
-<li><a href="https://github.com/git-college-of-surgery">git college of surgery</a></li>
-<li>The first successful git-commit-ectomy took place on Friday, June 1, 2018.
-    See <a href="https://pages.charlesreid1.com/git-commit-ectomy">https://pages.charlesreid1.com/git-commit-ectomy</a></li>
-<li>Finishing this requires a better way to visualize git commits</li>
-<li>To do that, we have developed <a href="https://pages.charlesreid1.com/git-subway-maps">git-subway-maps</a></li>
-</ul>
-<p>Python + APIs:</p>
-<ul>
-<li>building an API that calls APIs so you can API while you API
-    (a webhook that calls a hook - see <a href="https://pages.charlesreid1.com/b-captain-hook">captain hook</a>)</li>
-<li>testing APIs with Python + requests (currently top secret,
-    coming soon.)</li>
-</ul>
-<p>Python + Command line:</p>
-<ul>
-<li>command line utilities with python</li>
-<li>testing command line utilities with python</li>
-</ul>
-<p>More stuff:</p>
-<ul>
-<li>
-<p><a href="https://github.com/charlesreid1/magic-flying-camel">magic flying camel</a>
-    is a seed repository for getting started with a simple
-    Jekyll page on Github Pages</p>
-</li>
-<li>
-<p><a href="https://github.com/charlesreid1/magic-flying-pelican">magic flying pelican</a>
-    is a seed repository for getting started with a simple
-    Pelican blog on Github Pages</p>
-</li>
-</ul>
-<p>The rise of the mind machines:</p>
-<ul>
-<li><a href="https://github.com/rainbow-mind-machine/boring-mind-machine">boring-mind-machine</a> - contains base classes
-    used by all the mind machines</li>
-<li><a href="https://github.com/rainbow-mind-machine/rainbow-mind-machine">rainbow-mind-machine</a> - for running Twitter bot flocks</li>
-<li><a href="https://github.com/rainbow-mind-machine/embarcadero-mind-machine">embarcadero-mind-machine</a> - for running Github bot flocks</li>
-<li><a href="https://github.com/rainbow-mind-machine/cheeseburger-mind-machine">cheeseburger-mind-machine</a> - for running Google Drive bot flocks</li>
-<li><a href="https://github.com/rainbow-mind-machine">The rainbow mind machine organization</a> - for containing all of this craziness</li>
-</ul>
-<p>Each software package in the mind machine suite
-follows (or will follow) the prime number version
-system:</p>
-<ul>
-<li>More info on the <a href="https://charlesreid1.com/wiki/Prime_Number_Version_System">Prime Number Version System</a></li>
-<li>This is another bit of documentation that was being blocked by 
-    the ability to visualize git repositories</li>
-<li><a href="https://pages.charlesreid1.com/git-subway-maps">git-subway-maps</a> should
-    help with this.</li>
-</ul>
-<p>PyPi and Dockerhub:</p>
-<ul>
-<li>Rainbow mind machine software packages are requiring a more
-    streamlined deployment process</li>
-<li>Makefiles are in progress</li>
-</ul>
-<p><a href="https://pages.charlesreid1.com/how-do-i-pandoc/">how do i pandoc</a></p>
-<ul>
-<li>Currently working on implementing several Pandoc/Panflute filters</li>
-<li>Also see <a href="https://github.com/charlesreid1/translate-yer-docs">https://github.com/charlesreid1/translate-yer-docs</a>
-    for a practical usage of pandoc filters: translating documentation</li>
-</ul>
-<p><a href="https://pages.charlesreid1.com/how-do-i-pelican">how do i pelican</a> - a crash
-course in building a pelican blog</p>
-<p><a href="https://pages.charlesreid1.com/search-demo-mkdocs-material/">mkdocs search
-demo</a> a quick
-pop-up site demonstrating how to use the built-in search functionality of 
-mkdocs-material and lunr.js to index a pile of markdown files containing
-interesting links.</p>
-<p><a href="https://pages.charlesreid1.com/b-captain-hook/">captain hook</a> - we have already
-mentioned captain hook several times, but this is the magic that makes
-pages.charlesreid1.com possible.</p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/git.html">Git</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/github.html">Github</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/software.html">Software</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">Python</a>
+                    <a href="https://charlesreid1.github.io/tag/encryption.html">encryption</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -529,15 +329,9 @@ pages.charlesreid1.com possible.</p></div>
 
         <div class="pagination">
 
-            <a class="next" href="https://charlesreid1.github.io/index13.html">&larr; Newer</a>
+            <a class="next" href="https://charlesreid1.github.io/index27.html">&larr; Newer</a>
 
-            &nbsp;
-            &nbsp;
-            &nbsp;
-            &nbsp;
-            &nbsp;
 
-            <a class="prev" href="https://charlesreid1.github.io/index15.html">Older &rarr;</a>
         
           <br />
         </div>
