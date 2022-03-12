@@ -1,5 +1,5 @@
 Title: Copying LetsEncrypt Certs Between Machines
-Date: 2022-03-11 17:00
+Date: 2020-08-11 17:00
 Category: Security
 Tags: letsencrypt, ssl, https, certificates, letsencrypt
 
