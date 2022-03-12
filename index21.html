@@ -102,6 +102,591 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Computing Square Roots: Part 2: Using Continued Fractions
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-07-14T20:00:00-07:00" pubdate>Friday 07/14/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/computing-square-roots-part-2-using-continued-fractions.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#cf-number-systems">Number Systems and Representations</a></li>
+<li><a href="#cf-cf">Continued Fraction Representations</a></li>
+<li><a href="#cf-convergents">Convergents of Continued Fractions</a></li>
+<li><a href="#cf-example-coeffs">Example: Continued Fraction Coefficients of <span class="math">\(\sqrt{14}\)</span></a></li>
+<li><a href="#cf-example-convergents">Example: Convergents of <span class="math">\(\sqrt{14}\)</span></a></li>
+<li><a href="#cf-sqrt-approx">Approximating Square Roots</a></li>
+</ul>
+<p><a name="cf-number-systems"></a></p>
+<h2 id="continued-fractions">Continued Fractions</h2>
+<p>Let's start part 2 of our discussion of computing square roots by talking about 
+continued fractions. When we first learn mathematics, we learn to count in the 
+base 10 system: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9. We can construct representations of 
+all of the integers using these 10 digits, by arranging them in a different order.
+So, for example, saying 125 is equivalent to saying:</p>
+<div class="math">$$
+125 = 1 \times 10^2 + 2 \times 10^1 + 5 \times 10^0
+$$</div>
+<p>Later on in our mathematical lives, we learn that we can use other integers
+as our base, or <strong>radix</strong>, by expressing every integer as the sum of various 
+powers of that integer. For example, 125
+can be decomposed into powers of 2. In a base 2 system, we have only two symbols,
+0 and 1, so 125 can be represented as 1111101, which is equivalent to saying:</p>
+<div class="math">$$
+125 = 1 \times 2^6 + 1 \times 2^5 + 1 \times 2^4 + 1 \times 2^3 + 1 \times 2^2 + 1 \times 2
+$$</div>
+<p>Note that 1111101 is close to 1111111, which is <span class="math">\(2^7 = 128\)</span>.</p>
+<p>As Knuth points out in his <u>Art of Computer Programming</u>, Part II:</p>
+<blockquote>
+<i>"If our ancestors had invented arithmetic by counting with their two fists
+or their eight fingers, instead of their ten "digits," we would never have to 
+worry about writing binary-decimal conversion routines. (And we would perhaps
+never have learned as much about number systems.)
+</i>
+</blockquote>
+
+<p>This idea of an alternative radix to the traditional base 10 leads to entirely new 
+number systems with their own interesting properties. However, it goes even further - 
+as a high school student in 1955, Donald Knuth invented a number system with an
+imaginary, 4-symbol radix in base <span class="math">\(2i\)</span> (where <span class="math">\(i = \sqrt{-1}\)</span>), called 
+the <a href="https://en.wikipedia.org/wiki/Quater-imaginary_base">quater-imaginary base</a>.</p>
+<p>There are also number systems that use an irrational radix, such as 
+<a href="https://en.wikipedia.org/wiki/Golden_ratio_base">phinary</a>, which uses the golden ratio
+as its radix. Thus, the Golden Ratio <span class="math">\(\phi = \dfrac{1 + \sqrt{5}}{2}\)</span> becomes <span class="math">\(\phi = 1\)</span>,
+<span class="math">\(2 = \phi^1 + \phi^-2\)</span> becomes <span class="math">\(2 = 10.01\)</span>, <span class="math">\(5 = \phi^3 + \phi^{-1} + \phi^{-4}\)</span> 
+becomes <span class="math">\(5 = 1000.1001\)</span>, and so on. In the case of the irrational number <span class="math">\(\sqrt{5}\)</span>, 
+this number becomes a rational number in base <span class="math">\(\phi\)</span>: <span class="math">\(\sqrt{5} = \phi^2 + \phi^{-1}\)</span> 
+becomes <span class="math">\(\sqrt{5} = 10.1\)</span>.</p>
+<p>The single central idea behind these number systems is that the abstract 
+set of integers <span class="math">\(\mathbb{Z}\)</span> are being represented on an <a href="https://en.wikipedia.org/wiki/Ring_(algebra)">algebraic ring</a>,
+which is a fundamental mathematical object. Initially the idea of a ring
+may seem strange, but it creates the foundations of modern number theory.</p>
+<p><a name="cf-cf"></a></p>
+<h2 id="continued-fraction-representations">Continued Fraction Representations</h2>
+<p>(Note that while the next two sections will have a lot of "magic numbers," we will
+step through the procedure in the following sections, and it will be more clear
+where these numbers come from. There is also an excellent continued fractions calculator
+available online <a href="http://www.maths.surrey.ac.uk/hosted-sites/R.Knott/Fibonacci/cfCALC.html">here</a>.)</p>
+<p>We can use other kinds of mathematical objects to represent different numbers.
+Another technique is to use continued fractions to represent numbers.
+These are well-studied mathematical objects that date back to Euclid's <u>Elements</u>.
+The basic idea is to create a recursive expression that involves fractions nested
+beneath other fractions:</p>
+<div class="math">$$
+a_0+\cfrac{1}{a_1 +\cfrac{1}{a_2 +\cfrac{1}{
+      \begin{array}{@{}c@{}c@{}c@{}}
+        a_3 + {}\\ &amp;\ddots\\ &amp;&amp;{}+ \cfrac{1}{a_n}
+      \end{array}
+}}}
+$$</div>
+<p>For ease of writing, this is often written as:</p>
+<div class="math">$$
+a_0 + \dfrac{1}{a_1 +} \quad \dfrac{1}{a_2 +} \quad \dfrac{1}{a_3 + } \quad \dots \quad \dfrac{1}{a_{n-1} + } \quad \dfrac{1}{a_n}
+$$</div>
+<p>or, even shorter,</p>
+<div class="math">$$
+[a_0; a_1, a_2, a_3, \dots]
+$$</div>
+<p>These variables <span class="math">\(a_i\)</span> are called the <em>terms</em> of the continued fraction.
+Continued fractions can be used to represent rational numbers, in which case the continued fraction
+representation terminates after a finite number of terms. For example, <span class="math">\(\dfrac{125}{3} = [41; 1, 2]\)</span>, </p>
+<div class="math">$$
+\dfrac{125}{3} = 41 +\cfrac{1}{1 +\cfrac{1}{2}} 
+$$</div>
+<p>Continued fractions can also be used to represent irrational numbers, 
+in which case the continued fraction representation is a repeating pattern
+of variable length. For example, <span class="math">\(\sqrt{14} = [3; \overline{1,2,1,6}]\)</span>, where
+the line over the last digits indicates that the pattern repeats infinitely as
+<span class="math">\(1, 2, 1, 6, 1, 2, 1, 6, 1, 2, 1, 6, \dots\)</span>:</p>
+<div class="math">$$
+3 + \cfrac{1}{
+    1 + \cfrac{1}{
+        2+\cfrac{1}{
+            1+\cfrac{1}{
+                6+\cfrac{1}{
+                    \begin{array}{@{}c@{}c@{}c@{}}
+                        1 + {}\\ &amp;\ddots\\ &amp;&amp;{}
+                    \end{array}
+                }
+            }
+        }
+    }
+}
+$$</div>
+<p>A few useful properties of these patterns, for square roots, are:</p>
+<ul>
+<li>
+<p>First, the integer portion (3 in the case above) is the largest integer 
+    whose square is less than the number (14).</p>
+</li>
+<li>
+<p>Second, the sequence of integers that repeats is always palindromic,
+    and it always begins repeating once it reaches a value of <span class="math">\(2 a_0\)</span>.</p>
+</li>
+</ul>
+<p>Here are a few more square roots represented as continued fractions, to help illustrate
+the above properties:</p>
+<div class="math">$$
+\begin{array}
+_ \sqrt{19} &amp;=&amp; [4; \overline{2, 1, 3, 1, 2, 8}] \\
+\sqrt{115} &amp;=&amp; [10; \overline{1, 2, 1, 1, 1, 1, 1, 2, 1, 20}] \\
+\sqrt{988} &amp;=&amp; [31; \overline{2, 3, 4, 1, 20, 6, 1, 14, 1, 6, 20, 1, 4, 3, 2, 62}]
+\end{array}
+$$</div>
+<p>Next, we'll cover how to turn these terms <span class="math">\([a_0; a_1, a_2, \dots]\)</span> into rational
+numbers <span class="math">\(\frac{P}{Q}\)</span>. These fractions are called <em>convergents</em>.</p>
+<h2 id="convergents">Convergents</h2>
+<p>We will show an example of how to compute a continued fraction in the next section, 
+but we will cover one additional topic first. In order to be useful, we need some way
+to evaluate the continued fraction representation. One way to do this is to repeatedly
+compute common denominators, perform the fraction addition, and inert the result. 
+The fraction that results is equivalent to the continued fraction expression, but is 
+a rational number and therefore easier to evaluate. </p>
+<p>It turns out that this rational number is a very important quantity called the <strong>convergent</strong> 
+of <span class="math">\(\sqrt{n}\)</span>. However, it is cumbersome to perform the operation of de-rationalizing 
+the continued fraction. There is a useful shortcut that takes the form of a recurrence relation.</p>
+<p>The <span class="math">\(n^{th}\)</span> convergent is defined as the rational number that results when the continued fraction
+representation is carried out to <span class="math">\(n\)</span> terms, then expanded and simplified into a rational number.
+If a number like <span class="math">\(\sqrt{19}\)</span> has an infinite continued fraction representation, it means we can compute
+progressively more accurate rational approximations. </p>
+<p>For example, we know from the above that <span class="math">\(\sqrt{19} = [4; \overline{2,1,3,1,2,8}]\)</span>. Using this fact,
+we can use successive terms to write successive linear approximations:</p>
+<div class="math">$$
+\begin{array}
+_ \sqrt{19} &amp;\approx&amp; 4 \\
+\quad       &amp;\approx&amp; 4 + \frac{1}{2+0} \approx \frac{9}{2} \\
+\quad       &amp;\approx&amp; 4 + \cfrac{1}{2+\cfrac{1}{1}} \approx \frac{13}{3} \\
+\quad       &amp;\approx&amp; 4 + \cfrac{1}{2+\cfrac{1}{\cfrac{1}{3}}} \approx \frac{48}{11} \\
+\end{array}
+$$</div>
+<p>If we continue this sequence, we get a slew of approximations (there are also additional approximations between
+each of <em>these</em> terms...):</p>
+<div class="math">$$
+\begin{array}
+_ \sqrt{19} &amp;\approx&amp; \frac{61}{14} \\
+\quad       &amp;\approx&amp; \frac{170}{39} \\
+\quad       &amp;\approx&amp; \frac{1421}{326} \\
+\quad       &amp;\approx&amp; \frac{3012}{691} \\
+\quad       &amp;\approx&amp; \frac{4433}{1017} \\
+\sqrt{19}   &amp;\approx&amp; \frac{16311}{3742}
+\end{array}
+$$</div>
+<p>The numerator and denominator of the <span class="math">\(k^{th}\)</span> convergent are denoted <span class="math">\(P_k\)</span> and <span class="math">\(Q_k\)</span>, 
+respectively, and can be computed through the recurrence relation:</p>
+<div class="math">$$
+\dfrac{P_k}{Q_k} = \dfrac{P_{k-2} + a_k P_{k-1}}{Q_{k-2} + a_k Q_{k-1}}
+$$</div>
+<p>where the initial values are <span class="math">\(P_{-2} = 0, P_{-1} = 1\)</span> for P and
+<span class="math">\(Q_{-2} = 1, Q_{-1} = 0\)</span> for Q
+(making the first convergent equal to <span class="math">\(\frac{a_0}{1}\)</span>).
+This can be used to compute successive approximations.
+Note that on a computational platform, you will quickly reach the end 
+of your accuracy limit, so care must be taken for continued fraction
+sequences of longer than about 10 terms.</p>
+<p><a name="cf-example-coeffs"></a></p>
+<h2 id="example-continued-fraction-coefficients-of-sqrt14">Example: Continued Fraction Coefficients of <span class="math">\(\sqrt{14}\)</span></h2>
+<p>Let's walk through an example of how to compute the continued fraction 
+representation <span class="math">\([a_0; a_1, a_2, \dots, a_n]\)</span> for a square root,
+and how to compute the <span class="math">\(k^{th}\)</span> convergent.</p>
+<p>Begin with the square root of a given number. For variety, we will use <span class="math">\(\sqrt{14}\)</span>.
+We begin by computing the nearest integer to 14's square root. If we don't have a 
+square root routine, we can try integers by squaring them, and find the last integer
+that, when squared, is less than 14. This is <span class="math">\(a_0 = 3\)</span>. To interpret, <span class="math">\(a_0\)</span> is 
+the largest integer portion of our square root, with the residual portion 
+<span class="math">\(\sqrt{14}-3\)</span> the portion that will be represented by the continued fraction.</p>
+<p>Here's what we have:</p>
+<div class="math">$$
+\sqrt{14} = 3 + (\sqrt{14} - 3) \\
+$$</div>
+<p>We can drop the residual for an initial rational approximation of <span class="math">\(\sqrt{14} \approx 13\)</span>,
+but we can do better by going another step.</p>
+<p>We recognize that the residual, which we want write in the form <span class="math">\(\dfrac{1}{\mbox{something}}\)</span>,
+can be written as <span class="math">\(\dfrac{1}{\dfrac{1}{\sqrt{14}-3}}\)</span>: </p>
+<div class="math">$$
+\sqrt{14} = 3 + \dfrac{1}{ \frac{1}{\sqrt{14}-3} }
+$$</div>
+<p>Now examine the inverse residual term <span class="math">\(\dfrac{1}{\sqrt{14}-3}\)</span> for step 1,
+which we will call <span class="math">\(r_1\)</span>. 
+Repeat the procedure we performed above: find the nearest integer 
+portion to this quantity. In this case,</p>
+<div class="math">$$
+\dfrac{1}{r_1} = \dfrac{1}{\sqrt{14}-3} = 1.34833...
+$$</div>
+<p>Now split this into its integer portion, which becomes <span class="math">\(a_1\)</span>, 
+and its remaining fractional portion, .34833...:</p>
+<div class="math">$$
+a_1 = floor( \dfrac{1}{r_1} )
+$$</div>
+<p>and the new residual <span class="math">\(r\)</span> is written in terms of the old residual
+and the coefficent <span class="math">\(a_i\)</span>:</p>
+<div class="math">$$
+r_2 = \dfrac{1}{r_1} - a_1
+$$</div>
+<p>Generalizing, we get an iterative procedure to determine the 
+coefficients <span class="math">\(a_i\)</span>:</p>
+<div class="math">$$
+a_i = floor( \dfrac{1}{r_i} )
+$$</div>
+<p>followed by:</p>
+<div class="math">$$
+r_{i+1} = \dfrac{1}{r_i} - a_i
+$$</div>
+<p>where the initial values <span class="math">\(a_0, r_0\)</span> are computed as mentioned above,
+and the rest of the values in the sequence follow.</p>
+<p>Continuing for <span class="math">\(\sqrt{14}\)</span>, we get:</p>
+<div class="math">$$
+\begin{array}
+_ a_0 &amp;=&amp; 3 \\
+r_1 &amp;=&amp; \dfrac{1}{\sqrt{14}-3} = 1.348331 \\
+a_1 &amp;=&amp; 1 \\
+r_2 &amp;=&amp; \dfrac{1}{.348331} = 2.870829 \\
+a_2 &amp;=&amp; 2 \\
+r_3 &amp;=&amp; \dfrac{1}{0.870829} = 1.1483311 \\
+a_3 &amp;=&amp; 1 \\
+r_4 &amp;=&amp; \dfrac{1}{0.1483311} = 6.741676 \\
+a_4 &amp;=&amp; 6
+\end{array}
+$$</div>
+<p>It is at this point that we see <span class="math">\(2 a_0\)</span> and know that our (palindromic) 
+sequence will repeat. (When we evaluate the convergents, we will utilize
+the palindromic nature of this sequence.)</p>
+<p>Collecting these terms gives us the expected result: <span class="math">\(\sqrt{14} = [3; 1, 2, 1, 6]\)</span>.</p>
+<p>This gives us an algorithmic procedure for computing the 
+continued fraction representation <span class="math">\([a_0; a_1, a_2, a_n]\)</span> of a number -
+with the important caveat, as mentioned above, that some integers
+have sequences that are extremely long before they repeat, making it 
+impossible to find the full continued fraction representation 
+without arbitrary precision libraries.</p>
+<p>That being said, if you are only interested in the first 10 or so
+terms of the continued fraction representation, here is a 
+static Java method to compute them:</p>
+<div class="highlight"><pre><span></span><code>    <span class="cm">/** Find the (shorter than 10) continued fraction sequence for sqrt(n). </span>
+<span class="cm">     * This returns a list of integers, [a0, a1, a2, ...]</span>
+<span class="cm">     *</span>
+<span class="cm">     * @params n Number to compute the square root of.</span>
+<span class="cm">     */</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="nf">continuedFractionSqrt</span><span class="p">(</span><span class="kt">int</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">isPerfectSquare</span><span class="p">(</span><span class="n">n</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Error: n cannot be a perfect square.&quot;</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="kt">int</span> <span class="n">niters</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span> <span class="c1">// handbrake</span>
+
+        <span class="kt">int</span> <span class="n">ai</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">double</span> <span class="n">val</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">double</span> <span class="n">remainder</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">coeffs</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ArrayList</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span><span class="p">();</span>
+
+        <span class="c1">// Fencepost</span>
+        <span class="n">remainder</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">Math</span><span class="p">.</span><span class="na">sqrt</span><span class="p">(</span><span class="n">n</span><span class="p">);</span>
+
+        <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">niters</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="n">remainder</span><span class="p">;</span>
+            <span class="n">ai</span> <span class="o">=</span> <span class="n">floor</span><span class="p">(</span><span class="n">val</span><span class="p">);</span>
+            <span class="n">remainder</span> <span class="o">=</span> <span class="n">val</span> <span class="o">-</span> <span class="n">ai</span><span class="p">;</span>
+            <span class="n">coeffs</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="n">ai</span><span class="p">);</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">coeffs</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="o">*</span><span class="n">coeffs</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="p">{</span>
+                <span class="k">break</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">coeffs</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="cm">/** Check if x is a perfect square. */</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">boolean</span> <span class="nf">isPerfectSquare</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span> 
+        <span class="kt">int</span> <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">Math</span><span class="p">.</span><span class="na">round</span><span class="p">(</span><span class="n">Math</span><span class="p">.</span><span class="na">sqrt</span><span class="p">(</span><span class="n">x</span><span class="p">)));</span>
+        <span class="k">return</span> <span class="n">x</span><span class="o">==</span><span class="p">(</span><span class="n">s</span><span class="o">*</span><span class="n">s</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="cm">/** Find the floor of a double. */</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">floor</span><span class="p">(</span><span class="kt">double</span> <span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">Math</span><span class="p">.</span><span class="na">floor</span><span class="p">(</span><span class="n">j</span><span class="p">));</span>
+    <span class="p">}</span>
+</code></pre></div>
+
+<p>Here is a short program that uses this routine to compute 
+the continued fraction representation of <span class="math">\(\sqrt{14}\)</span>:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SquareRootCF</span> <span class="p">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;sqrt(14) = &quot;</span><span class="o">+</span><span class="n">Convergents</span><span class="p">.</span><span class="na">continuedFractionSqrt</span><span class="p">(</span><span class="mi">14</span><span class="p">));</span>
+        <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;sqrt(19) = &quot;</span><span class="o">+</span><span class="n">Convergents</span><span class="p">.</span><span class="na">continuedFractionSqrt</span><span class="p">(</span><span class="mi">19</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>and the corresponding output:</p>
+<div class="highlight"><pre><span></span><code>$ javac SquareRootCF.java &amp;&amp; java SquareRootCF
+sqrt(14) = [3, 1, 2, 1, 6]
+sqrt(19) = [4, 2, 1, 3, 1, 2, 8]
+</code></pre></div>
+
+<p><a name="cf-example-convergents"></a></p>
+<h2 id="example-convergents-of-sqrt14">Example: Convergents of <span class="math">\(\sqrt{14}\)</span></h2>
+<p>We now turn to the task of computing the convergents of the continued fraction,
+which will yield successive rational numbers that are progressively better approximations
+to <span class="math">\(\sqrt{14}\)</span>. </p>
+<p>We start with the expression given above for the <span class="math">\(k^{th}\)</span> convergent: </p>
+<div class="math">$$
+\dfrac{P_k}{Q_k} = \dfrac{P_{k-2} + a_k P_{k-1}}{Q_{k-2} + a_k Q_{k-1}}
+$$</div>
+<p>with initial values <span class="math">\(P_{-2} = 0, P_{-1} = 1\)</span> for P and
+<span class="math">\(Q_{-2} = 1, Q_{-1} = 0\)</span> for Q. This yields 
+the first "real" convergent:</p>
+<div class="math">$$
+\dfrac{P_1}{Q_1} = \dfrac{1 + 1 \times a_1}{0 + a_1 \times 1} = \dfrac{1 + 3}{0 + 1} = \dfrac{4}{1}
+$$</div>
+<p>Successive approximations will use the values <span class="math">\(P_1\)</span> and <span class="math">\(Q_1\)</span> to compute
+the next convergents.</p>
+<div class="math">$$
+\dfrac{P_2}{Q_2} = \dfrac{P_0 + P_1 a_1}{Q_0 + Q_1 a_1} = \frac{11}{3}
+$$</div>
+<p>Continuing in this fashion gives:</p>
+<div class="math">$$
+\begin{array}
+\quad \dfrac{P_2}{Q_2} &amp;=&amp; \dfrac{15}{4} \\
+\dfrac{P_3}{Q_3} &amp;=&amp; \dfrac{101}{27}
+\end{array}
+$$</div>
+<p>and so on. This recurrence relation is easy to code up. It starts with 
+the continued fraction coefficients for the given square root, 
+and computes successive values of P and Q. The number of terms computed
+is specified by the user. Once it reaches the end of the sequence of 
+continued fraction coefficients, it can start at the beginning again 
+(the sequence is palindromic). </p>
+<p>Finally, it returns the values of <span class="math">\(P_k\)</span> and <span class="math">\(Q_k\)</span>, and of the 
+successive convergents:</p>
+<div class="math">$$
+\begin{array}
+_ \sqrt{14} &amp;\approx&amp; 3 \\
+&amp;\approx&amp; 4 \\
+&amp;\approx&amp; 11/3 \\
+&amp;\approx&amp; 15/4 \\
+&amp;\approx&amp; 101/27 \\
+&amp;\approx&amp; 116/31 \\
+&amp;\approx&amp; 333/89 \\
+&amp;\approx&amp; 449/120 \\
+&amp;\approx&amp; 3027/809 \\
+&amp;\approx&amp; 3476/929 \\
+&amp;\approx&amp; 9979/2667 
+\end{array}
+$$</div>
+<p>Here is a static method in Java that will compute the convergents
+of a square root:</p>
+<div class="highlight"><pre><span></span><code>    <span class="cm">/** </span>
+<span class="cm">     * Compute the convergents (rational representation of</span>
+<span class="cm">     * continued fraction).</span>
+<span class="cm">     *</span>
+<span class="cm">     * This uses the recurrence relation:</span>
+<span class="cm">     *</span>
+<span class="cm">     * P_n     P_n-2 + a_n P_n-1</span>
+<span class="cm">     * ---- = -----------------</span>
+<span class="cm">     *  Q_n    Q_n-2 + a_n Q_n-1</span>
+<span class="cm">     */</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">long</span><span class="o">[]</span> <span class="nf">convergents</span><span class="p">(</span><span class="kt">int</span> <span class="n">n</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nterms</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kt">long</span><span class="o">[]</span> <span class="n">convergents</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">long</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span><span class="p">;</span>
+
+        <span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span> <span class="n">cfrepr</span> <span class="o">=</span> <span class="n">continuedFractionSqrt</span><span class="p">(</span><span class="n">n</span><span class="p">);</span>
+
+        <span class="c1">// Initial values for convergent recurrence relation</span>
+        <span class="kt">long</span> <span class="n">Pnm2</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// P_{n-2}</span>
+        <span class="kt">long</span> <span class="n">Pnm1</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="kt">long</span> <span class="n">Qnm2</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="kt">long</span> <span class="n">Qnm1</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">long</span> <span class="n">P</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="kt">long</span> <span class="n">Q</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+        <span class="c1">// Term 0 is the constant value a0.</span>
+        <span class="kt">int</span> <span class="n">accessindex</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;=</span><span class="n">nterms</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span> 
+            <span class="kt">int</span> <span class="n">an</span> <span class="o">=</span> <span class="n">cfrepr</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">accessindex</span><span class="p">);</span>
+
+            <span class="n">P</span> <span class="o">=</span> <span class="n">Pnm2</span> <span class="o">+</span> <span class="n">an</span> <span class="o">*</span> <span class="n">Pnm1</span><span class="p">;</span>
+            <span class="n">Q</span> <span class="o">=</span> <span class="n">Qnm2</span> <span class="o">+</span> <span class="n">an</span> <span class="o">*</span> <span class="n">Qnm1</span><span class="p">;</span>
+
+            <span class="n">Pnm2</span> <span class="o">=</span> <span class="n">Pnm1</span><span class="p">;</span>
+            <span class="n">Pnm1</span> <span class="o">=</span> <span class="n">P</span><span class="p">;</span>
+
+            <span class="n">Qnm2</span> <span class="o">=</span> <span class="n">Qnm1</span><span class="p">;</span>
+            <span class="n">Qnm1</span> <span class="o">=</span> <span class="n">Q</span><span class="p">;</span>
+
+            <span class="k">if</span><span class="p">(</span><span class="n">accessindex</span><span class="o">+</span><span class="mi">1</span><span class="o">&gt;=</span><span class="n">cfrepr</span><span class="p">.</span><span class="na">size</span><span class="p">())</span> <span class="p">{</span> 
+                <span class="c1">// Ensure we keep repeating the sequence</span>
+                <span class="c1">// if the sequence has fewer terms than</span>
+                <span class="c1">// the user asks for.</span>
+                <span class="c1">// This allows us to get really good</span>
+                <span class="c1">// approximations for numbers.</span>
+                <span class="c1">// This only works because the sequence</span>
+                <span class="c1">// is palindromic.</span>
+                <span class="n">accessindex</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="n">accessindex</span><span class="o">++</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="n">convergents</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">=</span> <span class="n">P</span><span class="p">;</span>
+        <span class="n">convergents</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span> <span class="o">=</span> <span class="n">Q</span><span class="p">;</span>
+
+        <span class="k">return</span> <span class="n">convergents</span><span class="p">;</span>
+    <span class="p">}</span>
+</code></pre></div>
+
+<p>Here is a simple driver program that prints out several
+convergents for <span class="math">\(\sqrt{14}\)</span>:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">SquareRootCF</span> <span class="p">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;=</span><span class="mi">10</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kt">long</span><span class="o">[]</span> <span class="n">conv</span> <span class="o">=</span> <span class="n">Convergents</span><span class="p">.</span><span class="na">convergents</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="n">i</span><span class="p">);</span>
+            <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Convergent &quot;</span><span class="o">+</span><span class="n">i</span><span class="o">+</span><span class="s">&quot;: &quot;</span><span class="o">+</span><span class="n">conv</span><span class="o">[</span><span class="mi">0</span><span class="o">]+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">conv</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>and the corresponding console output:</p>
+<div class="highlight"><pre><span></span><code>$ javac SquareRootCF.java &amp;&amp; java SquareRootCF
+Convergent 1: 4/1
+Convergent 2: 11/3
+Convergent 3: 15/4
+Convergent 4: 101/27
+Convergent 5: 116/31
+Convergent 6: 333/89
+Convergent 7: 449/120
+Convergent 8: 3027/809
+Convergent 9: 3476/929
+Convergent 10: 9979/2667
+</code></pre></div>
+
+<p><a name="cf-sqrt-refs"></a></p>
+<h1 id="references">References</h1>
+<ol>
+<li>
+<p>Hardy, G. H. <u>A Course of Pure Mathematics.</u> 
+Cambridge University Press, Tenth Edition (1908-1967).</p>
+</li>
+<li>
+<p>Knuth, Donald. <u>The Art of Computer Programming, Volume 2: Seminumerical Algorithms.</u> 
+Addison-Wesley Publishing Company, Second Edition (1975).</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/number-theory.html">number theory</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/square-roots.html">square roots</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/numerical-methods.html">numerical methods</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/continued-fractions.html">continued fractions</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/irrational-numbers.html">irrational numbers</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Computing Square Roots: Part 1: Using Newton's Method
             </b></h1>
         
@@ -814,424 +1399,6 @@ This queue of points is then sorted and returned in order.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                CSE 143 Final Project: Hilbert Sort: 2. The Solution Algorithm
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-06-27T11:00:00-07:00" pubdate>Tuesday 06/27/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/cse-143-final-project-hilbert-sort-2-the-solution-algorithm.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
-<p>This is the second in a series of three posts 
-detailing the Hilbert Sort problem,
-its solution, and its implementation.
-This post solves the problem.</p>
-<ul>
-<li><a href="#hilbert2-problem">Hilbert Sort Problem</a></li>
-<li><a href="#hilbert2-space">Space Is The Place</a></li>
-<li><a href="#hilbert2-reflections">The Reflections</a><ul>
-<li><a href="#hilbert2-quad">Reflected Quadrants</a></li>
-<li><a href="#hilbert2-scaling">Scaling</a></li>
-<li><a href="#hilbert2-reflection">Reflection</a></li>
-</ul>
-</li>
-<li><a href="#hilbert2-reflection-solution">Solving the Reflection Problem</a></li>
-<li><a href="#hilbert2-procedure">Procedure</a></li>
-<li><a href="#hilbert2-references">References</a></li>
-</ul>
-<p><a name="hilbert2-problem"></a></p>
-<h1 id="hilbert-sort-problem">Hilbert Sort Problem</h1>
-<p>In the prior post, we covered the Hilbert Sort problem, 
-but we state it once more succinctly here before 
-detailing a solution to the problem.</p>
-<p>The Hilbert Sort problem asks the following: 
-given a set of labeled <span class="math">\((x,y)\)</span> points,
-how can we sort the points according to 
-the order in which they are visited 
-by a space-filling Hilbert curve?</p>
-<p>Revisiting the example input and output provided, the input provides 
-the number of points and size of the grid on the first line, 
-followed by each point's coordinates and label.</p>
-<div class="highlight"><pre><span></span><code>Input:
-    14 25
-    5 5 Honolulu
-    5 10 PugetSound
-    5 20 Victoria
-    10 5 Berkeley
-    10 10 Portland
-    10 15 Seattle
-    10 20 Vancouver
-    15 5 LasVegas
-    15 10 Sacramento
-    15 15 Kelowna
-    15 20 PrinceGeorge
-    20 5 Phoenix
-    20 10 SaltLakeCity
-    20 20 Calgary
-
-Output:
-    Honolulu
-    Berkeley
-    Portland
-    PugetSound
-    Victoria
-    Vancouver
-    Seattle
-    Kelowna
-    PrinceGeorge
-    Calgary
-    SaltLakeCity
-    Sacramento
-    LasVegas
-    Phoenix
-</code></pre></div>
-
-<p><a name="hilbert2-space"></a></p>
-<h1 id="space-is-the-place">Space is the Place</h1>
-<p>To solve the Hilbert Sort problem, we have to avoid the temptation
-to think about the Hilbert curve and the way that it is constructed.
-While we spent quite a bit of time talking about the Hilbert curve
-and how it is constructed, the curve itself is not what we are 
-interested in - we are interested in the order in which the points
-are visited. </p>
-<p>Also remember, the motivation of solving the Hilbert Sort problem is to 
-arrange spatial <span class="math">\((x,y)\)</span> points so closer points are nearer together.</p>
-<p>No matter how many iterations of the Hilbert curve we end up drawing,
-we always apply the same procedure: cut the square into four quadrants, 
-reflect the southwest corner about the bottom left to top right diagonal,
-and reflect the southeast corner about the bottom right to top left diagonal.</p>
-<p>We will always visit points in the southwest quadrant before we visit 
-points in the northwest quadrant; we will always visit points in the northwest
-corner before we visit points in the northeast corner; etc.</p>
-<p><a name="hilbert2-reflections"></a></p>
-<h1 id="the-reflections">The Reflections</h1>
-<p>The trickiest part of the Hilbert Sort problem is the reflection that happens 
-to the lower left and lower right quadrants.</p>
-<p><a name="hilbert2-quad"></a></p>
-<h2 id="reflected-quadrants">Reflected Quadrants</h2>
-<p>Start with the first step of the Hilbert sort - take a square with points contained in it. 
-Split the square into four quadrants (with the intention of creating four sub-problems).
-However, to conform to the Hilbert Curve construction process,
-the lower left and lower right squares must be reflected.
-The lower left square is reflected about the bottom left to upper right diagonal,
-while the lower right square is reflected about the bottom right to upper left diagonal.</p>
-<p>Convince yourself of this by studying the curve construction procedure as illustrated
-by Hilbert himself in his 1890 paper (a.k.a., Hilbert Illustrates A Hilbert Curve):</p>
-<p><img alt="Hilbert Illustrates Construction of Hilbert Curve" src="/images/HilbertCurve-OriginalPaper.png"></p>
-<p>We are working toward a recursive method - and recursive methods call themselves repeatedly,
-apply to subproblems that are trivially similar. However, to translate this into a recursive 
-problem, we have to deal with the rotations within the current recursive step, 
-in such a way that we don't need to know the orientation of the prior square 
-to know the order in which to visit the squares - it is always southwest, northwest, notheast, southwest.</p>
-<p>After we split the squares into quadrants, 
-after we toss out any quadrants with no points, 
-we walk through each of the four quadrants in order 
-(southwest, northwest, northeast, southwest).
-If there is a single point in the quadrant,
-we add it to the priority queue.</p>
-<p>It is here that we take care of the rotation - 
-before we recursively call the Hilbert sort method
-on the quadrant itself.</p>
-<p><a name="hilbert2-scaling"></a></p>
-<h2 id="scaling">Scaling</h2>
-<p>We have a prescribed order for the four quadrants 
-in the current recursive level, and the current recursive level
-is working its way through each of those four quadrants.
-But remember, our algorithm only cares about the order of points.
-It does not care about the <span class="math">\((x,y)\)</span> location. 
-So we can ireflect <span class="math">\((x,y)\)</span> points by changing their 
-<span class="math">\((x,y)\)</span> coordinate locations. Ultimately
-we are only changing the program's internal representation
-of each point, not the original data on disk, 
-so we can think of <span class="math">\((x,y)\)</span> as mutable for our purposes.</p>
-<p>This is an important part of our solution:
-scaling (and reflecting) each quadrant before 
-recursively calling the Hilbert sort method 
-on the points contained in it.</p>
-<p>If we are considering a single quadrant 
-of dimensions <span class="math">\(\frac{S}{2} \times \frac{S}{2}\)</span>,
-containing points <span class="math">\((x,y)\)</span>, we may be able to 
-pass in the corners of our square, plus the 
-<span class="math">\((x,y)\)</span> points contained in it.
-However, as our squares get smaller,
-the distance between points gets smaller as well,
-so this has an upper limit as to how many points 
-it can sort.</p>
-<p>On the other hand, we can avoid passing all that information around
-and using doubles, by just rescaling everything to the given
-quadrant. We want each recursive level to completely forget 
-about where in the recursive stack it is, how large its square is
-relative to the original, etc. All it should be doing is 
-solving the same problem repeatedly - which is what recursion
-is best at. If we double the sides of the square, we get 
-a shape with original size <span class="math">\(S \times S\)</span>. To keep the points 
-shifted correctly we double their <span class="math">\((x,y)\)</span> coordinates 
-to <span class="math">\((2x, 2y)\)</span>.</p>
-<p>Once this transformation is performed, we are ready to call
-the Hilbert Sort function recursively - for the 
-northwest and northeast quadrants only. The southwest and 
-southeast quadrants still have a ways to go.</p>
-<p><a name="hilbert2-reflection"></a></p>
-<h2 id="reflection">Reflection</h2>
-<p>In addition to the scale-up transformation, southwest and southeast 
-qaudrant points must be reflected about their diagonals.</p>
-<p>Here's an example of what the process looks like in action:</p>
-<p><img alt="Hilbert Sort Poster Flowchart" src="/images/hilbert-poster.png"></p>
-<p><a name="hilbert2-reflection-solution"></a></p>
-<h1 id="solving-the-reflection-problem">Solving the Reflection Problem</h1>
-<p>The above section described where in the process the reflection 
-of the <span class="math">\((x,y)\)</span> points should happen. The process of applying the 
-reflection differs between the southwest and southeast quadrants.</p>
-<p>In the southwest quadrant, points are being reflected about the 
-diagonal line <span class="math">\(y=x\)</span>, so the reflection of <span class="math">\((x,y)\)</span> points in the 
-southwest quadrant can be performed by swapping the 
-<span class="math">\(x\)</span> and <span class="math">\(y\)</span> values of all of the points in that quadrant.</p>
-<p>In the southeast quadrant, the points are refelected about the 
-diagonal <span class="math">\(y = -x\)</span>, but it is not quite <span class="math">\(y = -x\)</span>, given that there is
-an offset of a half-quadrant width on the left. </p>
-<p>After an <span class="math">\((x,y)\)</span> point is transformed, it has a height equal to
-the distance from the point's x coordinate to the start of the qudarant.
-In equations,</p>
-<div class="math">$$
-y = S - x
-$$</div>
-<p>Further, after an <span class="math">\((x,y)\)</span> point is transformed, the distance from the 
-top of the bounding box to the former y coordinate 
-is the new x coordinate, </p>
-<div class="math">$$
-x = \frac{S}{2} - y
-$$</div>
-<p>The relative x coordinates of each point 
-(relative meaning, 0 starts at the beginning of the curent square,
-rather than the whole square) are 
-the x coordinates minus the half-quadrant width.</p>
-<p>Once these reflections are performed, we pass the 
-resulting <span class="math">\((x,y)\)</span> points on to a new Hilbert sort.
-The new Hilbert sort will be operating on an <span class="math">\(S x S\)</span> 
-square, as before. Importantly, the <span class="math">\((x,y)\)</span> points have been
-transformed in such a way that the order in which the Hilbert
-curve visits each point has not been affected.</p>
-<p><a name="hilbert2-procedure"></a></p>
-<h1 id="hilbert-sort-procedure">Hilbert Sort Procedure</h1>
-<p>The implementation strategy is, obviously, recursive. What we want to do at each level is:
-* Start with a square and points contained in the square. 
-* Cut the square under consideration into four quadrants.
-* Apply a transformation to each square so that it is re-oriented in a manner that matches our original Hilbert curve.</p>
-<p>Once each of those squares goes through all of its respective recursive calls, 
-it will return a sorted list of points. Then we will know what to do - 
-we collect each of the sorted points from each of the four quadrants in order, 
-maintain that order, and return those sorted quadrants.</p>
-<p>To nail down the details, treat the square under consideration as ranging from 
-<span class="math">\((0,0)\)</span> to <span class="math">\((S,S)\)</span>.</p>
-<p>Each time we cut a square into quadrants, we re-orient ourselves as to where 
-<span class="math">\((0,0)\)</span> is located and which quadrants will be visited in which order.
-If we are in the lower left quadrant, <span class="math">\(x\)</span> is below <span class="math">\(\frac{S}{2}\)</span> and 
-<span class="math">\(y\)</span> is below <span class="math">\(\frac{S}{2}\)</span>, so we rotate and reflect by swapping x and y:</p>
-<div class="highlight"><pre><span></span><code>        X -&gt; Y
-        Y -&gt; X
-</code></pre></div>
-
-<p>If we are in the upper left quadrant, x is below <span class="math">\(\frac{S}{2}\)</span>, y is above <span class="math">\(\frac{S}{2}\)</span>, 
-so subtract <span class="math">\(\frac{S}{2}\)</span> from y and we're done.</p>
-<div class="highlight"><pre><span></span><code>        X -&gt; X
-        Y -&gt; Y-(S/2)
-</code></pre></div>
-
-<p>If we are in the upper right quadrant, x is above <span class="math">\(\frac{S}{2}\)</span>, y is above <span class="math">\(\frac{S}{2}\)</span>, 
-so subtract <span class="math">\(\frac{S}{2}\)</span> from both</p>
-<div class="highlight"><pre><span></span><code>        X -&gt; X - S/2
-        Y -&gt; Y - S/2
-</code></pre></div>
-
-<p>If we are in the lower right quadrant, our x and y values are now 
-relative to the quadrant bounding box. The distance to the top of the 
-bounding box to the y coordinate becomes our new x coordinate, while the 
-distance from the right of the bounding box S to the x coordinate becomes 
-our new y coordinate:</p>
-<div class="highlight"><pre><span></span><code>        X -&gt; S/2 - Y
-        Y -&gt; S - X
-</code></pre></div>
-
-<p>Recursion always requires a base case and a recursive case. Our "base case" is the 
-simple comparison of one or no points in each of our four quadrants. If we get to 
-this base case, we know the order in which the Hilbert Curve will visit each of 
-those points.</p>
-<p>If we are not at the base case, if we have a large number of points to sort, 
-we can bin together all the points in a given quadrant, and consider the order
-in which those points go with an additional level of finer granularity. </p>
-<p><a name="hilbert2-pseudocode"></a></p>
-<h1 id="pseudocode">Pseudocode</h1>
-<div class="highlight"><pre><span></span><code>set square dimension S
-
-create unsorted queue
-load points into unsorted queue
-
-create sorted queue
-sorted queue = hilbert_sort( unsorted queue, square dimension )
-</code></pre></div>
-
-<p>Now here is the Hilbert sort function:</p>
-<div class="highlight"><pre><span></span><code>define hilbert_sort( unsorted queue, square dimension ):
-    create southwest queue
-    create northwest queue
-    create northeast queue
-    create southeast queue
-    for each point:
-        if in southwest:
-            create new point using X -&gt; Y, Y -&gt; X
-            add to southwest queue
-        if in northwest:
-            create new point using X -&gt; 2X, Y -&gt; 2Y - S
-            add to northwest queue
-        if in northeast:
-            create new point using X -&gt; 2X - S, Y -&gt; 2Y - S
-            add to northeast queue
-        if in southeast:
-            create new point using X -&gt; S - 2Y, Y -&gt; 2S - 2X
-            add to southeast queue
-
-        hilbertsort(southwest queue, square dimension)
-        hilbertsort(northwest queue, square dimension)
-        hilbertsort(northeast queue, square dimension)
-        hilbertsort(southeast queue, square dimension)
-
-        create new results queue
-        add points from southwest into results queue
-        add points from northwest into results queue
-        add points from northeast into results queue
-        add points from southeast into results queue
-        return results queue
-</code></pre></div>
-
-<p><a name="hilbert2-refs"></a></p>
-<h1 id="references">References</h1>
-<ol>
-<li>
-<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
-&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
-</li>
-<li>
-<p>"Über die stetige Abbildung einer Linie auf ein Flächenstück." D. Hilbert. 
-<strong>Mathematische Annalen</strong> 38 (1891), 459–460. <a href="/files/HilbertCurve.pdf">(pdf)</a></p>
-</li>
-<li>
-<p>"Hilbert Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 29 April 2017. Accessed 23 June 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Hilbert_curve">https://en.wikipedia.org/wiki/Hilbert_curve</a>&gt;</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hilbert-sort.html">hilbert sort</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1267,6 +1434,9 @@ sorted queue = hilbert_sort( unsorted queue, square dimension )
 
             <h2>March 2022</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/copying-letsencrypt-certs-between-machines.html">Copying LetsEncrypt Certs Between Machines</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/how-to-read-ulysses.html">How to Read Ulysses</a>
             </p>

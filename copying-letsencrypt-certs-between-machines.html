@@ -77,26 +77,11 @@
 
 <div class="container">
 
-    <div class="row">
-        <div class="col-md-12 col-centered" style="text-align: center;">
-            <div class="cosmojumbo">
-                <h1>Category: Security</h1>
-            </div>
-        </div>
-    </div>
-
-    <div class="v150"></div>
-
-    <div>
-
-
-<hr/ >
-
 <header>
 <div class="row">
-    <div class="col-md-12">
 
-        <!-- only the header is centered. -->
+
+    <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
                 Copying LetsEncrypt Certs Between Machines
@@ -116,13 +101,16 @@
         </div>
 
     </div>
+
 </div>
 </header>
 
-<div class="v20"></div>
+
+<div class="v50"></div>
+
 
 <div class="row">
-    <div class="col-md-8 col-centered" style="text-align: left;">
+    <div class="col-md-12" style="text-align: left;">
 
         <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
 <li><a href="#https-ssl-certificates-and-letsencrypt">HTTPS, SSL Certificates, and LetsEncrypt</a></li>
@@ -144,24 +132,122 @@ that use public DNS entries.)</p>
 <p>As a bit of background, the whole reason this is necessary, the whole reason we are dealing with
 the hassle of setting up SSL certificates, is to enable end-to-end encrypted connections to
 a server.</p>
-<p>For example …</p></div>
-        <br />
-        <br />
-        <footer>
-            <a rel="full-article" href="https://charlesreid1.github.io/copying-letsencrypt-certs-between-machines.html">Read On &crarr;</a>
-        </footer>
+<p>For example, we might have a web application that we want to make available over a VPN network.
+The web application would have a private IP address on the VPN network, say <code>10.0.0.101</code>.</p>
+<p>Now, what we want is for clients connected to the VPN to be able to visit a domain, say
+<code>foobar.limo</code>, and be able to make encrypted connections to the web service at <code>10.0.0.101</code>.</p>
+<p>We can do this (assuming we control the foobar.limo domain) by creating a public DNS entry
+for <code>foobar.limo</code> to point to <code>10.0.0.101</code>. Then when visitors type <code>foobar.limo</code> into their
+browser, if they are connected to the VPN they will reach the web service at <code>10.0.0.101</code>.</p>
+<p>To make connections encrypted, however, so that users can type <code>https://foobar.limo</code> and make an
+encrypted connection to the server at <code>10.0.0.101</code>, the server must have an SSL certificate
+for the <code>foobar.limo</code> domain.</p>
+<p>Assuming the web service at <code>10.0.0.101</code> cannot be reached from the outside world,
+it becomes necessary to perform several extra steps to enable SSL on the <code>10.0.0.101</code> server:</p>
+<ul>
+<li>
+<p>First, the DNS entry for <code>foobar.limo</code> must be temporarily updated to point to a server that:</p>
+<ul>
+<li>has a publicly-accessible IP address,</li>
+<li>has LetsEncrypt and certbot installed,</li>
+<li>is connected to or can connect to the VPN or private <code>10.0.0.101</code> server,</li>
+<li>has no services running on port 80</li>
+</ul>
+</li>
+<li>
+<p>Second, the certbot utility must be run on the publicly-accessible server to request a new or renewed
+  certificate <code>foobar.limo</code>. This will put the new or renewed <code>foobar.limo</code> cert files into
+  <code>/etc/letsencrypt/live</code>.</p>
+</li>
+<li>
+<p>Third, the LetsEncrypt certificates are owned by the root user, they must be owned by the root user on the
+  remote machine they are copied to, and SSH/SCP via the root user is (or should be!) prohibited,
+  the certificate files must be compressed using tar, so they can be copied as a non-root user;
+  and on the remote machine, they must be uncompressed to the appropriate location.</p>
+</li>
+</ul>
+<p>(Yes, there is always a <a href="https://xkcd.com/1168/">relevant XKCD</a>.)</p>
+<p>In this post, we cover how this works, and why you might want to do this.</p>
+<h2 id="create-certificates">Create Certificates</h2>
+<p>The first time you create a private VPN certificate on a machine:</p>
+<ul>
+<li>Log into the DNS provider</li>
+<li>Create a DNS record - type A, pointing to the IP address of the public server.</li>
+<li>Run the certbot command to create a certificate on the public server (see below).</li>
+<li>Copy the certificates to the private VPN node using scp (see below).</li>
+<li>Update the DNS record - type A, to point to the private VPN IP address of the private server.</li>
+</ul>
+<h3 id="certbot-command">Certbot Command</h3>
+<p>Command to create a certbot certificate (must be run as sudo):</p>
+<div class="highlight"><pre><span></span><code>#!/bin/bash
+if [ &quot;$(id -u)&quot; != &quot;0&quot; ]; then
+    echo &quot;&quot;
+    echo &quot;&quot;
+    echo &quot;This script should be run as root.&quot;
+    echo &quot;&quot;
+    echo &quot;&quot;
+    exit 1;
+fi
+
+set -x
+
+DOM=&quot;foobar.limo&quot;
+
+certbot certonly \
+    --standalone \
+    --non-interactive \
+    --agree-tos \
+    --email test@example.com \
+    -d ${DOM}
+</code></pre></div>
+
+<p>This command requires port 80 be available (the <code>--standalone</code> flag starts a standalone web server
+that binds to port 80). If port 80 is being used this command will fail to run and the cert will not be created.</p>
+<h3 id="tar-compress-certs-command">Tar Compress Certs Command</h3>
+<p>Archive on the public server:</p>
+<div class="highlight"><pre><span></span><code>DOM=&quot;foobar.limo&quot;
+sudo tar -chvzf foobar_certs.tar.gz \
+    /etc/letsencrypt/archive/${DOM} \
+    /etc/letsencrypt/renewal/${DOM}.conf \
+    /etc/letsencrypt/live/${DOM}
+</code></pre></div>
+
+<h3 id="secure-copy-certs-command">Secure Copy Certs Command</h3>
+<p>Use scp to copy certs to private remote machine:</p>
+<div class="highlight"><pre><span></span><code>scp foobar_certs.tar.gz user@10.0.0.101:~/
+</code></pre></div>
+
+<h3 id="untar-certs-command">Untar Certs Command</h3>
+<p>On the private remote machine, untar the certs file copied over:</p>
+<div class="highlight"><pre><span></span><code>cd /
+sudo tar -xvf ~/foobar_certs.tar.gz
+</code></pre></div>
+
+<p>Last, fix permissions for cert directories:</p>
+<div class="highlight"><pre><span></span><code>sudo chmod 700 /etc/letsencrypt/archive
+sudo chmod -R 755 /etc/letsencrypt/archive/*
+sudo chmod 700 /etc/letsencrypt/live
+sudo chmod -R 755 /etc/letsencrypt/live/*
+sudo chmod 700 /etc/letsencrypt/archive
+</code></pre></div>
+
+<h2 id="renew-certificates">Renew Certificates</h2>
+<p>When you renew a private VPN certificate on a machine:</p>
+<ul>
+<li>Log into the DNS provider</li>
+<li>Update the DNS record to a type A, pointing to the IP adress of the public server.</li>
+<li>Run the certbot command to renew a certificate on the public server (see above).</li>
+<li>Copy the certificates to the private VPN node (see above).</li>
+<li>Restore the DNS record - type A, to point to the private VPN IP address of private server again.</li>
+</ul></div>
 
     </div>
 </div>
 
-
-
 <div class="v20"></div>
 
-
-
 <div class="row">
-    <div class="col-md-8 col-centered" style="text-align: left;">
+    <div class="col-md-12" style="text-align: left;">
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
@@ -179,128 +265,7 @@ a server.</p>
 </div>
 
 
-
 <div class="v200"></div>
-
-
-<hr/ >
-
-<header>
-<div class="row">
-    <div class="col-md-12">
-
-        <!-- only the header is centered. -->
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Stunnel
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-04-30T20:00:00-07:00" pubdate>Sunday 04/30/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/stunnel.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-</div>
-</header>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-8 col-centered" style="text-align: left;">
-
-        <div class="entry-content"><ul>
-<li>
-<p><a href="#stunnel-intro">Introduction</a></p>
-<ul>
-<li><a href="#stunnel-what">What Does Stunnel Do?</a></li>
-<li><a href="#stunnel-work">How Does Stunnel Work?</a> </li>
-</ul>
-</li>
-<li>
-<p><a href="#stunnel-server">Setting Up an Stunnel Server</a></p>
-<ul>
-<li><a href="#stunnel-server-resoures">Charlesreid1.com Resources for Stunnel Servers</a></li>
-</ul>
-</li>
-<li>
-<p><a href="#stunnel-client">Setting Up an Stunnel Client</a></p>
-</li>
-<li>
-<p><a href="#stunnel-protocols">Example Protocols</a></p>
-</li>
-<li>
-<p><a href="#stunnel-docker">Stunnel with Docker</a></p>
-</li>
-<li>
-<p><a href="#stunnel-troubleshooting">Troubleshooting Stunnel Connections</a></p>
-</li>
-<li>
-<p><a href="#stunnel-refs">References</a></p>
-</li>
-</ul>
-<p><a name="stunnel-intro"></a></p>
-<h2 id="introduction">Introduction</h2>
-<p><a name="stunnel-what"></a></p>
-<h3 id="what-does-stunnel-do">What Does Stunnel Do?</h3>
-<p>Stunnel is a tool for creating SSL tunnels between a client and a server.</p>
-<p>Creating SSL connections is a general task that is very useful.
-In particular, any packet of any protocol can always be wrapped in an
-additional SSL layer, with packets embedded within packets, so this means 
-you can wrap arbitrary traffic protocols in SSL using Stunnel.</p>
-<p>Stunnel requires …</p></div>
-        <br />
-        <br />
-        <footer>
-            <a rel="full-article" href="https://charlesreid1.github.io/stunnel.html">Read On &crarr;</a>
-        </footer>
-
-    </div>
-</div>
-
-
-
-<div class="v20"></div>
-
-
-
-<div class="row">
-    <div class="col-md-8 col-centered" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/stunnel.html">stunnel</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ssl.html">SSL</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/encryption.html">encryption</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ssh.html">SSH</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/networking.html">networking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/openvpn.html">OpenVPN</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-
-<div class="v200"></div>
-
-
-
-    </div>
 
 </div>
 

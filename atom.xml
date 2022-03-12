@@ -1,5 +1,152 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>charlesreid1</title><link href="https://charlesreid1.github.io/" rel="alternate"></link><link href="https://charlesreid1.github.io/atom.xml" rel="self"></link><id>https://charlesreid1.github.io/</id><updated>2022-03-02T21:00:00-08:00</updated><entry><title>How to Read Ulysses</title><link href="https://charlesreid1.github.io/how-to-read-ulysses.html" rel="alternate"></link><published>2022-03-02T21:00:00-08:00</published><updated>2022-03-02T21:00:00-08:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2022-03-02:/how-to-read-ulysses.html</id><summary type="html">&lt;div class="toc"&gt;&lt;span class="toctitle"&gt;Table of Contents&lt;/span&gt;&lt;ul&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>charlesreid1</title><link href="https://charlesreid1.github.io/" rel="alternate"></link><link href="https://charlesreid1.github.io/atom.xml" rel="self"></link><id>https://charlesreid1.github.io/</id><updated>2022-03-11T17:00:00-08:00</updated><entry><title>Copying LetsEncrypt Certs Between Machines</title><link href="https://charlesreid1.github.io/copying-letsencrypt-certs-between-machines.html" rel="alternate"></link><published>2022-03-11T17:00:00-08:00</published><updated>2022-03-11T17:00:00-08:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2022-03-11:/copying-letsencrypt-certs-between-machines.html</id><summary type="html">&lt;div class="toc"&gt;&lt;span class="toctitle"&gt;Table of Contents&lt;/span&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href="#https-ssl-certificates-and-letsencrypt"&gt;HTTPS, SSL Certificates, and LetsEncrypt&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#create-certificates"&gt;Create Certificates&lt;/a&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href="#certbot-command"&gt;Certbot Command&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#tar-compress-certs-command"&gt;Tar Compress Certs Command&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#secure-copy-certs-command"&gt;Secure Copy Certs Command&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#untar-certs-command"&gt;Untar Certs Command&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;a href="#renew-certificates"&gt;Renew Certificates&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;p&gt;A quick post that details a useful operation: copying LetsEncrypt certificates
+from one machine to another.&lt;/p&gt;
+&lt;p&gt;(We also cover our use case: setting up certificates for private VPN networks
+that use public DNS entries.)&lt;/p&gt;
+&lt;h2 id="https-ssl-certificates-and-letsencrypt"&gt;HTTPS, SSL Certificates, and LetsEncrypt&lt;/h2&gt;
+&lt;p&gt;As a bit of background, the whole reason this is necessary, the whole reason we are dealing with
+the hassle of setting up SSL certificates, is to enable end-to-end encrypted connections to
+a server.&lt;/p&gt;
+&lt;p&gt;For example …&lt;/p&gt;</summary><content type="html">&lt;div class="toc"&gt;&lt;span class="toctitle"&gt;Table of Contents&lt;/span&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href="#https-ssl-certificates-and-letsencrypt"&gt;HTTPS, SSL Certificates, and LetsEncrypt&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#create-certificates"&gt;Create Certificates&lt;/a&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href="#certbot-command"&gt;Certbot Command&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#tar-compress-certs-command"&gt;Tar Compress Certs Command&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#secure-copy-certs-command"&gt;Secure Copy Certs Command&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#untar-certs-command"&gt;Untar Certs Command&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;a href="#renew-certificates"&gt;Renew Certificates&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;p&gt;A quick post that details a useful operation: copying LetsEncrypt certificates
+from one machine to another.&lt;/p&gt;
+&lt;p&gt;(We also cover our use case: setting up certificates for private VPN networks
+that use public DNS entries.)&lt;/p&gt;
+&lt;h2 id="https-ssl-certificates-and-letsencrypt"&gt;HTTPS, SSL Certificates, and LetsEncrypt&lt;/h2&gt;
+&lt;p&gt;As a bit of background, the whole reason this is necessary, the whole reason we are dealing with
+the hassle of setting up SSL certificates, is to enable end-to-end encrypted connections to
+a server.&lt;/p&gt;
+&lt;p&gt;For example, we might have a web application that we want to make available over a VPN network.
+The web application would have a private IP address on the VPN network, say &lt;code&gt;10.0.0.101&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Now, what we want is for clients connected to the VPN to be able to visit a domain, say
+&lt;code&gt;foobar.limo&lt;/code&gt;, and be able to make encrypted connections to the web service at &lt;code&gt;10.0.0.101&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;We can do this (assuming we control the foobar.limo domain) by creating a public DNS entry
+for &lt;code&gt;foobar.limo&lt;/code&gt; to point to &lt;code&gt;10.0.0.101&lt;/code&gt;. Then when visitors type &lt;code&gt;foobar.limo&lt;/code&gt; into their
+browser, if they are connected to the VPN they will reach the web service at &lt;code&gt;10.0.0.101&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;To make connections encrypted, however, so that users can type &lt;code&gt;https://foobar.limo&lt;/code&gt; and make an
+encrypted connection to the server at &lt;code&gt;10.0.0.101&lt;/code&gt;, the server must have an SSL certificate
+for the &lt;code&gt;foobar.limo&lt;/code&gt; domain.&lt;/p&gt;
+&lt;p&gt;Assuming the web service at &lt;code&gt;10.0.0.101&lt;/code&gt; cannot be reached from the outside world,
+it becomes necessary to perform several extra steps to enable SSL on the &lt;code&gt;10.0.0.101&lt;/code&gt; server:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;First, the DNS entry for &lt;code&gt;foobar.limo&lt;/code&gt; must be temporarily updated to point to a server that:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;has a publicly-accessible IP address,&lt;/li&gt;
+&lt;li&gt;has LetsEncrypt and certbot installed,&lt;/li&gt;
+&lt;li&gt;is connected to or can connect to the VPN or private &lt;code&gt;10.0.0.101&lt;/code&gt; server,&lt;/li&gt;
+&lt;li&gt;has no services running on port 80&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Second, the certbot utility must be run on the publicly-accessible server to request a new or renewed
+  certificate &lt;code&gt;foobar.limo&lt;/code&gt;. This will put the new or renewed &lt;code&gt;foobar.limo&lt;/code&gt; cert files into
+  &lt;code&gt;/etc/letsencrypt/live&lt;/code&gt;.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;Third, the LetsEncrypt certificates are owned by the root user, they must be owned by the root user on the
+  remote machine they are copied to, and SSH/SCP via the root user is (or should be!) prohibited,
+  the certificate files must be compressed using tar, so they can be copied as a non-root user;
+  and on the remote machine, they must be uncompressed to the appropriate location.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;(Yes, there is always a &lt;a href="https://xkcd.com/1168/"&gt;relevant XKCD&lt;/a&gt;.)&lt;/p&gt;
+&lt;p&gt;In this post, we cover how this works, and why you might want to do this.&lt;/p&gt;
+&lt;h2 id="create-certificates"&gt;Create Certificates&lt;/h2&gt;
+&lt;p&gt;The first time you create a private VPN certificate on a machine:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Log into the DNS provider&lt;/li&gt;
+&lt;li&gt;Create a DNS record - type A, pointing to the IP address of the public server.&lt;/li&gt;
+&lt;li&gt;Run the certbot command to create a certificate on the public server (see below).&lt;/li&gt;
+&lt;li&gt;Copy the certificates to the private VPN node using scp (see below).&lt;/li&gt;
+&lt;li&gt;Update the DNS record - type A, to point to the private VPN IP address of the private server.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="certbot-command"&gt;Certbot Command&lt;/h3&gt;
+&lt;p&gt;Command to create a certbot certificate (must be run as sudo):&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;#!/bin/bash
+if [ &amp;quot;$(id -u)&amp;quot; != &amp;quot;0&amp;quot; ]; then
+    echo &amp;quot;&amp;quot;
+    echo &amp;quot;&amp;quot;
+    echo &amp;quot;This script should be run as root.&amp;quot;
+    echo &amp;quot;&amp;quot;
+    echo &amp;quot;&amp;quot;
+    exit 1;
+fi
+
+set -x
+
+DOM=&amp;quot;foobar.limo&amp;quot;
+
+certbot certonly \
+    --standalone \
+    --non-interactive \
+    --agree-tos \
+    --email test@example.com \
+    -d ${DOM}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This command requires port 80 be available (the &lt;code&gt;--standalone&lt;/code&gt; flag starts a standalone web server
+that binds to port 80). If port 80 is being used this command will fail to run and the cert will not be created.&lt;/p&gt;
+&lt;h3 id="tar-compress-certs-command"&gt;Tar Compress Certs Command&lt;/h3&gt;
+&lt;p&gt;Archive on the public server:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;DOM=&amp;quot;foobar.limo&amp;quot;
+sudo tar -chvzf foobar_certs.tar.gz \
+    /etc/letsencrypt/archive/${DOM} \
+    /etc/letsencrypt/renewal/${DOM}.conf \
+    /etc/letsencrypt/live/${DOM}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3 id="secure-copy-certs-command"&gt;Secure Copy Certs Command&lt;/h3&gt;
+&lt;p&gt;Use scp to copy certs to private remote machine:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;scp foobar_certs.tar.gz user@10.0.0.101:~/
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h3 id="untar-certs-command"&gt;Untar Certs Command&lt;/h3&gt;
+&lt;p&gt;On the private remote machine, untar the certs file copied over:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;cd /
+sudo tar -xvf ~/foobar_certs.tar.gz
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Last, fix permissions for cert directories:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;sudo chmod 700 /etc/letsencrypt/archive
+sudo chmod -R 755 /etc/letsencrypt/archive/*
+sudo chmod 700 /etc/letsencrypt/live
+sudo chmod -R 755 /etc/letsencrypt/live/*
+sudo chmod 700 /etc/letsencrypt/archive
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2 id="renew-certificates"&gt;Renew Certificates&lt;/h2&gt;
+&lt;p&gt;When you renew a private VPN certificate on a machine:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Log into the DNS provider&lt;/li&gt;
+&lt;li&gt;Update the DNS record to a type A, pointing to the IP adress of the public server.&lt;/li&gt;
+&lt;li&gt;Run the certbot command to renew a certificate on the public server (see above).&lt;/li&gt;
+&lt;li&gt;Copy the certificates to the private VPN node (see above).&lt;/li&gt;
+&lt;li&gt;Restore the DNS record - type A, to point to the private VPN IP address of private server again.&lt;/li&gt;
+&lt;/ul&gt;</content><category term="Security"></category><category term="letsencrypt"></category><category term="ssl"></category><category term="https"></category><category term="certificates"></category></entry><entry><title>How to Read Ulysses</title><link href="https://charlesreid1.github.io/how-to-read-ulysses.html" rel="alternate"></link><published>2022-03-02T21:00:00-08:00</published><updated>2022-03-02T21:00:00-08:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2022-03-02:/how-to-read-ulysses.html</id><summary type="html">&lt;div class="toc"&gt;&lt;span class="toctitle"&gt;Table of Contents&lt;/span&gt;&lt;ul&gt;
 &lt;li&gt;&lt;a href="#a-little-bit-about-ulysses"&gt;A Little Bit About Ulysses&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#how-we-read-ulysses"&gt;How We Read Ulysses&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#two-parallel-routes-through-ulysses"&gt;Two Parallel Routes Through Ulysses&lt;/a&gt;&lt;ul&gt;

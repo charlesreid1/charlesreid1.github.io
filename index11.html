@@ -102,6 +102,233 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Five Letter Words: Part 4: Revisiting Diff by One
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-03-10T10:00:00-07:00" pubdate>Sunday 03/10/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/five-letter-words-part-4-revisiting-diff-by-one.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#about-the-five-letter-words">About the Five-Letter Words</a></li>
+<li><a href="#different-by-1-revisited">Different by 1, Revisited</a></li>
+<li><a href="#different-by-n-revisited">Different by N, Revisited</a></li>
+</ul>
+</div>
+<h2 id="about-the-five-letter-words">About the Five-Letter Words</h2>
+<p>In Volume 4, Facsimile 0 of Donald Knuth's <u>Art of Computer Programming</u>, 
+in which Knuth covers graph theory, he introduces a list of five-letter words
+as part of a data set useful in exploring graph theory and graph algorithms.</p>
+<p>The <a href="https://github.com/charlesreid1/five-letter-words/blob/master/sgb-words.txt">list of words</a> 
+is part of the <a href="http://www3.cs.stonybrook.edu/~algorith/implement/graphbase/implement.shtml">Stanford Graph Base</a>, 
+a set of data sets that are useful for studying graph theory and networks.</p>
+<p>See <a href="https://charlesreid1.com/wiki/Five_Letter_Words">Five Letter Words</a>
+on the charlesreid1.com wiki for details.</p>
+<h2 id="different-by-1-revisited">Different by 1, Revisited</h2>
+<p>This post is revisiting an exercise from the above volume,
+Exercise 28:</p>
+<blockquote>
+<p>Find pairs of SGB word vectors that differ by
++/- 1 in each component.</p>
+</blockquote>
+<p>In a prior blog post (<a href="#">Part 1</a>),
+we had inerpreted the question as finding
+word vectors whose Euclidean distance differed
+by 1 total, which is the same as a Hamming
+distance of 1.</p>
+<p>However, on revisiting the (more interesting)
+question actually being posed by the author,
+we find a different and more difficult problem.</p>
+<p>As an example of what Knuth is asking for:</p>
+<div class="highlight"><pre><span></span><code>rover -&gt; spuds
+</code></pre></div>
+
+<p>Each letter of the words are within an edit
+distance of 1, at each position.</p>
+<p>There are 38 such pairs:</p>
+<div class="highlight"><pre><span></span><code>$ python diff_by_one_fixed.py
+abaft babes
+absit baths
+adder beefs
+ambit blahs
+anger boffs
+anode boned
+bider chefs
+bidet chefs
+biffs cheer
+ghost hints
+hobos inapt
+holds inker
+honed inode
+hoods inner
+hoofs inner
+hoots input
+hoped inode
+ingot johns
+needs odder
+needs offer
+rider sheds
+rifer sheds
+rinds shoer
+robed spade
+robot snaps
+robot spans
+rover spuds
+ruffs steer
+runts stout
+rusts strut
+sheer tiffs
+sheet tiffs
+shout tints
+sides theft
+sneer toffs
+splat tombs
+spuds toter
+stuns tutor
+Found 38 pairs of words that differ by +/-1 in each component.
+</code></pre></div>
+
+<p>The approach we used was as follows:</p>
+<ul>
+<li>Iterate over each word in the wordlist
+  (use the first 1,000 words to keep it
+  shorter for testing)</li>
+<li>For each word:</li>
+<li>Generate all variations that are within +/-1 
+    using recursive backtracking (could also use
+    algorithm to generate all 32 binary codes of 
+    length 5, where 0 = -1, 1 = +1)</li>
+<li>For each of the 32 variations,<ul>
+<li>Check if the word is in the wordset
+  (O(1) cost if using a hash table/set)</li>
+<li>If so, add ordered pair (word1,word2)
+  to a set of solutions (to avoid dupes)</li>
+</ul>
+</li>
+</ul>
+<h2 id="different-by-n-revisited">Different by N, Revisited</h2>
+<p>We went back and modified the code to take a
+distance parameter d, but storage and compute
+cost, as well as the sparsity of the graph of
+shared bigrams and trigrams among these 5,000
+words, means the number of pairs increases 
+exponentially.</p>
+<div class="highlight"><pre><span></span><code>| Distance  | Number of pairs   | Walltime       |
+|-----------|-------------------|----------------|
+| 1         | 38                |     0.26 s     |
+| 2         | 525               |     5.26 s     |
+| 3         | 4982              |    38.87 s     |
+| 4         | ?? (10^5 est.)    |  10 min (est.) |
+</code></pre></div>
+
+<p>You can find the <code>diff_by_n.py</code> script here:
+<a href="https://git.charlesreid1.com/cs/five-letter-words/">https://git.charlesreid1.com/cs/five-letter-words/</a></p>
+<p>The output:</p>
+<div class="highlight"><pre><span></span><code>$ python diff_by_n.py
+abaft babes
+absit baths
+adder beefs
+ambit blahs
+anger boffs
+anode boned
+bider chefs
+bidet chefs
+biffs cheer
+ghost hints
+..
+Found 38 pairs of words that differ by +/-1 in each component.
+Time: 0.2673 s
+
+aback babel
+aback cabal
+abaft babes
+abash cacti
+abide baked
+abide caged
+abide caked
+abler bands
+abler bangs
+abode caned
+...
+Found 525 pairs of words that differ by +/-2 in each component.
+Time: 5.2617 s
+
+abaca ceded
+abaci babel
+abaci cabal
+abaci decaf
+abaci decal
+aback babel
+aback cabal
+aback decal
+abaft babes
+abaft bedew
+...
+Found 4982 pairs of words that differ by +/-3 in each component.
+Time: 38.8743 s
+</code></pre></div></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/art-of-computer-programming.html">art of computer programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/knuth.html">knuth</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/five-letter-words.html">five letter words</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 centillion: a document search engine
             </b></h1>
         
@@ -314,283 +541,6 @@ and contains silly things like gophers.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                A Few of My Favorite PEPs
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-02-11T12:00:00-08:00" pubdate>Monday 02/11/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/a-few-of-my-favorite-peps.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
-<ul>
-<li><a href="#fav">What's your favorite PEP?</a></li>
-<li><a href="#p0">PEP 0</a></li>
-<li><a href="#p8">PEP 8</a></li>
-<li><a href="#p20">PEP 20</a></li>
-<li><a href="#p3099">PEP 3099</a><ul>
-<li><a href="#2to3">Addendum: 2 to 3 Changes</a></li>
-</ul>
-</li>
-<li><a href="#p202">PEP 202</a></li>
-<li><a href="#gh">All the PEPs on Github</a></li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="fav"></a></p>
-<h2 id="whats-your-favorite-pep">What's your favorite PEP?</h2>
-<p>PEPs, or <strong>Python Enhancement Proposals</strong>, are documents in which
-features, additions, or general ideas are proposed as additions
-to the core Python language.</p>
-<p>As a Python user, we believe it's important to ask questions like this.</p>
-<p>Picking a "favorite PEP" is not just about having a ready and clever
-answer to a question you might expect in a technical interview;
-the PEP documents really <em>are</em> important, and really <em>do</em> shape 
-where Python is today and where it will be in the future.</p>
-<p>So let's look at a few of our favorite PEPs.</p>
-<p><a name="p0"></a></p>
-<h2 id="pep-0-the-pep-index">PEP 0: The PEP Index</h2>
-<p>PEP0 - the easiest answer to the question, "what's your favorite PEP?"</p>
-<p><a href="https://www.python.org/dev/peps/">PEP 0 - Index of Python Enhancement Proposals (PEPs)</a>
-lists all PEPs, including PEPs about PEPs, accepted PEPs, open PEPs,
-finished PEPs, informational PEPs, and abandoned PEPs.</p>
-<p>This is also a good place to search for a keyword or browse PEPs.</p>
-<p>This PEP is the favorite of people who love enumerations, library card catalogs,
-biblical genealogies, and litanies.</p>
-<p><a name="p8"></a></p>
-<h2 id="pep-8-the-python-style-guide">PEP 8: The Python Style Guide</h2>
-<p><a href="https://www.python.org/dev/peps/pep-0008/">PEP 8</a>
-covers the recommended Python style.
-It is a surprisingly quick read.</p>
-<p>This PEP dishes "official" opinions about 
-controversial topics such as:</p>
-<ul>
-<li>tabs or spaces (spoiler: <strong><em>spaces</em></strong>)</li>
-<li>line width</li>
-<li>whitespace</li>
-<li>naming conventions for variables, classes, and modules</li>
-</ul>
-<p>This PEP is the chosen favorite of those programmers who keep their
-crayons organized in the correct color order.</p>
-<p><a name="p20"></a></p>
-<h2 id="pep-20-the-zen-of-python">PEP 20: The Zen of Python</h2>
-<p><a href="https://www.python.org/dev/peps/pep-0020/">PEP 20</a> contains
-20 aphorisms that compose the Zen of Python - only 19 of which
-are contained in the PEP...</p>
-<p>Also available from Python via:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; import this
-</code></pre></div>
-
-<p>Many of the aphorisms in PEP 20 come in pairs.</p>
-<p>The first seven alone compose an excellent philosophy of programming.
-Six symmetric rules:</p>
-<div class="highlight"><pre><span></span><code>Beautiful is better than ugly.
-
-Explicit is better than implicit.
-
-Simple is better than complex.
-
-Complex is better than complicated.
-
-Flat is better than nested.
-
-Sparse is better than dense.
-</code></pre></div>
-
-<p>The seventh, one of the principal ideas behind Python:</p>
-<div class="highlight"><pre><span></span><code>Readability counts.
-</code></pre></div>
-
-<p>The next pair of aphorisms is important to our own style of programming:</p>
-<div class="highlight"><pre><span></span><code>Special cases aren&#39;t special enough to break the rules.
-
-Although practicality beats purity.
-</code></pre></div>
-
-<p>The latter aphorism is an acknowledgement that, ultimately, programming
-is a means to an end, and Python (or whatever programming language you use)
-should not <em>get in the way</em> of reaching that end - especially not for the
-sake of some abstract principle or theory. </p>
-<p>PEP 20 weighs in on errors:</p>
-<div class="highlight"><pre><span></span><code>Errors should never pass silently.
-
-Unless explicitly silenced.
-</code></pre></div>
-
-<p>Slightly perplexing:</p>
-<div class="highlight"><pre><span></span><code>In the face of ambiguity, refuse the temptation to guess.
-</code></pre></div>
-
-<p>More pairs:</p>
-<div class="highlight"><pre><span></span><code>There should be one-- and preferably only one -- obvious way to do it.
-
-Although that way may not be obvious at first unless you&#39;re Dutch.
-</code></pre></div>
-
-<p>From the <a href="https://en.wikipedia.org/wiki/Guido_van_Rossum">Wikipedia page on Guido van Rossum</a>:</p>
-<blockquote>
-<p>Guido van Rossum is a Dutch programmer...</p>
-</blockquote>
-<div class="highlight"><pre><span></span><code>Now is better than never.
-
-Although never is often better than *right* now.
-</code></pre></div>
-
-<p>That last one sounds like an excuse for procrastination.</p>
-<div class="highlight"><pre><span></span><code>If the implementation is hard to explain, it&#39;s a bad idea.
-
-If the implementation is easy to explain, it may be a good idea.
-</code></pre></div>
-
-<p>Finally, the last aphorism covers the reason you never see 
-<code>from module import *</code>:</p>
-<div class="highlight"><pre><span></span><code>Namespaces are one honking great idea - let&#39;s do more of those!
-</code></pre></div>
-
-<p>Namespaces, in this case, come from importing everything in 
-a Python package into a particular variable name - like 
-<code>import itertools</code> or <code>import numpy as np</code>.</p>
-<p>It turns out that, yes, in fact, namespaces are a great idea!</p>
-<p><a name="p3099"></a></p>
-<h2 id="pep-3099-things-that-will-not-change-in-python-3000">PEP 3099: Things That Will Not Change in Python 3000</h2>
-<p>We can't really decide what we enjoy most about <a href="https://www.python.org/dev/peps/pep-3099/">PEP 3099</a>.
-Maybe it's the fact that it does the opposite of what most 
-proclamations of a new major version do, which is, to say
-what new features it will <em>not</em> have.
-Maybe it's the way the language's creators demonstrate how well
-they have learned from the mistakes of others who adopt
-the "Burn it to the ground and rewrite from scratch"
-philosophy. Or maybe it's the delightful nostalgia of 
-"Python 3000".</p>
-<p>In any case, PEP 3099 is an instructive read, because any feature
-that will explicitly be kept during a major version bump is clearly
-either (a) useful, (b) important, or (c) both. Additionally, it 
-gives some insight into the design decisions made when Python
-was implemented ("Why does Python do X this way, instead of 
-some other easier way?").</p>
-<p>Not only that, you also get to walk through a graveyard of
-abandoned (but still interesting) ideas, and the links given
-in the PEP to the Python mailing list can provide additional
-useful information.</p>
-<p><a name="2to3"></a></p>
-<h2 id="addendum-peps-affecting-2-to-3-changes">Addendum: PEPs Affecting 2 to 3 Changes</h2>
-<p>In contrast to PEP 3099, which contains a list of all the things
-that <em>did not</em> change in Python 3, there were a large number of
-PEPs that <em>did</em> cause Python 3 to behave differently from Python 2.</p>
-<ul>
-<li><a href="https://www.python.org/dev/peps/pep-0237">PEP 237</a>: Unified long integers and integers</li>
-<li><a href="https://www.python.org/dev/peps/pep-0238">PEP 238</a>: Changed the division operator</li>
-<li><a href="https://www.python.org/dev/peps/pep-0412">PEP 412</a>: Key-sharing dictionary</li>
-<li><a href="https://www.python.org/dev/peps/pep-0428">PEP 428</a>: Object-oriented filesystem paths</li>
-<li><a href="https://www.python.org/dev/peps/pep-0435">PEP 435</a>: Adding enum type</li>
-<li><a href="https://www.python.org/dev/peps/pep-0448">PEP 448</a>: Unpacking</li>
-<li><a href="https://www.python.org/dev/peps/pep-0450">PEP 450</a>: Adding stats to standard library</li>
-<li><a href="https://www.python.org/dev/peps/pep-0498">PEP 498</a>: Literal string interpolation</li>
-<li><a href="https://www.python.org/dev/peps/pep-0515">PEP 515</a>: Underscores in numeric literals</li>
-<li><a href="https://www.python.org/dev/peps/pep-3101">PEP 3101</a>: Advanced string formatting</li>
-<li><a href="https://www.python.org/dev/peps/pep-3102">PEP 3102</a>: Keyword-only arguments</li>
-<li><a href="https://www.python.org/dev/peps/pep-3105">PEP 3105</a>: Make print a function</li>
-<li><a href="https://www.python.org/dev/peps/pep-3111">PEP 3111</a>: User input in Python 3000</li>
-<li><a href="https://www.python.org/dev/peps/pep-3114">PEP 3114</a>: Renaming <code>next()</code> to <code>__next__()</code></li>
-<li><a href="https://www.python.org/dev/peps/pep-3135">PEP 3135</a>: Super behavior</li>
-</ul>
-<p><a name="p202"></a></p>
-<h2 id="pep-202-list-comprehensions">PEP 202: List Comprehensions</h2>
-<p>Of course, picking your favorite PEP can also be an opportunity
-to make a statement about your favorite language feature of Python,
-since many of Python's most useful language features got their start 
-as PEPs.</p>
-<p>For us, list comprehensions (covered in <a href="https://www.python.org/dev/peps/pep-0202/">PEP 202</a>)
-area clear winner in any competition of most useful language features. 
-List comprehensions are a way of shortening for loop syntax, making it
-much easier to perform map and filtering operations. Some examples
-from PEP 202:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print([i for i in range(20) if i%2 == 0])
-[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
-
-&gt;&gt;&gt; nums = [1, 2, 3, 4]
-
-&gt;&gt;&gt; fruit = [&quot;Apples&quot;, &quot;Peaches&quot;, &quot;Pears&quot;, &quot;Bananas&quot;]
-
-&gt;&gt;&gt; print [(i, f) for i in nums for f in fruit]
-[(1, &#39;Apples&#39;), (1, &#39;Peaches&#39;), (1, &#39;Pears&#39;), (1, &#39;Bananas&#39;),
- (2, &#39;Apples&#39;), (2, &#39;Peaches&#39;), (2, &#39;Pears&#39;), (2, &#39;Bananas&#39;),
- (3, &#39;Apples&#39;), (3, &#39;Peaches&#39;), (3, &#39;Pears&#39;), (3, &#39;Bananas&#39;),
- (4, &#39;Apples&#39;), (4, &#39;Peaches&#39;), (4, &#39;Pears&#39;), (4, &#39;Bananas&#39;)]
-
-&gt;&gt;&gt; print([(i, f) for i in nums for f in fruit if f[0] == &quot;P&quot;])
-[(1, &#39;Peaches&#39;), (1, &#39;Pears&#39;),
- (2, &#39;Peaches&#39;), (2, &#39;Pears&#39;),
- (3, &#39;Peaches&#39;), (3, &#39;Pears&#39;),
- (4, &#39;Peaches&#39;), (4, &#39;Pears&#39;)]
-
-&gt;&gt;&gt; print([(i, f) for i in nums for f in fruit if f[0] == &quot;P&quot; if i%2 == 1])
-[(1, &#39;Peaches&#39;), (1, &#39;Pears&#39;), (3, &#39;Peaches&#39;), (3, &#39;Pears&#39;)]
-
-&gt;&gt;&gt; print([i for i in zip(nums, fruit) if i[0]%2==0])
-[(2, &#39;Peaches&#39;), (4, &#39;Bananas&#39;)]
-</code></pre></div>
-
-<p>List comprehensions enable code to be short but expressive, 
-brief but elegant. Brevity is the soul of wit, after all.</p>
-<p><a name="gh"></a></p>
-<h2 id="all-the-peps-on-github">All the PEPs on Github</h2>
-<p><a href="https://github.com/python/peps">All the PEPs are available on Github.</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/pep.html">pep</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -626,6 +576,9 @@ brief but elegant. Brevity is the soul of wit, after all.</p>
 
             <h2>March 2022</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/copying-letsencrypt-certs-between-machines.html">Copying LetsEncrypt Certs Between Machines</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/how-to-read-ulysses.html">How to Read Ulysses</a>
             </p>
