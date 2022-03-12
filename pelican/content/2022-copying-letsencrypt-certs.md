@@ -140,5 +140,6 @@ When you renew a private VPN certificate on a machine:
 * Update the DNS record to a type A, pointing to the IP adress of the public server.
 * Run the certbot command to renew a certificate on the public server (see above).
 * Copy the certificates to the private VPN node (see above).
+* Untar the certificates into place on the private VPN node (see above).
 * Restore the DNS record - type A, to point to the private VPN IP address of private server again.
 
