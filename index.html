@@ -102,198 +102,6 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Copying LetsEncrypt Certs Between Machines
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2022-03-11T17:00:00-08:00" pubdate>Friday 03/11/2022</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/copying-letsencrypt-certs-between-machines.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#https-ssl-certificates-and-letsencrypt">HTTPS, SSL Certificates, and LetsEncrypt</a></li>
-<li><a href="#create-certificates">Create Certificates</a><ul>
-<li><a href="#certbot-command">Certbot Command</a></li>
-<li><a href="#tar-compress-certs-command">Tar Compress Certs Command</a></li>
-<li><a href="#secure-copy-certs-command">Secure Copy Certs Command</a></li>
-<li><a href="#untar-certs-command">Untar Certs Command</a></li>
-</ul>
-</li>
-<li><a href="#renew-certificates">Renew Certificates</a></li>
-</ul>
-</div>
-<p>A quick post that details a useful operation: copying LetsEncrypt certificates
-from one machine to another.</p>
-<p>(We also cover our use case: setting up certificates for private VPN networks
-that use public DNS entries.)</p>
-<h2 id="https-ssl-certificates-and-letsencrypt">HTTPS, SSL Certificates, and LetsEncrypt</h2>
-<p>As a bit of background, the whole reason this is necessary, the whole reason we are dealing with
-the hassle of setting up SSL certificates, is to enable end-to-end encrypted connections to
-a server.</p>
-<p>For example, we might have a web application that we want to make available over a VPN network.
-The web application would have a private IP address on the VPN network, say <code>10.0.0.101</code>.</p>
-<p>Now, what we want is for clients connected to the VPN to be able to visit a domain, say
-<code>foobar.limo</code>, and be able to make encrypted connections to the web service at <code>10.0.0.101</code>.</p>
-<p>We can do this (assuming we control the foobar.limo domain) by creating a public DNS entry
-for <code>foobar.limo</code> to point to <code>10.0.0.101</code>. Then when visitors type <code>foobar.limo</code> into their
-browser, if they are connected to the VPN they will reach the web service at <code>10.0.0.101</code>.</p>
-<p>To make connections encrypted, however, so that users can type <code>https://foobar.limo</code> and make an
-encrypted connection to the server at <code>10.0.0.101</code>, the server must have an SSL certificate
-for the <code>foobar.limo</code> domain.</p>
-<p>Assuming the web service at <code>10.0.0.101</code> cannot be reached from the outside world,
-it becomes necessary to perform several extra steps to enable SSL on the <code>10.0.0.101</code> server:</p>
-<ul>
-<li>
-<p>First, the DNS entry for <code>foobar.limo</code> must be temporarily updated to point to a server that:</p>
-<ul>
-<li>has a publicly-accessible IP address,</li>
-<li>has LetsEncrypt and certbot installed,</li>
-<li>is connected to or can connect to the VPN or private <code>10.0.0.101</code> server,</li>
-<li>has no services running on port 80</li>
-</ul>
-</li>
-<li>
-<p>Second, the certbot utility must be run on the publicly-accessible server to request a new or renewed
-  certificate <code>foobar.limo</code>. This will put the new or renewed <code>foobar.limo</code> cert files into
-  <code>/etc/letsencrypt/live</code>.</p>
-</li>
-<li>
-<p>Third, the LetsEncrypt certificates are owned by the root user, they must be owned by the root user on the
-  remote machine they are copied to, and SSH/SCP via the root user is (or should be!) prohibited,
-  the certificate files must be compressed using tar, so they can be copied as a non-root user;
-  and on the remote machine, they must be uncompressed to the appropriate location.</p>
-</li>
-</ul>
-<p>(Yes, there is always a <a href="https://xkcd.com/1168/">relevant XKCD</a>.)</p>
-<p>In this post, we cover how this works, and why you might want to do this.</p>
-<h2 id="create-certificates">Create Certificates</h2>
-<p>The first time you create a private VPN certificate on a machine:</p>
-<ul>
-<li>Log into the DNS provider</li>
-<li>Create a DNS record - type A, pointing to the IP address of the public server.</li>
-<li>Run the certbot command to create a certificate on the public server (see below).</li>
-<li>Copy the certificates to the private VPN node using scp (see below).</li>
-<li>Update the DNS record - type A, to point to the private VPN IP address of the private server.</li>
-</ul>
-<h3 id="certbot-command">Certbot Command</h3>
-<p>Command to create a certbot certificate (must be run as sudo):</p>
-<div class="highlight"><pre><span></span><code>#!/bin/bash
-if [ &quot;$(id -u)&quot; != &quot;0&quot; ]; then
-    echo &quot;&quot;
-    echo &quot;&quot;
-    echo &quot;This script should be run as root.&quot;
-    echo &quot;&quot;
-    echo &quot;&quot;
-    exit 1;
-fi
-
-set -x
-
-DOM=&quot;foobar.limo&quot;
-
-certbot certonly \
-    --standalone \
-    --non-interactive \
-    --agree-tos \
-    --email test@example.com \
-    -d ${DOM}
-</code></pre></div>
-
-<p>This command requires port 80 be available (the <code>--standalone</code> flag starts a standalone web server
-that binds to port 80). If port 80 is being used this command will fail to run and the cert will not be created.</p>
-<h3 id="tar-compress-certs-command">Tar Compress Certs Command</h3>
-<p>Archive on the public server:</p>
-<div class="highlight"><pre><span></span><code>DOM=&quot;foobar.limo&quot;
-sudo tar -chvzf foobar_certs.tar.gz \
-    /etc/letsencrypt/archive/${DOM} \
-    /etc/letsencrypt/renewal/${DOM}.conf \
-    /etc/letsencrypt/live/${DOM}
-</code></pre></div>
-
-<h3 id="secure-copy-certs-command">Secure Copy Certs Command</h3>
-<p>Use scp to copy certs to private remote machine:</p>
-<div class="highlight"><pre><span></span><code>scp foobar_certs.tar.gz user@10.0.0.101:~/
-</code></pre></div>
-
-<h3 id="untar-certs-command">Untar Certs Command</h3>
-<p>On the private remote machine, untar the certs file copied over:</p>
-<div class="highlight"><pre><span></span><code>cd /
-sudo tar -xvf ~/foobar_certs.tar.gz
-</code></pre></div>
-
-<p>Last, fix permissions for cert directories:</p>
-<div class="highlight"><pre><span></span><code>sudo chmod 700 /etc/letsencrypt/archive
-sudo chmod -R 755 /etc/letsencrypt/archive/*
-sudo chmod 700 /etc/letsencrypt/live
-sudo chmod -R 755 /etc/letsencrypt/live/*
-sudo chmod 700 /etc/letsencrypt/archive
-</code></pre></div>
-
-<h2 id="renew-certificates">Renew Certificates</h2>
-<p>When you renew a private VPN certificate on a machine:</p>
-<ul>
-<li>Log into the DNS provider</li>
-<li>Update the DNS record to a type A, pointing to the IP adress of the public server.</li>
-<li>Run the certbot command to renew a certificate on the public server (see above).</li>
-<li>Copy the certificates to the private VPN node (see above).</li>
-<li>Untar the certificates into place on the private VPN node (see above).</li>
-<li>Restore the DNS record - type A, to point to the private VPN IP address of private server again.</li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/letsencrypt.html">letsencrypt</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ssl.html">ssl</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/https.html">https</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/certificates.html">certificates</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
                 How to Read Ulysses
             </b></h1>
         
@@ -668,6 +476,149 @@ to add an Overview section, you'll know it.</p>
 
 <div class="v200"></div>
   	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                MediaWiki Patterns for a Zettelkasten: Organizing Pages
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2022-02-04T16:00:00-08:00" pubdate>Friday 02/04/2022</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/zettelkasten.html">Zettelkasten</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/mediawiki-patterns-for-a-zettelkasten-organizing-pages.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#what-is-a-zettelkasten">What is a Zettelkasten?</a></li>
+<li><a href="#organizing-a-page">Organizing a Page</a></li>
+<li><a href="#what-problem-are-we-trying-to-solve">What Problem Are We Trying To Solve?</a></li>
+<li><a href="#pattern-1-reserve-top-level-sections">Pattern 1: Reserve Top Level Sections</a></li>
+<li><a href="#pattern-2-taking-notes-chronologically">Pattern 2: Taking Notes Chronologically</a></li>
+<li><a href="#pattern-3-subpages">Pattern 3: Subpages</a></li>
+<li><a href="#more-details">More Details</a></li>
+</ul>
+</div>
+<p>This post is part 4 of a series.</p>
+<h2 id="what-is-a-zettelkasten">What is a Zettelkasten?</h2>
+<p>See <a href="https://charlesreid1.github.io/using-mediawiki-as-a-zettelkasten-or-external-brain.html">Part 1</a> of this series for a little more background on what we're
+talking about! But basically:</p>
+<ul>
+<li>
+<p>A zettelkasten is a system of note-taking, where notes are kept simple
+  and tags, or categories, are added to notes to interlink them and create
+  a network of connected notes that aid in discovery and memory.</p>
+</li>
+<li>
+<p>MediaWiki (the software that runs Wikipedia) is a mature PHP software package
+  for creating a wiki, that has many built-in features that make it very amenable
+  for use as a zettelkasten.</p>
+</li>
+</ul>
+<h2 id="organizing-a-page">Organizing a Page</h2>
+<p>The way that pages are organized on a wiki is central to the way the entire wiki is structured. While it may seem
+like a trivial topic that anyone can figure out as they go, a zettelkasten is intended to hold notes accumulated
+over many years, and as pages accumulate more information they can start to become inconsistent, crowded, and
+messy.</p>
+<p>We are here with some battle-tested patterns to help manage that mess and keep pages organized and useful
+(for all of the many purposes a note in a zettelkasten may need to serve) for years to come.</p>
+<p>The three patterns we use to help organize pages on the MediaWiki zettelkasten are:</p>
+<ol>
+<li>Reserve top-level headers for meta-level page organization (different sections for different uses of the page).</li>
+<li>Take notes chronologically in a top-level Notes section.</li>
+<li>Move information to sub-pages as it accumulates or if requires more room.</li>
+</ol>
+<h2 id="what-problem-are-we-trying-to-solve">What Problem Are We Trying To Solve?</h2>
+<p>To understand what problem these patterns are trying to solve, suppose you have your MediaWiki zettelkasten, and
+you start a single note that is on a broad topic. The note might start with a simple structure, have its own
+internal logic, and be organized consistently. Easy as that!</p>
+<p>But now suppose you come back to that same topic three months later, with a different perspective and a different
+purpose. Maybe you're starting a new project, and re-using some information from the existing note but also adding new
+information. Or maybe you learned some new information that changes the way the page should be organized.</p>
+<p>With a page in place, with its own structure and organization and logic, it can be difficult to know where to
+incorporate new information down the road. The ideal note-taking system eliminates that kind of internal friction,
+and makes it as easy as possible to capture new information, without the cognitive burden of having to reorganize
+the page again and again.</p>
+<h2 id="pattern-1-reserve-top-level-sections">Pattern 1: Reserve Top Level Sections</h2>
+<p>This strategy is a small and easy-to-implement change in how new pages are created, that keeps the page flexible
+for multiple different uses. </p>
+<p>The strategy is this: when creating a page, the initial version of the page should only use second-level or deeper
+section headers, so any section like <code>=Specifications=</code> would become <code>==Specifications==</code>.</p>
+<p>Yup, that's it! We also have a simple example of a MediaWiki page before/after applying this pattern here:
+<a href="https://charlesreid1.com/wiki/Zettelkasten/Patterns/Page_Organization#Pattern_1:_Reserve_Top_Level_Sections">https://charlesreid1.com/wiki/Zettelkasten/Patterns/Page_Organization#Pattern_1:_Reserve_Top_Level_Sections</a></p>
+<h2 id="pattern-2-taking-notes-chronologically">Pattern 2: Taking Notes Chronologically</h2>
+<p>We reserve top-level headers for dividing the page based on its different uses. If we want to start taking notes,
+we can add a top-level Notes section to the bottom and start taking notes there. </p>
+<p>To keep notes organized chronologically, we add a second-level header with the year, month, and date. That way,
+while we're taking notes, we don't have to worry about how to incorporate the information into the existing
+"Overview" information, or try and filter the information as we go. We add notes to the notes section, and can copy
+or move information to other parts of the page later. </p>
+<p>Here is a simple example of a MediaWiki page after applying this pattern:
+<a href="https://charlesreid1.com/wiki/Zettelkasten/Patterns/Page_Organization#Pattern_2:_Taking_Notes_Chronologically">https://charlesreid1.com/wiki/Zettelkasten/Patterns/Page_Organization#Pattern_2:_Taking_Notes_Chronologically</a></p>
+<h2 id="pattern-3-subpages">Pattern 3: Subpages</h2>
+<p>While following the pattern covered above, you might find that on a particular day, working on a particular task,
+the notes for that task end up being much more complicated than initially expected - it might involve research,
+links, tasks, notes, and in general require more room than the sub-sub-subsection allotted to it by using the
+two patterns we have covered.</p>
+<p>In that situation, you can replace the sub-sub-section's text with a link to a subpage (for example, on the
+<code>[[Foobar]]</code> page, if you are working on Baz and it gets complicated, you create a subpage <code>[[Foobar/Baz]]</code>).
+The original page should link to the subpage, and vice-versa, to make it easy to navigate. Any relevant
+Category tags should also be added to the subpage, to help make it findable.</p>
+<p>This page shows another simple MediaWiki example page showing the subpage pattern in action:
+<a href="https://charlesreid1.com/wiki/Zettelkasten/Patterns/Page_Organization#Pattern_3:_Subpages">https://charlesreid1.com/wiki/Zettelkasten/Patterns/Page_Organization#Pattern_3:_Subpages</a></p>
+<h2 id="more-details">More Details</h2>
+<p>For more details, see the full writeup on our (public non-zettelkasten!) wiki here:
+<a href="https://charlesreid1.com/wiki/Zettelkasten/Patterns/Page_Organization">https://charlesreid1.com/wiki/Zettelkasten/Patterns/Page_Organization</a></p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/zettelkasten.html">zettelkasten</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mediawiki.html">mediawiki</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/note-taking.html">note taking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/memory.html">memory</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -697,9 +648,6 @@ to add an Overview section, you'll know it.</p>
 
             <h2>March 2022</h2>
 
-            <p class="archive">
-            <a href="https://charlesreid1.github.io/copying-letsencrypt-certs-between-machines.html">Copying LetsEncrypt Certs Between Machines</a>
-            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/how-to-read-ulysses.html">How to Read Ulysses</a>
             </p>
@@ -756,6 +704,19 @@ to add an Overview section, you'll know it.</p>
             </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/june-2021-tils.html">June 2021 TILs</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>August 2020</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/copying-letsencrypt-certs-between-machines.html">Copying LetsEncrypt Certs Between Machines</a>
             </p>
 
         </div>
