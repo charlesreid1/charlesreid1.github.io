@@ -102,6 +102,370 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Shortest Lattice Paths and Multiset Permutations
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-07-18T08:00:00-07:00" pubdate>Tuesday 07/18/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/shortest-lattice-paths-and-multiset-permutations.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#the-lattice-paths-problem">The Lattice Paths Problem</a></li>
+<li><a href="#problem-formulation-permutations">Problem Formulation: Permutations</a><ul>
+<li><a href="#permutations-of-unique-items-factorial">Permutations of Unique Items (Factorial)</a></li>
+<li><a href="#permutations-of-items-with-duplicates-multichoose">Permutations of Items with Duplicates (Multichoose)</a></li>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#solving-2d-rectangular-lattice">Solving 2D Rectangular Lattice</a><ul>
+<li><a href="#more-examples">More Examples</a></li>
+</ul>
+</li>
+<li><a href="#solving-2d-square-lattice-special-case">Solving 2D Square Lattice (Special Case)</a></li>
+<li><a href="#solving-3d-cuboid-lattice">Solving 3D Cuboid Lattice</a></li>
+<li><a href="#solving-3d-cubic-lattice-special-case">Solving 3D Cubic Lattice (Special Case)</a></li>
+<li><a href="#solving-n-dimensional-square-lattice-n-dimensional-multisets">Solving N-Dimensional Square Lattice (N-Dimensional Multisets)</a></li>
+</ul>
+</div>
+<h2 id="the-lattice-paths-problem">The Lattice Paths Problem</h2>
+<p>I first came across the lattice paths problem in <a href="https://projecteuler.net/problem=15">Project Euler problem 15</a>. 
+The question described a 2x2 square lattice,
+and illustrated the 6 ways of navigating from the top left corner to the bottom right corner by taking the minimum number
+of steps - 2 right steps and 2 down steps. </p>
+<p>The question then asks for the number of minimum paths on a 20 x 20 grid. Needless to say, even without seeing the number, 
+it should be obvious that enumerating all of these paths would get extremely expensive with grid dimensions growing beyond 10.
+That means this should be approached as an <strong>analytical</strong> combinatorics problem, not a computational combinatorics problem.
+As it turns out, there is a closed-form solution, and this is one of the few Project Euler questions that can be answered 
+with the straightforward use of Wolfram Alpha (I solved it while boarding a bus).</p>
+<p>But this is an interesting problem that goes beyond the Project Euler question - it has to do with 
+a combinatorics problem that is maddeningly simple, yet surprisingly difficult to formulate - the problem 
+of <strong>multisets</strong>.</p>
+<h2 id="problem-formulation-permutations">Problem Formulation: Permutations</h2>
+<p>Thinking through the 2x2 grid, we already stated that the shortest path must consist of 2 right moves and 2 down moves - 
+the number of paths is simply a question of the order in which these moves are made. Let us represent the path 
+that moves right twice, then down twice, using the string</p>
+<div class="highlight"><pre><span></span><code>RRDD
+</code></pre></div>
+
+<p>Now we have a way of representing paths through the lattice - and we've turned our very specific lattice problem 
+into a much more general combinatorics problem. How many unique permutations of the above path/string can we find?</p>
+<h3 id="permutations-of-unique-items-factorial">Permutations of Unique Items (Factorial)</h3>
+<p>Let's suppose we have a string consisting of unique characters:</p>
+<div class="highlight"><pre><span></span><code>ABCDEFG
+</code></pre></div>
+
+<p>Now how many permutations of this string are there? The first letter can be any of the 7 characters, so we have 7 possibilities. 
+The second letter can be any of the remaining 6 characters, so we have 7 * 6 possibilities. And so on down the line, until we get a 
+total number of possible permutations of the string equal to</p>
+<div class="math">$$
+7! = 7 \times 6 \times 5 \times 4 \times 3 \times 2 \times 1 = 5040
+$$</div>
+<p>There are 5040 unique permutations of the string. </p>
+<p>Our situation is complicated by the fact that some of our permutations are repeated. For example, if we label the two down moves 
+as D1 and D2, we can choose the first move as D1 and the second move as D2, or the first move as D2 and the second move as D1 - the two are equivalent. 
+This will eliminate some of the permutations.</p>
+<h3 id="permutations-of-items-with-duplicates-multichoose">Permutations of Items with Duplicates (Multichoose)</h3>
+<p>Our case is slightly different: we have items with duplicates. This fits into a general combinatorics framework called 
+<a href="https://en.wikipedia.org/wiki/Stars_and_bars_(combinatorics)">stars-and-bars</a> (link to Wikipedia article). 
+In this framework, we are trying to determine the number of ways that we can partition a set of n objects 
+into a set of <span class="math">\(k\)</span> bins. The <span class="math">\(n\)</span> objects are often denoted as star characters, and the k bins are formed by 
+k-1 bar characters. </p>
+<p>For example, if we are adding 5 components to a circuit board, and they can be any one of 9 possible components, we can represent this as
+the partitioning of 5 stars among 9 bins, or 8 bars. Here are some possibilities:</p>
+<div class="highlight"><pre><span></span><code>||||||||        &lt;-- No choices made yet (9 bins, 8 partitions)
+*|*||*||*|*||   &lt;-- Mix of different components
+||*|*||*|*||*   &lt;-- Mix of different components
+****|||*|||||   &lt;-- Heavy on component 1
+*|**|||**||||   &lt;-- Two pairs
+</code></pre></div>
+
+<p>In the case of our lattice path problem, we have only two unique characters, D and R. 
+We can think of the problem of generating permutations as inserting the down moves into a sequence of right moves. 
+We have a certain number of locations where we can insert the down moves, and down moves can be inserted in order.</p>
+<p>This is what's often called a stars-and-bars problem in combinatorics: trying to determine the number of permutations 
+of items from multisets can be described as partitioning star characters with bar characters.</p>
+<p>To formulate our problem in these terms, we can think of "distributing" our down moves as we move right through the lattice. 
+On the 20x20 grid, we are going to make 20 right moves, and we can distribute our 20 down moves at any of 21 possible locations 
+(columns of points on the lattice). </p>
+<p>Thus, our n items, the 20 down moves, are being placed between the 20 right moves, which are the 20 bars that create 
+21 bins (21 locations to place the down moves).</p>
+<h3 id="example">Example</h3>
+<p>Considering the smaller 2x2 example, and replacing bars with R, we have, for a 2x2 lattice, six possibilities:</p>
+<div class="highlight"><pre><span></span><code>RR    &lt;-- No choices made yet
+**RR  &lt;-- all on left
+*R*R  &lt;-- distributed... etc...
+*RR*
+R**R
+R*R*
+RR**
+</code></pre></div>
+
+<p>To enumerate the number of possibilities, we use the multichoose function, denoted "n multichoose k". This counts the number of ways
+to place n objects (D) into <span class="math">\(k\)</span> bins (created by <span class="math">\(k-1\)</span> other objects, R). The multichoose function is defined as
+(see <a href="https://en.wikipedia.org/wiki/Multiset#Counting_multisets">https://en.wikipedia.org/wiki/Multiset#Counting_multisets</a> Wikipedia page for proper Latex notation - 
+it looks like the binomial coefficient but with 2 parentheses):</p>
+<div class="math">$$
+n \mbox{  multichoose  } k = \binom{n+k-1}{n} 
+$$</div>
+<p>where, again, n is number of objects, being split into <span class="math">\(k\)</span> partitions by <span class="math">\(k-1\)</span> other objects.</p>
+<p>Now, let's plug in the numbers for the 2 by 2 lattice. We get:</p>
+<div class="math">$$
+n = 2, k = 3
+$$</div>
+<p>We are partitioning 2 down moves among 3 possible columns in the lattice. This gives:</p>
+<div class="math">$$
+2 \mbox{  multichoose  } 3 = \binom{2+3-1}{2} = \binom{4}{2} = 10
+$$</div>
+<p>which is indeed the number of paths through the lattice.</p>
+<h2 id="solving-2d-rectangular-lattice">Solving 2D Rectangular Lattice</h2>
+<p>To generalize, on a lattice of width <span class="math">\(W\)</span> and height <span class="math">\(H\)</span>, we have <span class="math">\(W\)</span> right moves that form <span class="math">\(W+1\)</span> partitions,
+in which we are placing H items. The number of possible paths through the lattice is therefore 
+equivalent to permutations of the string:</p>
+<div class="highlight"><pre><span></span><code>RRRR...(W times)...RRRDDDD...(H times)...DDDD
+</code></pre></div>
+
+<p>Now n and k are given by:</p>
+<div class="math">$$
+n = H, k = W+1
+$$</div>
+<p>so the total number of possible paths through the W x H square lattice is:</p>
+<div class="math">$$
+(H) \mbox{  multichoose  } (W+1) = \binom{W+1+H-1}{H} = \binom{W+H}{H}
+$$</div>
+<h3 id="more-examples">More Examples</h3>
+<p>The number of minimal paths through a 4 x 2 lattice (identical to the number of paths 
+through a 2 x 4 lattice) is:</p>
+<div class="math">$$
+P = \binom{4+2}{2} = \binom{4+2}{4} = 15
+$$</div>
+<p>The number of minimal paths through an 8x8 lattice is given by:</p>
+<div class="math">$$
+P = \binom{8+8}{8} = 12,870
+$$</div>
+<p>and finally, the number of minimal paths through a 20 x 20 lattice is given by:</p>
+<div class="math">$$
+P = \binom{20+20}{20} = 137,846,528,\mbox{XXX}
+$$</div>
+<p>(This is the Project Euler problem 15 answer so last few digits are omitted.)</p>
+<h2 id="solving-2d-square-lattice-special-case">Solving 2D Square Lattice (Special Case)</h2>
+<p>If we use the above formulas for the special case where the dimensions of the grid
+are equal, such as the 20 x 20 case, we get the simpler and more symmetric formula:</p>
+<div class="math">$$
+P = \binom{2D}{D}
+$$</div>
+<p>where <span class="math">\(D\)</span> is the dimension of the square grid. </p>
+<h2 id="solving-3d-cuboid-lattice">Solving 3D Cuboid Lattice</h2>
+<p>(Note: <a href="https://en.wikipedia.org/wiki/Cuboid">cuboids</a> are the 3D analogue of 2D rectangles.)</p>
+<p>If we take this idea a step further, and use a slightly different combinatoric formula,
+we can generalize the problem to paths through higher dimensional lattices. 
+This is an approach I came up with through trial and error, 
+and some experimentation with Mathematica.</p>
+<p>Suppose we have a 3D lattice, composed of 8 cubes, 2 on each side.
+Now we wish to know: how many shortest Manhattan distance paths are there
+through the lattice, from one corner to the other?</p>
+<p>This can be re-cast, as we did above, as the problem of counting
+unique permutations of a string of the form:</p>
+<div class="highlight"><pre><span></span><code>UURRBB
+</code></pre></div>
+
+<p>where U denotes an up move, R denotes a right move, and B denotes a back move.</p>
+<p>While we could use the multiset approach from above to describe this problem, 
+it turns out that this approach is not powerful enough to describe the problem
+of arbitrary 3D lattices.</p>
+<p>Let's pose the problem slightly more generally: we have C bags of moves or characters,
+each of a different size. We must use each character i precisely as many times as we have 
+instances in its bag C_i. How many unique permutations are there?</p>
+<p>Consider the following example string of length <span class="math">\(N = 14\)</span>, consisting of:</p>
+<div class="math">$$
+\begin{array}
+N_x &amp;=&amp; 4 \mbox{  UP moves} \\
+N_x &amp;=&amp; 4 \mbox{  RIGHT moves} \\
+N_x &amp;=&amp; 6 \mbox{  BACK moves}
+\end{array}
+$$</div>
+<p>These form a path through a 3D lattice of size <span class="math">\(4 \times 4 \times 6\)</span>:</p>
+<div class="highlight"><pre><span></span><code>UUUURRRRBBBBBB
+</code></pre></div>
+
+<p>The number of unique permutations can be computed by breaking this into sub-problems.
+Start by asking how many permutations there are of the string:</p>
+<div class="highlight"><pre><span></span><code>UUUUXXXXXXXXXX
+</code></pre></div>
+
+<p>(Treating the Rs and Bs as identical). Then we get:</p>
+<div class="math">$$
+\binom{N}{N_x} = \binom{N_x + N_y + N_z}{N_x} = \binom{14}{10} = 1001
+$$</div>
+<p>Next, we deal with the other sub-problem, the Xs, by asking how many ways 
+we can permute the following string:</p>
+<div class="highlight"><pre><span></span><code>RRRRBBBBBB
+</code></pre></div>
+
+<p>which is solved via another binomial coefficient. This number of permutations is given by:</p>
+<div class="math">$$
+\binom{N_y + N_z}{N_y} = \binom{N_y + N_z}{N_z} = \binom{10}{4} = \binom{10}{6} = 210
+$$</div>
+<p>Now combining these, we get the overall number of permutations:</p>
+<div class="math">$$
+P = \binom{14}{4} \cdot \binom{10}{4} = 210,210
+$$</div>
+<h2 id="solving-3d-cubic-lattice-special-case">Solving 3D Cubic Lattice (Special Case)</h2>
+<p>If we have the special case of a perfect cubic lattice, the formula above reduces to the nice and symmetric:</p>
+<div class="math">$$
+\dfrac{(3n)!}{(n!)^3}
+$$</div>
+<h2 id="solving-n-dimensional-square-lattice-n-dimensional-multisets">Solving N-Dimensional Square Lattice (N-Dimensional Multisets)</h2>
+<p>Let's look at the example of a traversal of a 4D lattice, 
+which we can think of as the evolution of a 3D traversal in time
+(a step in the fourth dimension would represent a "pause" in the 3D traversal). </p>
+<p>Consider the traversal of a cube with dimensions <span class="math">\(3 \times 4 \times 5 \times 3\)</span>. Then</p>
+<div class="math">$$
+N = 3 + 4 + 5 + 3
+$$</div>
+<div class="math">$$
+N_x = 3
+$$</div>
+<div class="math">$$
+N_y = 4
+$$</div>
+<div class="math">$$
+N_z = 5
+$$</div>
+<div class="math">$$
+N_t = 3
+$$</div>
+<p>A path on this 4D lattice has the form:</p>
+<div class="highlight"><pre><span></span><code>UUURRRRBBBBBWWW
+</code></pre></div>
+
+<p>(where <span class="math">\(W\)</span> denotes wait, or a step in the time dimension).</p>
+<p>The number of permutations is given by:</p>
+<div class="math">$$
+P = \binom{N_x + N_y + N_z + N_t}{N_x} \cdot \binom{N_y + N_z + N_t}{N_y} \cdot \binom{N_z + N_t}{N_z} 
+$$</div>
+<p>For our specific example,</p>
+<div class="math">$$
+P = \binom{3+4+5+3}{3} \cdot \binom{4+5+3}{4} \cdot \binom{5+3}{5} = 455 \cdot 495 \cdot 56 = 12,612,600
+$$</div>
+<p>Confirmed by Mathematica:</p>
+<p><img alt="Permutations with Mathematica" src="/images/mathematica-lattice.png"></p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/combinatorics.html">combinatorics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/permutations.html">permutations</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/lattice-paths.html">lattice paths</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/puzzles.html">puzzles</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Computing Square Roots: Part 2: Using Continued Fractions
             </b></h1>
         
@@ -1048,357 +1412,6 @@ $$</div>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                CSE 143 Final Project: Hilbert Sort: 3. The Code
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-06-30T20:00:00-07:00" pubdate>Friday 06/30/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/cse-143-final-project-hilbert-sort-3-the-code.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
-<p>This is the third in a series of three posts 
-detailing the Hilbert Sort problem,
-its solution, and its implementation.
-This post deals with the code to solve the
-Hilbert Sort problem.</p>
-<ul>
-<li>
-<p><a href="#hilbert3-pseudocode">Pseudocode</a></p>
-</li>
-<li>
-<p><a href="#hilbert3-code">Code</a></p>
-<ul>
-<li><a href="#hilbert3-utility">Utility Classes</a></li>
-<li><a href="#hilbert3-recursive">Recursive Sort Function</a></li>
-<li><a href="#hilbert3-main">Main Method</a></li>
-</ul>
-</li>
-<li>
-<p><a href="#hilbert2-references">References</a></p>
-</li>
-</ul>
-<p><a name="hilbert3-pseudocode"></a></p>
-<h1 id="hilbert-sort-pseudocode">Hilbert Sort: Pseudocode</h1>
-<p>From our prior post, here is the psudocode for our Hilbert Sort function:</p>
-<div class="highlight"><pre><span></span><code>define hilbert_sort( unsorted queue, square dimension ):
-    create southwest queue
-    create northwest queue
-    create northeast queue
-    create southeast queue
-    for each point:
-        if in southwest:
-            create new point using X -&gt; Y, Y -&gt; X
-            add to southwest queue
-        if in northwest:
-            create new point using X -&gt; 2X, Y -&gt; 2Y - S
-            add to northwest queue
-        if in northeast:
-            create new point using X -&gt; 2X - S, Y -&gt; 2Y - S
-            add to northeast queue
-        if in southeast:
-            create new point using X -&gt; S - 2Y, Y -&gt; 2S - 2X
-            add to southeast queue
-
-        hilbertsort(southwest queue, square dimension)
-        hilbertsort(northwest queue, square dimension)
-        hilbertsort(northeast queue, square dimension)
-        hilbertsort(southeast queue, square dimension)
-
-        create new results queue
-        add points from southwest into results queue
-        add points from northwest into results queue
-        add points from northeast into results queue
-        add points from southeast into results queue
-        return results queue
-</code></pre></div>
-
-<p>Because we are manually sorting, and we want order to be preserved,
-we should be using a queue to organize points as we sort them.
-That way, we add them in sorted order, and we are then able to remove
-them in sorted order.</p>
-<p><a name="hilbert3-code"></a></p>
-<h1 id="hilbert-sort-code">Hilbert Sort: Code</h1>
-<p>We begin by covering a utility class used by the Hilbert Sort method
-to store <span class="math">\((X,Y)\)</span> points. This is a simple example of a composition 
-design pattern. Next, we cover the bulk of the problem solution: 
-the recursive sort method that partiions points into quadrants.
-Finally, we cover the main method, which demonstrates reading data
-from an input file and passing it to the sort method.</p>
-<p><a name="hilbert3-utility"></a></p>
-<h2 id="hilbert-sort-utility-classes">Hilbert Sort: Utility Classes</h2>
-<p>To organize <span class="math">\((X,Y)\)</span> point data, we use a simple class
-using composition. This is defined next to the HilbertSort 
-class.</p>
-<div class="highlight"><pre><span></span><code>/**
- * An (x,y) Point class. 
- */
-class Point {
-    int x, y; // (x,y) point.
-    String name; // Each (x,y) point has a name in the file. Used for output.
-    /** Constructor. */
-    public Point(int x, int y, String name) { 
-        this.x = x; this.y = y; this.name = name;
-    }
-    /** String representation (x,y). */
-    public String toString() { 
-        return &quot;(&quot;+this.x+&quot;,&quot;+this.y+&quot;,&quot;+this.name+&quot;)&quot;;
-    }
-}
-</code></pre></div>
-
-<p><a name="hilbert3-recursive"></a></p>
-<h2 id="recursive-sort-function">Recursive Sort Function</h2>
-<p>Following is the recursive sort method, which (like merge sort)
-consists of a split step, which partitions an <span class="math">\(S \times S\)</span> 
-square into quadrants and distributes points in the square into their
-corresponding quadrants, and a merge step, which stitches together
-each quadrant in the correct order. </p>
-<div class="highlight"><pre><span></span><code>    /** Recursive implementation of a Hilbert sort. */
-    public static Queue&lt;Point&gt; hilbertSort(Queue&lt;Point&gt; inputP, int S) {
-        // Recursive method:
-        // Apply the Hilbert geometrical quadrant division 
-        // to sort points by when they are visited by a Hilbert curve.
-        //
-        // Base case: 
-        // There are 1 or fewer points in each quadrant.
-        // Keep splitting into quadrants until we reach the base case. 
-        if(inputP.size()&lt;1) {
-            return new LinkedList&lt;Point&gt;();
-        } else if(inputP.size()==1) {
-            return inputP;
-        }
-
-        // split by quadrant
-        Queue&lt;Point&gt; qSW = new LinkedList&lt;Point&gt;();
-        Queue&lt;Point&gt; qNW = new LinkedList&lt;Point&gt;();
-        Queue&lt;Point&gt; qNE = new LinkedList&lt;Point&gt;();
-        Queue&lt;Point&gt; qSE = new LinkedList&lt;Point&gt;();
-
-        // Sort points by dividing into quadrants
-        for(Point p : inputP) { 
-
-            // Prepare for the tricky part.
-            //
-            // Rotate the quadrant, and points in it,
-            // so that everything is now translated to fit
-            // how the template of the Hilbert curve is being drawn.
-            // (SW-&gt;NW-&gt;NE-SE)
-
-            boolean inSWquadrant = (2*p.x &lt;= S) &amp;&amp; (2*p.y &lt;= S);
-            boolean inNWquadrant = (2*p.x &lt;= S) &amp;&amp; (2*p.y &gt;= S);
-
-            boolean inNEquadrant = (2*p.x &gt;= S) &amp;&amp; (2*p.y &gt;= S);
-            boolean inSEquadrant = (2*p.x &gt;= S) &amp;&amp; (2*p.y &lt;= S);
-
-            // Each time we sort (x,y) points into quadrants,
-            // we also transform each coordinate point 
-            // in such a way that it rescales to an S x S square,
-            // but does not modify the order of the points. 
-            //
-            // Note that we can keep everything as integers by
-            // continuing to look at an S x S square,
-            // and double the x and y values to shift them over/up.
-            //
-            // Two easy cases:
-            if(inNWquadrant) {
-                // Northwest quadrant: 
-                // - shift y down by S/2
-                // - keep x and y in same order
-                qNW.add( new Point(2*p.x, 2*p.y-S, p.name) );
-
-            } else if(inNEquadrant) {
-                // Northeast quadrant:
-                // - shift x and y down by S/2
-                // - keep x and y in same order
-                qNE.add( new Point(2*p.x - S, 2*p.y - S, p.name) );
-
-            } else if(inSWquadrant) { 
-                // Southwest quadrant:
-                // - x and y need to swap places 
-                // - that&#39;s it.
-                qSW.add( new Point(2*p.y, 2*p.x, p.name) );
-
-            } else if(inSEquadrant) { 
-                // Southeast quadrant:
-                // - trickiest quadrant.
-                // - We want to preserve S - x, distance from right side
-                // - we want to use it as the new y coordinate
-                qSE.add( new Point(S - 2*p.y, 2*(S - p.x), p.name) );
-
-            }
-
-        }
-        // Sort til you reach the base case.
-        qSW = hilbertSort(qSW, S); 
-        qNW = hilbertSort(qNW, S); 
-        qNE = hilbertSort(qNE, S); 
-        qSE = hilbertSort(qSE, S);
-
-        Queue&lt;Point&gt; result = new LinkedList&lt;Point&gt;();
-        for(Point q : qSW) result.add(q);
-        for(Point q : qNW) result.add(q);
-        for(Point q : qNE) result.add(q); 
-        for(Point q : qSE) result.add(q);
-
-        return result;
-    }
-</code></pre></div>
-
-<p><a name="hilbert3-main"></a></p>
-<h2 id="main-method">Main Method</h2>
-<p>The last part of the code is the portion that loads the points and their labels 
-from a file, and populates a Queue of Point objects from it.
-This queue of points is then sorted and returned in order.</p>
-<div class="highlight"><pre><span></span><code>    /** Main driver. */
-    public static void main(String[] args) { 
-
-        Scanner stdin = new Scanner(new BufferedReader(new InputStreamReader(System.in)));
-
-        int n = stdin.nextInt();
-        int S = stdin.nextInt();
-
-        // n lines of 3 tokens each
-        Queue&lt;Point&gt; inputPoints = new LinkedList&lt;Point&gt;();
-        for(int i=0; i&lt;n; i++) { 
-            int x0 = stdin.nextInt();
-            int y0 = stdin.nextInt();
-            String label = stdin.next();
-            inputPoints.add(new Point(x0,y0,label));
-        }
-        Queue&lt;Point&gt; sortedPoints = hilbertSort(inputPoints, S);
-        for(Point p : sortedPoints) { 
-            System.out.println(p.name);
-        }
-    }
-</code></pre></div>
-
-<p><a name="hilbert3-refs"></a></p>
-<h1 id="references">References</h1>
-<ol>
-<li>
-<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
-&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
-</li>
-<li>
-<p>"Hilbert Sort." Git repository, git.charlesreid1.com. Charles Reid. Updated 16 June 2017.
-&lt;<a href="https://git.charlesreid1.com/cs/finalproject-143/src/master/hilbert/HilbertSort.java">https://git.charlesreid1.com/cs/finalproject-143/src/master/hilbert/HilbertSort.java</a>&gt;</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hilbert-sort.html">hilbert sort</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1483,8 +1496,11 @@ This queue of points is then sorted and returned in order.</p>
 
         <div class="well">
 
-            <h2>June 2021</h2>
+            <h2>December 2021</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/july-2021-tils.html">July 2021 TILs</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/june-2021-tils.html">June 2021 TILs</a>
             </p>
