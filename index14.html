@@ -102,6 +102,559 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Recursive Backtracking in Go for Bioinformatics Applications: 3. Go Implementation of Backtracking
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-01-03T10:30:00-08:00" pubdate>Thursday 01/03/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><em>This is the third in a series of three blog posts describing our
+solution to a bioinformatics problem from Rosalind.info,
+<a href="http://rosalind.info/problems/ba1i/">Problem BA1(i) (Find most frequent words with mismatches
+in a string)</a>.
+To solve this problem and generate variations of a DNA string
+as required, we implemented a recursive backtracking method
+in the Go programming language.</em></p>
+<ul>
+<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1: Counting Variations</a></em></li>
+<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">Part 2: Generating Variations</a></em></li>
+<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Part 3: Go Implementation of Recursive Backtracking</a></em></li>
+</ul>
+<div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#problem-description">Problem Description</a></li>
+<li><a href="#recursive-backtracking-pseudocode">Recursive Backtracking Pseudocode</a></li>
+<li><a href="#recursive-backtracking-go-implementation">Recursive Backtracking: Go Implementation</a><ul>
+<li><a href="#visit-hamming-neighbors-function">Visit Hamming Neighbors Function</a><ul>
+<li><a href="#public-non-recursive-function">Public, Non-Recursive Function</a></li>
+<li><a href="#private-recursive-function">Private, Recursive Function</a></li>
+</ul>
+</li>
+<li><a href="#assemble-visit-variation-function">Assemble Visit Variation Function</a></li>
+</ul>
+</li>
+<li><a href="#tests">Tests</a></li>
+<li><a href="#final-code">Final Code</a></li>
+<li><a href="#go-forth-and-be-fruitful">Go Forth and Be Fruitful</a></li>
+</ul>
+</div>
+<h2 id="problem-description">Problem Description</h2>
+<p>The task at hand is to take a given input strand of DNA,
+and generate variations from it that have up to <span class="math">\(d\)</span> differences
+(a Hamming distance of <span class="math">\(d\)</span>) in the codons (base pairs).</p>
+<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">part 1 of this series</a>, we walk through the
+construction of an analytical formula to count the number
+of variations of a given DNA string that can be generated,
+given the constraints of the problem.</p>
+<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">part 2 of this series</a>, we cover several techniques to
+generate variations on a DNA string, and present pseudocode
+for the recursive backtracking method that we use here.</p>
+<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">part 3 of this series</a>, we will cover our implementation
+of the recursive backtracking method in the Go programming
+language.</p>
+<p><br />
+<br /></p>
+<p><a name="backtracking"></a></p>
+<h2 id="recursive-backtracking-pseudocode">Recursive Backtracking Pseudocode</h2>
+<p>To review from the prior post, our pseudocode
+for recursive backtracking to explore variations
+or combinations looks like the following:</p>
+<div class="highlight"><pre><span></span><code>explore method:
+    base case:
+        visit this solution
+    recursive case:
+        for each available choice:
+            make a choice
+            explore outcomes
+            unmake the choice
+            move on to the next choice
+</code></pre></div>
+
+<p>The key elements there are the base and recursive
+cases, and the mechanism of iterating over each
+possible choice and making/exploring/unmaking
+the choice.</p>
+<p><a name="go-implementation"></a></p>
+<h2 id="recursive-backtracking-go-implementation">Recursive Backtracking: Go Implementation</h2>
+<p>In total, we have three different methods to
+accomplish this task:</p>
+<ul>
+<li>
+<p><code>VisitHammingNeighbors(input,d)</code>: this is the public method
+  that the user calls to generate a string array of all
+  strings that are a Hamming distance of up to <code>d</code> from
+  the input string <code>input</code>. This public method performs
+  parameter and error checking, initializes space for
+  data, and collects results.</p>
+</li>
+<li>
+<p><code>visitHammingNeighbors_recursive(base_kmer, depth, choices, results_map)</code>:
+  this method is the private recursive method available
+  only to the package. This method performs the actual
+  recursive work. </p>
+</li>
+</ul>
+<p><strong>NOTE:</strong> the function name starts with a lower case letter,
+so it is not exported by the package - i.e., it is not available
+to the user when they import this package.</p>
+<p>The base case of the <code>visitHammingNeighbors_recursive()</code>
+function will pass the final set of choices to the final
+step:</p>
+<ul>
+<li><code>assemble_variations(base_kmer, choices, results_map)</code>: 
+  this method (private to the package) is a recursive
+  method that uses the chosen indices and </li>
+</ul>
+<p><a name="visit-hamming"></a></p>
+<h3 id="visit-hamming-neighbors-function">Visit Hamming Neighbors Function</h3>
+<p>The function call to visit all Hamming neighbors and add them to the <code>results</code> set
+is split into two parts: a non-recursive public function, which provides a public wrapper
+that is user-friendly and performs error-checking on the parameters provided, and a
+recursive private function that is used internally but not intended to be called by
+users directly.</p>
+<h4 id="public-non-recursive-function">Public, Non-Recursive Function</h4>
+<p>Here is the entry point function that the user calls
+when they wish to generate all variations on a given
+string of DNA, and have the variations returned as a
+string slice.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Given an input string of DNA, generate variations</span>
+<span class="c1">// of said string that are a Hamming distance of</span>
+<span class="c1">// less than or equal to d.</span>
+<span class="kd">func</span> <span class="nx">VisitHammingNeighbors</span><span class="p">(</span><span class="nx">input</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">d</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="c1">// a.k.a. visit_kmer_neighbors</span>
+
+    <span class="c1">// number of codons</span>
+    <span class="nx">n_codons</span> <span class="o">:=</span> <span class="mi">4</span>
+
+    <span class="c1">// Use combinatorics to calculate the total</span>
+    <span class="c1">// number of variation.</span>
+    <span class="nx">buffsize</span><span class="p">,</span> <span class="nx">_</span> <span class="o">:=</span> <span class="nx">CountHammingNeighbors</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">),</span> <span class="nx">d</span><span class="p">,</span> <span class="nx">n_codons</span><span class="p">)</span>
+</code></pre></div>
+
+<p>The call to <code>CountHammingNeighbors()</code> uses the counting
+formula from <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1</a>
+to predict the number of variations. If the user has selected
+an astronomical problem size, the program warns the user.</p>
+<div class="highlight"><pre><span></span><code>    <span class="c1">// This blows up quickly, so warn the user</span>
+    <span class="c1">// if their problem is too big</span>
+    <span class="nx">MAX</span> <span class="o">:=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e6</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nx">buffsize</span> <span class="p">&gt;</span> <span class="nx">MAX</span> <span class="p">{</span>
+        <span class="nx">msg</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Error: you are generating over MAX = %d permutations, you probably don&#39;t want to do this.&quot;</span><span class="p">,</span> <span class="nx">d</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">nil</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span>
+    <span class="p">}</span>
+</code></pre></div>
+
+<p>Now the actual recursive backtracking algorithm begins.
+The code loops over every possible value of Hamming distance
+<span class="math">\(d\)</span> and calls the recursive method at each value of <span class="math">\(d\)</span>.</p>
+<div class="highlight"><pre><span></span><code>    <span class="c1">// Store the final results in a set (string-&gt;bool map)</span>
+    <span class="nx">results</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="p">)</span>
+
+    <span class="c1">// Begin backtracking algorithm</span>
+    <span class="k">for</span> <span class="nx">dd</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">dd</span> <span class="o">&lt;=</span> <span class="nx">d</span><span class="p">;</span> <span class="nx">dd</span><span class="o">++</span> <span class="p">{</span>
+
+        <span class="c1">// The choices array will change with each recursive call.</span>
+        <span class="c1">// Go passes all arguments by copy, which is good for us.</span>
+        <span class="nx">choices</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">int</span><span class="p">{}</span>
+
+        <span class="c1">// Populate list of neighbors</span>
+        <span class="nx">visitHammingNeighbors_recursive</span><span class="p">(</span><span class="nx">input</span><span class="p">,</span> <span class="nx">dd</span><span class="p">,</span> <span class="nx">choices</span><span class="p">,</span> <span class="nx">results</span><span class="p">)</span>
+
+    <span class="p">}</span>
+</code></pre></div>
+
+<p>We don't assign any results from the call to <code>visitHammingNeighbors_recursive()</code>
+because we pass in a data structure (actually a pointer to a
+data structure), <code>results</code>, that is modified in-place.</p>
+<p>Thus, when we complete a call to <code>visitHammingNeighbors_recursive()</code>,
+results will contain all variations already.</p>
+<div class="highlight"><pre><span></span><code>    <span class="c1">// Check if we have the right number of results</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">results</span><span class="p">)</span> <span class="o">!=</span> <span class="nx">buffsize</span> <span class="p">{</span>
+        <span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;WARNING: number of results (%d) did not match expected value (%d)\n&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="nx">results</span><span class="p">),</span> <span class="nx">buffsize</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="nx">results</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h4 id="private-recursive-function">Private, Recursive Function</h4>
+<p>In the above function, the call to the recursive
+function to visit all Hamming neighbors happens
+here:</p>
+<div class="highlight"><pre><span></span><code>        <span class="c1">// Populate list of neighbors</span>
+        <span class="nx">visitHammingNeighbors_recursive</span><span class="p">(</span><span class="nx">input</span><span class="p">,</span> <span class="nx">dd</span><span class="p">,</span> <span class="nx">choices</span><span class="p">,</span> <span class="nx">results</span><span class="p">)</span>
+</code></pre></div>
+
+<p>The user passes the original kmer <code>input</code>, along with the
+Hamming distance parameter <code>dd</code>, the list of choices
+of indices that have already been selected <code>choices</code>,
+and the data structure storing all resulting strings
+<code>results</code>.</p>
+<p>As with the pseudocode, we have a base case and 
+a recursive case. The recursive function is being
+called repeatedly until it reaches a depth of 0,
+with the depth parameter being decremented each call.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Recursive function: given an input string of DNA,</span>
+<span class="c1">// generate Hamming neighbors that are a Hamming</span>
+<span class="c1">// distance of exactly d. Populate the neighbors</span>
+<span class="c1">// array with the resulting neighbors.</span>
+<span class="kd">func</span> <span class="nx">visitHammingNeighbors_recursive</span><span class="p">(</span><span class="nx">base_kmer</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">depth</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">choices</span> <span class="p">[]</span><span class="kt">int</span><span class="p">,</span> <span class="nx">results</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+
+    <span class="k">if</span> <span class="nx">depth</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+
+        <span class="c1">// Base case</span>
+
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+
+        <span class="c1">// Recursive case</span>
+
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The base case occurs when we reach a depth of 0 and have
+no further choices to make. We reach this base case for
+each binary number with <span class="math">\(d\)</span> digits set to 1; once the base
+case is reached, we call the <code>assemble_variations()</code> function
+to substitute all possible codons at the selected indices.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span> <span class="nx">visitHammingNeighbors_recursive</span><span class="p">(</span><span class="nx">base_kmer</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">depth</span> <span class="kt">int</span><span class="p">,</span> <span class="nx">choices</span> <span class="p">[]</span><span class="kt">int</span><span class="p">,</span> <span class="nx">results</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+
+    <span class="k">if</span> <span class="nx">depth</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">{</span>
+
+        <span class="c1">// Base case</span>
+        <span class="nx">assemble_variations</span><span class="p">(</span><span class="nx">base_kmer</span><span class="p">,</span> <span class="nx">choices</span><span class="p">,</span> <span class="nx">results</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">nil</span>
+</code></pre></div>
+
+<p>The recursive case is slightly more complicated, but it follows
+the same backtracking pseudocode covered previously: from a set
+of possible choices, try each choice, recursively call this 
+function, then unmake the choice and move on to the next choice.</p>
+<p>Here, the choice is which index <code>c</code> in the kmer to modify. Each
+kmer can only be modified once, so we have a for loop to
+check if the index <code>c</code> is in the list of choices already made.</p>
+<div class="highlight"><pre><span></span><code>    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+
+        <span class="c1">// Recursive case</span>
+        <span class="k">for</span> <span class="nx">c</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">c</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">base_kmer</span><span class="p">);</span> <span class="nx">c</span><span class="o">++</span> <span class="p">{</span>
+
+            <span class="kd">var</span> <span class="nx">indexAlreadyTaken</span> <span class="kt">bool</span>
+            <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">choice</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">choices</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="nx">c</span> <span class="o">==</span> <span class="nx">choice</span> <span class="p">{</span>
+                    <span class="nx">indexAlreadyTaken</span> <span class="p">=</span> <span class="kc">true</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+</code></pre></div>
+
+<p>As before, the recursive call to this function will
+not return any values that need to be stored, since 
+<code>results</code> points to a data structure (map) that is 
+modified in-place.</p>
+<div class="highlight"><pre><span></span><code>            <span class="k">if</span> <span class="p">!</span><span class="nx">indexAlreadyTaken</span> <span class="p">{</span>
+
+                <span class="c1">// This will make a new copy of choices</span>
+                <span class="c1">// for each recursive function call</span>
+                <span class="nx">choices2</span> <span class="o">:=</span> <span class="nb">append</span><span class="p">(</span><span class="nx">choices</span><span class="p">,</span> <span class="nx">c</span><span class="p">)</span>
+                <span class="nx">err</span> <span class="o">:=</span> <span class="nx">visitHammingNeighbors_recursive</span><span class="p">(</span><span class="nx">base_kmer</span><span class="p">,</span> <span class="nx">depth</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nx">choices2</span><span class="p">,</span> <span class="nx">results</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+                    <span class="k">return</span> <span class="nx">err</span>
+                <span class="p">}</span>
+
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><a name="assemble-visit"></a></p>
+<h3 id="assemble-visit-variation-function">Assemble Visit Variation Function</h3>
+<p>Once we've generated each list of indices to modify,
+we call a second recursive function to substitute each
+codon into each index.</p>
+<p>In the recursive method above, each recursive function
+call added a new choice to <code>choices</code>; in this recursive
+function, each recursive funcction call pops a choice 
+from <code>choices</code>. Thus, the base case is when <code>choices</code>
+is empty.</p>
+<p>Here are the base and recursive cases:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Given a base kmer and a choice of indices where</span>
+<span class="c1">// the kmer should be changed, generate all possible</span>
+<span class="c1">// variations on this base_kmer.</span>
+<span class="kd">func</span> <span class="nx">assemble_variations</span><span class="p">(</span><span class="nx">base_kmer</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">choices</span> <span class="p">[]</span><span class="kt">int</span><span class="p">,</span> <span class="nx">results</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">choices</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+
+        <span class="c1">// Recursive case</span>
+        <span class="o">...</span>
+
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+
+        <span class="c1">// Base case</span>
+        <span class="o">...</span>
+
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The recursive case pops a choice from <code>choices</code>, 
+finds which nucleotide (AGCT) is at that location,
+and assembles the list of possible choices (the
+other 3 nucleotide values). It then performs
+the recursive backtracking algorithm, choosing 
+from each of the three possible nucleotide values,
+exploring the choice by making a recursive call,
+then un-making the choice.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span> <span class="nx">assemble_variations</span><span class="p">(</span><span class="nx">base_kmer</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">choices</span> <span class="p">[]</span><span class="kt">int</span><span class="p">,</span> <span class="nx">results</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">choices</span><span class="p">)</span> <span class="p">&gt;</span> <span class="mi">0</span> <span class="p">{</span>
+
+        <span class="c1">// Recursive case</span>
+
+        <span class="nx">all_codons</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;A&quot;</span><span class="p">,</span> <span class="s">&quot;T&quot;</span><span class="p">,</span> <span class="s">&quot;G&quot;</span><span class="p">,</span> <span class="s">&quot;C&quot;</span><span class="p">}</span>
+
+        <span class="c1">// Pop the next choice</span>
+        <span class="c1">// https://github.com/golang/go/wiki/SliceTricks</span>
+        <span class="nx">ch_ix</span><span class="p">,</span> <span class="nx">choices</span> <span class="o">:=</span> <span class="nx">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nx">choices</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+        <span class="c1">// Get the value of the codon at that location</span>
+        <span class="k">if</span> <span class="nx">ch_ix</span> <span class="p">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nx">base_kmer</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// slice of string is bytes,</span>
+            <span class="c1">// so convert back to string</span>
+            <span class="nx">this_codon</span> <span class="o">:=</span> <span class="nb">string</span><span class="p">(</span><span class="nx">base_kmer</span><span class="p">[</span><span class="nx">ch_ix</span><span class="p">])</span>
+            <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">codon</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">all_codons</span> <span class="p">{</span>
+
+                <span class="k">if</span> <span class="nx">codon</span> <span class="o">!=</span> <span class="nx">this_codon</span> <span class="p">{</span>
+                    <span class="c1">// Swap out the old codon with the new codon</span>
+                    <span class="nx">new_kmer</span> <span class="o">:=</span> <span class="nx">base_kmer</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="nx">ch_ix</span><span class="p">]</span> <span class="o">+</span> <span class="nx">codon</span> <span class="o">+</span> <span class="nx">base_kmer</span><span class="p">[</span><span class="nx">ch_ix</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span>
+                    <span class="nx">assemble_variations</span><span class="p">(</span><span class="nx">new_kmer</span><span class="p">,</span> <span class="nx">choices</span><span class="p">,</span> <span class="nx">results</span><span class="p">)</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+
+        <span class="c1">// Base case</span>
+        <span class="nx">results</span><span class="p">[</span><span class="nx">base_kmer</span><span class="p">]</span> <span class="p">=</span> <span class="kc">true</span>
+
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><br />
+<br /></p>
+<p><a name="tests"></a></p>
+<h2 id="tests">Tests</h2>
+<p>The last step after some debugging was to write tests for the
+function to generate all variations of a DNA string, to ensure
+the recursive backtracking functions work correctly.</p>
+<p>The pattern we use is to create a struct containing test parameters,
+then create a test matrix by initializing instances of the
+parameter struct with the parameters we want to test.</p>
+<p>Here is how we set up the tests:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">func</span> <span class="nx">TestMatrixVisitHammingNeighbors</span><span class="p">(</span><span class="nx">t</span> <span class="o">*</span><span class="nx">testing</span><span class="p">.</span><span class="nx">T</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="nx">tests</span> <span class="p">=</span> <span class="p">[]</span><span class="kd">struct</span> <span class="p">{</span>
+        <span class="nx">input</span> <span class="kt">string</span>
+        <span class="nx">d</span>     <span class="kt">int</span>
+        <span class="nx">gold</span>  <span class="p">[]</span><span class="kt">string</span>
+    <span class="p">}{</span>
+        <span class="p">{</span><span class="s">&quot;AAA&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;AAC&quot;</span><span class="p">,</span> <span class="s">&quot;AAT&quot;</span><span class="p">,</span> <span class="s">&quot;AAG&quot;</span><span class="p">,</span> <span class="s">&quot;AAA&quot;</span><span class="p">,</span> <span class="s">&quot;CAA&quot;</span><span class="p">,</span> <span class="s">&quot;GAA&quot;</span><span class="p">,</span> <span class="s">&quot;TAA&quot;</span><span class="p">,</span> <span class="s">&quot;ATA&quot;</span><span class="p">,</span> <span class="s">&quot;ACA&quot;</span><span class="p">,</span> <span class="s">&quot;AGA&quot;</span><span class="p">},</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">test</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">tests</span> <span class="p">{</span>
+
+        <span class="o">...</span>
+
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Each test case should generate all Hamming neighbors, and compare to the list of
+Hamming neighbors provided. This requires two tricks:</p>
+<ul>
+<li>sort before comparing, to ensure a proper comparison</li>
+<li>use a custom <code>EqualStringSlices()</code> function that will iterate through
+  two string slices element-wise to check if they are equal.</li>
+</ul>
+<p>The <code>EqualStringSlices()</code> function is required because Go does not have 
+built-in equality checks for slices.</p>
+<p>Here is what the tests look like:</p>
+<div class="highlight"><pre><span></span><code>    <span class="k">for</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">test</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">tests</span> <span class="p">{</span>
+
+        <span class="c1">// Money shot</span>
+        <span class="nx">result</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">VisitHammingNeighbors</span><span class="p">(</span><span class="nx">test</span><span class="p">.</span><span class="nx">input</span><span class="p">,</span> <span class="nx">test</span><span class="p">.</span><span class="nx">d</span><span class="p">)</span>
+
+        <span class="c1">// Check if there was error</span>
+        <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+            <span class="nx">msg</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Error: %v&quot;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+            <span class="nx">t</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span>
+        <span class="p">}</span>
+
+        <span class="c1">// Sort before comparing</span>
+        <span class="nx">sort</span><span class="p">.</span><span class="nx">Strings</span><span class="p">(</span><span class="nx">test</span><span class="p">.</span><span class="nx">gold</span><span class="p">)</span>
+        <span class="nx">sort</span><span class="p">.</span><span class="nx">Strings</span><span class="p">(</span><span class="nx">result</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">!</span><span class="nx">EqualStringSlices</span><span class="p">(</span><span class="nx">result</span><span class="p">,</span> <span class="nx">test</span><span class="p">.</span><span class="nx">gold</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">msg</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Error testing VisitHammingNeighbors():\ncomputed = %v\ngold     = %v&quot;</span><span class="p">,</span>
+                <span class="nx">result</span><span class="p">,</span> <span class="nx">test</span><span class="p">.</span><span class="nx">gold</span><span class="p">)</span>
+            <span class="nx">t</span><span class="p">.</span><span class="nx">Error</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+</code></pre></div>
+
+<p><a name="final"></a></p>
+<h2 id="final-code">Final Code</h2>
+<p>The final version of the recursive function to visit all Hamming neighbors
+and return them in a string array can be found in the <code>go-rosalind</code> library
+on Github.</p>
+<p>Specifically, in the file <a href="https://github.com/charlesreid1/go-rosalind/blob/master/rosalind/rosalind_ba1.go"><code>rosalind_ba1.go</code></a>,
+there is a <a href="https://github.com/charlesreid1/go-rosalind/blob/master/rosalind/rosalind_ba1.go#L711"><code>VisitHammingNeighbors()</code></a>
+function that is the public function that calls the private recursive
+function <a href="https://github.com/charlesreid1/go-rosalind/blob/master/rosalind/rosalind_ba1.go#L778"><code>visitHammingNeighbors_recursive()</code></a>,
+and the recursive function to swap out codons is
+in the <a href="https://github.com/charlesreid1/go-rosalind/blob/master/rosalind/rosalind_ba1.go#L819"><code>visit()</code></a>
+funciont.</p>
+<p><a name="fruitful"></a></p>
+<h2 id="go-forth-and-be-fruitful">Go Forth and Be Fruitful</h2>
+<p>Now that you have the basic tools to imlement a recursive
+backtracking algorithm in Go to generate string variations,
+you have one of the key ingredients to solve Rosalind.info
+problem <a href="http://rosalind.info/problems/ba1i/">BA1i, "Find Most Frequent Words with Mismatches by
+String"</a>.</p>
+<p>This problem is tricky principally because it requires generating
+every DNA string variation, so now you should have the key
+ingredient to solve BA1i (and several problems that follow).</p>
+<p>You can use the final version of the methods we covered by importing
+the <code>go-rosalind</code> library in your Go code
+(<a href="https://godoc.org/github.com/charlesreid1/go-rosalind/rosalind">link to go-rosalind documentation on godoc.org</a>)
+or you can implement your own version of these algorithms. 
+The Go code we covered in this post is also on Github in the
+<a href="https://github.com/charlesreid1/go-rosalind">charlesreid1/go-rosalind</a> repository.</p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/strings.html">strings</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/combinatorics.html">combinatorics</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Recursive Backtracking in Go for Bioinformatics Applications: 2. Generating Variations
             </b></h1>
         
@@ -966,365 +1519,6 @@ possible DNA strings.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Basic Data Structures in Go: Maps
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2018-12-20T17:00:00-08:00" pubdate>Thursday 12/20/2018</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/basic-data-structures-in-go-maps.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h2 id="basic-data-structures-in-go-maps">Basic Data Structures in Go: Maps</h2>
-<p>Continuing with our series of blog posts on what
-we've been learning about Go in the process of solving
-problems on Rosalind.info, this post will cover how 
-some basic data structures work in Go, and how we
-used each to solve problems from the Chapter 1 Rosalind
-problems.</p>
-<h2 id="maps">Maps</h2>
-<p>The simplest way to describe a map is to say it is a
-structure useful for storing key-value pairs.</p>
-<p>Before we walk through what maps look like in Go, let's
-talk about what a map is (in the data structure sense).
-And to do that, it's useful to talk a bit about mathematical
-functions and maps in the mathematical sense.</p>
-<h3 id="what-is-a-map">What is a map</h3>
-<p>The term "map" is taken from mathematics. A map is just a
-relationship - a general term, but still useful. Most 
-mathematics courses deal with functions, which are formally 
-defined as <strong>maps</strong> from one set of numbers onto another,
-such that one input corresponds to one output.</p>
-<p>A (data structure) map, similarly, is a relationship between
-two sets - a key set, and a value set. Each key corresponds
-to only one value. </p>
-<p>Maps are typically stored under the hood as either a hash
-map (which does not sort keys and has very fast O(1), or
-constant time, operations) or a tree map (which sorts keys 
-using a binary tree and has slower O(log N) operations).</p>
-<h3 id="map-notation-in-go">Map notation in Go</h3>
-<p>In Go, map types are denoted <code>map[keyType]valueType</code>.</p>
-<p>For example, to map strings to integers, we would use
-a map of type <code>map[string]int</code>. </p>
-<p>We create a map variable by declaring its type:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="nx">m</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span>
-</code></pre></div>
-
-<p>However, this does not allocate any space for the map,
-and trying to add keys to the map at this point would
-result in an error.</p>
-<p>We need to actually allocate space for the map. In Go,
-you can allocate space for a map two ways: first, using
-Go's built-in <code>make()</code> function; and second, by creating
-and populating the map in one line.</p>
-<h3 id="using-make-with-maps">Using <code>make()</code> with maps</h3>
-<p>To allocate space for a map, you can use the <code>make()</code>
-function and pass it the map type. This will actually
-create space in memory for the map, and allow you to 
-add items or look up keys in the map.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="nx">m</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span>
-<span class="nx">m</span> <span class="p">=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
-</code></pre></div>
-
-<h3 id="creating-and-populating">Creating and populating</h3>
-<p>If you want to create and populate the map in one line,
-you can specify the type, then have trailing brackets
-containing the items you want to add:</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Create an empty map</span>
-<span class="nx">m</span> <span class="o">:=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{}</span>
-</code></pre></div>
-
-<div class="highlight"><pre><span></span><code><span class="c1">// Create and populate a map</span>
-<span class="nx">m</span> <span class="o">:=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="s">&quot;A&quot;</span><span class="p">:</span><span class="mi">10</span><span class="p">,</span> <span class="s">&quot;T&quot;</span><span class="p">:</span><span class="mi">15</span><span class="p">,</span> <span class="s">&quot;G&quot;</span><span class="p">:</span><span class="mi">20</span><span class="p">,</span> <span class="s">&quot;C&quot;</span><span class="p">:</span><span class="mi">25</span><span class="p">}</span>
-</code></pre></div>
-
-<h3 id="zero-values">Zero values</h3>
-<p>One feature of maps that makes them really easy to work
-with is, if you try and look up a key, and the key does
-not exist in the map, the map will not raise an exception
-(which Python does), it will return the zero value of 
-the value type. </p>
-<p>For example, the zero value of the <code>int</code> type is 0, 
-so if we create a map like <code>m := map[string]int{"A":10}</code>
-and we then look up a key that isn't in the map, like 
-<code>m["G"]</code>, Go will return 0.</p>
-<p>Similarly, the zero value for booleans is false, so you
-can utilize the zero value behavior to create a set data
-structure using maps. By creating a <code>map[keyType]bool</code>
-map, you can use the boolean value to indicate membership
-of a key in the given set. Then, if you look up keys that
-do not exist in the map, Go will return the zero value of
-booleans by default, which will be false.</p>
-<h3 id="easy-iterating-over-maps">Easy iterating over maps</h3>
-<p>It is easy to iterate over maps using the <code>range</code> keyword
-in Go, which will return the keys (optionally, both keys 
-and values) of the map in a loop:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="nx">m</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span>
-        <span class="s">&quot;ABC&quot;</span><span class="p">:</span><span class="mi">10</span><span class="p">,</span> 
-        <span class="s">&quot;DEF&quot;</span><span class="p">:</span><span class="mi">20</span><span class="p">,</span> 
-        <span class="s">&quot;GHI&quot;</span><span class="p">:</span><span class="mi">30</span>
-<span class="p">}</span>
-
-<span class="k">for</span> <span class="nx">k</span><span class="p">,</span><span class="nx">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="nx">m</span> <span class="p">{</span>
-    <span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Key:&quot;</span><span class="p">,</span><span class="nx">k</span><span class="p">,</span><span class="s">&quot; --&gt; Value:&quot;</span><span class="p">,</span><span class="nx">v</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<h2 id="example-assembling-kmer-histogram">Example: Assembling kmer histogram</h2>
-<p>Here is an example using maps: this function assembles
-a kmer histogram from a strand of DNA base pairs. To do
-this, it loops over every codon in the DNA strand and
-increments a counter in a map. Finally, this histogram
-map is returned. (This function is useful for determining
-the most frequent kmer.)</p>
-<p>Here's the whole function that helps solve Rosalind problem
-BA1B. We'll look at it piece by piece below: </p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Return the histogram of kmers of length k </span>
-<span class="c1">// found in the given input</span>
-<span class="kd">func</span> <span class="nx">KmerHistogram</span><span class="p">(</span><span class="nx">input</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">k</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span><span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-
-    <span class="nx">result</span> <span class="o">:=</span> <span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{}</span>
-
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)&lt;</span><span class="mi">1</span> <span class="p">{</span>
-        <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Error: input string was not DNA. Only characters ATCG are allowed, you had %s&quot;</span><span class="p">,</span><span class="nx">input</span><span class="p">)</span>
-        <span class="k">return</span> <span class="nx">result</span><span class="p">,</span> <span class="nx">errors</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-    <span class="p">}</span>
-
-    <span class="c1">// Number of substring overlaps</span>
-    <span class="nx">overlap</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span> <span class="o">-</span> <span class="nx">k</span> <span class="o">+</span> <span class="mi">1</span>
-
-    <span class="c1">// If overlap &lt; 1, we are looking</span>
-    <span class="c1">// for kmers longer than our input</span>
-    <span class="k">if</span> <span class="nx">overlap</span><span class="p">&lt;</span><span class="mi">1</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="nx">result</span><span class="p">,</span><span class="kc">nil</span>
-    <span class="p">}</span>
-
-    <span class="c1">// Iterate over each position,</span>
-    <span class="c1">// extract the string,</span>
-    <span class="c1">// increment the count.</span>
-    <span class="k">for</span> <span class="nx">i</span><span class="o">:=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">i</span><span class="p">&lt;</span><span class="nx">overlap</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-        <span class="c1">// Get the kmer of interest</span>
-        <span class="nx">substr</span> <span class="o">:=</span> <span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">:</span><span class="nx">i</span><span class="o">+</span><span class="nx">k</span><span class="p">]</span>
-
-        <span class="c1">// If it doesn&#39;t exist, the value is 0</span>
-        <span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-    <span class="p">}</span>
-
-    <span class="k">return</span> <span class="nx">result</span><span class="p">,</span><span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<h3 id="function-walkthrough">Function Walkthrough</h3>
-<p>The first thing you'll notice is the comment style:
-there is a comment right before each function, which
-is common practice in Go, because comments that come
-before a function are picked up by <code>godoc</code> (the Go
-documentation tool) and turned into documentation.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Return the histogram of kmers of length k </span>
-<span class="c1">// found in the given input</span>
-<span class="kd">func</span> <span class="nx">KmerHistogram</span><span class="p">(</span><span class="nx">input</span> <span class="kt">string</span><span class="p">,</span> <span class="nx">k</span> <span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span><span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-</code></pre></div>
-
-<p>Go has internalized the idea that comments are a part
-of the documentation, so comments don't need to be 
-formatted in any special way (like <code>/// this</code> or <code>/** this */</code>
-business) to end up being picked up by godoc.</p>
-<p>Next, we create an empty map (kmer strings to integer
-frequency counters) and stride over the entire input string
-with a window the size of the kmers we are interested in,
-adding or incrementing each corresponding counter in the map
-as we go.</p>
-<p>The overlap variable is the number of possible kmers of length
-<code>k</code> in the entire input string, which requires a bit of algebra
-to gt the indices right:</p>
-<div class="highlight"><pre><span></span><code>    <span class="c1">// Number of substring overlaps</span>
-    <span class="nx">overlap</span> <span class="o">:=</span> <span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span> <span class="o">-</span> <span class="nx">k</span> <span class="o">+</span> <span class="mi">1</span>
-</code></pre></div>
-
-<p>The for loop utilizes Go's slice notation to take a slice of
-the string (which does not require creating or duplicating any
-string data), and uses the extracted kmer as a key to add or 
-increment the counter: </p>
-<div class="highlight"><pre><span></span><code>    <span class="c1">// Iterate over each position,</span>
-    <span class="c1">// extract the string,</span>
-    <span class="c1">// increment the count.</span>
-    <span class="k">for</span> <span class="nx">i</span><span class="o">:=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">i</span><span class="p">&lt;</span><span class="nx">overlap</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">{</span>
-        <span class="c1">// Get the kmer of interest</span>
-        <span class="nx">substr</span> <span class="o">:=</span> <span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">:</span><span class="nx">i</span><span class="o">+</span><span class="nx">k</span><span class="p">]</span>
-
-        <span class="c1">// If it doesn&#39;t exist, the value is 0</span>
-        <span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-    <span class="p">}</span>
-</code></pre></div>
-
-<p>This is where the behavior of maps for non-existent keys comes
-in handy - in Go, if you ask for a key that does not exist
-in the map, the map will return the zero value of the specified
-type. </p>
-<p>This statement:</p>
-<div class="highlight"><pre><span></span><code>        <span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-</code></pre></div>
-
-<p>can also be written as:</p>
-<div class="highlight"><pre><span></span><code>        <span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span> <span class="p">=</span> <span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
-</code></pre></div>
-
-<p>So, the first time a kmer (stored in <code>substr</code>) is encountered, the
-kmer will not exist as a key in the map, and the key lookup on the 
-right hand side will return 0, incrementing the counter to 1
-the first time the kmer is encountered.</p>
-<p>Subsequent times the kmer is encountered, the value will be found 
-and substituted on the right side so it will be incremented by 1.</p>
-<p>Finally, when we return from the function, we can use a Python-like
-syntax of returning multiple values separated by commas, yet
-another great feature of Go: </p>
-<div class="highlight"><pre><span></span><code>    <span class="k">return</span> <span class="nx">result</span><span class="p">,</span><span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<p>By convention, the return types of functions will include an error type 
-at the very end, so if you had a function named <code>ExampleFunction</code> that 
-returned three integers, the function definition would look like this:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">func</span> <span class="nx">ExampleFunction</span><span class="p">()</span> <span class="p">(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-    <span class="o">...</span>    
-<span class="p">}</span>
-</code></pre></div>
-
-<p>Additionally, we also see from the function's return statement
-above that we can use the reserved keyword <code>nil</code> to set a variable
-to a null value, and that the convention is to return <code>nil</code> in place
-of the error, so that in the calling function we can set up a structure
-like this:</p>
-<div class="highlight"><pre><span></span><code>a, b, c, err := ExampleFunction()
-
-if err != nil {
-    err := &quot;Please read this important message&quot;
-    return -1,-1,-1,errors.New(err)
-}
-</code></pre></div>
-
-<h2 id="summary">Summary</h2>
-<p>Maps are my favorite data structure, so I'm glad that they're
-easy to use in Go. Some important points about using
-maps in Go:</p>
-<ul>
-<li>
-<p>Declaring a variable as a map type does not allocate any space
-  for the map; saying <code>var m map[keyType]valueType</code> and then 
-  trying to access keys will cause an exception.</p>
-</li>
-<li>
-<p>To allcoate space for a map, use <code>make(map[keyType]valueType)</code> 
-  or instantiate with the <code>{}</code> notation, like 
-  <code>m := map[keyType]valueType{"asdf":1}</code></p>
-</li>
-<li>
-<p>To ask for a key, use the square bracket notation. To set a value
-  for a key, use the square bracket notation on the left and assign
-  a value on the right: <code>m[my_key] = my_value</code></p>
-</li>
-<li>
-<p>Asking for missing keys will return the zero value of whatever
-  type the map values are. </p>
-</li>
-<li>
-<p>Iterating over key-value pairs in a map using a for loop is easy
-  using the built-in <code>range</code> keyword.</p>
-</li>
-</ul>
-<h2 id="addendum-check-if-a-key-is-in-a-map">Addendum: Check if a Key is in a Map</h2>
-<p>Because of the default behavior of maps, where they return a zero value for
-keys that do not exist in the map, it is not immediately obvious how to
-differentiate between the case where a key is in a map already and has a zero
-value, versus the case where the key does not yet exist in the map and the zero
-value is only being returned because the key can't be found.</p>
-<p>To resolve this, we can use two Go features: error-checking, and the underscore - 
-a variable that serves as a one-way sink for information, and serves a similar
-purpose to the underscore in Python.</p>
-<p>First, we mentioned above that various operations that can return errors will return
-an error type as the last return type, along with any other return values.
-This includes the operation of accessing a key. To assign the value and the error
-to variables at once:</p>
-<div class="highlight"><pre><span></span><code><span class="nx">v</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">[</span><span class="nx">my_key</span><span class="p">]</span>
-</code></pre></div>
-
-<p>Now, to check if the key exists in the map, we are only concerned with the variable
-<code>err</code> and we don't really need the variable <code>v</code>. Instead of assigning <code>v</code> to a variable
-that we never use, and then having the Go compiler complain about it, we can use the
-underscore as a placeholder:</p>
-<div class="highlight"><pre><span></span><code><span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">[</span><span class="nx">my_key</span><span class="p">]</span>
-</code></pre></div>
-
-<p>Now, we just add a check for whether <code>err</code> is nil, and voila, we have our check of
-whether a key is in the map or not:</p>
-<div class="highlight"><pre><span></span><code><span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">m</span><span class="p">[</span><span class="nx">my_key</span><span class="p">]</span>
-
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="c1">// This key is missing from the map</span>
-
-<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="c1">// This key already exists in the map</span>
-
-<span class="p">}</span>
-</code></pre></div></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/maps.html">maps</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1411,6 +1605,9 @@ whether a key is in the map or not:</p>
 
             <h2>December 2021</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/august-2021-tils.html">August 2021 TILs</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/july-2021-tils.html">July 2021 TILs</a>
             </p>

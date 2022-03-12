@@ -102,6 +102,228 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Using Mock API Servers
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2020-03-09T19:00:00-07:00" pubdate>Monday 03/09/2020</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/using-mock-api-servers.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#the-mockapiserver-class">The MockAPIServer Class</a></li>
+<li><a href="#a-basic-unit-test-with-mockapiserver">A Basic Unit Test with MockAPIServer</a></li>
+</ul>
+</div>
+<h1 id="summary">Summary</h1>
+<p>In a prior post, we covered how to write a mock API server that stored a thread
+as a class attribute and used it to run the server in the background by starting
+a thread.</p>
+<p>However, we neglected to cover how to actually <em>use</em> the mock API server. So here
+we include some examples of how you can use the mock API server to write better
+tests for components that require interacting with APIs.</p>
+<h1 id="the-mockapiserver-class">The MockAPIServer Class</h1>
+<p>Let's start with a recap of the mock API server class. Major features included:</p>
+<ul>
+<li>
+<p>Inheriting from the base HTTP server class in Python, to take advantage of
+  the methods available through it</p>
+</li>
+<li>
+<p>Using a singleton design pattern to start and stop the fake API server</p>
+</li>
+</ul>
+<p>Basically we create the server, call <code>start_serving()</code>, and that starts the
+server on a thread in the background.</p>
+<p>Here is the source code:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
+    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
+        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
+        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># Get the bind address and port</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
+
+        <span class="c1"># Create an HTTP server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
+
+        <span class="c1"># Create a thread to run the server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
+
+        <span class="c1"># Start the server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># Shut down the server</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+
+        <span class="c1"># Let the thread rejoin the worker pool</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
+        <span class="c1"># Enforce rule: JSON only</span>
+        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="c1"># Convert received JSON to dict</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
+
+        <span class="c1"># Process the json</span>
+
+        <span class="c1"># Send a response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+</code></pre></div>
+
+<h1 id="a-basic-unit-test-with-mockapiserver">A Basic Unit Test with MockAPIServer</h1>
+<p>Let's make a basic test that uses the <code>MockAPIServer</code> class. We'll use
+<code>unittest</code> for simplicity, other testing frameworks offer similar
+functionality.</p>
+<p>Before testing our code, we'll need to make sure the API URL is configurable,
+sicne we will need to get the mock API server's bind address and port and use
+those to instruct our code where to find the API server.</p>
+<p>Here is a short example function that we'll test:</p>
+<p><strong><code>foobar.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">urllib.parse</span>
+
+<span class="k">def</span> <span class="nf">make_api_call</span><span class="p">(</span><span class="n">api_url</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A simple function that gets an API endpoint</span>
+<span class="sd">    and returns if no problems raised.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Assemble our API call</span>
+    <span class="n">endpoint</span> <span class="o">=</span> <span class="s1">&#39;/hello/world&#39;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urljoin</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s1">&#39;hello world&#39;</span><span class="p">)</span>
+
+    <span class="c1"># The basic mock server will just echo our request back</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+    <span class="k">return</span>
+</code></pre></div>
+
+<p>Now we write a short test for our foobar script:</p>
+<p><strong><code>test_foobar.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">foobar</span> <span class="kn">import</span> <span class="n">make_api_call</span>
+<span class="kn">import</span> <span class="nn">unittest</span>
+
+<span class="k">class</span> <span class="nc">TestAPICalls</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">setUpClass</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span> <span class="o">=</span> <span class="n">MockAPIServer</span><span class="p">()</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">start_serving</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">test_api_call</span><span class="p">():</span>
+        <span class="n">addr</span><span class="p">,</span> <span class="n">port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urljoin</span><span class="p">(</span>
+            <span class="s1">&#39;http://&#39;</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
+        <span class="p">)</span>
+        <span class="n">make_api_cal</span><span class="p">(</span><span class="n">api_url</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">tearDownClass</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">stop_serving</span><span class="p">()</span>
+</code></pre></div>
+
+<p>We can run the test like so:</p>
+<div class="highlight"><pre><span></span><code>python test_foobar.py
+</code></pre></div>
+
+<p>Here's what happens when we run the test:</p>
+<ul>
+<li>The <code>setUpClass()</code> method is called, which creates a mock API server that starts on
+  localhost on port 9876 and runs the server on a thread.</li>
+<li>The <code>test_api_call()</code> method is run, which makes the API call to the mock API server.
+  (Nothing interesting is happening on either end, right now, but stay tuned for more
+  examples.)</li>
+<li>The <code>tearDownClass()</code> method is called, which stops the mock API server and returns
+  the thread worker to the pool of workers.</li>
+</ul>
+<p>Stay tuned for more complicated examples in the future - we are currently working on
+extending this mock API server to mock calls to the Github API.</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/http.html">http</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/server.html">server</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/api.html">api</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/flask.html">flask</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/web-server.html">web server</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Creating Mock API Servers
             </b></h1>
         
@@ -569,278 +791,6 @@ hello world!
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Confuse-A-Constructor: When Class A's Constructor Returns Objects of Type B
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2020-02-22T13:00:00-08:00" pubdate>Saturday 02/22/2020</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/confuse-a-constructor-when-class-as-constructor-returns-objects-of-type-b.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#confuse-a-constructor">Confuse-A-Constructor</a></li>
-<li><a href="#what-is-the-constructor">What is the constructor?</a></li>
-<li><a href="#rewiring-the-constructor-to-do-weird-stuff">Rewiring the constructor to do... weird stuff</a></li>
-<li><a href="#a-simple-example-class">A simple example class</a></li>
-<li><a href="#adding-a-__new__-method">Adding a __new__ method</a></li>
-<li><a href="#when-__new__-returns-objects-not-classes">When __new__ returns objects, not classes</a></li>
-<li><a href="#moving-beyond-argparse">Moving beyond argparse</a></li>
-<li><a href="#using-__new__-in-your-patterns">Using __new__ in your patterns</a></li>
-</ul>
-</div>
-<h2 id="confuse-a-constructor">Confuse-A-Constructor</h2>
-<p>Today, we are going to confuse a constructor.</p>
-<iframe allowFullScreen="allowFullScreen" src="https://www.youtube.com/embed/1tsIxNci_dE?ecver=1&amp;iv_load_policy=1&amp;rel=0&amp;yt:stretch=16:9&amp;autohide=1&amp;color=red&amp;width=560&amp;width=560" width="560" height="315" allowtransparency="true" frameborder="0">
-    <script type="text/javascript">function execute_YTvideo(){return youtube.query({ids:"channel==MINE",startDate:"2019-01-01",endDate:"2019-12-31",metrics:"views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained",dimensions:"day",sort:"day"}).then(function(e){},function(e){console.error("Execute error",e)})}</script>
-</iframe>
-
-<h2 id="what-is-the-constructor">What is the constructor?</h2>
-<p>One of the first concepts encountered in object-oriented programming
-is that of the <em>constructor</em>, the method that is run immediately after
-an object is instantiated that configures and initializes the object.</p>
-<p>In Python, a constructor is defined by the <code>__init__</code> function.
-The constructor is not permitted to return a value, because
-constructing a new instance of class A should result in an object
-of type A. Returning something would just be confusing things.</p>
-<p>But does it ever make sense for a constructor of class A to return
-an object of type B? And if it does make sense, how do we go about
-doing it?</p>
-<h2 id="rewiring-the-constructor-to-do-weird-stuff">Rewiring the constructor to do... weird stuff</h2>
-<p>The answer lies in Python's <code>__new__</code> method, which is a method called
-when a class is defined (not instantiated). The <code>__new__</code> method is
-different from the <code>__init__</code> method, and does not do the same thing.</p>
-<p>The <code>__new__</code> method for class A should only return the type of class A.
-If <code>__new__</code> returns anything else, Python will not run the <code>__init__</code>
-method for class A.</p>
-<p>For example, suppose we want a wrapper class that transparently constructs
-different kinds of objects conditionally - based on a configuration file,
-or the state of a file, or some other condition. We want to construct an
-object of type A and get back an object of type B, C, or D. How to do that?</p>
-<p>First, let's look at how the <code>__new__</code> method works.</p>
-<h2 id="a-simple-example-class">A simple example class</h2>
-<p>Start with a simple example class:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instance of class A created&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Executing this gives:</p>
-<div class="highlight"><pre><span></span><code>In [3]: my_object = A()
-Instance of class A created
-
-In [4]: my_object.hello()
-Hello world
-</code></pre></div>
-
-<h2 id="adding-a-__new__-method">Adding a <code>__new__</code> method</h2>
-<p>Now let's look at a class A where we define the <code>__new__</code> method. This method
-controls how the instantiation of objects of type A work, so we can do something
-like limiting the creation of objects of type A to when a certain condition is
-met:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">random</span>
-
-<span class="k">def</span> <span class="nf">tossCoin</span><span class="p">():</span>
-    <span class="k">if</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">True</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">False</span>
-
-<span class="k">class</span> <span class="nc">A5050</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">tossCoin</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Count not create instance&quot;</span><span class="p">)</span>
-        <span class="n">instance</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">A5050</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">instance</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instance of class A5050 created&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Now we can run this block of code:</p>
-<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">make_a5050</span><span class="p">():</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">my_object</span> <span class="o">=</span> <span class="n">A5050</span><span class="p">()</span>
-        <span class="n">my_object</span><span class="o">.</span><span class="n">hello</span><span class="p">()</span>
-    <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Better luck next time!&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>It takes a few tries:</p>
-<div class="highlight"><pre><span></span><code>In [9]: make_a5050()
-Better luck next time!
-
-In [10]: make_a5050()
-Instance of class A5050 created
-Hello world
-</code></pre></div>
-
-<p>The <code>__new__</code> method for the <code>A5050</code> class raises a runtime error
-with a 50% probability. Otherwise, it calls the <code>__new__</code> method
-of the parent class (<code>object</code>, which returns a class of type <code>object</code>).
-We pass the same arguments and keyword arguments (args/kwargs) on to the
-super class <code>__new__</code>, but we could optionally modify them here (say, add
-a keyword, or check the state of a file, or etc.).</p>
-<p>This is just an example of how the instantiation behavior of a class
-can be modified before its constructor is even called by using the
-<code>__new__</code> method.</p>
-<h2 id="when-__new__-returns-objects-not-classes">When <code>__new__</code> returns objects, not classes</h2>
-<p>In the above example, our <code>__new__</code> method returned the result of
-a call to <code>__new__</code> of a parent class. What happens if <code>__new__</code>
-returns something else?</p>
-<p>First, repeating an important point made above: if <code>__new__</code> for a class
-returns anything <em>other</em> than that class type, then <code>__init__</code> will not 
-be called for that class.</p>
-<p>That means that the <code>__new__</code> method should <em>either</em> return a class (if
-returning the type of its parent class, like a normal <code>__new__</code> method
-does), <em>or</em> it should return an instantiated object.</p>
-<p>Let's imagine that we want to create different instances of different
-classes based on a command line flag passed to the script:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">BaseClass</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world from class </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
-
-<span class="k">class</span> <span class="nc">B</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">C</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">D</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">B</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">B</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">C</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">C</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">D</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">D</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Could not create instance&quot;</span><span class="p">)</span>
-
-<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="nn">argparse</span>
-
-    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-B&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type B&#39;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-C&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type C&#39;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-D&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type D&#39;</span><span class="p">)</span>
-
-    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-
-    <span class="n">a</span> <span class="o">=</span> <span class="n">A</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
-</code></pre></div>
-
-<p>Now if we run this script and pass it different flags, we get
-a variable <code>a</code> with different types:</p>
-<div class="highlight"><pre><span></span><code>$ py wat2.py -h
-usage: wat2.py [-h] [-B] [-C] [-D]
-
-optional arguments:
-  -h, --help  show this help message and exit
-  -B          Return object of type B
-  -C          Return object of type C
-  -D          Return object of type D
-</code></pre></div>
-
-<p>Now try the three flags:</p>
-<div class="highlight"><pre><span></span><code>$ py wat2.py -B
-&lt;class &#39;__main__.B&#39;&gt;
-
-$ py wat2.py -C
-&lt;class &#39;__main__.C&#39;&gt;
-
-$ py wat2.py -D
-&lt;class &#39;__main__.D&#39;&gt;
-</code></pre></div>
-
-<h2 id="moving-beyond-argparse">Moving beyond argparse</h2>
-<p>The example above shows how the constructor can use
-argparse options to determine what kind of object
-to return with <code>__new__</code>, but you can use other
-types of conditions as well:</p>
-<ul>
-<li>using command line options (see argparse example above)</li>
-<li>using configuration file options</li>
-<li>using environment variable values</li>
-<li>checking status of a file or port</li>
-<li>checking whether internet connection is available</li>
-</ul>
-<h2 id="using-__new__-in-your-patterns">Using <code>__new__</code> in your patterns</h2>
-<p>We have already covered the <a href="#">Registry</a>
-pattern in a prior blog post, but the
-<code>__new__</code> method lends itself well to
-all kinds of other patterns, including the
-Singleton pattern and the Factory pattern.</p>
-<p>There are some very useful patterns covered
-in this Github repository: <a href="https://github.com/faif/python-patterns">https://github.com/faif/python-patterns</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/constructor.html">constructor</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/object-oriented-programming.html">object oriented programming</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -927,6 +877,9 @@ in this Github repository: <a href="https://github.com/faif/python-patterns">htt
 
             <h2>December 2021</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/august-2021-tils.html">August 2021 TILs</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/july-2021-tils.html">July 2021 TILs</a>
             </p>
