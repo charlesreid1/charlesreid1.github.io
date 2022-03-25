@@ -102,6 +102,397 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Deconvoluting Convolutional Neural Networks
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-05-29T14:00:00-07:00" pubdate>Wednesday 05/29/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/machine-learning.html">Machine Learning</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/deconvoluting-convolutional-neural-networks.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#introduction-a-simple-cnn-example">Introduction: A Simple CNN Example</a></li>
+<li><a href="#exploring-the-data">Exploring the Data</a></li>
+<li><a href="#create-cnn">Create CNN</a></li>
+<li><a href="#analyzing-network-architecture-and-tensor-shapes">Analyzing Network Architecture and Tensor Shapes</a><ul>
+<li><a href="#input-image-layer">Input Image Layer</a></li>
+<li><a href="#first-convolution-layer">First Convolution Layer</a></li>
+<li><a href="#first-activation-layer">First Activation Layer</a></li>
+<li><a href="#first-maxpooling-layer">First MaxPooling Layer</a></li>
+<li><a href="#second-convolution-layer">Second Convolution Layer</a></li>
+<li><a href="#second-activation-layer">Second Activation Layer</a></li>
+<li><a href="#second-maxpooling-layer">Second MaxPooling Layer</a></li>
+<li><a href="#third-convolution-layer">Third Convolution Layer</a></li>
+<li><a href="#third-activation-layer">Third Activation Layer</a></li>
+<li><a href="#third-maxpooling-layer">Third MaxPooling Layer</a></li>
+<li><a href="#flatten-and-dense-layers">Flatten and Dense Layers</a></li>
+<li><a href="#categorical-output">Categorical Output</a></li>
+</ul>
+</li>
+<li><a href="#image-transformer">Image Transformer</a><ul>
+<li><a href="#next-steps">Next Steps</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h1 id="introduction-a-simple-cnn-example">Introduction: A Simple CNN Example</h1>
+<p>As part of our weekly Deep Learning for Genomics reading group
+here in the <a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology (DIB Lab)</a>,
+we are applying convolutional neural networks (deep learning) 
+to various problems in genomics and biology.</p>
+<p>For the most recent meeting, we prepared some notes on how convolutional
+neural networks work. The notes are in the form of a Jupyter notebook.
+This blog post summarizes some of the important conclusions from the
+notebook and links to relevant sections in the notebook.</p>
+<p>In the notebook covered in this blog post, we set up a 
+simple convolutional neural network from an example on the
+<a href="https://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html">keras blog</a>.
+This example is used to classify input images as being either
+a cat or a dog.</p>
+<p>All materials covered in this blog post are in the 
+<a href="https://github.com/charlesreid1/deconvoluting-convolutions">charlesreid1/deconvoluting-convolutions</a>
+repository on Github.</p>
+<h1 id="exploring-the-data">Exploring the Data</h1>
+<p><strong>TL;DR:</strong> When developing a deep learning model for a problem,
+it is important to start by exploring the data and understanding
+it thoroughly. </p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Image-Data">Link to "Image Data" section of notebook</a></p>
+<h1 id="create-cnn">Create CNN</h1>
+<p><strong>TL;DR:</strong> Our convolutional neural network consists of the following architecture:</p>
+<ul>
+<li>Convolutional Stage #1<ul>
+<li>Convolution (3 x 3 kernel, 32 filters)</li>
+<li>Activation (ReLU)</li>
+<li>Max Pooling (2x2)</li>
+</ul>
+</li>
+<li>Convolutional Stage #2<ul>
+<li>Convolution (3 x 3 kernel, 32 filters)</li>
+<li>Activation (ReLU)</li>
+<li>Max Pooling (2x2)</li>
+</ul>
+</li>
+<li>Convolutional Stage #3<ul>
+<li>Convolution (3 x 3 kernel, 64 filters)</li>
+<li>Activation (ReLU)</li>
+<li>Max Pooling (2x2)</li>
+</ul>
+</li>
+<li>Flatten</li>
+<li>Dense (64 nodes)</li>
+<li>Activation (ReLU)</li>
+<li>Dropout (0.5)</li>
+<li>Dense (1 node)</li>
+<li>Activation (ReLU)</li>
+</ul>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Create-Convolutional-Neural-Network">Link to "Create Convolutional Neural Network" section of notebook</a></p>
+<h1 id="analyzing-network-architecture-and-tensor-shapes">Analyzing Network Architecture and Tensor Shapes</h1>
+<p><strong>TL;DR:</strong> Each step of the neural network transforms
+an input tensor of a given shape into an output tensor
+of a (potentially different) shape.</p>
+<p>In this section of the notebook, we step through each
+of the neural network's layers to explain how the size
+of each layer's inputs and outputs are determined.</p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Network-Architecture/Shapes">Link to "Network Architecture/Shapes" section of notebook</a></p>
+<h2 id="input-image-layer">Input Image Layer</h2>
+<p><strong>TL;DR:</strong> The size of the cat and dog images is 150 x 150 pixels.
+Each image is a color image, so it consists of 3 channels. Therefore,
+the input to the very first layer has a shape of</p>
+<div class="math">$$
+(\mbox{None}, w_0, h_0, c_0) = (\mbox{None}, 150, 150, 3)
+$$</div>
+<p>(where "None" indicates a variable-size dimension that is equal to
+the number of total input images, or alternatively, the number of 
+images per batch, if we are using batch learning).</p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Input-Image-Layer">Link to "Input Image Layer" section of notebook</a></p>
+<h2 id="first-convolution-layer">First Convolution Layer</h2>
+<p><strong>TL;DR:</strong> A convolutional layer with a kernel size of <span class="math">\(k_1 \times k_1\)</span>
+and a number of filters <span class="math">\(c_1\)</span> will transform the shape of the input image to:</p>
+<div class="math">$$
+(\mbox{None}, w_1, h_1, c_1) = 
+(\mbox{None}, 148, 148, 32)
+$$</div>
+<p>where</p>
+<div class="math">$$
+w_1 = w_0 - k_1 + 1 \\
+h_1 = h_0 - k_1 + 1
+$$</div>
+<p>Importantly, each of the three input channels are added together to determine
+their contribution to the final convolution filters - the number of input channels
+does not affect the number of output channels. </p>
+<p>The total number of output channels is equal to the number of filters
+in the convolution layer. </p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#First-Convolution-Layer">Link to "First Convolutional Layer" section of notebook</a></p>
+<h2 id="first-activation-layer">First Activation Layer</h2>
+<p><strong>TL;DR:</strong> The activation layer is a straightforward one-to-one mapping -
+each individual value from the output of the convolution layer is fed through
+the rectified linear unit (ReLU) function and the resulting output value becomes
+the input to the next layer. The ReLU function is given by:</p>
+<div class="math">$$
+\mbox{ReLU}(x) = \max(0,x)
+$$</div>
+<p>The activation layer does not change the shape of the input tensor.</p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#First-Activation-Layer">Link to "First Activation Layer" section of notebook</a></p>
+<h2 id="first-maxpooling-layer">First MaxPooling Layer</h2>
+<p><strong>TL;DR:</strong> The max pooling layer is a way of making the final convolutional
+filters (the "feature-detectors" of the convolutional neural network) less 
+sensitive to the exact placement of features. The pooling layer only affects
+the size of the filter, not the number of channels.</p>
+<p>If we use a max pooling window of <span class="math">\(p_1 \times p_1\)</span>, we will reduce the image
+size by <span class="math">\(\mbox{ceil}(w_1/p_1)\)</span> and <span class="math">\(\mbox{ceil}(h_1/p_1)\)</span>. This reduces the input tensor shape
+to:</p>
+<div class="math">$$
+(\mbox{None}, \mbox{ceil}(w_1/p_1), \mbox{ceil}(h_1/p_1), c_1) = 
+(\mbox{None}, 74, 74, 32)
+$$</div>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#First-Max-Pooling-Layer">Link to "First Max Pooling Layer" section of notebook</a></p>
+<h2 id="second-convolution-layer">Second Convolution Layer</h2>
+<p><strong>TL;DR:</strong> The second convolutional layer has a kernel size 
+of <span class="math">\(k_2 \times k_2\)</span> and a number of filters <span class="math">\(c_2\)</span>, which will
+transform the shape of the input image in the same way as 
+described for the first convolutional layer.</p>
+<p>Note that just as the number of channels (3) in each 
+input to the first convolutional layer did not affect
+the final number of channels in the output of the convolutional
+layer (number of channels was fixed by specifying number of
+output filters for the convolutional layer), so the number of
+input channels to the second convolutional layer does not affect 
+the number of output channels from the second convolutional
+layer.</p>
+<p>The final shape coming out of the second convolutional layer is:</p>
+<div class="math">$$
+(\mbox{None}, w_2, h_2, c_2) = 
+(\mbox{None}, 72, 72, 32)
+$$</div>
+<p>where</p>
+<div class="math">$$
+w_2 = w_1 - k_2 + 1 \\
+h_2 = h_1 - k_2 + 1 \\
+$$</div>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Second-Convolution-Layer">Link to "Second Convolutional Layer" section of notebook</a></p>
+<h2 id="second-activation-layer">Second Activation Layer</h2>
+<p><strong>TL;DR:</strong> The activation layer again uses a function to
+map input values to output values in a one-to-one mapping,
+so the activation layer does not change the shape of the 
+input tensor.</p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Second-Activation-Layer">Link to "Second Activation Layer" section of notebook</a></p>
+<h2 id="second-maxpooling-layer">Second MaxPooling Layer</h2>
+<p><strong>TL;DR:</strong> The second max pooling layer uses a pooling
+window of size <span class="math">\(p_2 \times p_2\)</span>. This will reduce the input
+size to <span class="math">\(\mbox{ceil}(w_2/p_2) \times \mbox{ceil}(h_2/p_2)\)</span>. This reduces 
+the input tensor shape to:</p>
+<div class="math">$$
+(\mbox{None}, \mbox{ceil}(w_2/p), \mbox{ceil}(h_2/p), c_2) = 
+(\mbox{None}, 36, 36, 32)
+$$</div>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Second-Max-Pooling-Layer">Link to "Second Max Pooling Layer" section of notebook</a></p>
+<h2 id="third-convolution-layer">Third Convolution Layer</h2>
+<p><strong>TL;DR:</strong> The third convolution layer with a kernel size 
+of <span class="math">\(k_3 \times k_3\)</span> and <span class="math">\(c_3\)</span> output filters will transform
+the input tensor shape in the following way (note that the
+third convolutional layer has 64 filters, not 32):</p>
+<div class="math">$$
+(\mbox{None}, w_3, h_3, c_3) =
+(\mbox{None}, 34, 34, 64)
+$$</div>
+<p>where</p>
+<div class="math">$$
+w_3 = w_2 - k_3 + 1 \\
+h_3 = h_2 - k_3 + 1
+$$</div>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Third-Convolution-Layer">Link to "Third Convolutional Layer" section of notebook</a></p>
+<h2 id="third-activation-layer">Third Activation Layer</h2>
+<p><strong>TL;DR:</strong> The activation layer again uses a function to
+map input values to output values in a one-to-one mapping,
+so the activation layer does not change the shape of the 
+input tensor.</p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Third-Activation-Layer">Link to "Third Activation Layer" section of notebook</a></p>
+<h2 id="third-maxpooling-layer">Third MaxPooling Layer</h2>
+<p><strong>TL;DR:</strong> The thid max pooling layer uses a pooling
+window of size <span class="math">\(p_3 \times p_3\)</span>. This will reduce the input
+size to <span class="math">\(\mbox{ceil}(w_3/p_3) \times \mbox{ceil}(h_3/p_3)\)</span>. This reduces 
+the input tensor shape to:</p>
+<div class="math">$$
+(\mbox{None}, \mbox{ceil}(w_3/p_3), \mbox{ceil}(h_3/p_3), c_2) = 
+(\mbox{None}, 17, 17, 64)
+$$</div>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Third-Max-Pooling-Layer">Link to "Third Max Pooling Layer" section of notebook</a></p>
+<h2 id="flatten-and-dense-layers">Flatten and Dense Layers</h2>
+<p><strong>TL;DR:</strong> The flatten layer converts a tensor of dimension <span class="math">\((\mbox{None}, 17, 17, 64)\)</span>
+into a 1D vector of <span class="math">\(17 \times 17 \times 64 = 18,496\)</span> neural network nodes. This does not
+change any of the values, it simply reshapes the input tensor.</p>
+<p>The first dense layer reduces the flattened <span class="math">\(18,496\)</span> nodes to <span class="math">\(64\)</span> nodes, using a fully connected
+layer of nodes. These values are then passed through an activation function (as with the above
+activation layers, this is a one-to-one mapping and does not change the shape of the input tensor).
+The dense layer is followed by a dropout layer to help prevent overfitting; this pattern is common
+in convolutional neural networks.</p>
+<p>The second dense layer further reduces the <span class="math">\(64\)</span> nodes to a single node, whose output will determine
+whether the input image is a cat or a dog.</p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Flatten-Layer">Link to "Flatten Layer" section of notebook</a></p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Dense-(64)">Link to "Dense (64) Layers" section of notebook</a></p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Dense-(1)">Link to "Dense (1) Layers" section of notebook</a></p>
+<h2 id="categorical-output">Categorical Output</h2>
+<p><strong>TL;DR:</strong> Normally when classifying cats and dogs, we would have two output neurons, one to
+output a binary yes/no to answer "is this a cat?" and another output a binary yes/no to answer 
+"is this a dog?". However, in this example, we assume that <em>all</em> inputs contain either only cats
+or only dogs, so the single-output binary classifier is determining whether an image is a dog (0)
+or a cat (1).</p>
+<h1 id="image-transformer">Image Transformer</h1>
+<p><strong>TL;DR:</strong> The <code>ImageDataGenerator</code> class is a class provided by keras
+for loading image data from a directory and (optionally) applying various
+transformations to the images in order to generate additional training data
+from a set of images. For example, the following code block from the 
+notebook creates an <code>ImageDataGenerator</code> class that will load images from a
+folder on disk, and applies various transformations (shearing, zooming, 
+and horizontally flipping) to each image during the training process.</p>
+<div class="highlight"><pre><span></span><code><span class="n">train_datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span>
+    <span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span> <span class="o">/</span> <span class="mi">255</span><span class="p">,</span>
+    <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">zoom_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">horizontal_flip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<p>This can then be used to generate test image data:</p>
+<div class="highlight"><pre><span></span><code><span class="n">train_generator</span> <span class="o">=</span> <span class="n">train_datagen</span><span class="o">.</span><span class="n">flow_from_directory</span><span class="p">(</span>
+    <span class="s1">&#39;train&#39;</span><span class="p">,</span>
+    <span class="n">target_size</span><span class="o">=</span><span class="p">(</span><span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span><span class="p">),</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+    <span class="n">class_mode</span><span class="o">=</span><span class="s1">&#39;binary&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>This will look for images in the relative path <code>train/data/</code>
+(note the implicit <code>data/</code> directory tacked on the end).
+Note that this image data generator allows us to use images
+that do not have size <span class="math">\(150 \times 150\)</span>, as they will be re-sized
+to <code>target_size</code>.</p>
+<p><a href="https://tinyurl.com/deconvoluting-convolutions#Image-Transformer">Link to "Image Transformer" section of notebook</a></p>
+<h2 id="next-steps">Next Steps</h2>
+<p>Now that we have walked through a sample convolutional neural network
+and covered how each layer transforms the size of the input tensor, 
+we are ready to start applying convolutional neural networks to real
+problems.</p>
+<p>Our next blog post will cover the materials in the
+<a href="https://github.com/charlesreid1/deep-learning-genomics">charlesreid1/deep-learning-genomics</a>
+repository on Github, which applies the convolutional neural 
+network concept in a 1D context (applying convolutions to 1D sequences, 
+instead of 2D images) to learn about (and predict) DNA transcription factor 
+binding sites.  </p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/deep-learning.html">deep learning</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/machine-learning.html">machine learning</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/neural-networks.html">neural networks</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/keras.html">keras</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/convolutional-neural-networks.html">convolutional neural networks</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/cnn.html">cnn</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Graphs for Bioinformatics, Part 2: Finding Eulerian Paths
             </b></h1>
         
@@ -929,128 +1320,6 @@ that all reads are perfect).</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                The Git-Commit-Ectomy
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-04-17T12:00:00-07:00" pubdate>Wednesday 04/17/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-git-commit-ectomy.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>TLDR: Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p>
-<p><br /></p>
-<p>Consider the following <em>completely hypothetical</em>
-scenario.</p>
-<p>Suppose you've been working for a while on your latest
-invention, a brand-new whiz-bang command line
-tool that's fast and solves an important problem
-and you're chugging your way to the finish line.</p>
-<p>As part of preparing to release your software tool,
-you add some tests, because that's what you do.</p>
-<p>Those tests require some data, so you add a few test
-data sets, a few hundred kilobytes each, nothing fancy.</p>
-<p>Then one day, <strong>the intern</strong> (who is just trying to be 
-helpful by adding a new test) slips in a 70 MB test
-data set, and slips it in with a string of commits
-that somehow get incorporated into the master branch.</p>
-<p>(Side note: you turned on branch protection to prevent
-this whole mess, didn't you? <em>Didn't you??</em> 
-'Course you did. This is all
-just a hypothetical scenario.)</p>
-<p>Now, the situation is complicated: there are several
-open pull requests and active branches, and a non-trivial
-amount of history that's been added since the time the
-large test data set was accidentally added.</p>
-<p><strong>The intern</strong> apologizes profusely and promises to 
-bring in donuts every day next week. But the damage 
-is done.</p>
-<p><strong>The intern</strong>, a git novice, pulls out a laptop
-and runs a <code>git rm</code> on the files, pushing to the
-remote and happily, ignorantly believing the problem
-has been solved.</p>
-<p>But <strong>the intern</strong> does not understand how git works.
-It has a perfect memory, and remembers every file in
-every commit. Since the problematic first commit that
-added the large files, git has remembered and will always
-remember that large file. It's in git's blood. 
-It's what git was designed to do.</p>
-<p>Once the intern has been, ahem, moved along,
-and branch protection has been turned on,
-it's time to find a git surgeon to perform a 
-git-commit-ectomy to remove the problematic
-large files from the repository entirely.</p>
-<h2 id="dr-reids-patented-git-commit-ectomy">Dr. Reid's Patented Git-Commit-Ectomy</h2>
-<p>If it's a git-commit-ectomy you need,
-try Dr. Reid's Patented Git-Commit-Ectomy
-to ease your git commit pains.</p>
-<p>Whether you want to keep thing simple
-and remove a git commit from a single branch,
-or if you've got multiple branches, Dr. Reid's
-Patented Git-Commit-Ectomy will get you back
-on your feet.</p>
-<p>Dr. Reid's Patented Git-Commit-Ectomy can handle
-even the most messy, confused, and tangled git 
-commit history - with a bit of work and a gifted
-surgeon the git-commit-ectomy can smooth things 
-out and get you feeling right as rain.</p>
-<p>Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1134,6 +1403,9 @@ out and get you feeling right as rain.</p>
 
             <h2>December 2021</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/september-2021-tils.html">September 2021 TILs</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/august-2021-tils.html">August 2021 TILs</a>
             </p>
