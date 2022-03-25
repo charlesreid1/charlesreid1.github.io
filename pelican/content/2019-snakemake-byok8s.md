@@ -10,7 +10,7 @@ Tags: python, bioinformatics, workflows, pipelines, snakemake, travis, kubernete
 
 # Recap: Workflows as Executables
 
-In our previous blog post, [Building Snakemake Command Line Wrappers](https://charlesreid1.github.io/building-snakemake-command-line-wrappers.html),
+In our previous blog post, [Building Snakemake Command Line Wrappers](https://charlesreid1.github.io/building-snakemake-command-line-wrappers-for-workflows.html)
 we covered some approaches to making Snakemake
 workflows into executables that can be run as
 command line utilities.
