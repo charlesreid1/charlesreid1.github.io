@@ -102,371 +102,6 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Applied Gitflow
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2020-07-01T12:00:00-07:00" pubdate>Wednesday 07/01/2020</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/applied-gitflow.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#how-we-apply-gitflow">How We Apply Gitflow</a></li>
-<li><a href="#the-tools">The Tools</a></li>
-<li><a href="#recap-of-gitflow">Recap of Gitflow</a></li>
-<li><a href="#deploying-and-releasing">Deploying and Releasing</a></li>
-<li><a href="#environment-file">Environment File</a></li>
-<li><a href="#deploy-action">Deploy Action</a></li>
-<li><a href="#release-action">Release Action</a></li>
-<li><a href="#release-script">Release Script</a><ul>
-<li><a href="#breaking-it-down">Breaking It Down</a></li>
-</ul>
-</li>
-<li><a href="#makefile">Makefile</a></li>
-<li><a href="#more-details">More Details</a></li>
-</ul>
-</div>
-<p><strong>This is a retroactive blog post. This post was authored in February 2022,
-using material authored in July 2020.</strong></p>
-<p>The most up-to-date version of this content is here: <a href="https://charlesreid1.com/wiki/Applied_Gitflow">https://charlesreid1.com/wiki/Applied_Gitflow</a></p>
-<h2 id="how-we-apply-gitflow">How We Apply Gitflow</h2>
-<p>In some prior blog posts, we've covered a few patterns that we use for software development,
-including:</p>
-<ul>
-<li>
-<p><a href="https://charlesreid1.github.io/automatically-generating-up-to-date-requirementstxt-for-python-projects.html">Automatically generating requirements.txt files with pinned versions for Python
-  projects</a>,
-  which covered a Makefile rule that would programmatically generate a fresh, up-to-date requirements.txt file
-  for a Python project</p>
-</li>
-<li>
-<p><a href="https://charlesreid1.github.io/incorporating-terraform-commands-into-makefiles.html">Incorporating Terraform commands into
-  Makefiles</a> to make it easy
-  to use <code>make</code> and terraform to manage multiple cloud deployments</p>
-</li>
-<li>
-<p><a href="https://charlesreid1.github.io/git-workflows-part-1-supercharging-your-git-config.html">Git workflows: supercharging your git
-  config</a>, which covers
-  some tricks and aliases for the git configuration file that makes some git operations a lot easier</p>
-</li>
-<li>
-<p><a href="https://charlesreid1.github.io/git-workflows-part-3-refactoring-large-branches-and-pull-requests.html">Git workflows: refactoring large branches and pull
-  requests</a>,
-  which covered strategies and techniques for refactoring a large set of changes
-  or pull request into smaller chunks that are simpler and easier to review,
-  without having to start from scratch</p>
-</li>
-</ul>
-<p>In this post, we'll get into some details about how we manage software in git repositories.</p>
-<p>Specifically, we want to provide some details about how gitflow looks
-when it's being used to manage software with different versions,
-and when that software is being deployed in multiple environments.</p>
-<p>The original gitflow pattern doesn't talk much about how software
-deployments in multiple environments fits in with the gitflow model,
-or even <em>if</em> it fits in the gitflow model.</p>
-<p>With a few adjustments and patterns, gitflow can easily handle both.
-In this post we'll share patterns we have found useful when using
-gitflow to manage both deployments and releases.</p>
-<h2 id="the-tools">The Tools</h2>
-<p>The main tool for this writeup is git, used for version control of the repository. GitHub and Gitea provide an
-interface to manage the git repository and to collaborate/review code. We use the gitflow model for managing
-branches and code, so we'll summarize it, and provide a link with the details. </p>
-<p>We are also using a cloud provider where we upload the code to the cloud, and the code is run there. 
-(Think AWS lambda function.) That code is separate from the git repository, so we need a way to track
-what code is in what environment. We'll cover how we do that, too. </p>
-<h2 id="recap-of-gitflow">Recap of Gitflow</h2>
-<p>Since this post is talking about how to apply <a href="https://nvie.com/posts/a-successful-git-branching-model/">Gitflow</a>,
-let's go through a quick recap of how it works.</p>
-<p>Gitflow requires that a few branches be created, but
-let's assume you're working in a repo already set up with Gitflow.
-In that case, regular development work looks like thi:</p>
-<ul>
-<li>The <code>develop</code> branch is where the newest version is being worked on</li>
-<li>Specific fixes or features go into their own feature branch</li>
-<li>Feature branches are reviewed/tested before being merged into <code>develop</code></li>
-<li>When it is time for a new version, the accumulated features on <code>develop</code> are
-  put into a new branch for the new version.</li>
-<li>When the new version is ready, the <code>main</code> branch is updated to point to the new version branch.
-  A new release is made from the main branch.</li>
-</ul>
-<p>There is also a workflow for bug fixes for versions that have already been released:</p>
-<ul>
-<li>A new hotfix branch is created from the version branch (which is also what the <code>main</code> branch is pointing to)</li>
-<li>The changes are added to the hotfix branch</li>
-<li>The hotfix branch is merged back into the version branch, the version number is bumped, and a new release is cut.</li>
-<li>The hotfix branch is also merged into the <code>develop</code> branch, so that it will make it into future releases.</li>
-</ul>
-<h2 id="deploying-and-releasing">Deploying and Releasing</h2>
-<p>As the original author himself says on the page describing Gitflow,
-this model doesn't say much about how to handle deployments into
-multiple cloud environments.</p>
-<p>There are two main actions that an operator can take, using the system we have devised:</p>
-<ul>
-<li>deploy code (upload the code to a cloud stage, and have that version of the code running in the cloud)</li>
-<li>release code (update which version of the code is considered the "latest version")</li>
-</ul>
-<p>Additionally, the actions the operator can take will require certain variables to be defined - the location of the
-source code, and which cloud environment (development, integration, production) we're deploying to, for example. Those
-variables are defined using environment variables, so that we can use scripts to do deploy or release actions.</p>
-<h2 id="environment-file">Environment File</h2>
-<p>Before covering the deploy and release scripts, here is an example environment file. The example release script
-below refers to these variables. The deploy script (no example provided, since it will inevitably be case-specific)
-also uses these environment variables. More environment variables can be added as needed, to grow with the
-complexity of the software and deployment process.</p>
-<div class="highlight"><pre><span></span><code>#!/bin/bash
-
-export PROJECTNAME_PACKAGENAME_HOME=&quot;${HOME}/path/to/package&quot;
-export PROJECTNAME_PACKAGENAME_STAGE=&quot;dev&quot;
-</code></pre></div>
-
-<h2 id="deploy-action">Deploy Action</h2>
-<p>The deploy action is the action that takes the code in its current state and uploads it to the cloud. That can take
-many forms depending on the cloud service being used, but for example deploying an AWS lambda function would mean
-creating a new .zip file from the lambda function code, and uploading that zip file to the corresponding lambda
-function using the AWS CLI.</p>
-<p>The deploy action is a script that is run. It deploys the code in its current state in the repository. Environment
-variables are used to parameterize the script. There are environment variables to specify the repository location
-on disk, to specify the deployment stage, and any others that are needed.</p>
-<p>The deploy script is also the place to assert certain conditions are true before the deploy action is taken. We
-keep it simple, but these can be expanded on:</p>
-<ul>
-<li>Check various environment variables are set</li>
-<li>Check environment variable values</li>
-</ul>
-<p>These can be done in the deploy script directly, if the checks are simple, or they can be moved to an entire
-separate script like a hypothetical <code>check_env.sh</code>, which would be run before the deploy script (using a make rule
-dependency).</p>
-<p>(Note that if checks are TOO strict, they can interfere with deployment, so they should be adjusted accordingly.) </p>
-<p>Another step the deployment action might have before the actual deployment is to assemble any deployment
-configuration files. For example, if the deployment process requires a JSON file that is dynamically assembled from
-other bits of information, that could go in its own script that would be run before the deploy script (using a make
-rule dependency).</p>
-<p>For this writeup, we keep things simple and do all the checks in the deploy script.</p>
-<h2 id="release-action">Release Action</h2>
-<p>The release action can be thought of as a git repository operation.</p>
-<p><strong>When does a release happen?</strong></p>
-<p>When using gitflow, features and bugfixes will accumulate in the develop branch. Eventually the time for a new
-release will come (scheduled, or because enough changes have accumulated). A new branch will be created that will
-"freeze" the code in whatever state the develop branch is in. (Freeze is in quotes, because there are small changes
-that need to be made to that "frozen" code before a release happens, but those are changes like bumping the version
-number - no core changes.)</p>
-<p><strong>Where does the release script come in?</strong></p>
-<p>Once the code in the release branch is ready to go, the release script is run. The script will create a git tag, reset the head of the branch corresponding to the release (the "stable release" branch, usually main) to the head of the pre-release branch - whatever branch you're on when the release script is being run. Using our convention, we name this branch release/v1 (prefixed with release/ and a v plus the major version number only). </p>
-<p><strong>What does the release script do?</strong></p>
-<p>The release script starts by running some checks to make sure the code is in a state that's ready to release. There
-must be no uncommitted files in the repo, there must be no changes to tracked files, and there must be no unpushed
-changes in the repository (local commits that haven't been pushed to the remote).</p>
-<p>If those conditions are met, then the release script proceeds. The release script will start by creating a git tag,
-which records the date, time, and branch being released to. Next, the head of the branch to release to (usually
-main) will be reset to the head of the branch to release from (the "frozen" code that's all fixed up for the
-release). Finally, the release script will push the results of the reset operation, and the new tag, to the remote.</p>
-<p>To keep it more general, the release script uses the concept of a "source" and "destination" branch - the source is
-the branch to release from, the destination is the branch to release to. The destination branch is the one whose
-head is reset to the source branch's head. (That should help clarify the script below a bit more.) </p>
-<p>Also, the Makefile (which we cover below) will take care of providing the right destination and source branch
-names.</p>
-<h2 id="release-script">Release Script</h2>
-<p>Here is an example release script, which we would add to our repository at <code>scripts/release.sh</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
-<span class="nb">set</span> -euo pipefail
-<span class="nb">set</span> -x
-
-<span class="nv">REMOTE</span><span class="o">=</span><span class="s2">&quot;origin&quot;</span>
-
-<span class="c1"># Check that environment file has been sourced</span>
-<span class="k">if</span> <span class="o">[</span> -z <span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECTNAME_PACKAGENAME_HOME</span><span class="si">}</span><span class="s2">&quot;</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-    <span class="nb">echo</span> <span class="s1">&#39;You must set the $PROJECTNAME_PACKAGENAME_HOME environment variable to proceed.&#39;</span>
-    <span class="nb">exit</span> <span class="m">1</span>
-<span class="k">fi</span>
-
-<span class="c1"># Check the script is being called correctly</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="nv">$#</span> !<span class="o">=</span> <span class="m">2</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Given a source (pre-release) branch and a destination (release) branch,&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;this script does the following:&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot; - create a git tag&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot; - reset head of destination branch to head of source branch&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot; - push result to git repo&quot;</span>
-    <span class="nb">echo</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Usage: </span><span class="k">$(</span>basename <span class="nv">$0</span><span class="k">)</span><span class="s2"> source_branch dest_branch&quot;</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Example: </span><span class="k">$(</span>basename <span class="nv">$0</span><span class="k">)</span><span class="s2"> release/v2 main&quot;</span>
-    <span class="nb">exit</span> <span class="m">1</span>
-<span class="k">fi</span>
-
-<span class="c1"># Check that all changes are committed</span>
-<span class="k">if</span> ! git diff-index --quiet HEAD --<span class="p">;</span> <span class="k">then</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You have uncommitted files in your Git repository. Please commit or stash them.&quot;</span>
-    <span class="nb">exit</span> <span class="m">1</span>
-<span class="k">fi</span>
-
-<span class="nb">export</span> <span class="nv">PROMOTE_FROM_BRANCH</span><span class="o">=</span><span class="nv">$1</span> <span class="nv">PROMOTE_DEST_BRANCH</span><span class="o">=</span><span class="nv">$2</span>
-
-<span class="c1"># Check that there are no local commits that haven&#39;t been pushed yet</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;</span><span class="k">$(</span>git log <span class="si">${</span><span class="nv">REMOTE</span><span class="si">}</span>/<span class="si">${</span><span class="nv">PROMOTE_FROM_BRANCH</span><span class="si">}</span>..<span class="si">${</span><span class="nv">PROMOTE_FROM_BRANCH</span><span class="si">}</span><span class="k">)</span><span class="s2">&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-    <span class="nb">echo</span> <span class="s2">&quot;You have unpushed changes on your promote from branch </span><span class="si">${</span><span class="nv">PROMOTE_FROM_BRANCH</span><span class="si">}</span><span class="s2">! Aborting.&quot;</span>
-    <span class="nb">exit</span> <span class="m">1</span>
-<span class="k">fi</span>
-
-<span class="nv">RELEASE_TAG</span><span class="o">=</span><span class="k">$(</span>date -u +<span class="s2">&quot;%Y-%m-%d-%H-%M-%S&quot;</span><span class="k">)</span>-<span class="si">${</span><span class="nv">PROMOTE_DEST_BRANCH</span><span class="si">}</span>.release
-
-<span class="c1"># Check whether there are commits on the destination branch that aren&#39;t on the source branch (changes would be thrown away)</span>
-<span class="k">if</span> <span class="o">[[</span> <span class="s2">&quot;</span><span class="k">$(</span>git --no-pager log --graph --abbrev-commit --pretty<span class="o">=</span>oneline --no-merges -- <span class="nv">$PROMOTE_DEST_BRANCH</span> ^<span class="nv">$PROMOTE_FROM_BRANCH</span><span class="k">)</span><span class="s2">&quot;</span> !<span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="o">]]</span><span class="p">;</span> <span class="k">then</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Warning: The following commits are present on </span><span class="nv">$PROMOTE_DEST_BRANCH</span><span class="s2"> but not on </span><span class="nv">$PROMOTE_FROM_BRANCH</span><span class="s2">&quot;</span>
-    git --no-pager log --graph --abbrev-commit --pretty<span class="o">=</span>oneline --no-merges <span class="nv">$PROMOTE_DEST_BRANCH</span> ^<span class="nv">$PROMOTE_FROM_BRANCH</span>
-    <span class="nb">echo</span> -e <span class="s2">&quot;\nYou must transfer them, or overwrite and discard them, from branch </span><span class="nv">$PROMOTE_DEST_BRANCH</span><span class="s2">.&quot;</span>
-    <span class="nb">exit</span> <span class="m">1</span>
-<span class="k">fi</span>
-
-<span class="c1"># Check that untracked files are not present</span>
-<span class="k">if</span> ! git --no-pager diff --ignore-submodules<span class="o">=</span>untracked --exit-code<span class="p">;</span> <span class="k">then</span>
-    <span class="nb">echo</span> <span class="s2">&quot;Working tree contains changes to tracked files. Please commit or discard your changes and try again.&quot;</span>
-    <span class="nb">exit</span> <span class="m">1</span>
-<span class="k">fi</span>
-
-<span class="c1"># Perform the actual release operations</span>
-git fetch --all
-git -c advice.detachedHead<span class="o">=</span><span class="nb">false</span> checkout <span class="si">${</span><span class="nv">REMOTE</span><span class="si">}</span>/<span class="nv">$PROMOTE_FROM_BRANCH</span>
-git checkout -B <span class="nv">$PROMOTE_DEST_BRANCH</span>
-git tag <span class="nv">$RELEASE_TAG</span>
-git push --force <span class="nv">$REMOTE</span> <span class="nv">$PROMOTE_DEST_BRANCH</span>
-git push --tags <span class="nv">$REMOTE</span>
-</code></pre></div>
-
-<h3 id="breaking-it-down">Breaking It Down</h3>
-<p>Let's break down the essential commands, starting with the checks: </p>
-<p><code>git diff-index --quiet HEAD --</code></p>
-<ul>
-<li>Checks that all changes are committed</li>
-<li>git diff-index is basically the same as git diff, but restricted to the working tree or index only</li>
-<li>See <a href="https://stackoverflow.com/q/24197606">https://stackoverflow.com/q/24197606</a></li>
-</ul>
-<p><code>git log ${REMOTE}/${PROMOTE_FROM_BRANCH}..${PROMOTE_FROM_BRANCH}</code></p>
-<ul>
-<li>Checks the difference between the remote and local versions of the promote from branch</li>
-<li>If this command turns up any commits, those are all local, unpushed commits</li>
-</ul>
-<p><code>RELEASE_TAG=$(date -u +"%Y-%m-%d-%H-%M-%S")-${PROMOTE_DEST_BRANCH}.release</code></p>
-<ul>
-<li>Creates a name for the git tag with the date and time, and branch being released to</li>
-<li>This stores the release history in git tags</li>
-</ul>
-<p><code>git --no-pager log --graph --abbrev-commit --pretty=oneline --no-merges -- $PROMOTE_DEST_BRANCH ^$PROMOTE_FROM_BRANCH)</code></p>
-<ul>
-<li>This command checks for any commits that are on the destination branch and not on the source branch</li>
-<li>Because the destination branch's head will be reset, commits on the destination branch but not on the source branch would be lost</li>
-<li>(This script could optionally add a --force flag, to power through the release even if this check fails)</li>
-</ul>
-<p><code>git --no-pager diff --ignore-submodules=untracked --exit-code</code></p>
-<ul>
-<li>Checks if there are any untracked changes in the working tree</li>
-<li>If there are, the release can't proceed</li>
-</ul>
-<p>Now here's a breakdown of the release process commands:</p>
-<p><code>git fetch --all</code></p>
-<ul>
-<li>Ensures we have an up-to-date picture of where the remotes are at</li>
-</ul>
-<p><code>git -c advice.detachedHead=false checkout ${REMOTE}/$PROMOTE_FROM_BRANCH</code></p>
-<ul>
-<li>Checks out the source branch from the remote</li>
-<li>This command is the reason why we have to make sure all local commits are pushed to the remote</li>
-<li>The release process uses the remote version of the source/destination branches</li>
-</ul>
-<p><code>git checkout -B $PROMOTE_DEST_BRANCH</code></p>
-<ul>
-<li>This step forces the destination branch to be the same as the source branch.</li>
-</ul>
-<p><code>git tag $RELEASE_TAG</code></p>
-<ul>
-<li>Creates a record of what was released and when via a git tag</li>
-</ul>
-<p><code>git push --force $REMOTE $PROMOTE_DEST_BRANCH</code></p>
-<p><code>git push --tags $REMOTE</code></p>
-<ul>
-<li>Pushes the results of the operations to the remote</li>
-</ul>
-<h2 id="makefile">Makefile</h2>
-<p>Now we add a Makefile with rules for releasing and deploying.</p>
-<p>The first rule is the release rule - run this when the current branch is release/vX and it's ready for it's final release.</p>
-<div class="highlight"><pre><span></span><code><span class="nv">CB</span> <span class="o">:=</span> <span class="k">$(</span>shell git branch --show-current<span class="k">)</span>
-
-<span class="nf">release_mainx</span><span class="o">:</span>
-    @echo <span class="s2">&quot;Releasing current branch </span><span class="k">$(</span>CB<span class="k">)</span><span class="s2"> to mainx&quot;</span>
-    scripts/release.sh <span class="k">$(</span>CB<span class="k">)</span> mainx
-</code></pre></div>
-
-<p>The <code>$(CB)</code> is short for current branch.</p>
-<p>Now on to the deploy rule.</p>
-<p>Because we might want to deploy the code in an arbitrary state (temporarily deploying a feature branch to the development stage, for example), the deploy script and deploy rule are intended to deploy the code in its current state, and don't have the same kinds of checks as the release script. </p>
-<div class="highlight"><pre><span></span><code><span class="nf">deploy</span><span class="o">:</span>
-    scripts/deploy.sh
-</code></pre></div>
-
-<p>As mentioned above, the deploy script will be case-specific so we don't provide an example.</p>
-<p>How does the deploy script know which environment to deploy to? It depends on the environment file that was
-sourced, and the value of the <code>PROJECTNAME_PACKAGENAME_STAGE</code> variable. The deploy script should be checking that
-that environment variable is set to a valid value before proceeding with the deploy.</p>
-<h2 id="more-details">More Details</h2>
-<p>For more details, see the full writeup on our wiki here:
-<a href="https://charlesreid1.com/wiki/Applied_Gitflow">https://charlesreid1.com/wiki/Applied_Gitflow</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/github.html">github</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/gitflow.html">gitflow</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hubflow.html">hubflow</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/patterns.html">patterns</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
                 A Singleton Configuration Class in Python
             </b></h1>
         
@@ -991,6 +626,294 @@ extending this mock API server to mock calls to the Github API.</p></div>
 
 <div class="v200"></div>
   	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Creating Mock API Servers
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2020-02-26T22:00:00-08:00" pubdate>Wednesday 02/26/2020</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/creating-mock-api-servers.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#mock-api-server-class">Mock API Server Class</a><ul>
+<li><a href="#startstop-serving">Start/Stop Serving</a><ul>
+<li><a href="#getting-bind-addressport">Getting Bind Address/Port</a></li>
+<li><a href="#start-serving">Start Serving</a></li>
+<li><a href="#stop-serving">Stop Serving</a></li>
+</ul>
+</li>
+<li><a href="#handling-requests">Handling Requests</a><ul>
+<li><a href="#defining-post-response-method">Defining POST Response Method</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#putting-it-all-together">Putting it all together</a></li>
+</ul>
+</div>
+<h1 id="overview">Overview</h1>
+<p>In this post we discuss a way of mocking an API server during tests.
+This technique will let you create a fake API server that can respond
+to API calls however you want.</p>
+<p>The technique is twofold:</p>
+<ul>
+<li>
+<p>First, we create a mock API handler that extends <code>BaseHTTPRequestHandler</code>, which is the built-in HTTP server
+  class in Python. We can extend the server class to control how it responds to requests - to implement a
+  method to respond to POST requests, we implement a <code>do_POST()</code> method, to respond to GET requests
+  we implement a <code>do_GET()</code> method, and so on. (In the example below, we restrict the types of requests
+  to JSON content only.)</p>
+</li>
+<li>
+<p>Second, we use the Singleton design pattern, by implementing 
+  two class methods, <code>start_serving()</code> and <code>stop_serving()</code>, that
+  we can call before and after our tests to set up and tear down
+  the fake API server. This method will take care of starting the
+  HTTP server on a separate thread, so that it does not block 
+  execution.</p>
+</li>
+</ul>
+<h1 id="mock-api-server-class">Mock API Server Class</h1>
+<p>Let's start with the mock server class. This is going to extend the
+<code>BaseHTTPRequestHandler</code> class from the <code>http.server</code> module, and
+extend it.</p>
+<p>We implement a stub method for the POST response behavior; this is the
+only type of request that our mock API server will respond to.</p>
+<p>We also have two stub class methods to start and stop the server.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
+    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">pass</span>
+</code></pre></div>
+
+<h2 id="startstop-serving">Start/Stop Serving</h2>
+<p>We start with the two class methods to start and stop the server.</p>
+<h3 id="getting-bind-addressport">Getting Bind Address/Port</h3>
+<p>Define another static method to get the address to bind to, and the
+port to use; in this case we'll hard code values, but this function
+could also find unused networking ports, etc.</p>
+<div class="highlight"><pre><span></span><code>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
+        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
+        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
+</code></pre></div>
+
+<h3 id="start-serving">Start Serving</h3>
+<p>Next, the <code>start_serving()</code> method should start a thread
+(using the <code>cls._thread</code> attribute to store it for later)
+and create an underlying HTTP server (and using the <code>self._server</code>
+attribute to store it for later):</p>
+<div class="highlight"><pre><span></span><code>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># Get the bind address and port</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
+
+        <span class="c1"># Create an HTTP server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
+
+        <span class="c1"># Create a thread to run the server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
+
+        <span class="c1"># Start the server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="stop-serving">Stop Serving</h3>
+<p>The <code>stop_serving()</code> method stops the thread</p>
+<div class="highlight"><pre><span></span><code>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># Shut down the server</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+
+        <span class="c1"># Let the thread rejoin the worker pool</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
+</code></pre></div>
+
+<h2 id="handling-requests">Handling Requests</h2>
+<p>The mock API server should only process POST requests, and should
+only accept JSON-formatted requests. We can implement those checks
+and have the server return a 500 error if clients do not send a
+properly formatted JSON request.</p>
+<h3 id="defining-post-response-method">Defining POST Response Method</h3>
+<p>To define a response to POST requests made to the API we are mocking,
+we start by validating the JSON request that is received.</p>
+<p>Note: this utilizes several built-in methods of the HTTP server class.</p>
+<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
+        <span class="c1"># Enforce rule: JSON only</span>
+        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="c1"># Convert received JSON to dict</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
+
+        <span class="c1"># Process the json</span>
+        <span class="o">...</span>
+</code></pre></div>
+
+<p>Now, the JSON can be processed using a validate function,
+for example, or generic success/failure responses returned
+based on the contents of a request.</p>
+<p>Let's do something very simple: have the API server return
+whatever was sent in the request.</p>
+<p>We can turn the dictionary <code>message</code> (a dictionary containing
+the original request) back into a string, and the string into
+a stream of bytes. Then we can write headers and the stream of
+bytes into the response.</p>
+<div class="highlight"><pre><span></span><code>        <span class="c1"># Send a response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+</code></pre></div>
+
+<p>The <code>_set_headers()</code> method is a short method that just sends
+(writes) the correct headers:</p>
+<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Note: the <code>send_headers()</code> and <code>end_headers()</code> methods are built-in
+to the HTTP server base class we are using.</p>
+<h1 id="putting-it-all-together">Putting it all together</h1>
+<p>Putting it all together, we get one final mock API server class:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
+    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
+        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
+        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># Get the bind address and port</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
+
+        <span class="c1"># Create an HTTP server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
+
+        <span class="c1"># Create a thread to run the server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
+
+        <span class="c1"># Start the server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># Shut down the server</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+
+        <span class="c1"># Let the thread rejoin the worker pool</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
+        <span class="c1"># Enforce rule: JSON only</span>
+        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="c1"># Convert received JSON to dict</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
+
+        <span class="c1"># Process the json</span>
+
+        <span class="c1"># Send a response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+</code></pre></div></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/http.html">http</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/server.html">server</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/api.html">api</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/flask.html">flask</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/web-server.html">web server</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1026,9 +949,6 @@ extending this mock API server to mock calls to the Github API.</p></div>
 
             <h2>March 2022</h2>
 
-            <p class="archive">
-            <a href="https://charlesreid1.github.io/episode-23740000-of-so-thats-in-the-internet-archive-now.html">Episode 23,740,000 of So That's In The Internet Archive Now</a>
-            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/how-to-read-ulysses.html">How to Read Ulysses</a>
             </p>

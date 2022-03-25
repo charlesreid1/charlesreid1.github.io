@@ -102,448 +102,6 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Python Patterns: The Registry
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2020-02-20T22:22:00-08:00" pubdate>Thursday 02/20/2020</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/python-patterns-the-registry.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#what-is-the-registry-pattern">What is the Registry Pattern?</a><ul>
-<li><a href="#the-registry-base-type">The Registry Base Type</a></li>
-<li><a href="#the-base-registered-class">The Base Registered Class</a></li>
-<li><a href="#extending-the-base-registered-class">Extending the Base Registered Class</a></li>
-<li><a href="#seeing-it-in-action">Seeing it in action</a></li>
-</ul>
-</li>
-<li><a href="#examples">Examples</a><ul>
-<li><a href="#example-search-engine">Example: Search Engine</a><ul>
-<li><a href="#registry-subclasses">Registry Subclasses</a></li>
-<li><a href="#doctype-registry-base-type">Doctype Registry Base Type</a></li>
-<li><a href="#base-registered-doctype-class">Base Registered Doctype Class</a></li>
-<li><a href="#derived-registered-doctype-class">Derived Registered Doctype Class</a></li>
-<li><a href="#using-the-registry">Using the Registry</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#further-modifications">Further Modifications</a></li>
-<li><a href="#summary">Summary</a></li>
-</ul>
-</div>
-<h1 id="overview">Overview</h1>
-<p>This post is a summary of a useful Python programming pattern called the Registry pattern.</p>
-<p>The Registry pattern is a way of keeping track of all subclasses of a given class.</p>
-<p>More details about this pattern are available at <a href="https://github.com/faif/python-patterns">https://github.com/faif/python-patterns</a>.</p>
-<h1 id="what-is-the-registry-pattern">What is the Registry Pattern?</h1>
-<p>Let's start with a common scenario: you have some kind of manager class that is
-managing multiple related subclasses, and you are looking for a simpler way to
-manage the subclasses.</p>
-<p>The registry pattern creates a map of labels to class types, and allows you to
-access a single registry common to all of those classes. The registry is updated
-every time a new class is added.</p>
-<p>This is useful for several situations, including these two examples:</p>
-<ul>
-<li>You want the manager class to iterate over every available subclass and call a
-  particular method on each subclass</li>
-<li>You want to streamline a factory class, which takes an input label (like the name
-  of a class) and creates/returns an object of that type</li>
-</ul>
-<h2 id="the-registry-base-type">The Registry Base Type</h2>
-<p>We start by defining a registry base type (or class). This class defines one behavior,
-which is adding itself to the class registry. It creates a shared instance variable called
-<code>REGISTRY</code> which is shared amongst all of the classes, and is also accessible via a class
-method.</p>
-<p>This is the base class; any class we want registered should inherit from this class.
-It should also extend the <code>type</code> class, since it is itself a class type:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">RegistryBase</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
-
-    <span class="n">REGISTRY</span> <span class="o">=</span> <span class="p">{}</span>
-
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="c1"># instantiate a new type corresponding to the type of class being defined</span>
-        <span class="c1"># this is currently RegisterBase but in child classes will be the child class</span>
-        <span class="n">new_cls</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">REGISTRY</span><span class="p">[</span><span class="n">new_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_cls</span>
-        <span class="k">return</span> <span class="n">new_cls</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_registry</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">REGISTRY</span><span class="p">)</span>
-</code></pre></div>
-
-<p>The design here is subtle, but the details are important to understand how it works.</p>
-<p>A few important things to note, progressing from top to bottom:</p>
-<ul>
-<li>
-<p>The <code>REGISTRY</code> variable is defined outside the scope of any class methods, meaning it is a
-  shared instance variable (a variable that is shared across all instances of <code>RegistryBase</code>);
-  this is an example of the Borg pattern.</p>
-</li>
-<li>
-<p>The <code>RegistryBase</code> class defines <code>__new__</code>, not <code>__init__</code>; the <code>__new__</code> method is run when
-  the class is defined, while <code>__init__</code> is run when the classs is instantiated. This ensures
-  that any subclasses that inherit from <code>RegistryBase</code> add themselves to the registry when they
-  are defined, not when they are instantiated.</p>
-</li>
-<li>
-<p>In the constructor, we store a reference to the current class using this line:</p>
-</li>
-</ul>
-<p><code>new_cls = type.__new__(cls, name, bases, attrs)</code></p>
-<p>This creates a new class, but of type <code>type</code> (confusing, but basically it means we store
-  a reference to this <em><strong>type</strong></em> of object, not just a reference to a particular object).</p>
-<p>It is important to note that once we use the registry, the value that is returned is callable,
-  and will create an object corresponding to that type.</p>
-<ul>
-<li>We define a <code>get_registry</code> method to return a copy of the registry; this must be decorated with
-  a <code>@classmethod</code> decorator (not a <code>@staticmethod</code> decorator) so that it has access to the registry,
-  which is a class instance variable.</li>
-</ul>
-<p><strong>BONUS NOTE:</strong> From prior experience, we have found it easiest to ignore the case of the
-label (uppercase, lowercase, CamelCase, etc) and convert all class names to lowercase in the
-registry:</p>
-<div class="highlight"><pre><span></span><code>        <span class="bp">cls</span><span class="o">.</span><span class="n">REGISTRY</span><span class="p">[</span><span class="n">new_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="n">new_cls</span>
-</code></pre></div>
-
-<h2 id="the-base-registered-class">The Base Registered Class</h2>
-<p>Now we can define a base class that will extend the <code>RegistryBase</code> class. However, because <code>RegistryBase</code>
-is a <code>type</code> class, we shouldn't extend it directly - we should use it as a <em>metaclass</em>.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">BaseRegisteredClass</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">RegistryBase</span><span class="p">):</span>
-    <span class="k">pass</span>
-</code></pre></div>
-
-<p>Any class that inherits from this <code>BaseRegisteredClass</code> will now be included in the registry when it is
-defined.</p>
-<h2 id="extending-the-base-registered-class">Extending the Base Registered Class</h2>
-<p>The next step is to use the base registered class to start creating interesting classes:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">ExtendedRegisteredClass</span><span class="p">(</span><span class="n">BaseRegisteredClass</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">pass</span>
-</code></pre></div>
-
-<p>We skip defining constructor behavior, as the call order is what's important.</p>
-<h2 id="seeing-it-in-action">Seeing it in action</h2>
-<p>Now we can see the process of adding subclasses to the registry in action.</p>
-<p>Start by checking the registry before we have created any subclasses:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print(RegistryHolder.REGISTRY)
-[&#39;BaseRegisteredClass&#39;]
-</code></pre></div>
-
-<p>Next, define the extended registered class:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; class ExtendedRegisteredClass(BaseRegisteredClass):
-...     def __init__(self, *args, **kwargs):
-...         pass
-</code></pre></div>
-
-<p>Remember, we add the new class to the registry in the <code>__new__</code> method, not the
-<code>__init__</code> method, so we don't even need to instantiate an <code>ExtendedRegisteredClass</code>
-object for it to be added to the registry. Check the registry again:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print(RegistryHolder.REGISTRY)
-[&#39;BaseRegisteredClass&#39;, &#39;ExtendedRegisteredClass&#39;]
-</code></pre></div>
-
-<h1 id="examples">Examples</h1>
-<p>Let's consider a specific example to help illustrate the usefulness of the Registry pattern:
-adding the ability to index different kinds of documents to a search engine.</p>
-<h2 id="example-search-engine">Example: Search Engine</h2>
-<p>Suppose we are writing a search engine, and we are working on the search engine
-backend. Specifically, consider the backend portion that iterates over a group of
-documents, checks if the document is already in the search index, and either adds
-a new item to the search index, updates an existing item in the search index, or
-deletes an item from the search index.</p>
-<h3 id="registry-subclasses">Registry Subclasses</h3>
-<p>A search engine may index multiple kinds of documents, each living in different locations.
-For example, a search index may index .docx files in a Google Drive folder,
-Github issues, and/or a local folder full of Markdown files. For each of these
-document types, we must define:</p>
-<ul>
-<li>
-<p>How to add or update all documents in the document storage system (Google Drive, Github
-  API, local filesystem, etc.); this method should be able to get a list of documents of this
-  document type that are already in the search index, either by running a query itself, or by
-  accepting a list of documents already in the index as an input argument</p>
-</li>
-<li>
-<p>What schema to use (mapping various field names to data types) for documents of this type</p>
-</li>
-<li>
-<p>How to display search results when they are documents of this type (i.e., how to display
-  what fields when showing the user search results)</p>
-</li>
-</ul>
-<p>This can be done by defining classes corresponding to different document types, where
-each class defines how to do the above actions, and wraps them in high-level API methods
-that the manager classes can call.</p>
-<p>The manager classes want a way to get a list of available document types, and to call
-each document type's high-level API methods. This can be done with the registry.</p>
-<h3 id="doctype-registry-base-type">Doctype Registry Base Type</h3>
-<p>Start by defining a base type that will register new subclasses in a doctype registry. Note that
-as per the <a href="https://docs.python.org/3/reference/datamodel.html#object.__new__"><code>__new__</code> documentation</a>,
-the <code>__new__</code> method takes the class (in our case, a class of type <code>type</code>) as the first argument <code>cls</code>,
-and it should return a new object instance (which, again, is an instance of type <code>type</code>).</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">DoctypeRegistryBase</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
-
-    <span class="n">DOCTYPE_REGISTRY</span> <span class="o">=</span> <span class="p">{}</span>
-
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="n">new_cls</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">[</span><span class="n">new_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="n">new_cls</span>
-        <span class="k">return</span> <span class="n">new_cls</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_doctype_registry</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">)</span>
-</code></pre></div>
-
-<h3 id="base-registered-doctype-class">Base Registered Doctype Class</h3>
-<p>Next, we define a base class for any document type that we want registered in the doctype
-registry, using <code>DoctypeRegistryBase</code> as our metaclass (because it is a class of type <code>type</code>,
-as opposed to a normal class).  All document types are required to define three bits of behavior
-(interacting with the document storage system to iterate over all documents; extracting information
-from individual documents; and displaying a given document type when it is a search result. We
-define these virtual methods on the base registered doctype class.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">BaseRegisteredDoctypeClass</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">DoctypeRegistryBase</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Iterate over all documents in the document storage system</span>
-<span class="sd">        and add/update/delete documents as needed.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">get_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Assemble and return the schema (map of field names to data types)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">render_search_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Use a Jinja template to render a single search result of type doctype</span>
-<span class="sd">        to display to the user via the web interface</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
-</code></pre></div>
-
-<h3 id="derived-registered-doctype-class">Derived Registered Doctype Class</h3>
-<p>Now that we have a base class, we can define child classes that have the specific
-API functionality needed.</p>
-<p>Here is a high-level sketch of what the Github issue document type class might look like,
-starting with the add/update/delete method, which boils down to some set operations to determine
-what documents to add, update, or delete from the search index.</p>
-<p>(Also note, these methods are defined as class methods because they are called once for each
-doctype class, but this does not necessarily need to be the case.)</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">GithubIssueDoctype</span><span class="p">(</span><span class="n">BaseRegisteredDoctypeClass</span><span class="p">):</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="c1"># Get set of indexed document IDs</span>
-        <span class="n">indexed_docs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="n">results</span> <span class="o">=</span> <span class="n">run_search_index_query</span><span class="p">(</span><span class="n">doctype</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
-        <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-            <span class="n">indexed_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-
-        <span class="c1"># Get set of remote document IDs</span>
-        <span class="n">remote_docs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">org_name</span> <span class="ow">in</span> <span class="n">get_org_names</span><span class="p">():</span>
-            <span class="k">for</span> <span class="n">repo_name</span> <span class="ow">in</span> <span class="n">get_repo_names</span><span class="p">(</span><span class="n">org_name</span><span class="p">):</span>
-                <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">get_repo_files</span><span class="p">(</span><span class="n">repo_name</span><span class="p">,</span> <span class="n">org_name</span><span class="p">):</span>
-                    <span class="n">remote_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-
-        <span class="c1"># Do some set math to figure out what to add/update/delete</span>
-        <span class="n">add_ids</span> <span class="o">=</span> <span class="n">remote_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">indexed_docs</span><span class="p">)</span>
-        <span class="n">update_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
-        <span class="n">delete_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
-
-        <span class="c1"># Do the operations</span>
-        <span class="k">for</span> <span class="n">add_id</span> <span class="ow">in</span> <span class="n">add_ids</span><span class="p">:</span>
-            <span class="n">add_document_to_index</span><span class="p">(</span><span class="n">add_id</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">update_id</span> <span class="ow">in</span> <span class="n">update_ids</span><span class="p">:</span>
-            <span class="n">update_document_in_index</span><span class="p">(</span><span class="n">update_id</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">delete_id</span> <span class="ow">in</span> <span class="n">delete_ids</span><span class="p">:</span>
-            <span class="n">delete_document_in_index</span><span class="p">(</span><span class="n">delete_id</span><span class="p">)</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="o">...</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">render_search_result</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="o">...</span>
-</code></pre></div>
-
-<p>Now we do the same for documents on Google Drive, defining a different <code>add_update_delete()</code> method
-specific to Google Drive documents (note that while the sketch of this method looks similar to the
-Github doctype above, the implementation will look more and more different as we include more and more
-detail in our method and API calls).</p>
-<p>As before, we make these methods class methods.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">GoogleDocsDoctype</span><span class="p">(</span><span class="n">BaseRegisteredDoctypeClass</span><span class="p">):</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="c1"># Get set of indexed document IDs</span>
-        <span class="n">indexed_dcos</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="n">results</span> <span class="o">=</span> <span class="n">run_search_index_query</span><span class="p">(</span><span class="n">doctype</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
-        <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-            <span class="n">indexed_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-
-        <span class="c1"># Get set of remote document IDs</span>
-        <span class="n">remote_docs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">get_gdrive_file_list</span><span class="p">():</span>
-            <span class="n">remote_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-
-        <span class="c1"># Do some math to figure out what to add/update/delete</span>
-        <span class="n">add_ids</span> <span class="o">=</span> <span class="n">remote_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">indexed_docs</span><span class="p">)</span>
-        <span class="n">update_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
-        <span class="n">delete_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
-
-        <span class="c1"># Do the operations</span>
-        <span class="k">for</span> <span class="n">add_id</span> <span class="ow">in</span> <span class="n">add_ids</span><span class="p">:</span>
-            <span class="n">add_document_to_index</span><span class="p">(</span><span class="n">add_id</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">update_id</span> <span class="ow">in</span> <span class="n">update_ids</span><span class="p">:</span>
-            <span class="n">update_document_in_index</span><span class="p">(</span><span class="n">update_id</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">delete_id</span> <span class="ow">in</span> <span class="n">delete_ids</span><span class="p">:</span>
-            <span class="n">delete_document_in_index</span><span class="p">(</span><span class="n">delete_id</span><span class="p">)</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="o">...</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">render_search_result</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="o">...</span>
-</code></pre></div>
-
-<h3 id="using-the-registry">Using the Registry</h3>
-<p>The last step is to actually use the registry from the class that manages all of our subclasses.
-In this case, we have a <code>Search</code> class that defines high-level operations (such as, "add/update/delete
-all documents indexed by this search engine") and in turn calls the corresponding method for each doctype
-that has been registered.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Search</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="nf">add_update_delete_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-
-        <span class="c1"># Iterate over every doc type</span>
-        <span class="k">for</span> <span class="n">doctype_name</span> <span class="ow">in</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">:</span>
-
-            <span class="c1"># Get a handle to the doctype class</span>
-            <span class="n">doctype_class</span> <span class="o">=</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">[</span><span class="n">doctype_name</span><span class="p">]</span>
-
-            <span class="c1"># Call the class method add_update_delete on the doctype class</span>
-            <span class="n">doctype_class</span><span class="o">.</span><span class="n">add_update_delete</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-            <span class="c1"># Note: if we need to create an instance first</span>
-            <span class="c1"># doctype_instance = doctype_class()</span>
-            <span class="c1"># doctype_instance.add_update_delete(*args, **kwargs)</span>
-</code></pre></div>
-
-<h1 id="further-modifications">Further Modifications</h1>
-<p>In the example above, we don't have any need to create specific instances of the document type classes,
-since they do not need to preserve their state between calls, and we only need one instance of the doctype
-class per search engine.</p>
-<p>We could re-implement this pattern, modifying the search engine doctype classes to be normal, non-static
-classes. This would allow us to have, say, two instances of the Github issues doctype class (corresponding
-to two different sets of Github API credentials, or two different Github accounts), or two instances of the
-Google Drive doctype class (corresponding to two different Google Drive folders). In this case, we would
-want to restructure the Search class to instantiate and save doctype class instances in the constructor,
-and use them later.</p>
-<p>Here's an example <code>Search</code> class that would instantiate one of each subclass in the constructor, to be used
-in later methods:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Search</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-
-        <span class="c1"># Store instances of each doctype</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">all_doctypes</span> <span class="o">=</span> <span class="p">[]</span>
-
-        <span class="c1"># Iterate over every doc type</span>
-        <span class="k">for</span> <span class="n">doctype_name</span> <span class="ow">in</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">:</span>
-
-        <span class="c1"># Get a handle to the doctype class</span>
-        <span class="n">doctype_class</span> <span class="o">=</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">[</span><span class="n">doctype_name</span><span class="p">]</span>
-
-        <span class="c1"># Create an instance of type doctype_class</span>
-        <span class="n">doctype_instance</span> <span class="o">=</span> <span class="n">doctype_class</span><span class="p">()</span>
-
-        <span class="c1"># Save for later</span>
-        <span class="n">all_doctypes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doctype_instance</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-
-        <span class="c1"># Call the add_update_delete method on each doctype instance</span>
-        <span class="k">for</span> <span class="n">doctype_name</span><span class="p">,</span> <span class="n">doctype_instance</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_doctypes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">doctype_instance</span><span class="o">.</span><span class="n">add_update_delete</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</code></pre></div>
-
-<p>(Note that this would work best if we removed the <code>@classmethod</code> decorators from the doctype classes
-defined above.)</p>
-<h1 id="summary">Summary</h1>
-<p>In this post, we covered a useful programming pattern, the Registry, and showed it in action for one
-example - allowing a search engine index to register various document type subclasses, then use those
-registered subclasses to propagate calls to all document types later.</p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/patterns.html">patterns</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/design-patterns.html">design patterns</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/registry.html">registry</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
                 Incorporating Terraform Commands into Makefiles
             </b></h1>
         
@@ -1255,6 +813,450 @@ latest compatible versions of software.</p>
 
 <div class="v200"></div>
   	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Git Workflows, Part 3: Refactoring Large Branches and Pull Requests
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-12-08T15:00:00-08:00" pubdate>Sunday 12/08/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/git-workflows-part-3-refactoring-large-branches-and-pull-requests.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#managing-complexity">Managing Complexity</a></li>
+<li><a href="#refactoring-large-branches">Refactoring Large Branches</a><ul>
+<li><a href="#converting-a-set-of-commits-to-unstaged-changes">Converting a Set of Commits to Unstaged Changes</a><ul>
+<li><a href="#git-format-patch">git format-patch</a></li>
+<li><a href="#cherry-pick-and-unstage">cherry-pick and unstage</a></li>
+<li><a href="#soft-reset-and-commit">soft reset and commit</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#refactoring-large-pull-requests">Refactoring Large Pull Requests</a><ul>
+<li><a href="#chaining-pull-requests">Chaining Pull Requests</a></li>
+<li><a href="#preparing-to-merge-a-large-pull-request">Preparing to Merge a Large Pull Request</a></li>
+<li><a href="#rinse-and-repeat">Rinse and Repeat</a></li>
+<li><a href="#final-merge-into-master">Final Merge into Master</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h1 id="summary">Summary</h1>
+<ul>
+<li>If a feature branch or pull request gets too complicated and should be refactored
+  into simpler pieces:<ul>
+<li>Create a new feature branch from the original destination branch</li>
+<li>Turn commits into patches, or cherry-pick commits (leaving changes unstaged)</li>
+<li>Apply patches or cherry-picks to the feature branch</li>
+<li>Use <code>git add --patch</code> or <code>git add --edit</code> to selectively split out changes into separate commits</li>
+</ul>
+</li>
+</ul>
+<p>This post contains many common patterns applied to different workflows.</p>
+<h1 id="managing-complexity">Managing Complexity</h1>
+<p>When collaborating on software, especially large software with people who are not the
+primary developers, it is important to limit the complexity of features and proposed
+changes. Why is it bad practice to propose large, complex changes?</p>
+<ul>
+<li>It is harder to review the proposed changes</li>
+<li>Bugs increase in likelihood, and increase in likelihood far faster than the amount of code.</li>
+<li>More complex changes usually combine </li>
+</ul>
+<h1 id="refactoring-large-branches">Refactoring Large Branches</h1>
+<p>Consider the case of a large feature branch that is suffering from feature creep (trying to
+cram too many changes into one branch.) For example, in the process of implementing a feature,
+you may also implement significant fixups, refactoring of functions, and code cleanup that is
+in the same file but not entirely related. While writing tests for the new feature, you may also
+refactor tests to be cleaner, or to use context manager foobar, or etc.</p>
+<p>To illustrate: suppose you are on a branch called <code>feature</code> (created off of <code>master</code>) that consists of
+three sets of changes, DEF:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
+</code></pre></div>
+
+<ul>
+<li>D corresponds to implementing the new feature and writing tests for it</li>
+<li>E corresponds to fixups to the same file that was changed to implement the feature</li>
+<li>F corresponds to fixups to tests unrelated to the new feature</li>
+</ul>
+<p>Now, in reality, if things were really so clean, if you had a time machine or the patience to
+to rebase commits one at a time and split them into atomic changes only to the features in their
+scope (which would be super easy because of course your git logs are filled with helpful, concise
+commit messages) you could use <code>git cherry-pick</code> to replay commits D1, D2, D3 onto a new D
+branch, and so on. </p>
+<p>But in reality, commit F1 contains a little bit of E1, and D2, and vice versa, and so on.
+It's much easier to navigate a diff and select pieces from it.  That's were <code>git add -e</code>
+(or <code>--edit</code>) will help.</p>
+<p>We also have to turn a set of commits into a single set of unstaged changes (meaning, replay
+the changes each commit made but not replay the commits themselves). There are a few ways
+to do this, we'll cover two ways: squashing and rolling back a set of commits, and converting
+a set of commits into a set of patch files.</p>
+<p>Once the commits have been rolled back and unstaged, particular changes can be staged for each
+split commit using <code>git add -e</code> and using the editor to select which changes to include or exclude
+from the commit. As each commit is created, branches can be created that are linked to the group
+of changes in each new commit.</p>
+<h2 id="converting-a-set-of-commits-to-unstaged-changes">Converting a Set of Commits to Unstaged Changes</h2>
+<p>We are trying to untangle a set of unrelated changes into separate commits that group related
+changes together. For the example, we want to convert this:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
+</code></pre></div>
+
+<p>to this:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D - E - F (feature)
+</code></pre></div>
+
+<p>so that the changes in commits D, E, and F are simpler, more limited in scope, and easier to review.</p>
+<p>We cover three strategies for turning a sequence of commits like <code>D1-E1-...-E3</code> into a set of unstaged
+changes. Then, particular changes can be selectively added to commits using <code>git add -e</code> (<code>--edit</code>) or
+<code>git add -p</code> (<code>--patch</code>).</p>
+<h3 id="git-format-patch">git format-patch</h3>
+<p>To create a set of patches, one per commit, to edit them or apply them in various orders,
+you can use <code>git format-patch</code> with a commit range:</p>
+<div class="highlight"><pre><span></span><code>git format-patch D1..E3
+</code></pre></div>
+
+<p>This will create a series of patches like </p>
+<div class="highlight"><pre><span></span><code>patches/0001-the-D1-commit-message.patch
+patches/0001-the-E1-commit-message.patch
+patches/0001-the-D2-commit-message.patch
+patches/0001-the-F1-commit-message.patch
+patches/0001-the-E2-commit-message.patch
+patches/0001-the-F2-commit-message.patch
+patches/0001-the-D3-commit-message.patch
+patches/0001-the-F3-commit-message.patch
+patches/0001-the-E3-commit-message.patch
+</code></pre></div>
+
+<p>Patches can be further split or modified, and can be applied in the desired order (although
+changes in line numbers happening out of order may confuse the program applying the patch).</p>
+<p>Start by creating a branch from the desired commit (commit <code>B</code> in the diagram above):</p>
+<div class="highlight"><pre><span></span><code>git checkout B
+</code></pre></div>
+
+<p>(where <code>B</code> should be either the commit hash for commit B, or a tag or branch that is associated
+with commit B). Now create a branch that will start from that commit (we'll start with our branch
+for feature D here):</p>
+<div class="highlight"><pre><span></span><code>git checkout -b feature-d
+</code></pre></div>
+
+<p>Now apply patches to the new branch, which will start from commit <code>B</code>.</p>
+<p>To apply a patch, use <code>patch -p1</code>:</p>
+<div class="highlight"><pre><span></span><code>patch -p1 &lt; 0001-the-D1-commit-message.patch
+</code></pre></div>
+
+<p>The <code>-p1</code> strips the prefix by 1 directory level, which is necessary with patches created
+by git. We use <code>patch</code> rather than <code>git am</code> to apply the patch, because we want to apply
+the changes independent of git, and only stage the changes we want into our next commit.</p>
+<p>If you have a series of commits that you want to squash, that's also easy to do by applying
+each patch for those commits, then staging all the changes from those patches into a new
+commit.</p>
+<p>As patches are applied, particular changes can be staged and commits can be crafted. Use 
+the <code>--edit</code> or <code>--patch</code> flags of <code>git add</code>:</p>
+<div class="highlight"><pre><span></span><code>git add --edit &lt;filename&gt;
+git add --patch &lt;filename&gt;
+</code></pre></div>
+
+<p>This allows selective filtering of particular edits into the next commit, so that one patch
+(or any number of patches) can be applied, and selective changes can be staged into a commit.</p>
+<p>Once you are ready, just run</p>
+<div class="highlight"><pre><span></span><code>git commit
+</code></pre></div>
+
+<p>without specifying the filename. (If you specify the filename, it will stage all changes,
+and ignore the crafting you've done.)</p>
+<p>As you create a commit or a set of commits specific to changeset D, you can work on a D branch.
+When you finish all commits related to D, you can start a new branch with</p>
+<div class="highlight"><pre><span></span><code>git checkout feature-e
+</code></pre></div>
+
+<p>that will start a new branch from where the d-branch left off. Chaining your
+changes together into several small branches that build on each other will 
+help keep pull requests simpler too.</p>
+<p>The advantages of this approach include:</p>
+<ul>
+<li>Commits can be split by applying the patch and staging particular edits</li>
+<li>The ability to split single commits into more commits, or combine/squash commits together, means
+  this approach has a lot of flexibility</li>
+<li>Best for some situations where, e.g., a long series of commits with many small commits that should
+  be squashed and some large commits that should be split </li>
+</ul>
+<p>The disadvantages of this approach include:</p>
+<ul>
+<li>Patches applied out of order can confuse the program applying the patches</li>
+</ul>
+<h3 id="cherry-pick-and-unstage">cherry-pick and unstage</h3>
+<p>An alternative to the above workflow is to use <code>git cherry-pick</code> to apply the changes from particular
+commits, but to leave those changes unstaged using the <code>--no-commit</code> or <code>-n</code> flag:</p>
+<div class="highlight"><pre><span></span><code>git cherry-pick --no-commit &lt;commit-hash&gt;
+git cherry-pick -n &lt;commit-hash&gt;
+</code></pre></div>
+
+<p>Alternatively, a range of commits can be used instead:</p>
+<div class="highlight"><pre><span></span><code>git cherry-pick -n &lt;commit-hash-start&gt;..&lt;commit-hash-end&gt;
+</code></pre></div>
+
+<p>This can help achieve a similar level of flexibility to the patch approach.</p>
+<h3 id="soft-reset-and-commit">soft reset and commit</h3>
+<p>Suppose the commit history is simple enough that you can squash all of the commits together
+into a single diff set, and pick the changes to split into commits D, E, and F.</p>
+<p>In that case, the easiest way might be to roll back all of the commits made, but preserve
+the changes that each commit made. This is precisely what a <em>soft reset</em> will do.</p>
+<p>For the git commit history</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
+</code></pre></div>
+
+<p>Run the command</p>
+<div class="highlight"><pre><span></span><code>git reset --soft B
+</code></pre></div>
+
+<p>to move the HEAD pointer to commit B, while also <em>preserving</em> all changes made from the
+start of the feature branch <code>D1</code> to the tip of the feature branch <code>E3</code>, all added as
+staged changes (as though they had been <code>git add</code>-ed).</p>
+<p>The changes will be staged, but changes to files can be unstaged using</p>
+<div class="highlight"><pre><span></span><code>git restore --staged &lt;filename&gt;
+</code></pre></div>
+
+<p>Now add changes selectively using the <code>--edit</code> or <code>--patch</code> flags</p>
+<div class="highlight"><pre><span></span><code>git add --edit &lt;filename&gt;
+git add --patch &lt;filename&gt;
+</code></pre></div>
+
+<p>If desired, those changes can be unstaged, and then re-staged using <code>git add --edit</code> or
+<code>git add --patch</code> to selectively add changes to particular commits.</p>
+<p>When done, run </p>
+<div class="highlight"><pre><span></span><code>git commit
+</code></pre></div>
+
+<p>with no arguments to commit the changes you made.</p>
+<h1 id="refactoring-large-pull-requests">Refactoring Large Pull Requests</h1>
+<p>The approaches above can be useful for refactoring branches. The end result will look something like this:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D (feature-d)
+      \ 
+       E (feature-e)
+        \
+         F (feature-f)
+</code></pre></div>
+
+<p>Now 3 pull requests can be made, one for each feature. Thanks to the refactoring above, each branch
+should be a more isolated set of changes that are all related, and therefore easier to review.</p>
+<h2 id="chaining-pull-requests">Chaining Pull Requests</h2>
+<p>The three D E F branches should be merged in together, since they are all related. But their changes should
+be kept separate to make reviewing each branch easier. To accomplish this, chain the pull requests together
+like so:</p>
+<p>Pull Request 1: merge <code>feature-d</code> into <code>master</code></p>
+<p>Pull Request 2: merge <code>feature-e</code> into <code>feature-d</code></p>
+<p>Pull Request 3: merge <code>feature-f</code> into <code>feature-e</code></p>
+<p>In this way, each pull request only shows the changes specific to that branch.</p>
+<p>(If each pull request were made against <code>master</code>, then later branches (F) would also incorporate changes
+from prior branches (D), resulting in messy and hard-to-review pull requests.)</p>
+<p>Pull requests are reviewed and discussed, and new commits will probably be added to fix things or incorporate
+feedback:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D - DA - DB (feature-d)
+      \ 
+       E - EA - EB (feature-e)
+        \
+         F - FA - FB (feature-f)
+</code></pre></div>
+
+<h2 id="preparing-to-merge-a-large-pull-request">Preparing to Merge a Large Pull Request</h2>
+<p>All of your pull requests are approved and ready to merge. Now what?</p>
+<p>Pull requests will need to be merged in reverse order (last PR is merged first - f into e, e into d, d into
+master).  To test that things go smoothly with the first pull request (<code>feature-f</code> into <code>feature-e</code>), we should
+create a local E-F integration branch.</p>
+<p>The local integration branch will have new commits if changes are needed to resolve merge conflicts or fix
+broken tests. Any changes made can be added to the <code>feature-f</code> branch and pushed to the remote, so that
+they are part of the pull request, making the merge into <code>feature-e</code> go smoothly.</p>
+<p>To create a throwaway E-F integration branch, we start by creating a test integration branch from the tip of the
+<code>feature-f</code> branch, and we will merge branch <code>feature-e</code> into branch <code>feature-f</code>.</p>
+<div class="highlight"><pre><span></span><code>git checkout feature-f
+</code></pre></div>
+
+<p>Now we create a local E-F integration branch:</p>
+<div class="highlight"><pre><span></span><code>git checkout -b integration-e-f
+</code></pre></div>
+
+<p>Now we merge <code>feature-e</code> into <code>integration-e-f</code>, which is the same as <code>feature-f</code>:</p>
+<div class="highlight"><pre><span></span><code>git merge --no-ff feature-e
+</code></pre></div>
+
+<p>The <code>--no-ff</code> flag creates a separate merge commit, which is useful here to keep our commit history clean.</p>
+<p>If merge conflicts are encountered, those can be resolved in the usual manner, and the (conflict-free) new
+versions of each file, reflecting changes from <code>feature-f</code> and <code>feature-e</code>, will all be present after the
+merge commit.</p>
+<p>Further commits can also be made to make tests pass, with a resulting git diagram:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D - DA - DB (feature-d)
+      \ 
+       E - EA - EB ----
+        \              \
+         F - FA - FB - EF1 - EF2 (integration-e-f)
+                              ^
+                             HEAD
+</code></pre></div>
+
+<p>Once the <code>integration-e-f</code> branch is polished and passing tests, we can re-label it as <code>feature-f</code> and push
+the new commits to the remote. To re-label <code>integration-e-f</code> as <code>feature-f</code>, assuming we're at the tip of
+the <code>integration-e-f</code> branch (where we left off above):</p>
+<div class="highlight"><pre><span></span><code>git branch -D feature-f
+git checkout -b feature-f
+</code></pre></div>
+
+<p>and push the new commits to the remote's <code>feature-f</code> branch, before you merge in the pull request (<code>feature-f</code>
+into <code>feature-e</code>):</p>
+<div class="highlight"><pre><span></span><code>git push origin feature-f
+</code></pre></div>
+
+<p>Now you are ready to merge pull request 3 (F into E).</p>
+<h2 id="rinse-and-repeat">Rinse and Repeat</h2>
+<p>Rinse and repeat for pull requests 2 and 1.</p>
+<p>For Pull Request 2, we start by creating a new <code>integration-d-e-f</code> branch from the tip of the
+<code>integration-e-f</code> branch, like so:</p>
+<div class="highlight"><pre><span></span><code>git checkout integration-d-e
+git checkout -b integration-d-e-f
+</code></pre></div>
+
+<p>and use the same approach of merging in the <code>feature-d</code> branch with an explicit merge commit:</p>
+<div class="highlight"><pre><span></span><code>git merge --no-ff feature-d
+</code></pre></div>
+
+<p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
+and you should now have a git commit history like this:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D - DA - DB ----------------
+      \                          \
+       E - EA - EB ----           \
+        \              \           \
+         F - FA - FB - EF1 - EF2 - DEF1 - DEF2 (integration-d-e-f)
+                                            ^
+                                           HEAD
+</code></pre></div>
+
+<p>Now re-label the <code>integration-d-e-f</code> branch as <code>feature-e</code>:</p>
+<div class="highlight"><pre><span></span><code>git branch -D feature-e &amp;&amp; git checkout -b feature-e
+</code></pre></div>
+
+<p>Finally, push all new commits to the remote, including the new merge
+commit, which will make sure the pull request can be merged without
+any conflicts:</p>
+<div class="highlight"><pre><span></span><code>git push origin feature-e
+</code></pre></div>
+
+<p>Now PR 2 (E into D) can be merged.</p>
+<h2 id="final-merge-into-master">Final Merge into Master</h2>
+<p>The last and final PR, D into master, will merge all combined feature
+branches into the master branch. We start with a <code>feature-d</code> branch
+that has several commits related to feature D, then several commits
+from merging the <code>feature-e</code> branch in (pull request 2, E into D),
+and the <code>feature-e</code> branch also had <code>feature-f</code> merged into it.</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+     \
+      D - D2 - DEF1 - DEF2 (feature-d)
+</code></pre></div>
+
+<p>Now we will create one more commit on the <code>feature-d</code> branch that is
+merging <code>master</code> into <code>feature-d</code>, which will help the merge happen
+smoothly for pull request 1 (D into master).</p>
+<p>But first we switch to an integration branch, in case things don't go
+smoothly and we want to throw away the merge commit:</p>
+<div class="highlight"><pre><span></span><code>git branch integration-def-master
+</code></pre></div>
+
+<p>Create an explicit merge commit to merge <code>master</code> into <code>integration-def-master</code>:</p>
+<div class="highlight"><pre><span></span><code>git merge --no-ff master
+</code></pre></div>
+
+<p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
+and you should now have a git commit history like this:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+     \   \---------------------
+      \                        \
+       D - D2 - DEF1 - DEF2 - DEF3 (integration-def-master)
+</code></pre></div>
+
+<p>where commit <code>DEF3</code> is the merge commit created with the <code>--no-ff</code> command.</p>
+<p>The merge commit will resolve any conflicts. When you're satisfied with the
+merge commit, you can switch out the <code>integration-def-master</code> branch with the
+<code>feature-d</code> branch like so:</p>
+<div class="highlight"><pre><span></span><code>git branch -D feature-d
+git checkout -b feature-d
+</code></pre></div>
+
+<p>Now you can push the merge commit to the remote:</p>
+<div class="highlight"><pre><span></span><code>git push origin feature-d
+</code></pre></div>
+
+<p>and you're now ready to merge your (conflict-free) pull request!</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1290,9 +1292,6 @@ latest compatible versions of software.</p>
 
             <h2>March 2022</h2>
 
-            <p class="archive">
-            <a href="https://charlesreid1.github.io/episode-23740000-of-so-thats-in-the-internet-archive-now.html">Episode 23,740,000 of So That's In The Internet Archive Now</a>
-            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/how-to-read-ulysses.html">How to Read Ulysses</a>
             </p>

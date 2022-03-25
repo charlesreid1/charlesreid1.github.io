@@ -102,467 +102,6 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Fixing Bottlenecks in the Guava Traveling Salesperson Problem Code
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-03-29T14:00:00-07:00" pubdate>Wednesday 03/29/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/java.html">Java</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/fixing-bottlenecks-in-the-guava-traveling-salesperson-problem-code.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><ul>
-<li><a href="#tsp2-intro">Intro</a></li>
-<li><a href="#tsp2-graphs">The Graphs We Are Solving</a><ul>
-<li><a href="#tsp2-viz-graphs">Visualizations of Graphs</a></li>
-</ul>
-</li>
-<li><a href="#tsp2-guava-tsp-soln">Guava TSP Solution</a><ul>
-<li><a href="#tsp2-timing-guava-tsp">Timing the TSP Solution</a></li>
-</ul>
-</li>
-<li><a href="#tsp2-improving">Improving the Guava TSP Solution</a><ul>
-<li><a href="#tsp2-flaw">The Flaw</a></li>
-<li><a href="#tsp2-fixing">Fixing the Flaw</a></li>
-<li><a href="#tsp2-pessimist">The Pessimist Algorithm</a></li>
-</ul>
-</li>
-<li><a href="#tsp2-timing">Timing Results</a></li>
-<li><a href="#tsp2-future">Future Work</a></li>
-</ul>
-<p><a name="tsp2-intro"></a></p>
-<h2 id="intro">Intro</h2>
-<p>In a prior blog post we introduced you to the traveling salesperson problem (TSP),
-which involves finding the shortest path through every city in a group of cities
-connected by a network of roads. Using Google Guava, we have implemented a solution 
-to the TSP in Java.</p>
-<p>Our philosophy toward timing, profiling, and optimization is that it is always best 
-to work from data - and timing is the first place to begin collecting data.
-As we will show in this blog post, simply timing your function for different problem sizes
-can reveal scaling behavior that indicates bottlenecks, bugs, or inefficiencies in the algorithm.</p>
-<p>In this post, we use simple timing tools and a spreadsheet 
-to plot scaling behavior and identify bottlenecks in the 
-traveling salesperson problem code. Fixing the bottleneck
-led to a reduction in cost of <strong>two orders of magnitude</strong>.</p>
-<p>Here's a preview:</p>
-<p><img alt="TSP Guava Solution scaling results - initial and pessimist algorithms" src="/images/tsp-guava-initial-pessimist.png"></p>
-<p>In this post we'll cover what we did to time the problem,
-the initial results, and the algorithm improvement that led to 
-the massive performance improvement.</p>
-<p>But first, let's look at some of the graphs that are being solved.</p>
-<p><a name="tsp2-graphs"></a></p>
-<h2 id="the-graphs-we-are-solving">The Graphs We Are Solving</h2>
-<p>Let's start by having a look at some of the graphs we will be solving,
-and the representation of the problem.</p>
-<p><a name="tsp2-viz-graphs"></a></p>
-<h3 id="visualizations-of-graphs">Visualizations of Graphs</h3>
-<p>The first few graphs start out simple: here is a randomly generated 4-node traveling salesman problem
-(we wil cover the code that generates the graph pictured here in a moment):</p>
-<p><img alt="TSP graph with 4 nodes" src="/images/graphviz_tsp_4.png"></p>
-<p><strong>Shortest Route: [0, 2, 3, 1] Distance: 112.0</strong></p>
-<p>Here is another randomly generated graph with 5 nodes:</p>
-<p><img alt="TSP graph with 5 nodes" src="/images/graphviz_tsp_5.png"></p>
-<p><strong>Shortest Route: [0, 4, 2, 1, 3]   Distance: 130.0</strong></p>
-<p>With 6 nodes:</p>
-<p><img alt="TSP graph with 6 nodes" src="/images/graphviz_tsp_6.png"></p>
-<p><strong>Shortest Route: [0, 2, 4, 1, 5, 3]    Distance: 163.0</strong></p>
-<p>But problem of this sise are still trivially easy for a processor to handle.
-Our inefficient, first-pass algorithm started to show signs of eating up CPU cycles 
-at around 9 nodes (albeit less than 1 second). Here is the graph with 9 nodes:</p>
-<p><img alt="TSP graph with 9 nodes" src="/images/graphviz_tsp_9.png"></p>
-<p><strong>Shortest Route: [0, 6, 1, 7, 3, 2, 5, 8, 4]   Distance: 166.0</strong></p>
-<p>With 12 nodes:</p>
-<p><img alt="TSP graph with 12 nodes" src="/images/graphviz_tsp_12.png"></p>
-<p><strong>Shortest Route: [0, 7, 5, 4, 1, 8, 6, 10, 11, 9, 3, 2]    Distance: 236.0</strong></p>
-<p>At 14 nodes, even the efficient algorithm crosses the 1 second threshold.</p>
-<p><img alt="TSP graph with 14 nodes" src="/images/graphviz_tsp_14.png"></p>
-<p><strong>Shortest Route: [0, 2, 6, 10, 13, 12, 7, 4, 1, 11, 5, 3, 9, 8]    Distance: 277.0</strong></p>
-<p>We tested randomly-generated, fully-connected graphs of up to 18 nodes, 
-and the algorithm was able to compute solutions within a few minutes.
-Here is an 18-node graph:</p>
-<p><img alt="TSP graph with 18 nodes" src="/images/graphviz_tsp_18.png"></p>
-<p><strong>Shortest Route: [0, 3, 10, 6, 12, 5, 11, 2, 14, 8, 13, 4, 7, 1, 9]    Distance: 267.0</strong></p>
-<p><a name="tsp2-guava-tsp-soln"></a></p>
-<h2 id="the-guava-tsp-solution">The Guava TSP Solution</h2>
-<p>In a prior post we covered the implementation of a solution to the TSP 
-using Guava's Network objects. This implementation utilized a recursive
-depth-first search algorithm to search for the shortest path among all nodes.</p>
-<p>To recap, here was our pseudocode for the TSP solution:</p>
-<div class="highlight"><pre><span></span><code>explore(neighbors):
-
-    if(no more unvisited neighbors):
-        # This is the base case.
-        if total distance is less than current minimum:
-            save path and new minimum
-
-    else:
-        # This is the recursive case.
-        for neighbor in unvisited neighbors:
-            visit neighbor
-            explore(new_neighbors)
-            unvisit neighbor
-</code></pre></div>
-
-<p>And here is what the recursive backtracking <code>explore()</code> method looked like
-when implemented in Java:</p>
-<div class="highlight"><pre><span></span><code>    <span class="cm">/** Recursive backtracking method: explore possible solutions starting at this node, having made nchoices */</span>
-    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">explore</span><span class="p">(</span><span class="n">Node</span> <span class="n">node</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nchoices</span><span class="p">)</span> <span class="p">{</span>
-
-        <span class="k">if</span><span class="p">(</span><span class="n">nchoices</span> <span class="o">==</span> <span class="n">graphSize</span><span class="p">)</span> <span class="p">{</span>
-            <span class="c1">// </span>
-            <span class="c1">// BASE CASE</span>
-            <span class="c1">//</span>
-            <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span> <span class="o">&lt;</span> <span class="k">this</span><span class="p">.</span><span class="na">min_distance</span> <span class="o">||</span> <span class="k">this</span><span class="p">.</span><span class="na">min_distance</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-                <span class="c1">// Solution base case</span>
-                <span class="k">this</span><span class="p">.</span><span class="na">min_distance</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="p">;</span>
-                <span class="n">printSolution</span><span class="p">();</span>
-            <span class="p">}</span>
-
-        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-            <span class="c1">//</span>
-            <span class="c1">// RECURSIVE CASE</span>
-            <span class="c1">//  </span>
-            <span class="n">Set</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="n">graph</span><span class="p">.</span><span class="na">adjacentNodes</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
-            <span class="k">for</span><span class="p">(</span><span class="n">Node</span> <span class="n">neighbor</span> <span class="p">:</span> <span class="n">neighbors</span><span class="p">)</span> <span class="p">{</span>
-                <span class="k">if</span><span class="p">(</span><span class="n">neighbor</span><span class="p">.</span><span class="na">visited</span> <span class="o">==</span> <span class="kc">false</span><span class="p">)</span> <span class="p">{</span>
-
-                    <span class="kt">int</span> <span class="n">distance_btwn</span> <span class="o">=</span> <span class="o">-</span><span class="mi">10000</span><span class="p">;</span>
-
-                    <span class="k">for</span><span class="p">(</span> <span class="n">Edge</span> <span class="n">edge</span> <span class="p">:</span> <span class="n">graph</span><span class="p">.</span><span class="na">edgesConnecting</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">neighbor</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
-                        <span class="n">distance_btwn</span> <span class="o">=</span> <span class="n">edge</span><span class="p">.</span><span class="na">value</span><span class="p">;</span>
-                    <span class="p">}</span>
-
-                    <span class="c1">// Make a choice</span>
-                    <span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="n">neighbor</span><span class="p">.</span><span class="na">id</span><span class="p">;</span>
-                    <span class="n">neighbor</span><span class="p">.</span><span class="na">visit</span><span class="p">();</span>
-                    <span class="k">this</span><span class="p">.</span><span class="na">this_distance</span> <span class="o">+=</span> <span class="n">distance_btwn</span><span class="p">;</span>
-
-                    <span class="c1">// Explore the consequences</span>
-                    <span class="n">explore</span><span class="p">(</span><span class="n">neighbor</span><span class="p">,</span><span class="n">nchoices</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
-
-                    <span class="c1">// Unmake the choice</span>
-                    <span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-                    <span class="n">neighbor</span><span class="p">.</span><span class="na">unvisit</span><span class="p">();</span>
-                    <span class="k">this</span><span class="p">.</span><span class="na">this_distance</span> <span class="o">-=</span> <span class="n">distance_btwn</span><span class="p">;</span>
-                <span class="p">}</span>
-                <span class="c1">// Move on to the next choice (continue loop)</span>
-            <span class="p">}</span>               
-        <span class="p">}</span> <span class="c1">// End base/recursive case</span>
-    <span class="p">}</span>
-</code></pre></div>
-
-<p>Note: full TSP code available at <a href="http://git.charlesreid1.com/charlesreid1/tsp">http://git.charlesreid1.com/charlesreid1/tsp</a>.</p>
-<p><a name="tsp2-timing-guava-tsp"></a></p>
-<h3 id="timing-the-tsp-solution">Timing the TSP Solution</h3>
-<p>To time the Guava solution to the TSP, we utilized Java's system time
-to measure the amount of time it took to compute solutions, 
-excluding the time spent on graph construction.</p>
-<p>Here is the code that performs the timing of the call to the explore method:</p>
-<div class="highlight"><pre><span></span><code>    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="p">)</span> <span class="kd">throws</span> <span class="n">IllegalArgumentException</span> <span class="p">{</span> 
-
-        <span class="p">...</span>
-
-        <span class="kt">double</span> <span class="n">conn</span> <span class="o">=</span> <span class="mf">1.00</span><span class="p">;</span>
-        <span class="n">TSP</span> <span class="n">t</span> <span class="o">=</span> <span class="k">new</span> <span class="n">TSP</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="n">conn</span><span class="p">);</span>
-
-        <span class="kt">long</span> <span class="n">start</span> <span class="o">=</span> <span class="n">System</span><span class="p">.</span><span class="na">nanoTime</span><span class="p">();</span>
-        <span class="n">t</span><span class="p">.</span><span class="na">solve</span><span class="p">();</span>
-        <span class="kt">long</span> <span class="n">end</span> <span class="o">=</span> <span class="n">System</span><span class="p">.</span><span class="na">nanoTime</span><span class="p">();</span>
-        <span class="kt">long</span> <span class="n">duration</span> <span class="o">=</span> <span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">;</span>
-
-        <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">printf</span><span class="p">(</span><span class="s">&quot;Elapsed time %03f s\n &quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">duration</span><span class="o">/</span><span class="mf">1E9</span><span class="p">)</span> <span class="p">);</span>
-    <span class="p">}</span>
-</code></pre></div>
-
-<p>The elapsed time is computed using <code>System.nanoTime()</code>.</p>
-<p>Writing a script to feed variable size graphs and time the resulting code 
-showed some pretty awful scaling behavior: </p>
-<p><img alt="Java Guava TSP Solution Scaling" src="/images/tsp-java-scaling.png"></p>
-<p>This scaling behavior reveals a bottleneck in the algorithm:
-the algorithm scales the same way the problem size scales.
-A more efficient algorithm would be capable of ruling out 
-more of the solution space as the graph size grows,
-allowing the algorithm to scale better at large problem sizes.</p>
-<p>This led to some reconsideration of the algorithm.</p>
-<p><a name="tsp2-improving"></a></p>
-<h2 id="improving-the-guava-tsp-solution">Improving the Guava TSP Solution</h2>
-<p>The original TSP algorithm implemented a subtle flaw - 
-not by implementing a mistake in the calculation, 
-but by ignoring an important piece of information.</p>
-<p><a name="tsp2-theflaw"></a></p>
-<h3 id="the-flaw">The Flaw</h3>
-<p>As the recursive depth-first search traverses the graph, the algorithm is checking if all nodes have been traversed.
-When all nodes have been traversed, it then compares the distance of that journey to the current shortest journey.
-If the new journey is shorter, it is saved as the new shortest journey, otherwise it is ignored and we move on.</p>
-<p>What this ignores is the fact that any path, at any point, can be checked to see if it is 
-longer than the current minimum, and if it is, any possibilities that follow from it can be skipped.</p>
-<p>For example, consider the TSP on a graph of six cities, A B C D E F.</p>
-<p>Suppose that the algorithm is in the midst of the recursive backtracking solution,
-and has a current minimum distance and minimum path of the route <code>A-B-E-D-C-F</code>, which is 24 miles.</p>
-<p>Now suppose that the algorithm is searching for solutions that begin with the choice <code>A-E-C</code>,
-and the distance <code>A-E-C</code> is 28 miles.</p>
-<p>The naive algorithm ignores this information, and continues choosing from among the 
-3 remaining cities, computing the total length for <span class="math">\(3! = 6\)</span> additional routes, and finding 
-that all six of them do not work.</p>
-<p>The smart algorithm checks <em>each time it chooses a new node</em> whether the length of the current route
-exceeds the current minimum route distance (if one has been found/set).
-If not, the algorithm keeps going, but if so, it skips choosing neighbors 
-and returns directly to the parent caller.</p>
-<p><a name="tsp2-fixing"></a></p>
-<h3 id="fixing-the-flaw">Fixing the Flaw</h3>
-<p>Fixing the flaw is surpsingly easy: we just add an if statement.</p>
-<p>Illustrating first with the pseudocode:</p>
-<div class="highlight"><pre><span></span><code>explore(neighbors):
-
-    if(no more unvisited neighbors):
-        # This is the base case.
-        if total distance is less than current minimum:
-            save path and new minimum
-
-    else:
-        # This is the recursive case.
-        if current distance is greater than current minimum:
-            skip
-        else:
-            for neighbor in unvisited neighbors:
-                visit neighbor
-                explore(new_neighbors)
-                unvisit neighbor
-</code></pre></div>
-
-<p>In our Java implementation, the algorithm simply prints out solutions as it goes,
-then returns to the calling function whether a solution was found or not.
-Thus, we can "skip" a set of solutions by just returning to the calling function,
-using a <code>return</code> statement.</p>
-<div class="highlight"><pre><span></span><code>        <span class="k">if</span><span class="p">(</span><span class="n">nchoices</span> <span class="o">==</span> <span class="n">graphSize</span><span class="p">)</span> <span class="p">{</span>
-            <span class="c1">// </span>
-            <span class="c1">// BASE CASE</span>
-            <span class="c1">//</span>
-            <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span> <span class="o">&lt;</span> <span class="k">this</span><span class="p">.</span><span class="na">min_distance</span> <span class="o">||</span> <span class="k">this</span><span class="p">.</span><span class="na">min_distance</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-                <span class="c1">// Solution base case:</span>
-                <span class="k">this</span><span class="p">.</span><span class="na">min_distance</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="p">;</span>
-                <span class="n">printSolution</span><span class="p">();</span>
-            <span class="p">}</span>
-
-        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-            <span class="c1">//</span>
-            <span class="c1">// RECURSIVE CASE</span>
-            <span class="c1">//  </span>
-
-            <span class="cm">/* </span>
-<span class="cm">             * The following lines result in a huge computational cost savings.</span>
-<span class="cm">            */</span>
-            <span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="o">&gt;</span><span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="o">&gt;</span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="p">)</span> <span class="p">{</span>
-                <span class="c1">// Just give up already. It&#39;s meaningless. There&#39;s no point.</span>
-                <span class="k">return</span><span class="p">;</span>
-            <span class="p">}</span>
-
-            <span class="c1">// Everything else stays exactly the same</span>
-            <span class="n">Set</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="n">graph</span><span class="p">.</span><span class="na">adjacentNodes</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
-            <span class="k">for</span><span class="p">(</span><span class="n">Node</span> <span class="n">neighbor</span> <span class="p">:</span> <span class="n">neighbors</span><span class="p">)</span> <span class="p">{</span>
-                <span class="k">if</span><span class="p">(</span><span class="n">neighbor</span><span class="p">.</span><span class="na">visited</span> <span class="o">==</span> <span class="kc">false</span><span class="p">)</span> <span class="p">{</span>
-
-                    <span class="kt">int</span> <span class="n">distance_btwn</span> <span class="o">=</span> <span class="o">-</span><span class="mi">10000</span><span class="p">;</span>
-
-                    <span class="k">for</span><span class="p">(</span> <span class="n">Edge</span> <span class="n">edge</span> <span class="p">:</span> <span class="n">graph</span><span class="p">.</span><span class="na">edgesConnecting</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">neighbor</span><span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
-                        <span class="n">distance_btwn</span> <span class="o">=</span> <span class="n">edge</span><span class="p">.</span><span class="na">value</span><span class="p">;</span>
-                    <span class="p">}</span>
-
-                    <span class="c1">// Make a choice</span>
-                    <span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="n">neighbor</span><span class="p">.</span><span class="na">id</span><span class="p">;</span>
-                    <span class="n">neighbor</span><span class="p">.</span><span class="na">visit</span><span class="p">();</span>
-                    <span class="k">this</span><span class="p">.</span><span class="na">this_distance</span> <span class="o">+=</span> <span class="n">distance_btwn</span><span class="p">;</span>
-
-                    <span class="c1">// Explore the consequences</span>
-                    <span class="n">explore</span><span class="p">(</span><span class="n">neighbor</span><span class="p">,</span><span class="n">nchoices</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
-
-                    <span class="c1">// Unmake the choice</span>
-                    <span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-                    <span class="n">neighbor</span><span class="p">.</span><span class="na">unvisit</span><span class="p">();</span>
-                    <span class="k">this</span><span class="p">.</span><span class="na">this_distance</span> <span class="o">-=</span> <span class="n">distance_btwn</span><span class="p">;</span>
-                <span class="p">}</span>
-                <span class="c1">// Move on to the next choice (continue loop)</span>
-            <span class="p">}</span>               
-        <span class="p">}</span> <span class="c1">// End base/recursive case</span>
-    <span class="p">}</span>
-</code></pre></div>
-
-<p><a name="tsp2-pessimist"></a></p>
-<h3 id="the-pessimist-algorithm">The Pessimist Algorithm</h3>
-<p>This algorithm is dubbed The Pessimist Algorithm. Let's see how it works.
-Here is that new if statement:</p>
-<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="o">&gt;</span><span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="o">&gt;</span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// Just give up already. It&#39;s meaningless. There&#39;s no point.</span>
-    <span class="k">return</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<p>This if statement tests two conditions - first, we check if a first minimum distance has actually been found,
-and second, we check if the distance of the current path is greater than the minimum distance.
-If it is, we give up continuing our search down this path, and just return back to the calling function.</p>
-<p>This introduces a small computational cost - 
-we now have an if statement to check every time the <code>explore()</code> method is called -
-but it results in such significant cost savings that it does not matter.</p>
-<p><a name="tsp-timing"></a></p>
-<h2 id="timing-results">Timing Results</h2>
-<p>Shown below is a graph of the walltime for various problem sizes,
-showing both the original algorithm and the pessimist algorithm
-and their scaling behavior. </p>
-<p>The pessimist algorithm led to a <em>drastic</em> improvement in scale-up -
-the results are striking.</p>
-<p><img alt="TSP Guava Solution scaling results - initial and pessimist algorithms" src="/images/tsp-guava-initial-pessimist.png"></p>
-<p>And here are the results in a table form:</p>
-<div class="highlight"><pre><span></span><code>-----------------------------------------------------------------------------------------
-| Number of Nodes N | Initial Algorithm Walltime [s] | Pessimist Algorithm Walltime [s] |
-|-------------------|--------------------------------|----------------------------------|
-| 4                 | 0.005                          | 0.006                            |
-| 5                 | 0.006                          | 0.006                            |
-| 6                 | 0.009                          | 0.008                            |
-| 7                 | 0.017                          | 0.011                            |
-| 8                 | 0.029                          | 0.020                            |
-| 9                 | 0.083                          | 0.023                            |
-| 10                | 0.305                          | 0.053                            |
-| 11                | 1.443                          | 0.118                            |
-| 12                | 15.808                         | 0.149                            |
-| 13                | 180.078                        | 0.524                            |
-| 14                |                                | 1.276                            |
-| 15                |                                | 3.905                            |
-| 16                |                                | 216.827                          |
-| 17                |                                | 106.992                          |
-| 18                |                                | 337.930                          |
------------------------------------------------------------------------------------------
-</code></pre></div>
-
-<p>For a problem with 13 nodes, the initial algorithm took 3 minutes; 
-the pessimist algorithm didn't even break the one second mark!</p>
-<h2 id="future-work">Future Work</h2>
-<p>Now that we've got the algorithm running faster and more efficiently,
-we can tackle larger problems and explore the impact of problem topology
-on solutions, and we can rest assured we have an efficient algorithm
-that can scale to larger and more interesting problems.</p>
-<p>There are further improvements we could make to the algorithm to improve it, though.
-By examining the solutions that are found, we can see that the solutions
-usually, but not always, connects from each neighbor to its next-closest neighbor.
-If, when iterating over neighbors, we start by searching the nearest neighbors first,
-we can potentially get to the minimum solution faster, which would allow us
-to more quickly rule out larger portions of the solution space that are infeasible.</p>
-<p>This would induce an additional overhead cost of sorting, since the Guava library
-returns the edges that connect to a node as an unordered Set. These edges would 
-have to be added to a container and sorted to implement the nearest-neighbor search.</p>
-<p>However, we saw with the pessimist solution that a small increase in complexity
-can rule out large enough portions of the solution space to make it worthwhile,
-so it may be that the cost of sorting each edge pays off in the computational savings that result.</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/guava.html">guava</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graph.html">graph</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/tsp.html">TSP</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/performance.html">performance</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
                 Python vs. Perl: N Queens Problem
             </b></h1>
         
@@ -1682,6 +1221,579 @@ that will improve the performance by orders of magnitude. But more on that in a 
 
 <div class="v200"></div>
   	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Perl vs. Java: N Queens Problem
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-03-22T22:00:00-07:00" pubdate>Wednesday 03/22/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/perl-vs-java-n-queens-problem.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#pvj-background">Background: Huh?</a></li>
+<li><a href="#pvj-nqueensproblem">N Queens Problem</a></li>
+<li><a href="#pvj-nqueenssoln">N Queens Solution</a><ul>
+<li><a href="#pvj-perlsoln">Perl Solution</a></li>
+<li><a href="#pvj-javasoln">Java Solution</a></li>
+</ul>
+</li>
+<li><a href="#pvj-h2hnqueens">Head to Head: Walltime vs. Number of Queens</a></li>
+<li><a href="#pvj-perlprof">Perl Profiling</a></li>
+<li><a href="#pvj-perlprofresults">Perl Profiling Results</a></li>
+<li><a href="#pvj-javaprof">Java Profiling</a></li>
+<li><a href="#pvj-javaprofresults">Java Profiling Results</a></li>
+<li><a href="#pvj-h2hntested">Head to Head: Walltime vs. Number of Solutions Tested</a></li>
+<li><a href="#pvj-applesoranges">Apples and Oranges</a></li>
+<li><a href="#pvj-sources">Sources</a></li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>In this post, we describe an implementation of the <a href="https://en.wikipedia.org/wiki/Eight_queens_puzzle">N Queens Problem</a>,
+which is a puzzle related to optimization, combinatorics, and recursive backtracking.
+The puzzle asks: how many configurations are there for placing 8 queens on a chessboard
+such that no queen can attack any othr queen?</p>
+<p>This problem was implemented in Perl and in Java, the solution results were timed,
+and the codes were profiled. While Perl is an interpreted language, and is therefore
+fully expeted to be much slower than Java (which indeed it is), it is still useful
+to compare the performance between these two codes to gain an appreciation for 
+the advantages and disadvantages to both approaches.</p>
+<p><a name="pvj-background"></a></p>
+<h2 id="background-huh">Background: Huh?</h2>
+<p>Recently I read an <a href="http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html">(11 year old) article</a> 
+by Steve Yegge entitled "Execution in the Kingdom of Nouns." In it, Steve describes the way that in Java, 
+"Classes are really the only modeling tool Java provides you. 
+So whenever a new idea occurs to you, you have to sculpt it or wrap it or smash at it until it becomes a thing, 
+even if it began life as an action, a process, or any other non-'thing' concept."</p>
+<p>The article inspired me to try on this verb-oriented mode of thinking in a more... active way. 
+Prior experiences with OCaml were confusing, and Haskell continues to evade me,
+so it was easier to dust off old Perl skills than learn enough Haskell or Ocaml to solve N queens problem.
+Perl was the next-closest verb-oriented "scripting" language.</p>
+<p>I was also familiar with the N queens problem, since I'm a programming instructor (I'll let you guess which language),
+and it seemed like a nice problem for both noun-based and verb-based approaches. 
+But it also meant I had to learn enough Perl to solve the N queens problem.</p>
+<p>...or, use the <a href="http://rosettacode.org/wiki/N-queens_problem#Perl">Perl solution to the N queens problem from Rosetta Code</a>.</p>
+<p>Right...</p>
+<p>So here's the plan: study a verb-oriented implementation of this canonical, deceptively subtle programming problem in Perl; 
+translate it into a verb-oriented Java program; and run the two head-to-head, using a profiler to understand the results.</p>
+<p><a name="pvj-nqueensproblem"></a></p>
+<h2 id="n-queens-problem">N Queens Problem</h2>
+<p>The N queens problem predates computers - it's a chess puzzle that asks: how many ways can you place 8 queens on a chessboard
+such that no queen can attack any other queen? </p>
+<p>The number of possible configurations of queens on a chessboard is 64 pick 8, or</p>
+<div class="math">$$
+\dfrac{64!}{(64-8)!} = 64 \times 63 \times \dots \times 57 \times 56 = 178,462,987,637,760 
+$$</div>
+<p>Here's that calculation in Python:</p>
+<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; import numpy as np
+&gt;&gt;&gt; np.prod(range(64-8+1,64+1))
+178462987637760
+</code></pre></div>
+
+<p>That's bigger than the net worth of most U.S. Presidents!</p>
+<p>If we implemented a dumb brute-force solution that tested each of these configurations, we'd be waiting until the heat death of the universe.</p>
+<p>Fortunately, as we place queens on the board we can check if it is an invalid placement, and rule out any configurations that would follow from that choice.
+As long as we are making our choices in an orderly fashion, this enables us to rule out most of the nearly 10 quadrillion possibilities. 
+If we place queens column-by-column and rule out rows where there are already queens, by keeping track of where queens have already been placed, 
+we can reduce the number of possible rows by 1 with each queen placed. The first queen has 8 possible rows where it can be placed,
+the second queen has 7 possible rows (excluding the row that the first queen was placed on), and so on. The number of possiblities is:</p>
+<div class="math">$$
+8! = 8 \times 7 \times \dots \times 2 \times 1 = 40,320
+$$</div>
+<p>A big improvement! Here's that calculation in Python:</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="k">def</span> <span class="nf">fact</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+<span class="o">...</span>     <span class="k">if</span><span class="p">(</span><span class="n">n</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
+<span class="o">...</span>         <span class="k">return</span> <span class="mi">1</span>
+<span class="o">...</span>     <span class="k">else</span><span class="p">:</span>
+<span class="o">...</span>         <span class="k">return</span> <span class="n">n</span><span class="o">*</span><span class="n">fact</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="o">...</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">fact</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="mi">40320</span>
+</code></pre></div>
+
+<p>This still-large number of possibilities can be further reduced by using the same procedure, but checking for invalid rows based on the diagonal squares that each already-placed queen attacks.
+This covers each precondition for a solved board, and allows the base case of the recursive backtracking method to be as simple as,
+"If you've reached this point, you have a valid solution. Add it to the solutions bucket."</p>
+<p>Now, let's get to the solution algorithm.</p>
+<p><a name="pvj-nqueenssoln"></a></p>
+<h2 id="n-queens-solution">N Queens Solution</h2>
+<p>As a recap, we dusted off our Perl skills to utilize an N queens solution in Perl from <a href="http://rosettacode.org/wiki/N-queens_problem#Perl">Rosetta Code</a>.</p>
+<p>Here's the pseudocode:</p>
+<div class="highlight"><pre><span></span><code>explore(column):
+    if last column:
+        # base case
+        add to solutions
+    else:
+        # recursive case
+        for each row:
+            if this is a safe row:
+                place queen on this row
+                explore(column+1)
+                remove queen from this row
+</code></pre></div>
+
+<p>Both codes use integer arrays to keep track of where queens are placed. 
+Solutions are stringified version of these arrays, consisting of 8 digits.</p>
+<p><a name="pvj-perlsoln"></a></p>
+<h3 id="perl-solution">Perl Solution</h3>
+<p>After looking at the Rosetta Code solution for a (long) while and marking it up with comments to understand what it was doing, 
+I decided it was precisely the kind of verb-oriented solution I wanted to test out to compare Perl and Java.
+It uses no objects, but instead relies on fast built-in data structures (arrays), 
+for loop expansion (only <code>for my $i (1 .. $N)</code>, no <code>for($i=1; $i&lt;=$N; $i++)</code>),
+and basic integer math. The cost of solving the problem comes down to basic indexing and array access.</p>
+<p>This is the kind of solution I imagine a human calculator like Alan Turing or John Von Neuman looking at, nodding, and saying, "Makes sense! (And by the way the answer is 92.)"</p>
+<p><a href="https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535">Github gist: nqueens.pl</a></p>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/usr/bin/perl</span>
+
+<span class="c1"># Solve the N queens problem</span>
+<span class="c1"># using recursive backtracking.</span>
+<span class="c1"># </span>
+<span class="c1"># Author: Charles Reid</span>
+<span class="c1"># Date: March 2017</span>
+
+<span class="c1"># Create an array to store solutions</span>
+<span class="k">my</span> <span class="nv">@solutions</span><span class="p">;</span>
+
+<span class="c1"># Create an array to store where queens have been placed</span>
+<span class="k">my</span> <span class="nv">@queens</span><span class="p">;</span>
+
+<span class="c1"># Mark the rows already used (useful for lookup)</span>
+<span class="k">my</span> <span class="nv">@occupied</span><span class="p">;</span>
+
+<span class="c1"># explore() implements a recursive, depth-first backtracking method</span>
+<span class="k">sub</span> <span class="nf">explore</span> <span class="p">{</span> 
+    <span class="c1"># Parameters:</span>
+    <span class="c1">#   depth : this is the argument passed by the user</span>
+
+    <span class="c1"># First argument passed to the function is $depth </span>
+    <span class="c1"># (how many queens we&#39;ve placed on the board),</span>
+    <span class="c1"># so use shift to pop that out of the parameters </span>
+    <span class="k">my</span> <span class="p">(</span><span class="nv">$depth</span><span class="p">,</span> <span class="nv">@diag</span><span class="p">)</span> <span class="o">=</span> <span class="nb">shift</span><span class="p">;</span>
+
+    <span class="c1"># Explore is a recursive method,</span>
+    <span class="c1"># so we need a base case and a recursive case.</span>
+    <span class="c1">#</span>
+    <span class="c1"># The base case is, we&#39;ve reached a leaf node,</span>
+    <span class="c1"># placed 8 queens, and had no problems, </span>
+    <span class="c1"># so we found a solution.</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nv">$depth</span><span class="o">==</span><span class="nv">$board_size</span><span class="p">)</span> <span class="p">{</span> 
+        <span class="c1"># Here, we store the stringified version of @queens,</span>
+        <span class="c1"># which are the row numbers of prior queens. </span>
+        <span class="c1"># This is a global variable that is shared across</span>
+        <span class="c1"># instances of this recursive function.</span>
+        <span class="nb">push</span> <span class="nv">@solutions</span><span class="p">,</span> <span class="s">&quot;@queens\n&quot;</span><span class="p">;</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Mark the squares that are attackable, </span>
+    <span class="c1"># so that we can cut down on the search space.</span>
+    <span class="nv">$#diag</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="nv">$board_size</span><span class="p">;</span>
+    <span class="k">for</span><span class="p">(</span> <span class="mi">0</span> <span class="o">..</span> <span class="nv">$#queens</span><span class="p">)</span> <span class="p">{</span> 
+        <span class="nv">$ix1</span> <span class="o">=</span> <span class="nv">$queens</span><span class="p">[</span><span class="nv">$_</span><span class="p">]</span> <span class="o">+</span> <span class="nv">$depth</span> <span class="o">-</span> <span class="nv">$_</span> <span class="p">;</span>
+        <span class="nv">$diag</span><span class="p">[</span> <span class="nv">$ix1</span> <span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+        <span class="nv">$ix2</span> <span class="o">=</span> <span class="nv">$queens</span><span class="p">[</span><span class="nv">$_</span><span class="p">]</span> <span class="o">-</span> <span class="nv">$depth</span> <span class="o">+</span> <span class="nv">$_</span> <span class="p">;</span>
+        <span class="nv">$diag</span><span class="p">[</span> <span class="nv">$ix2</span> <span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="k">my</span> <span class="nv">$row</span> <span class="p">(</span><span class="mi">0</span> <span class="o">..</span> <span class="nv">$board_size</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1"># Cut down on the search space:</span>
+        <span class="c1"># if this square is already occupied</span>
+        <span class="c1"># or will lead to an invalid solution,</span>
+        <span class="c1"># don&#39;t bother exploring it.</span>
+        <span class="k">next</span> <span class="k">if</span> <span class="nv">$occupied</span><span class="p">[</span><span class="nv">$row</span><span class="p">]</span> <span class="o">||</span> <span class="nv">$diag</span><span class="p">[</span><span class="nv">$row</span><span class="p">];</span>
+
+        <span class="c1"># Make a choice</span>
+        <span class="nb">push</span> <span class="nv">@queens</span><span class="p">,</span> <span class="nv">$row</span><span class="p">;</span>
+        <span class="c1"># Mark the square as occupied</span>
+        <span class="nv">$occupied</span><span class="p">[</span><span class="nv">$row</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+
+        <span class="c1"># Explore the consequences</span>
+        <span class="n">explore</span><span class="p">(</span><span class="nv">$depth</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+
+        <span class="c1"># Unmake the choice</span>
+        <span class="nb">pop</span> <span class="nv">@queens</span><span class="p">;</span>
+
+        <span class="c1"># Mark the square as unoccupied</span>
+        <span class="nv">$occupied</span><span class="p">[</span><span class="nv">$row</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nv">$board_size</span> <span class="o">=</span> <span class="mi">8</span><span class="p">;</span> 
+
+<span class="n">explore</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+
+<span class="k">print</span> <span class="s">&quot;total &quot;</span><span class="p">,</span> <span class="nb">scalar</span><span class="p">(</span><span class="nv">@solutions</span><span class="p">),</span> <span class="s">&quot; solutions\n&quot;</span><span class="p">;</span>
+</code></pre></div>
+
+<p><a name="pvj-javasoln"></a></p>
+<h3 id="java-solution">Java Solution</h3>
+<p>Starting with the Rosetta Code solution in Perl, I translated the algorithm into Java, sticking as closely as possible to the Way of the Verb.
+I replicated the solution in Java with a minimal amount of object-oriented-ness. 
+A Board class simply wraps the same set of arrays and array manipulations that the Perl solution implements directly.
+These constitute the lookahead check for safe places to put the queen. </p>
+<p>The Java solution implements a static class containing a Linked List to store solutions. 
+This is the only use of non-array objects and has a trivial impact on the solution walltime.</p>
+<p><a href="https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535">Github gist: NQueens.java</a></p>
+<p>(Verbatim code not included for length.)</p>
+<p><a name="pvj-h2hnqueens"></a></p>
+<h2 id="head-to-head-walltime-vs-number-of-queens">Head to Head: Walltime vs. Number of Queens</h2>
+<p><img alt="Graph of walltime versus number of queens" src="/images/perl-vs-java-nqueens.png"></p>
+<div class="highlight"><pre><span></span><code>-----------------------------------------------
+| NQueens | Nsolutions | Java [s]  | Perl [s] |
+|---------|------------|-----------|----------|
+| 8       | 92         | 0.003     | 0.016    |
+| 9       | 352        | 0.006     | 0.067    |
+| 10      | 724        | 0.017     | 0.259    |
+| 11      | 2680       | 0.061     | 1.542    |
+| 12      | 14200      | 0.240     | 8.431    |
+| 13      | 73712      | 1.113     | 48.542   |
+| 14      | 365596     | 6.557     | 303.278  |
+| 15      | 2279184    | 42.619    | 2057.052 |
+-----------------------------------------------
+</code></pre></div>
+
+<p>Java smokes Perl.</p>
+<p>Initially I was using the Unix <code>time</code> utility to time these two,
+and it seemed to be close for smaller problem sizes (N=9 or smaller) - 
+Perl would start up and run faster than Java, measured end-to-end.
+But when you time the program by using timers built into the language, 
+it removes some of the overhead from the timing comparisons,
+and Java becomes the clear winner.</p>
+<p>We can dig deeper and understand this comparison better by using some profiling tools.</p>
+<p><a name="pvj-perlprof"></a></p>
+<h2 id="perl-profiling">Perl Profiling</h2>
+<p>I profiled Perl with <code>Devel::NYTProf</code> , 
+an excellent Perl module <a href="http://search.cpan.org/~timb/Devel-NYTProf-6.04/lib/Devel/NYTProf.pm">available here on Cpanm</a>.</p>
+<p>More details about the profiling tools I used for Perl are on the charlesreid1 wiki at 
+<a href="https://charlesreid1.com/wiki/Perl/Profiling">Perl/Profiling</a>. </p>
+<p>To run with <code>Devel::NYTProf</code>, use `cpanm:</p>
+<div class="highlight"><pre><span></span><code>$ cpanm Devel::NYTProf
+</code></pre></div>
+
+<p>Now you can run Perl with <code>Devel::NYTProf</code> by doing:</p>
+<div class="highlight"><pre><span></span><code>$ perl -d:NYTProf nqueens.pl
+</code></pre></div>
+
+<p>This results in a binary output file called <code>nytprof.out</code> that can be processed with several 
+NYTProf post-processing tools. Use the CSV file tool to begin with:</p>
+<div class="highlight"><pre><span></span><code>$ nytprofcsv nytprof.out
+</code></pre></div>
+
+<p>This puts the CSV file in a folder called <code>nytprof/</code>.</p>
+<p><a name="pvj-perlprofresults"></a></p>
+<h2 id="perl-profiling-results">Perl Profiling Results</h2>
+<p>The CSV output of the NYTProf module gives a breakdown of 
+the amount of time spent in each method call, how many times it was called, and how much time per call was spent.
+From this we can see the busiest lines are the lines accessing the arrays, and looping over the rows.
+This is confirmation that this algorithm is testing the performance of the arrays,
+and confirms the N queens problem is profiling Perl's core performance with its built-in data structures.</p>
+<p>The profiling results of the 11 queens problem are shown below.</p>
+<div class="highlight"><pre><span></span><code># Profile data generated by Devel::NYTProf::Reader
+# Version: v6.04
+# More information at http://metacpan.org/release/Devel-NYTProf/
+# Format: time,calls,time/call,code
+0.000238,2,0.000119,use Time::HiRes qw(time);
+0.000039,2,0.000019,use strict;
+0.000491,2,0.000246,use warnings;
+0.000021,1,0.000021,my $start = time;
+0.010338,2680,0.000004,push @solutions, &quot;@queens\n&quot;;
+0.009993,2680,0.000004,return;
+0.186298,164246,0.000001,$#attacked = 2 * $board_size;
+0.150338,164246,0.000001,for( 0 .. $#queens) { 
+0.675523,1.26035e+06,0.000001,$attacked[ $ix2 ] = 1;
+1.242624,164246,0.000008,for my $row (0 .. $board_size-1) {
+0.267469,166925,0.000002,explore($depth+1);
+0.125272,166925,0.000001,$occupied[$row] = 0;
+0.000002,1,0.000002,explore(0);
+0.000011,1,0.000011,my $duration = time - $start;
+0.000075,1,0.000075,print &quot;Found &quot;, scalar(@solutions), &quot; solutions\n&quot;;
+0.000050,1,0.000050,printf &quot;Execution time: %0.3f s \n&quot;,$duration;
+</code></pre></div>
+
+<p>One of the more interesting pieces of information comes from several lines 
+populating the squares that are on the diagonals with other queens (<code>$attacked</code>):</p>
+<div class="highlight"><pre><span></span><code># Format: time,calls,time/call,code
+0.186298,164246,0.000001,$#attacked = 2 * $board_size;
+</code></pre></div>
+
+<p>The second column gives the number of times this line is executed - 164,246.
+This is actually the number of solutions that are tried,
+excluding the deepest depth of the tree (the base recursive case).</p>
+<p>The Java profiler will show us that Java explores the exact same number of solutions,
+which is confirmation that these tests are comparing the two languages on equal footing.</p>
+<p><a name="pvj-javaprof"></a></p>
+<h2 id="java-profiling">Java Profiling</h2>
+<p>More details about the profiling tools I used for Java are on the charlesreid1 wiki at 
+<a href="https://charlesreid1.com/wiki/Java/Profiling">Java/Profiling</a></p>
+<p>I profiled Java with two tools, the <a href="http://jiprof.sourceforge.net/">Java Interactive Profiler (JIP)</a>
+and the <a href="https://docs.oracle.com/javase/7/docs/technotes/samples/hprof.html">HPROF tool</a> 
+that Oracle provides with Java.</p>
+<p>No special compiler flags are needed, so compile as normal:</p>
+<div class="highlight"><pre><span></span><code>$ javac NQueens.java
+</code></pre></div>
+
+<p>If you are profiling with JIP, you want the JIP jar, as described on the wiki: <a href="https://charlesreid1.com/wiki/Java/Profiling">Java/Profiling</a> 
+Then run Java with the <code>-javaagent</code> flag:</p>
+<div class="highlight"><pre><span></span><code>$ <span class="nb">export</span> <span class="nv">PATH2JIP</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">HOME</span><span class="si">}</span><span class="s2">/Downloads/jip&quot;</span>
+$ java -javaagent:<span class="si">${</span><span class="nv">PATH2JIP</span><span class="si">}</span>/profile/profile.jar NQueens
+</code></pre></div>
+
+<p>This results in a <code>profile.txt</code> file with detailed profiling information
+(an example is shown below).</p>
+<p>The HPROF tool likewise requires no special compiler flags. 
+It can be run with various options from the command line. 
+Here's a basic usage of HPROF that will reduce the amount of output slightly,
+making the size of the output file a little smaller:</p>
+<div class="highlight"><pre><span></span><code>$ java -agentlib:hprof<span class="o">=</span><span class="nv">verbose</span><span class="o">=</span>n NQueens
+</code></pre></div>
+
+<p>This dumps out a file called <code>java.hprof.txt</code> that contains a significant amount of information.
+The most useful, though, is at the end, so use tail to get a quick overview of the results:</p>
+<div class="highlight"><pre><span></span><code>$ tail -n 100 java.hprof.txt
+</code></pre></div>
+
+<p><a name="pvj-javaprof"></a></p>
+<h2 id="java-profiling-results">Java Profiling Results</h2>
+<p>The profiling results from JIP for the 11 queens problem are shown below.</p>
+<div class="highlight"><pre><span></span><code>+----------------------------------------------------------------------
+|  File: profile.txt
+|  Date: 2017.03.19 19:34:18 PM
++----------------------------------------------------------------------
+
++--------------------------------------+
+| Most expensive methods summarized    |
++--------------------------------------+
+
+               Net
+          ------------
+ Count     Time    Pct  Location
+ =====     ====    ===  ========
+166926    909.5   82.2  NQueens:explore
+164246     55.6    5.0  Board:getDiagAttacked
+166925     41.4    3.7  Board:unchoose
+166925     40.7    3.7  Board:choose
+164246     31.0    2.8  Board:getOccupied
+     1     18.2    1.6  NQueens:main
+  2680      7.3    0.7  Board:toString
+  2680      2.3    0.2  SolutionSaver:saveSolution
+     1      0.2    0.0  SolutionSaver:nSolutions
+     1      0.1    0.0  SolutionSaver:&lt;init&gt;
+     1      0.0    0.0  Board:&lt;init&gt;
+</code></pre></div>
+
+<p>From this output we can see that the method getDiagAttacked, 
+which is called each time we check a solution in the recursive case,
+is called 164,246 times - exactly the same number of solutions that the Perl profiler showed.
+One of the downsides of the JIP profiler is that it only gives high-level 
+profiling information about methods and classes - it stops there.</p>
+<p>Fortunately, however, the HPROF tool picks up where JIP leaves off.
+The HPROF tool makes the program much slower but yields a huge amount of information.
+In addition to an enormous heap dump of all objects appearing on Java's heap at any point,
+it also shows where the time was spent in the low-level methods.</p>
+<div class="highlight"><pre><span></span><code>SITES BEGIN (ordered by live bytes) Sun Mar 19 19:34:21 2017
+          percent          live          alloc&#39;ed  stack class
+ rank   self  accum     bytes objs     bytes  objs trace name
+    1 86.01% 86.01%  10510976 164234  10510976 164234 300462 int[]
+    2  1.93% 87.94%    235840 2680    235840  2680 300467 char[]
+    3  1.09% 89.03%    133320 1515    133320  1515 300465 char[]
+    4  1.07% 90.11%    131200    8    131200     8 300263 char[]
+    5  1.05% 91.16%    128640 2680    128640  2680 300464 char[]
+    6  1.04% 92.20%    127560 1313    127560  1313 300010 char[]
+    7  0.76% 92.96%     92728 1009     92728  1009 300000 char[]
+    8  0.54% 93.50%     65664    8     65664     8 300260 byte[]
+    9  0.53% 94.02%     64320 2680     64320  2680 300468 java.util.LinkedList$Node
+   10  0.53% 94.55%     64320 2680     64320  2680 300466 java.lang.String
+SITES END
+</code></pre></div>
+
+<p>HPROF tells us that over 86% of the time spent on this program was spent accessing integer arrays.
+Again, confirmation that we are getting a fair measurement of Java's performance with a core data type, the integer array.</p>
+<p><a name="pvj-h2hntested"></a></p>
+<h2 id="head-to-head-walltime-vs-number-of-solutions-tested">Head to Head: Walltime vs. Number of Solutions Tested</h2>
+<p>Using the results of the profilers from each N queens problem, <code>N = 8 .. 15</code>, 
+I extracted the total number of solutions tried, and confirmed that these numbers were the same 
+between Java and Perl for each of the problem sizes.</p>
+<p>Here is a table of the number of solutions found, and number of solutions tried, versus problem size:</p>
+<div class="highlight"><pre><span></span><code>-------------------------------------------------------------
+| NQueens | Nsolutions | Ntested     | Java [s]  | Perl [s] |
+|---------|------------|-------------|-----------|----------|
+| 8       | 92         | 1965        | 0.003     | 0.016    |
+| 9       | 352        | 8042        | 0.006     | 0.067    |
+| 10      | 724        | 34815       | 0.017     | 0.259    |
+| 11      | 2680       | 164246      | 0.061     | 1.542    |
+| 12      | 14200      | 841989      | 0.240     | 8.431    |
+| 13      | 73712      | 4601178     | 1.113     | 48.542   |
+| 14      | 365596     | 26992957    | 6.557     | 303.278  |
+| 15      | 2279184    | 168849888   | 42.619    | 2057.052 |
+-------------------------------------------------------------
+</code></pre></div>
+
+<p>When the wall time for Java and Perl are plotted against the number of solutions tested,
+an interesting trend emerges: the two scale the same way, with a fixed vertical offset.</p>
+<p><img alt="Graph of walltime versus number of solutions tested" src="/images/perl-vs-java-ntested.png"></p>
+<p>While this is proving what we already knew, 
+that a compiled language beats a scripted language every time,
+it also provides proof Perl can scale as well as Java - 
+it just takes significantly more overhead and time per statement.</p>
+<p><a name="pvj-applesoranges"></a></p>
+<h2 id="why-java-beat-perl">Why Java Beat Perl</h2>
+<p>Compiled languages are turned into bytecode and pre-optimized for the processor.</p>
+<p>Perl is a scripted and interpreted language, like Python, evaluated piece by piece.</p>
+<p>So, we didn't learn anything surprising. But we did find an interesting result - 
+Perl can scale as well as Java in its implementation of the N queens recursive backtracking algorithm.</p>
+<p><a name="pvj-sources"></a></p>
+<h2 id="sources">Sources</h2>
+<ol>
+<li>
+<p>"Execution in the Kingdom of Nouns". Steve Yegge. March 2006. Accessed 18 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html">https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html</a>&gt;</p>
+</li>
+<li>
+<p>"N-Queens Problem". Rosetta Code, GNU Free Documentation License. Edited 6 March 2017. Accessed 21 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081421/http://rosettacode.org/wiki/N-queens_problem">https://web.archive.org/web/20170320081421/http://rosettacode.org/wiki/N-queens_problem</a>&gt;</p>
+</li>
+<li>
+<p>"nqueens.pl". Charles Reid. Github Gist, Github Inc. Edited 20 March 2017. Accessed 20 March 2017.
+&lt;<a href="https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535">https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535</a>&gt;</p>
+</li>
+<li>
+<p>"NQueens.java". Charles Reid. Github Gist, Github Inc. Edited 20 March 2017. Accessed 20 March 2017.
+&lt;<a href="https://gist.github.com/charlesreid1/7b8d7b9dffb7b3090039849d72c5fff5">https://gist.github.com/charlesreid1/7b8d7b9dffb7b3090039849d72c5fff5</a>&gt;</p>
+</li>
+<li>
+<p>"Devel::NYTProf". Adam Kaplan, Tim Bunce. Copyright 2008-2016, Tim Bunce. Published 4 March 2008. Accessed 20 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081508/http://search.cpan.org/~timb/Devel-NYTProf-6.04/lib/Devel/NYTProf.pm">https://web.archive.org/web/20170320081508/http://search.cpan.org/~timb/Devel-NYTProf-6.04/lib/Devel/NYTProf.pm</a>&gt;</p>
+</li>
+<li>
+<p>"Perl/Profiling". Charles Reid. Edited 20 March 2017. Accessed 20 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081532/https://charlesreid1.com/wiki/Perl/Profiling">https://web.archive.org/web/20170320081532/https://charlesreid1.com/wiki/Perl/Profiling</a>&gt;</p>
+</li>
+<li>
+<p>"Java/Profiling". Charles Reid. Edited 20 March 2017. Accessed 20 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081535/https://charlesreid1.com/wiki/Java/Profiling">https://web.archive.org/web/20170320081535/https://charlesreid1.com/wiki/Java/Profiling</a>&gt;</p>
+</li>
+<li>
+<p>"JIP - The Java Interactive Profiler." Andrew Wilcox. Published 30 April 2010. Accessed 20 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081538/http://jiprof.sourceforge.net/">https://web.archive.org/web/20170320081538/http://jiprof.sourceforge.net/</a>&gt;</p>
+</li>
+<li>
+<p>"HPROF". Oracle Corporation. Copyright 1993, 2016. Published 2016. Accessed 20 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081540/https://docs.oracle.com/javase/7/docs/technotes/samples/hprof.html">https://web.archive.org/web/20170320081540/https://docs.oracle.com/javase/7/docs/technotes/samples/hprof.html</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/perl.html">perl</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/n-queens.html">n-queens</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -1717,9 +1829,6 @@ that will improve the performance by orders of magnitude. But more on that in a 
 
             <h2>March 2022</h2>
 
-            <p class="archive">
-            <a href="https://charlesreid1.github.io/episode-23740000-of-so-thats-in-the-internet-archive-now.html">Episode 23,740,000 of So That's In The Internet Archive Now</a>
-            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/how-to-read-ulysses.html">How to Read Ulysses</a>
             </p>

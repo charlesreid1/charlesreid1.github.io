@@ -102,294 +102,6 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Creating Mock API Servers
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2020-02-26T22:00:00-08:00" pubdate>Wednesday 02/26/2020</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/creating-mock-api-servers.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#mock-api-server-class">Mock API Server Class</a><ul>
-<li><a href="#startstop-serving">Start/Stop Serving</a><ul>
-<li><a href="#getting-bind-addressport">Getting Bind Address/Port</a></li>
-<li><a href="#start-serving">Start Serving</a></li>
-<li><a href="#stop-serving">Stop Serving</a></li>
-</ul>
-</li>
-<li><a href="#handling-requests">Handling Requests</a><ul>
-<li><a href="#defining-post-response-method">Defining POST Response Method</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#putting-it-all-together">Putting it all together</a></li>
-</ul>
-</div>
-<h1 id="overview">Overview</h1>
-<p>In this post we discuss a way of mocking an API server during tests.
-This technique will let you create a fake API server that can respond
-to API calls however you want.</p>
-<p>The technique is twofold:</p>
-<ul>
-<li>
-<p>First, we create a mock API handler that extends <code>BaseHTTPRequestHandler</code>, which is the built-in HTTP server
-  class in Python. We can extend the server class to control how it responds to requests - to implement a
-  method to respond to POST requests, we implement a <code>do_POST()</code> method, to respond to GET requests
-  we implement a <code>do_GET()</code> method, and so on. (In the example below, we restrict the types of requests
-  to JSON content only.)</p>
-</li>
-<li>
-<p>Second, we use the Singleton design pattern, by implementing 
-  two class methods, <code>start_serving()</code> and <code>stop_serving()</code>, that
-  we can call before and after our tests to set up and tear down
-  the fake API server. This method will take care of starting the
-  HTTP server on a separate thread, so that it does not block 
-  execution.</p>
-</li>
-</ul>
-<h1 id="mock-api-server-class">Mock API Server Class</h1>
-<p>Let's start with the mock server class. This is going to extend the
-<code>BaseHTTPRequestHandler</code> class from the <code>http.server</code> module, and
-extend it.</p>
-<p>We implement a stub method for the POST response behavior; this is the
-only type of request that our mock API server will respond to.</p>
-<p>We also have two stub class methods to start and stop the server.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
-    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">pass</span>
-</code></pre></div>
-
-<h2 id="startstop-serving">Start/Stop Serving</h2>
-<p>We start with the two class methods to start and stop the server.</p>
-<h3 id="getting-bind-addressport">Getting Bind Address/Port</h3>
-<p>Define another static method to get the address to bind to, and the
-port to use; in this case we'll hard code values, but this function
-could also find unused networking ports, etc.</p>
-<div class="highlight"><pre><span></span><code>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
-        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
-        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
-        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
-</code></pre></div>
-
-<h3 id="start-serving">Start Serving</h3>
-<p>Next, the <code>start_serving()</code> method should start a thread
-(using the <code>cls._thread</code> attribute to store it for later)
-and create an underlying HTTP server (and using the <code>self._server</code>
-attribute to store it for later):</p>
-<div class="highlight"><pre><span></span><code>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Get the bind address and port</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
-
-        <span class="c1"># Create an HTTP server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
-
-        <span class="c1"># Create a thread to run the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
-
-        <span class="c1"># Start the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-</code></pre></div>
-
-<h3 id="stop-serving">Stop Serving</h3>
-<p>The <code>stop_serving()</code> method stops the thread</p>
-<div class="highlight"><pre><span></span><code>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Shut down the server</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
-
-        <span class="c1"># Let the thread rejoin the worker pool</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
-</code></pre></div>
-
-<h2 id="handling-requests">Handling Requests</h2>
-<p>The mock API server should only process POST requests, and should
-only accept JSON-formatted requests. We can implement those checks
-and have the server return a 500 error if clients do not send a
-properly formatted JSON request.</p>
-<h3 id="defining-post-response-method">Defining POST Response Method</h3>
-<p>To define a response to POST requests made to the API we are mocking,
-we start by validating the JSON request that is received.</p>
-<p>Note: this utilizes several built-in methods of the HTTP server class.</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
-        <span class="c1"># Enforce rule: JSON only</span>
-        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-            <span class="k">return</span>
-        <span class="c1"># Convert received JSON to dict</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
-        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
-
-        <span class="c1"># Process the json</span>
-        <span class="o">...</span>
-</code></pre></div>
-
-<p>Now, the JSON can be processed using a validate function,
-for example, or generic success/failure responses returned
-based on the contents of a request.</p>
-<p>Let's do something very simple: have the API server return
-whatever was sent in the request.</p>
-<p>We can turn the dictionary <code>message</code> (a dictionary containing
-the original request) back into a string, and the string into
-a stream of bytes. Then we can write headers and the stream of
-bytes into the response.</p>
-<div class="highlight"><pre><span></span><code>        <span class="c1"># Send a response</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-</code></pre></div>
-
-<p>The <code>_set_headers()</code> method is a short method that just sends
-(writes) the correct headers:</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-</code></pre></div>
-
-<p>Note: the <code>send_headers()</code> and <code>end_headers()</code> methods are built-in
-to the HTTP server base class we are using.</p>
-<h1 id="putting-it-all-together">Putting it all together</h1>
-<p>Putting it all together, we get one final mock API server class:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
-    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
-        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
-        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
-        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Get the bind address and port</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
-
-        <span class="c1"># Create an HTTP server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
-
-        <span class="c1"># Create a thread to run the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
-
-        <span class="c1"># Start the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Shut down the server</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
-
-        <span class="c1"># Let the thread rejoin the worker pool</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
-        <span class="c1"># Enforce rule: JSON only</span>
-        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-            <span class="k">return</span>
-        <span class="c1"># Convert received JSON to dict</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
-        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
-
-        <span class="c1"># Process the json</span>
-
-        <span class="c1"># Send a response</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-</code></pre></div></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/http.html">http</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/server.html">server</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/api.html">api</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/flask.html">flask</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/web-server.html">web server</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
                 Python: From Args to Kwargs
             </b></h1>
         
@@ -841,6 +553,448 @@ in this Github repository: <a href="https://github.com/faif/python-patterns">htt
 
 <div class="v200"></div>
   	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Python Patterns: The Registry
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2020-02-20T22:22:00-08:00" pubdate>Thursday 02/20/2020</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/python-patterns-the-registry.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#what-is-the-registry-pattern">What is the Registry Pattern?</a><ul>
+<li><a href="#the-registry-base-type">The Registry Base Type</a></li>
+<li><a href="#the-base-registered-class">The Base Registered Class</a></li>
+<li><a href="#extending-the-base-registered-class">Extending the Base Registered Class</a></li>
+<li><a href="#seeing-it-in-action">Seeing it in action</a></li>
+</ul>
+</li>
+<li><a href="#examples">Examples</a><ul>
+<li><a href="#example-search-engine">Example: Search Engine</a><ul>
+<li><a href="#registry-subclasses">Registry Subclasses</a></li>
+<li><a href="#doctype-registry-base-type">Doctype Registry Base Type</a></li>
+<li><a href="#base-registered-doctype-class">Base Registered Doctype Class</a></li>
+<li><a href="#derived-registered-doctype-class">Derived Registered Doctype Class</a></li>
+<li><a href="#using-the-registry">Using the Registry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#further-modifications">Further Modifications</a></li>
+<li><a href="#summary">Summary</a></li>
+</ul>
+</div>
+<h1 id="overview">Overview</h1>
+<p>This post is a summary of a useful Python programming pattern called the Registry pattern.</p>
+<p>The Registry pattern is a way of keeping track of all subclasses of a given class.</p>
+<p>More details about this pattern are available at <a href="https://github.com/faif/python-patterns">https://github.com/faif/python-patterns</a>.</p>
+<h1 id="what-is-the-registry-pattern">What is the Registry Pattern?</h1>
+<p>Let's start with a common scenario: you have some kind of manager class that is
+managing multiple related subclasses, and you are looking for a simpler way to
+manage the subclasses.</p>
+<p>The registry pattern creates a map of labels to class types, and allows you to
+access a single registry common to all of those classes. The registry is updated
+every time a new class is added.</p>
+<p>This is useful for several situations, including these two examples:</p>
+<ul>
+<li>You want the manager class to iterate over every available subclass and call a
+  particular method on each subclass</li>
+<li>You want to streamline a factory class, which takes an input label (like the name
+  of a class) and creates/returns an object of that type</li>
+</ul>
+<h2 id="the-registry-base-type">The Registry Base Type</h2>
+<p>We start by defining a registry base type (or class). This class defines one behavior,
+which is adding itself to the class registry. It creates a shared instance variable called
+<code>REGISTRY</code> which is shared amongst all of the classes, and is also accessible via a class
+method.</p>
+<p>This is the base class; any class we want registered should inherit from this class.
+It should also extend the <code>type</code> class, since it is itself a class type:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">RegistryBase</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
+
+    <span class="n">REGISTRY</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="c1"># instantiate a new type corresponding to the type of class being defined</span>
+        <span class="c1"># this is currently RegisterBase but in child classes will be the child class</span>
+        <span class="n">new_cls</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">REGISTRY</span><span class="p">[</span><span class="n">new_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_cls</span>
+        <span class="k">return</span> <span class="n">new_cls</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_registry</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">REGISTRY</span><span class="p">)</span>
+</code></pre></div>
+
+<p>The design here is subtle, but the details are important to understand how it works.</p>
+<p>A few important things to note, progressing from top to bottom:</p>
+<ul>
+<li>
+<p>The <code>REGISTRY</code> variable is defined outside the scope of any class methods, meaning it is a
+  shared instance variable (a variable that is shared across all instances of <code>RegistryBase</code>);
+  this is an example of the Borg pattern.</p>
+</li>
+<li>
+<p>The <code>RegistryBase</code> class defines <code>__new__</code>, not <code>__init__</code>; the <code>__new__</code> method is run when
+  the class is defined, while <code>__init__</code> is run when the classs is instantiated. This ensures
+  that any subclasses that inherit from <code>RegistryBase</code> add themselves to the registry when they
+  are defined, not when they are instantiated.</p>
+</li>
+<li>
+<p>In the constructor, we store a reference to the current class using this line:</p>
+</li>
+</ul>
+<p><code>new_cls = type.__new__(cls, name, bases, attrs)</code></p>
+<p>This creates a new class, but of type <code>type</code> (confusing, but basically it means we store
+  a reference to this <em><strong>type</strong></em> of object, not just a reference to a particular object).</p>
+<p>It is important to note that once we use the registry, the value that is returned is callable,
+  and will create an object corresponding to that type.</p>
+<ul>
+<li>We define a <code>get_registry</code> method to return a copy of the registry; this must be decorated with
+  a <code>@classmethod</code> decorator (not a <code>@staticmethod</code> decorator) so that it has access to the registry,
+  which is a class instance variable.</li>
+</ul>
+<p><strong>BONUS NOTE:</strong> From prior experience, we have found it easiest to ignore the case of the
+label (uppercase, lowercase, CamelCase, etc) and convert all class names to lowercase in the
+registry:</p>
+<div class="highlight"><pre><span></span><code>        <span class="bp">cls</span><span class="o">.</span><span class="n">REGISTRY</span><span class="p">[</span><span class="n">new_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="n">new_cls</span>
+</code></pre></div>
+
+<h2 id="the-base-registered-class">The Base Registered Class</h2>
+<p>Now we can define a base class that will extend the <code>RegistryBase</code> class. However, because <code>RegistryBase</code>
+is a <code>type</code> class, we shouldn't extend it directly - we should use it as a <em>metaclass</em>.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">BaseRegisteredClass</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">RegistryBase</span><span class="p">):</span>
+    <span class="k">pass</span>
+</code></pre></div>
+
+<p>Any class that inherits from this <code>BaseRegisteredClass</code> will now be included in the registry when it is
+defined.</p>
+<h2 id="extending-the-base-registered-class">Extending the Base Registered Class</h2>
+<p>The next step is to use the base registered class to start creating interesting classes:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">ExtendedRegisteredClass</span><span class="p">(</span><span class="n">BaseRegisteredClass</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">pass</span>
+</code></pre></div>
+
+<p>We skip defining constructor behavior, as the call order is what's important.</p>
+<h2 id="seeing-it-in-action">Seeing it in action</h2>
+<p>Now we can see the process of adding subclasses to the registry in action.</p>
+<p>Start by checking the registry before we have created any subclasses:</p>
+<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print(RegistryHolder.REGISTRY)
+[&#39;BaseRegisteredClass&#39;]
+</code></pre></div>
+
+<p>Next, define the extended registered class:</p>
+<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; class ExtendedRegisteredClass(BaseRegisteredClass):
+...     def __init__(self, *args, **kwargs):
+...         pass
+</code></pre></div>
+
+<p>Remember, we add the new class to the registry in the <code>__new__</code> method, not the
+<code>__init__</code> method, so we don't even need to instantiate an <code>ExtendedRegisteredClass</code>
+object for it to be added to the registry. Check the registry again:</p>
+<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print(RegistryHolder.REGISTRY)
+[&#39;BaseRegisteredClass&#39;, &#39;ExtendedRegisteredClass&#39;]
+</code></pre></div>
+
+<h1 id="examples">Examples</h1>
+<p>Let's consider a specific example to help illustrate the usefulness of the Registry pattern:
+adding the ability to index different kinds of documents to a search engine.</p>
+<h2 id="example-search-engine">Example: Search Engine</h2>
+<p>Suppose we are writing a search engine, and we are working on the search engine
+backend. Specifically, consider the backend portion that iterates over a group of
+documents, checks if the document is already in the search index, and either adds
+a new item to the search index, updates an existing item in the search index, or
+deletes an item from the search index.</p>
+<h3 id="registry-subclasses">Registry Subclasses</h3>
+<p>A search engine may index multiple kinds of documents, each living in different locations.
+For example, a search index may index .docx files in a Google Drive folder,
+Github issues, and/or a local folder full of Markdown files. For each of these
+document types, we must define:</p>
+<ul>
+<li>
+<p>How to add or update all documents in the document storage system (Google Drive, Github
+  API, local filesystem, etc.); this method should be able to get a list of documents of this
+  document type that are already in the search index, either by running a query itself, or by
+  accepting a list of documents already in the index as an input argument</p>
+</li>
+<li>
+<p>What schema to use (mapping various field names to data types) for documents of this type</p>
+</li>
+<li>
+<p>How to display search results when they are documents of this type (i.e., how to display
+  what fields when showing the user search results)</p>
+</li>
+</ul>
+<p>This can be done by defining classes corresponding to different document types, where
+each class defines how to do the above actions, and wraps them in high-level API methods
+that the manager classes can call.</p>
+<p>The manager classes want a way to get a list of available document types, and to call
+each document type's high-level API methods. This can be done with the registry.</p>
+<h3 id="doctype-registry-base-type">Doctype Registry Base Type</h3>
+<p>Start by defining a base type that will register new subclasses in a doctype registry. Note that
+as per the <a href="https://docs.python.org/3/reference/datamodel.html#object.__new__"><code>__new__</code> documentation</a>,
+the <code>__new__</code> method takes the class (in our case, a class of type <code>type</code>) as the first argument <code>cls</code>,
+and it should return a new object instance (which, again, is an instance of type <code>type</code>).</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">DoctypeRegistryBase</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
+
+    <span class="n">DOCTYPE_REGISTRY</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="n">new_cls</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">[</span><span class="n">new_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="n">new_cls</span>
+        <span class="k">return</span> <span class="n">new_cls</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_doctype_registry</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="base-registered-doctype-class">Base Registered Doctype Class</h3>
+<p>Next, we define a base class for any document type that we want registered in the doctype
+registry, using <code>DoctypeRegistryBase</code> as our metaclass (because it is a class of type <code>type</code>,
+as opposed to a normal class).  All document types are required to define three bits of behavior
+(interacting with the document storage system to iterate over all documents; extracting information
+from individual documents; and displaying a given document type when it is a search result. We
+define these virtual methods on the base registered doctype class.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">BaseRegisteredDoctypeClass</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">DoctypeRegistryBase</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Iterate over all documents in the document storage system</span>
+<span class="sd">        and add/update/delete documents as needed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Assemble and return the schema (map of field names to data types)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">render_search_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Use a Jinja template to render a single search result of type doctype</span>
+<span class="sd">        to display to the user via the web interface</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="derived-registered-doctype-class">Derived Registered Doctype Class</h3>
+<p>Now that we have a base class, we can define child classes that have the specific
+API functionality needed.</p>
+<p>Here is a high-level sketch of what the Github issue document type class might look like,
+starting with the add/update/delete method, which boils down to some set operations to determine
+what documents to add, update, or delete from the search index.</p>
+<p>(Also note, these methods are defined as class methods because they are called once for each
+doctype class, but this does not necessarily need to be the case.)</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">GithubIssueDoctype</span><span class="p">(</span><span class="n">BaseRegisteredDoctypeClass</span><span class="p">):</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># Get set of indexed document IDs</span>
+        <span class="n">indexed_docs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">run_search_index_query</span><span class="p">(</span><span class="n">doctype</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">indexed_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="c1"># Get set of remote document IDs</span>
+        <span class="n">remote_docs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">org_name</span> <span class="ow">in</span> <span class="n">get_org_names</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">repo_name</span> <span class="ow">in</span> <span class="n">get_repo_names</span><span class="p">(</span><span class="n">org_name</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">get_repo_files</span><span class="p">(</span><span class="n">repo_name</span><span class="p">,</span> <span class="n">org_name</span><span class="p">):</span>
+                    <span class="n">remote_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="c1"># Do some set math to figure out what to add/update/delete</span>
+        <span class="n">add_ids</span> <span class="o">=</span> <span class="n">remote_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">indexed_docs</span><span class="p">)</span>
+        <span class="n">update_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
+        <span class="n">delete_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
+
+        <span class="c1"># Do the operations</span>
+        <span class="k">for</span> <span class="n">add_id</span> <span class="ow">in</span> <span class="n">add_ids</span><span class="p">:</span>
+            <span class="n">add_document_to_index</span><span class="p">(</span><span class="n">add_id</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">update_id</span> <span class="ow">in</span> <span class="n">update_ids</span><span class="p">:</span>
+            <span class="n">update_document_in_index</span><span class="p">(</span><span class="n">update_id</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">delete_id</span> <span class="ow">in</span> <span class="n">delete_ids</span><span class="p">:</span>
+            <span class="n">delete_document_in_index</span><span class="p">(</span><span class="n">delete_id</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="o">...</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">render_search_result</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="o">...</span>
+</code></pre></div>
+
+<p>Now we do the same for documents on Google Drive, defining a different <code>add_update_delete()</code> method
+specific to Google Drive documents (note that while the sketch of this method looks similar to the
+Github doctype above, the implementation will look more and more different as we include more and more
+detail in our method and API calls).</p>
+<p>As before, we make these methods class methods.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">GoogleDocsDoctype</span><span class="p">(</span><span class="n">BaseRegisteredDoctypeClass</span><span class="p">):</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># Get set of indexed document IDs</span>
+        <span class="n">indexed_dcos</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">run_search_index_query</span><span class="p">(</span><span class="n">doctype</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">indexed_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="c1"># Get set of remote document IDs</span>
+        <span class="n">remote_docs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">get_gdrive_file_list</span><span class="p">():</span>
+            <span class="n">remote_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="c1"># Do some math to figure out what to add/update/delete</span>
+        <span class="n">add_ids</span> <span class="o">=</span> <span class="n">remote_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">indexed_docs</span><span class="p">)</span>
+        <span class="n">update_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
+        <span class="n">delete_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
+
+        <span class="c1"># Do the operations</span>
+        <span class="k">for</span> <span class="n">add_id</span> <span class="ow">in</span> <span class="n">add_ids</span><span class="p">:</span>
+            <span class="n">add_document_to_index</span><span class="p">(</span><span class="n">add_id</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">update_id</span> <span class="ow">in</span> <span class="n">update_ids</span><span class="p">:</span>
+            <span class="n">update_document_in_index</span><span class="p">(</span><span class="n">update_id</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">delete_id</span> <span class="ow">in</span> <span class="n">delete_ids</span><span class="p">:</span>
+            <span class="n">delete_document_in_index</span><span class="p">(</span><span class="n">delete_id</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="o">...</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">render_search_result</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="o">...</span>
+</code></pre></div>
+
+<h3 id="using-the-registry">Using the Registry</h3>
+<p>The last step is to actually use the registry from the class that manages all of our subclasses.
+In this case, we have a <code>Search</code> class that defines high-level operations (such as, "add/update/delete
+all documents indexed by this search engine") and in turn calls the corresponding method for each doctype
+that has been registered.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Search</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">add_update_delete_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="c1"># Iterate over every doc type</span>
+        <span class="k">for</span> <span class="n">doctype_name</span> <span class="ow">in</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">:</span>
+
+            <span class="c1"># Get a handle to the doctype class</span>
+            <span class="n">doctype_class</span> <span class="o">=</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">[</span><span class="n">doctype_name</span><span class="p">]</span>
+
+            <span class="c1"># Call the class method add_update_delete on the doctype class</span>
+            <span class="n">doctype_class</span><span class="o">.</span><span class="n">add_update_delete</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="c1"># Note: if we need to create an instance first</span>
+            <span class="c1"># doctype_instance = doctype_class()</span>
+            <span class="c1"># doctype_instance.add_update_delete(*args, **kwargs)</span>
+</code></pre></div>
+
+<h1 id="further-modifications">Further Modifications</h1>
+<p>In the example above, we don't have any need to create specific instances of the document type classes,
+since they do not need to preserve their state between calls, and we only need one instance of the doctype
+class per search engine.</p>
+<p>We could re-implement this pattern, modifying the search engine doctype classes to be normal, non-static
+classes. This would allow us to have, say, two instances of the Github issues doctype class (corresponding
+to two different sets of Github API credentials, or two different Github accounts), or two instances of the
+Google Drive doctype class (corresponding to two different Google Drive folders). In this case, we would
+want to restructure the Search class to instantiate and save doctype class instances in the constructor,
+and use them later.</p>
+<p>Here's an example <code>Search</code> class that would instantiate one of each subclass in the constructor, to be used
+in later methods:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Search</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="c1"># Store instances of each doctype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">all_doctypes</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Iterate over every doc type</span>
+        <span class="k">for</span> <span class="n">doctype_name</span> <span class="ow">in</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">:</span>
+
+        <span class="c1"># Get a handle to the doctype class</span>
+        <span class="n">doctype_class</span> <span class="o">=</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">[</span><span class="n">doctype_name</span><span class="p">]</span>
+
+        <span class="c1"># Create an instance of type doctype_class</span>
+        <span class="n">doctype_instance</span> <span class="o">=</span> <span class="n">doctype_class</span><span class="p">()</span>
+
+        <span class="c1"># Save for later</span>
+        <span class="n">all_doctypes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doctype_instance</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="c1"># Call the add_update_delete method on each doctype instance</span>
+        <span class="k">for</span> <span class="n">doctype_name</span><span class="p">,</span> <span class="n">doctype_instance</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_doctypes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">doctype_instance</span><span class="o">.</span><span class="n">add_update_delete</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</code></pre></div>
+
+<p>(Note that this would work best if we removed the <code>@classmethod</code> decorators from the doctype classes
+defined above.)</p>
+<h1 id="summary">Summary</h1>
+<p>In this post, we covered a useful programming pattern, the Registry, and showed it in action for one
+example - allowing a search engine index to register various document type subclasses, then use those
+registered subclasses to propagate calls to all document types later.</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/patterns.html">patterns</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/design-patterns.html">design patterns</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/registry.html">registry</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -876,9 +1030,6 @@ in this Github repository: <a href="https://github.com/faif/python-patterns">htt
 
             <h2>March 2022</h2>
 
-            <p class="archive">
-            <a href="https://charlesreid1.github.io/episode-23740000-of-so-thats-in-the-internet-archive-now.html">Episode 23,740,000 of So That's In The Internet Archive Now</a>
-            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/how-to-read-ulysses.html">How to Read Ulysses</a>
             </p>
