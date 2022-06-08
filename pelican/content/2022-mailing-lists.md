@@ -1,5 +1,5 @@
 Title: How to Subscribe to Infinite Mailing Lists
-Date: 2022-06-08 21:00
+Date: 2022-06-08 16:42
 Category: Reading
 Tags: reading, mailing lists, productivity
 
