@@ -16,9 +16,7 @@ THEME = 'charlesreid1-githubio-theme'
 
 # -------------------
 # Plugins:
-HOME = os.environ.get('HOME')
-PLUGIN_PATHS = [HOME+'/codes/pelican-plugins/']
-PLUGINS = ['render_math']
+PLUGINS = ['pelican.plugins.render_math']
 
 #MARKUP = ('md')
 
