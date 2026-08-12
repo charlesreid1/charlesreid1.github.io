@@ -2,7 +2,6 @@ Title: Notes on Italo Calvino's *Six Memos for the Next Millennium*
 Date: 2022-12-30 22:00
 Category: Reading
 Tags: reading, calvino, literature, notes, lightness, quickness
-Status: draft
 
 We spent the tail end of 2022 reading Italo Calvino's *Six Memos for the
 Next Millennium*, which is a set of Norton Lectures Calvino was preparing

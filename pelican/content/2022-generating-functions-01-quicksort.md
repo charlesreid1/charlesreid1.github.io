@@ -2,7 +2,6 @@ Title: Generating Functions Part 1: Solving the Quicksort Recurrence
 Date: 2022-10-23 12:00
 Category: Mathematics
 Tags: mathematics, generating functions, algorithms, quicksort, recurrence, sedgewick
-Status: draft
 
 This post is part 1 of a series on generating functions, based on notes
 we have been working through from Sedgewick and Flajolet's *Analysis of

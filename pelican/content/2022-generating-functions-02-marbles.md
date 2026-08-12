@@ -2,7 +2,6 @@ Title: Generating Functions Part 2: Marbles in a Can
 Date: 2022-10-24 12:00
 Category: Mathematics
 Tags: mathematics, generating functions, combinatorics, ogf, trotter
-Status: draft
 
 This is part 2 of our series on generating functions. In
 [part 1](generating-functions-part-1-solving-the-quicksort-recurrence.html)

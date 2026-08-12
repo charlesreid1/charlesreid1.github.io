@@ -2,7 +2,6 @@ Tpelican/content/2022-fmm-de-mere-dice.mditle: A Pair of Dice Games (or, Why Che
 Date: 2022-10-22 22:00
 Category: Mathematics
 Tags: mathematics, probability, dice, pascal, friday morning math
-Status: draft
 
 Here is a nice little problem from Paul Nahin's *Will You Be Alive 10 Years
 From Now?*. It is a problem from the 1654 correspondence between Antoine

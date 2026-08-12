@@ -2,7 +2,6 @@ Title: Generating Functions Part 3: Ternary Strings and Exponential Generating F
 Date: 2022-10-25 12:00
 Category: Mathematics
 Tags: mathematics, generating functions, egf, combinatorics, strings
-Status: draft
 
 This is part 3 of our series on generating functions.
 [Part 1](generating-functions-part-1-solving-the-quicksort-recurrence.html)

@@ -2,7 +2,6 @@ Title: Reading *Bums*: Peter Golenbock's Oral History of the Brooklyn Dodgers
 Date: 2022-11-21 21:00
 Category: Reading
 Tags: reading, baseball, brooklyn dodgers, history, oral history, golenbock
-Status: draft
 
 *Bums: An Oral History of the Brooklyn Dodgers* by Peter Golenbock is
 exactly what it says on the tin. It is an oral history, which means the

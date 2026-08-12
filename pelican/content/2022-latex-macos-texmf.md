@@ -2,7 +2,6 @@ Title: Installing LaTeX Packages on macOS: The `~/Library/texmf` Layout
 Date: 2022-06-19 20:00
 Category: LaTeX
 Tags: latex, mac, tex, texmf, packages
-Status: draft
 
 Every few years, we find ourselves installing a new LaTeX package on a Mac,
 and every few years, we find ourselves searching for the same set of directory
