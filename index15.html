@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Recursive Backtracking in Go for Bioinformatics Applications: 2. Generating Variations
+                centillion: a document search engine
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2018-12-28T14:00:00-08:00" pubdate>Friday 12/28/2018</time>
+                <time datetime="2019-03-10T09:00:00-07:00" pubdate>Sunday 03/10/2019</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
+                <a href="https://charlesreid1.github.io/category/centillion.html">Centillion</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">permalink</a>
+                <a href="https://charlesreid1.github.io/centillion-a-document-search-engine.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,336 +127,25 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p><em>This is the second in a series of three blog posts describing our
-solution to a bioinformatics problem from Rosalind.info,
-<a href="http://rosalind.info/problems/ba1i/">Problem BA1(i) (Find most frequent words with mismatches
-in a string)</a>.
-To solve this problem and generate variations of a DNA string
-as required, we implemented a recursive backtracking method
-in the Go programming language.</em></p>
-<ul>
-<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1: Counting Variations</a></em></li>
-<li><em>Part 2: Generating Variations (you are here)</em></li>
-<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Part 3: Go Implementation of Recursive Backtracking</a></em></li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="toc"></a></p>
-<h2 id="table-of-contents">Table of Contents</h2>
-<ul>
-<li><a href="#problem-descr">Problem Description</a></li>
-<li><a href="#perms-combs-vars">Permutations vs Combinations vs Variations</a></li>
-<li><a href="#recursion">Recursion</a><ul>
-<li><a href="#backtracking">Recursive Backtracking Pseudocode</a></li>
-</ul>
-</li>
-<li><a href="#dna">Appying to DNA Variations</a><ul>
-<li><a href="#generating-visits">Generating Visits with Binary Numbers</a></li>
-<li><a href="#assembling">Assembling the Variation</a></li>
-</ul>
-</li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="problem-descr"></a></p>
-<h2 id="problem-description">Problem Description</h2>
-<p>The task at hand is to take a given input strand of DNA,
-and generate variations from it that have up to <span class="math">\(d\)</span> differences
-(a Hamming distance of <span class="math">\(d\)</span>) in the codons (base pairs).</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">part 1 of this series</a>, we walk through the
-construction of an analytical formula to count the number
-of variations of a given DNA string that can be generated,
-given the constraints of the problem.</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">part 2 of this series</a>, we cover several techniques to
-generate variations on a DNA string, and present pseudocode
-for the recursive backtracking method that we use here.</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">part 3 of this series</a>, we will cover our implementation
-of the recursive backtracking method in the Go programming
-language.</p>
-<p><a name="perms-combs-vars"></a></p>
-<h2 id="permutations-vs-combinations-vs-variations">Permutations vs Combinations vs Variations</h2>
-<p>Before covering generation of variations of a DNA string,
-we should cover some terminology for clarification.</p>
-<p>If we were to use the term <em>permutations</em>, as in, we are
-counting (or generating) <em>permutations</em> of the input DNA string, 
-that would imply that we were doing some kind of
-rearrangement of the elements of the input DNA string
-(for example, swapping two codons). This is not the
-problem that we are solving, and requires different
-formulas. (See <a href="http://mathworld.wolfram.com/Permutation.html">Permutations</a>
-entry on Wolfram MathWorld.)</p>
-<p>The variations that we are referring to are not
-exactly <em>combinations</em>, either, though. If we were
-to use the term <em>combinations</em>, it would imply that
-we were choosing a set of <span class="math">\(k\)</span> integers from a set
-of <span class="math">\(d\)</span> integers <span class="math">\({1, 2, \dots, d}\)</span>.</p>
-<p>The variations that we are counting are similar to
-combinations, but with the additional act of swapping
-out each codon at the position (integer) selected
-with three other possible codons, so there are
-more variations than combinations (and many
-more permutations than variations).</p>
-<p><a name="transform"></a></p>
-<h2 id="transforming-the-problem-space">Transforming the Problem Space</h2>
-<p>A surprisingly large variety of problems in combinatorics 
-can be transformed into an equivalent problem involving 
-binary numbers, which are usually easier to think about.</p>
-<p>To generate variations, we can break up the process of
-producing a variation into two steps, or choices, and
-then convert these choices (and the process of making them)
-into an equivalent problem in terms of binary numbers.</p>
-<p>We can decompose the cration of a DNA string variation into
-the first step of choosing which codons (indices) to edit, 
-and the second step of cycling through every possible codon 
-(ATGC) at the selected indices.</p>
-<p>To translate this into an equivalent binary number problem,
-consider the input string of DNA "AAAAA" and let the Hamming
-distance that we are considering be <span class="math">\(d = 1\)</span>. Then we can code
-each index with a 0 (not chosen) or a 1 (chosen) and turn the
-problem into cycling throgh all binary numbers with 1 bit:</p>
-<div class="highlight"><pre><span></span><code>00001
-00010
-00100
-01000
-10000
-</code></pre></div>
-
-<p>The second step is to cycle through each alternate codon at
-the given position, so that <code>00001</code> would generate the 
-variations:</p>
-<div class="highlight"><pre><span></span><code>AAAAC
-AAAAG
-AAAAT
-</code></pre></div>
-
-<p>and so on.</p>
-<p>We saw this two-part technique already when counting the total number of
-variations that could be created in <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1: Counting Variations</a>.
-It resulted in a counting formula with two terms, a binomial term
-for step 1 and an exponential term for step 2.</p>
-<p>We can think of the problem as forming a tree with several
-decision nodes that need to be explored; this type of problem
-structure is ideal for a recursive backtracking algorithm.</p>
-<p>We will cover the use of recursive backtracking to actually
-explore the entire tree of possible outcomes (not just count
-it), starting with some review and background on recursive 
-backtracking and how it works.</p>
-<p><a name="recursion"></a></p>
-<h2 id="recursion">Recursion</h2>
-<p>Recursion is a common pattern to use for problems that require
-exploring a large problem space that requires us to make
-several selections.</p>
-<p>A recursive backtracking algorithm is analogous to exploring a
-maze but laying out a rope as you go, so tht you can revisit
-each possible route. In this case, we are using backtracking
-to make the choice of which indices of the input DNA string
-to modify. We want to explore all possible choices to generate
-all possible variations of the input DNA string, and backtracking
-gives us the framework to do that.</p>
-<p>For example, if we wanted to recursively generate codon choices
-for the case of an input DNA string like "AAAAA" and <span class="math">\(d = 2\)</span>,
-we would call a recursive method twice; the first time through,
-we would choose one of the five indices, and mark it as picked;
-then we would call the method again, and choose a second index
-(different from the first) and mark it as picked.</p>
-<p>When unrolled, this is equivalent to a nested for loop,</p>
-<div class="highlight"><pre><span></span><code>for i in range( 0 .. len(dna_string) ):
-    for j in range( 0 .. len(dna_string) ):
-        if (i != j):
-            Start with the binary number 00000
-            Set the digit at index i to 1
-            Set the digit at index j to 1
-</code></pre></div>
-
-<p><a name="backtracking"></a></p>
-<h3 id="recursive-backtracking-pseudocode">Recursive Backtracking Pseudocode</h3>
-<p>Basic pseudocode for a backtracking method:</p>
-<div class="highlight"><pre><span></span><code>explore method:
-    base case:
-        visit this solution
-    recursive case:
-        for each available choice:
-            make a choice
-            explore outcomes
-            unmake the choice
-            move on to the next choice
-</code></pre></div>
-
-<p><a name="dna"></a></p>
-<h2 id="applying-to-dna-variations">Applying to DNA Variations</h2>
-<p>There are actually two places where we need to apply
-backtracking to our problem.</p>
-<p><a name="generating-visits"></a></p>
-<h3 id="generating-visits-with-binary-numbers">Generating Visits with Binary Numbers</h3>
-<p>The first application of recursive backtracking is to
-carry out step 1, choosing indices in the original
-DNA string to modify or cycle through altnerate 
-codons. We showed above how generating variations
-on a kmer of length <span class="math">\(k\)</span> at a distance <span class="math">\(d\)</span> from the
-original kmer was equivalent to generating binary 
-numbers with <span class="math">\(d\)</span> bits set to 1.</p>
-<p>We can use recursive backtracking to generate these
-numbers. By creating a method that recursively selects
-an index to switch to 1, and passing that (and all prior
-choices) on to further recursive calls, the function
-can recurse to a given depth <span class="math">\(d\)</span> and visit all possible
-binary numbers with <span class="math">\(d\)</span> bits set to 1.</p>
-<p>The base case of this recursive method would be reached
-when all <span class="math">\(d\)</span> choices had been made and <span class="math">\(d\)</span> bits were 
-set to 1. Then the choice of indices to swap out with
-alternate codons would be passed on to a recursive method
-that would carry out Step 2 (see below).</p>
-<p>For example, to generate variations of the 5-mer <code>AAAAA</code>,
-we would start by selecting a Hamming distance <span class="math">\(d\)</span>, then
-generate a binary number with <span class="math">\(d\)</span> bits set to 1 to select
-indices to modify. Suppose <span class="math">\(d = 2\)</span>; then the first few
-binary numbers are:</p>
-<div class="highlight"><pre><span></span><code>AAAAA
-11000
-10100
-10010
-10001
-...
-</code></pre></div>
-
-<p>To expand on the pseudocode a bit more, to generate a
-binary number with <span class="math">\(d\)</span> bits flipped to 1 we will want
-to call a recursive method with a depth of <span class="math">\(d\)</span>, making
-a choice at each recursive call of which index to set
-to 1 next.</p>
-<p>The <span class="math">\(n^{th}\)</span> recursive call picks the <span class="math">\(n^{th}\)</span> index for
-1. Each index can only be chosen once in the stack of 
-recursive calls, and the indices that have been chosen
-by prior recursive function calls are passed along.</p>
-<p>Thus we need a minimum of two parameters: an integer
-indicating the depth level of this recursive function
-call, and an integer array of index choices.</p>
-<div class="highlight"><pre><span></span><code>function generate_binary_numbers( depth, choices[], ... ):
-
-    if depth is 0,
-        base case
-        no more choices left to make
-        choices[] is full
-        pass along choices[] to assemble the variations
-
-    else,
-        recursive case
-        for each possible index,
-            if this index is not already in choices,
-                add this index to choices
-                generate_binary_numbers( depth+1, choices[] )
-                remove this index from choices
-</code></pre></div>
-
-<p><a name="assembling"></a></p>
-<h3 id="assembling-the-variation">Assembling the Variation</h3>
-<p>Each binary number is then turned into variations by substituting
-every combination of 3 codons in every position with a 1
-possible, so the first binary number for <span class="math">\(d=2\)</span> would generate
-the variations:</p>
-<div class="highlight"><pre><span></span><code>AAAAA
-11000
------
-CCAAA
-GCAAA
-TCAAA
-CGAAA
-GGAAA
-TGAAA
-CTAAA
-GTAAA
-TTAAA
-</code></pre></div>
-
-<p>This would be repeated for all Hamming distances up to the
-maximum specified Hamming distance.</p>
-<p>Like the generation of binary numbers, the substitution of all
-possible combinations of codons at these positions is a
-task conducive to a recursive backtracking algorithm.</p>
-<p>Like the prior task's recursive method, this task's recursive 
-method will have one parameter for depth (number of choices
-left to make) and a range of choices to try (codons).</p>
-<div class="highlight"><pre><span></span><code>function assemble_variations( depth, choices[], ... ):
-
-    if depth is 0,
-        base case
-        no more choices left to make
-        choices[] is full
-        pass along choices[] to assemble the variations
-
-    else,
-        recursive case
-        for each possible index,
-            if this index is not already in choices,
-                add this index to choices
-                generate_binary_numbers( depth+1, choices[] )
-                remove this index from choices
-</code></pre></div>
-
-<p>In the final part, Part 3, of this blog post, we will cover the actual 
-Go implementation of these functions.</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+        <div class="entry-content"><p>We're excited to announce the public release of <a href="https://github.com/dcppc/centillion">centillion</a>,
+a document search engine. </p>
+<p>centillion is a search tool that can be used by any individual or organization
+to index Github repositories (including the content of markdown files),
+Google Drive folders (including the content of .docx files), and Disqus
+comment threads.</p>
+<p>centillion is <a href="https://travis-ci.org/dcppc/centillion">tested using Travis CI</a>.</p>
+<p>centillion was originally written for the <a href="https://public.nihdatacommons.us">NIH Data Commons</a>
+effort (which recently concluded).  centillion was built to facilitate information-finding
+in a project with hundreds of people at dozens of institutions generating a sea of email threads,
+Google Drive folders, markdown files, websites, and Github repositories.</p>
+<p>centillion provided a single comprehensive way of searching across All The Things 
+and earned the author many thanks from members across the Data Commons. It is the
+author's hope that centillion can prove equally useful for other organizations.</p>
+<p>Under the hood centillion uses <a href="http://flask.pocoo.org/">Flask</a> (a web server
+microframework) and <a href="https://whoosh.readthedocs.io/en/latest/">Whoosh</a> (a Python-based
+search engine tool).</p>
+<p>You can get a copy of the latest centillion release here: <a href="https://github.com/dcppc/centillion">https://github.com/dcppc/centillion</a></p>
+<p>You can find the latest centillion documentation here: <a href="http://nih-data-commons.us/centillion/">http://nih-data-commons.us/centillion/</a></p></div>
 
     </div>
 </div>
@@ -468,21 +157,19 @@ Go implementation of these functions.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
+                    <a href="https://charlesreid1.github.io/tag/centillion.html">centillion</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
+                    <a href="https://charlesreid1.github.io/tag/search.html">search</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
+                    <a href="https://charlesreid1.github.io/tag/search-engine.html">search engine</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    <a href="https://charlesreid1.github.io/tag/google-drive.html">google drive</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
+                    <a href="https://charlesreid1.github.io/tag/github.html">github</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/strings.html">strings</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/combinatorics.html">combinatorics</a>
+                    <a href="https://charlesreid1.github.io/tag/flask.html">flask</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -500,18 +187,18 @@ Go implementation of these functions.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Recursive Backtracking in Go for Bioinformatics Applications: 1. Counting Variations
+                Any Color You Like, As Long As It's 00ADD8
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2018-12-26T18:00:00-08:00" pubdate>Wednesday 12/26/2018</time>
+                <time datetime="2019-02-23T10:00:00-08:00" pubdate>Saturday 02/23/2019</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
+                <a href="https://charlesreid1.github.io/category/go.html">Go</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">permalink</a>
+                <a href="https://charlesreid1.github.io/any-color-you-like-as-long-as-its-00add8.html">permalink</a>
             </span>
             </p>
         </div>
@@ -528,418 +215,69 @@ Go implementation of these functions.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p><em>This is the first in a series of three blog posts describing our
-solution to a bioinformatics problem from Rosalind.info,
-<a href="http://rosalind.info/problems/ba1i/">Problem BA1(i) (Find most frequent words with mismatches
-in a string)</a>.
-To solve this problem and generate variations of a DNA string
-as required, we implemented a recursive backtracking method
-in the Go programming language.</em></p>
-<ul>
-<li><em>Part 1: Counting Variations (you are here)</em></li>
-<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">Part 2: Generating Variations</a></em></li>
-<li><em><a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Part 3: Go Implementation of Recursive Backtracking</a></em></li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="toc"></a></p>
-<h2 id="table-of-contents">Table of Contents</h2>
-<ul>
-<li><a href="#problem-descr">Problem Description</a></li>
-<li><a href="#functions">Useful Functions</a><ul>
-<li><a href="#binomial">Binomial Function</a></li>
-<li><a href="#factorial">Factorial Function</a></li>
-</ul>
-</li>
-<li><a href="#counting-permutations">Counting Permutations</a><ul>
-<li><a href="#deriving">Deriving the Formula</a></li>
-<li><a href="#indices">Term 1: Picking DNA Indices</a></li>
-<li><a href="#side-note">Term 1: Side Note on Ordering</a></li>
-<li><a href="#modifying">Term 2: Modifying DNA Codons</a></li>
-</ul>
-</li>
-<li><a href="#final">Final Counting Formula</a></li>
-<li><a href="#golang">Implementing in Go</a><ul>
-<li><a href="#golang-bionomial-factorial">Binomial and Factorial Functions in Go</a></li>
-<li><a href="#variations">Variations Counting Function in Go</a></li>
-</ul>
-</li>
-</ul>
-<p><br />
-<br /></p>
-<p><a name="problem-descr"></a></p>
-<h2 id="problem-description">Problem Description</h2>
-<p>The task at hand is to take a given input strand of DNA,
-and generate variations from it that have up to <span class="math">\(d\)</span> differences
-(a Hamming distance of <span class="math">\(d\)</span>) in the codons (base pairs).</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">part 1 of this series</a>, we walk through the
-construction of an analytical formula to count the number
-of variations of a given DNA string that can be generated,
-given the constraints of the problem.</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">part 2 of this series</a>, we cover several techniques to
-generate variations on a DNA string, and present pseudocode
-for the recursive backtracking method that we use here.</p>
-<p>In <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">part 3 of this series</a>, we will cover our implementation
-of the recursive backtracking method in the Go programming
-language.</p>
-<p><a name="functions"></a></p>
-<h2 id="useful-functions">Useful Functions</h2>
-<p>It's always useful to review some basic mathematics
-useful for combinatorics applications. We'll review
-the factorial and binomial functions, which will
-show up in our final formula for the total nubmer
-of variations we will be generating.</p>
-<p><a name="factorial"></a></p>
-<h3 id="factorial-function">Factorial Function</h3>
-<p>The factorial function for an integer <span class="math">\(n\)</span> is written
-<span class="math">\(n!\)</span> and is defined for <span class="math">\(n \geq 1\)</span> as:</p>
-<div class="math">$$
-n! = n \cdot (n-1) \cdot \dots \cdot 2 \cdot 1
-$$</div>
-<p>for example, <span class="math">\(5!\)</span> would be:</p>
-<div class="math">$$
-5! = 5 \times 4 \times 3 \times 2 \times 1 = 120
-$$</div>
-<p><a name="binomial"></a></p>
-<h3 id="binomial-function">Binomial Function</h3>
-<p>The binomial function has many applications in combinatorics.
-It is the number of ways of independently selecting <span class="math">\(k\)</span> items
-from a set of <span class="math">\(n\)</span> items, and is written:</p>
-<div class="math">$$
-\binom{n}{k} = \dfrac{ n! }{ k! (n-k)! }
-$$</div>
-<p><br />
-<br /></p>
-<p><a name="counting-permutations"></a></p>
-<h2 id="counting-permutations">Counting Permutations</h2>
-<p>What we want is a formula to count the number of permutations</p>
-<p>To derive a formula, it helps to think through the problem
-starting with smaller special cases, and generalize 
-from there in terms of the problem parameters.</p>
-<p><a name="deriving"></a></p>
-<h3 id="deriving-the-formula">Deriving the Formula</h3>
-<p>The problem we're trying to solve is generating all perms
-with hamming distance less than or equal to d, but let's
-start with a simpler problem: generating all perms with 
-hamming distance of exactly d.</p>
-<p>Then we can just sum up over each d.</p>
-<p>Start with a simple situation: string of dna with 3 codons.
-Case of hamming distance 0 too trivial, so start with case of
-hamming distance of 1.</p>
-<p>There are two terms in our combinatorics formula that we
-need to think about:</p>
-<ul>
-<li>
-<p><strong>Term 1:</strong> We have a certain number of codons to modify (this is fixed
-  by the Hamming distance d that we pick). Term 1 counts up the
-  number of ways of selecting which indices of the original 
-  DNA string to modify.</p>
-</li>
-<li>
-<p><strong>Term 2:</strong> Once we've picked out the indices we are going to modify, we
-  have several variations for each index (4 total codons, so 3
-  variations). Term 2 is a count of the number of variations that are
-  possible, given the choice of indices in the original DNA string
-  to modify.</p>
-</li>
-</ul>
-<p>The approach here is to think about these two terms
-independently and separately. Each term has a formula
-to count the number of possibilities indexed by each.
-Then, because these are independent choices, the total
-number of combined choices is the product of these two
-terms.</p>
-<p><a name="indices"></a></p>
-<h3 id="term-1-picking-dna-indices">Term 1: Picking DNA Indices</h3>
-<p>The first term in our formula for number of variations
-will be the term representing the number of ways of 
-choosing which indices in the original DNA input string
-to edit.</p>
-<p>Given a Hamming distance of <span class="math">\(d\)</span>, and the fact that we
-have one and only one edit (Hamming distance unit) per
-base pair, Term 1 counts the number of ways of picking
-<span class="math">\(d\)</span> items from a set of <span class="math">\(n\)</span> items. Order does not matter.</p>
-<p>This problem is equivalent to having a row of <span class="math">\(n\)</span> on/off
-switches, all in the off position, and counting the number
-of ways of throwing exactly <span class="math">\(d\)</span> of them into the on position.</p>
-<p>Likewise, it is equivalent to having <span class="math">\(d\)</span> identical colored balls, 
-and counting the number of ways of placing them into <span class="math">\(n\)</span>
-slots, one ball per slot.</p>
-<p>We can see how the problem has a kind of triangular structure.
-Returning to the scenario of <span class="math">\(n\)</span> on/off switches:</p>
-<ul>
-<li>
-<p>If we have <span class="math">\(d = n\)</span> switches to throw, or if we have 
-  <span class="math">\(d = 0\)</span> switches to throw, in either case we have
-  only 1 possible outcome.</p>
-</li>
-<li>
-<p>If we have <span class="math">\(d = n-1\)</span> switches to throw, or if we 
-  have <span class="math">\(d = 1\)</span> switch to throw, either way we have
-  <span class="math">\(n\)</span> possible outcomes</p>
-</li>
-<li>
-<p>If we have <span class="math">\(d = n-2\)</span> or <span class="math">\(d = 2\)</span> switches to throw,
-  there are <span class="math">\(n (n-1)\)</span> possible outcomes; etc.</p>
-</li>
-</ul>
-<p>In fact, this problem - choosing <span class="math">\(d\)</span> things
-from a set of <span class="math">\(n\)</span> things - is common enough that
-there is a special function just to describe it,
-and that's the binomial function (covered above).</p>
-<p>The binomial function is defined as:</p>
-<div class="math">$$
-\binom{n}{k} = \dfrac{ n! }{ k! (n-k)! }
-$$</div>
-<p>In the scenarios posed above, the order of our choices
-did not matter - the balls were not numbered, the order
-in which we threw each switch did not affect the outcome.</p>
-<p>If the order did matter, if the order in which the on/off
-switches were thrown mattered or if the balls that were
-placed into slots had sequential numbers on them, then we
-would need a different function - the expression above 
-to count the number of outcomes would not have a <span class="math">\(k!\)</span> in 
-the denominator.</p>
-<p><a name="side-note"></a></p>
-<h3 id="term-1-side-note-on-ordering">Term 1: Side Note on Ordering</h3>
-<p>If the order of the index choices does not matter, 
-the <span class="math">\(k!\)</span> term in the denominator must be included 
-to cancel out double-counting in the situations where
-(for example) <span class="math">\(i\)</span> is chosen first and <span class="math">\(j\)</span> is chosen second,
-and then the situation where <span class="math">\(j\)</span> is chosen first and <span class="math">\(i\)</span>
-is chosen second.</p>
-<p>If the <span class="math">\(k!\)</span> term is present in the denominator, it says
-that the order in which items are selected does not matter,
-in which case we are generating <em>combinations</em>.</p>
-<p>To count combinations, use the "n choose k" function. See the 
-<a href="http://mathworld.wolfram.com/Combination.html">Combination</a>
-article on Wolfram MathWorld.</p>
-<p>If the <span class="math">\(k!\)</span> term is <em>not</em> present in the denominator, it says
-that the order in which items are selected does matter,
-in which case we are generating <em>permutations</em>.</p>
-<p>To count permutations, use the "n pick k" function. See the 
-<a href="http://mathworld.wolfram.com/Permutation.html">Permutation</a>
-article on Wolfram MathWorld.</p>
-<p><a name="modifying"></a></p>
-<h3 id="term-2-modifying-dna-codons">Term 2: Modifying DNA Codons</h3>
-<p>Once we've selected the <span class="math">\(d\)</span> indices in the original DNA
-string that we are going to modify, we have to count the
-number of ways those base pairs can be modified.</p>
-<p>We have <span class="math">\(d\)</span> base pairs to modify, and <span class="math">\(c = 4\)</span> total
-codons (ATGC). Each base pair that we are modifying
-has <span class="math">\(c-1\)</span> possible codons that it we can swap it out
-with, and each choice is independent, so the number
-of possibile outcomes (Term 2) is:</p>
-<div class="math">$$
-(c-1)^{d}
-$$</div>
-<p><br />
-<br /></p>
-<p><a name="final"></a></p>
-<h2 id="final-counting-formula">Final Counting Formula</h2>
-<p>To write the final formula for counting the number of variations <span class="math">\(V\)</span>
-of a given DNA string of length <span class="math">\(n\)</span> that are a Hamming
-distance of less than or equal to <span class="math">\(d\)</span>, with <span class="math">\(c\)</span> possible codons 
-(A, T, G, C), we will need to sum over Hamming distances
-from 0 to <span class="math">\(d\)</span>:</p>
-<div class="math">$$
-V = \sum_{k = 0}^{d} \binom{n}{k} (c-1)^{k}
-$$</div>
-<p><a name="golang"></a></p>
-<h2 id="implementing-in-go">Implementing in Go</h2>
-<p>Now, let's look at how we would implement this counting
-formula in Go. This will be useful, since programs run 
-much faster when they are able to allocate all the sapce
-they need in memory ahead of time. Counting the number
-of variations of our DNA input string will allow us to
-do just that.</p>
-<p><a name="golang-binomial-factorial"></a></p>
-<h3 id="binomial-and-factorial-functions-in-go">Binomial and Factorial Functions in Go</h3>
-<p>We'll start with binomial and factorial functions in Go:
-continuing with our theme of recursion, we implement
-a recursive factorial function.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Compute the factorial of an integer.</span>
-<span class="kd">func</span><span class="w"> </span><span class="nx">Factorial</span><span class="p">(</span><span class="nx">n</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">n</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// base case</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">1</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// recursive case</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">n</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">Factorial</span><span class="p">(</span><span class="nx">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<p>The factorial function will behave correctly for the
-case of <span class="math">\(n=1\)</span> and <span class="math">\(n=0\)</span>, and will return 1 if <span class="math">\(n\)</span> is
-negative (which is reasonable behavior for our purposes.)</p>
-<p>The binomial function utilizes the factorial function:</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Returns value of the binomial coefficient Binom(n, k).</span>
-<span class="kd">func</span><span class="w"> </span><span class="nx">Binomial</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span><span class="w"> </span><span class="nx">k</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">{</span>
-
-<span class="w">    </span><span class="nx">result</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">1</span>
-
-<span class="w">    </span><span class="c1">// Since C(n, k) = C(n, n-k)</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">k</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="p">(</span><span class="nx">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">k</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nx">k</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">k</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Calculate value of:</span>
-<span class="w">    </span><span class="c1">//</span>
-<span class="w">    </span><span class="c1">// ( n * (n-1) * ... * (n-k+1) )</span>
-<span class="w">    </span><span class="c1">// -----------------------------</span>
-<span class="w">    </span><span class="c1">//   ( k * (k-1) * ... * 1 )</span>
-<span class="w">    </span><span class="c1">// </span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">k</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nx">result</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="nx">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">i</span>
-<span class="w">        </span><span class="nx">result</span><span class="w"> </span><span class="o">/=</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">result</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<p>(Note that we might want to add some additional error checks to the
-<code>Binomial()</code> function.)</p>
-<p><a name="variations"></a></p>
-<h3 id="variations-counting-function-in-go">Variations Counting Function in Go</h3>
-<p>Now we can put everything together into a function to count
-the number of "Hamming neighbors" - variations on a given 
-DNA string that are a Hamming distance of up to <span class="math">\(d\)</span> away
-from the original DNA string.</p>
-<p>To count the number of Hamming neighbors, we implement
-the formula above. We leave out the error checks on the
-parameter values here, for brevity.</p>
-<p>The inputs are:</p>
-<ul>
-<li><span class="math">\(n\)</span> - length of DNA input string</li>
-<li><span class="math">\(d\)</span> - maximum Hamming distance</li>
-<li><span class="math">\(c\)</span> - number of codons (4, ATGC)</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="c1">// Given an input string of DNA of length n,</span>
-<span class="c1">// a maximum Hamming distance of d,</span>
-<span class="c1">// and a number of codons c, determine</span>
-<span class="c1">// the number of Hamming neighbors of</span>
-<span class="c1">// distance less than or equal to d</span>
-<span class="c1">// using a combinatorics formula.</span>
-<span class="kd">func</span><span class="w"> </span><span class="nx">CountHammingNeighbors</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span><span class="w"> </span><span class="nx">d</span><span class="p">,</span><span class="w"> </span><span class="nx">c</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-
-<span class="w">    </span><span class="c1">// We require the following:</span>
-<span class="w">    </span><span class="c1">// n &gt; 0</span>
-<span class="w">    </span><span class="c1">// d &gt;= 0</span>
-<span class="w">    </span><span class="c1">// c &gt; 0</span>
-
-<span class="w">    </span><span class="c1">// Use combinatorics to calculate number of variations</span>
-<span class="w">    </span><span class="nx">nv</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">dd</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">dd</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="nx">d</span><span class="p">;</span><span class="w"> </span><span class="nx">dd</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
-
-<span class="w">        </span><span class="c1">// Binomial(n,d) =&gt; number of ways we can</span>
-<span class="w">        </span><span class="c1">//                  pick codons to edit</span>
-<span class="w">        </span><span class="nx">next_term</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">Binomial</span><span class="p">(</span><span class="nx">n</span><span class="p">,</span><span class="w"> </span><span class="nx">dd</span><span class="p">)</span>
-
-<span class="w">        </span><span class="c1">// (c-1)^d =&gt; number of ways that the codons</span>
-<span class="w">        </span><span class="c1">//            we picked to edit can be edited</span>
-<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="nx">j</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">j</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">dd</span><span class="p">;</span><span class="w"> </span><span class="nx">j</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nx">next_term</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">        </span><span class="nx">nv</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">next_term</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">nv</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<p>We can run this with a few values of k and d to verify it returns
-the expected values:</p>
-<div class="highlight"><pre><span></span><code>For kmer AAA k = 3:
-d = 0, count = 1
-d = 1, count = 10
-d = 2, count = 37
-d = 3, count = 64
-</code></pre></div>
-
-<p>for a kmer of length 3, we can compute the first 3 values (1, 10, 37)
-by hand. The last value, when <span class="math">\(d = k\)</span>, is a special case where every
-base pair in the DNA strand can be changed to any codon. Since there
-are 4 possible codons, this leads to <span class="math">\(4^k = 2^{2k}\)</span> possibilities.</p>
-<p>For <span class="math">\(d = k = 3\)</span>, we have <span class="math">\(2^6 = 64\)</span> possible DNA strings.</p>
-<p>Now, moving on to <span class="math">\(k=5\)</span>:</p>
-<div class="highlight"><pre><span></span><code>For kmer AAAAA k = 5:
-d = 0, count = 1
-d = 1, count = 16
-d = 2, count = 106
-d = 3, count = 376
-d = 4, count = 781
-d = 5, count = 1024
-</code></pre></div>
-
-<p>We can calculate 1 and 16 by hand, verifying those two numbers.
-As before, the case of <span class="math">\(k = d = 5\)</span> gives a total of <span class="math">\(4^5 = 2^{10} = 1024\)</span>
-possible DNA strings.</p>
-<p><br />
-<br /></p>
-<p><strong>Next: <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html"> Recursive Backtracking in Go for Bioinformatics Applications: 2. Generating Variations</a></strong></p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+        <div class="entry-content"><p>A short post with some thoughts on how writing Go code has
+helped me learn to stop worrying and love auto-formatting tools.</p>
+<p>Go code is terse. Not Python-terse, but terse. And unlike Java, 
+you don't find yourself constantly resorting to the security
+blanket of objects - something that Python (mercifully) can 
+go either way on.</p>
+<p>I used Java when I taught computer science at South Seattle College,
+and remember telling students once that one day, students taking
+CSC 142/143 would be using Go instead of Java. These days, I'm not
+as certain of that, but given that Go's strengths are asynchronous
+programming (critical for taking advantage of multicore hardware) 
+and tasks suited for the web, it isn't hard to imagine a "Go 2.0"
+that becomes a de-facto standard in school curricula.</p>
+<p>Something else I like about Go is the way there is a toolchain that
+adheres to the Unix tooling philosophy: do one thing and do it well.
+Take <code>gofmt</code> as an example - this is a tool that autoformats
+Go code to conform to the Go standard spec. <code>gofmt</code> is a simple tool
+that does just one thing. This tool can be connected to various text
+editors with hooks, a la <a href="https://github.com/fatih/vim-go">vimgo</a>.</p>
+<p><code>gofmt</code> has taught me the value, and convenience, of embracing 
+the norms and standards set by a language's community. Go
+recommends using tabs, for example, which early on I found
+a bit repulsive. Before I had vimgo set up, I was stubbornly 
+using spaces instead of tabs in my Go code.</p>
+<p>But then I set up vimgo so that, every time I saved a buffer containing
+Go code, it would run <code>gofmt</code> on the code, replacing all of the nitpicky
+details (like how many spaces between parentheses and variables, or wether
+<code>==</code> should be surrounded be spaces) and it just makes an executive decision.</p>
+<p>Sure, it uses tabs instead of spaces, but once you start to work on
+code and save it and you see all of these details just <em>handled</em>, 
+you quickly learn not to worry about it.</p>
+<p>And the surprising thing, to me, was just how much overhead I was spending
+on those things. It adds up.</p>
+<p>The <code>gofmt</code> executive decision strategy is similar to <a href="https://github.com/ambv/black">black</a>,
+"The uncompromising Python code formatter," whose slogan
+is "Any color you like, as long as it's black."</p>
+<p>While I really like black and would love to let it handle all of my Python
+code the way <code>gofmt</code> handles all of my Go code, the unfortunate reality is
+that Python, unlike Go, does not have an official standard, and if you
+automatically apply black formatting to all Python code, you can quickly
+wreak havoc on version-controlled code. You have to tread more lightly
+with black. I apply black more selectively by only applying it to <code>.py</code> 
+files that are in specific project subdirectories.)</p>
+<p>A slogan for <code>gofmt</code> could be, "Any color you like, as long as it's <code>#00ADD8</code>."</p>
+<p>Wait, what? Where did <code>#00ADD8</code> come from?</p>
+<p>It's in the <a href="https://storage.googleapis.com/golang-assets/Go-brand-book-v1.9.5.pdf">Go Brand Book</a>.
+Prior to discovering this (the link was dropped in an unrelated
+discussion on the <a href="https://golang.org/help/">gonuts mailing list</a>),
+I had no idea waht a brand book was. Turns out, this is very much
+<em>a thing</em> in marketing. Companies, projects, and organizations all
+have brand books that lay out the details of their marketing designs,
+branding, looks, everything down to the fonts and colors.</p>
+<p>The Go brand book is short, but it does specify an official color
+for Golang: <code>#00ADD8</code>. It also covers critical details about how to
+depict the Go gopher, including the physics of gopher belly folds:</p>
+<p><img alt="Extremely important details" src="images/bellyfold.png"></p>
+<p>There are some other branding books - the 
+<a href="https://www.flipsnack.com/cardesigns/brandbook-cocacola.html">Coca Cola brand book</a>.
+is simultaneously fascinating and terrible,
+in a late stage capitalism kind of way.</p>
+<p>At any rate, at least the Go brand book is about something useful,
+and contains silly things like gophers.</p>
+<p><img alt="Gopher specs" src="images/gopherpage.png"></p></div>
 
     </div>
 </div>
@@ -957,17 +295,13 @@ possible DNA strings.</p>
                     &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
-                    &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    <a href="https://charlesreid1.github.io/tag/black.html">black</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/strings.html">strings</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/combinatorics.html">combinatorics</a>
+                    <a href="https://charlesreid1.github.io/tag/gofmt.html">gofmt</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -985,18 +319,18 @@ possible DNA strings.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Basic Data Structures in Go: Maps
+                A Few of My Favorite PEPs
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2018-12-20T17:00:00-08:00" pubdate>Thursday 12/20/2018</time>
+                <time datetime="2019-02-11T12:00:00-08:00" pubdate>Monday 02/11/2019</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/basic-data-structures-in-go-maps.html">permalink</a>
+                <a href="https://charlesreid1.github.io/a-few-of-my-favorite-peps.html">permalink</a>
             </span>
             </p>
         </div>
@@ -1013,298 +347,220 @@ possible DNA strings.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><h2 id="basic-data-structures-in-go-maps">Basic Data Structures in Go: Maps</h2>
-<p>Continuing with our series of blog posts on what
-we've been learning about Go in the process of solving
-problems on Rosalind.info, this post will cover how 
-some basic data structures work in Go, and how we
-used each to solve problems from the Chapter 1 Rosalind
-problems.</p>
-<h2 id="maps">Maps</h2>
-<p>The simplest way to describe a map is to say it is a
-structure useful for storing key-value pairs.</p>
-<p>Before we walk through what maps look like in Go, let's
-talk about what a map is (in the data structure sense).
-And to do that, it's useful to talk a bit about mathematical
-functions and maps in the mathematical sense.</p>
-<h3 id="what-is-a-map">What is a map</h3>
-<p>The term "map" is taken from mathematics. A map is just a
-relationship - a general term, but still useful. Most 
-mathematics courses deal with functions, which are formally 
-defined as <strong>maps</strong> from one set of numbers onto another,
-such that one input corresponds to one output.</p>
-<p>A (data structure) map, similarly, is a relationship between
-two sets - a key set, and a value set. Each key corresponds
-to only one value. </p>
-<p>Maps are typically stored under the hood as either a hash
-map (which does not sort keys and has very fast O(1), or
-constant time, operations) or a tree map (which sorts keys 
-using a binary tree and has slower O(log N) operations).</p>
-<h3 id="map-notation-in-go">Map notation in Go</h3>
-<p>In Go, map types are denoted <code>map[keyType]valueType</code>.</p>
-<p>For example, to map strings to integers, we would use
-a map of type <code>map[string]int</code>. </p>
-<p>We create a map variable by declaring its type:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span>
-</code></pre></div>
-
-<p>However, this does not allocate any space for the map,
-and trying to add keys to the map at this point would
-result in an error.</p>
-<p>We need to actually allocate space for the map. In Go,
-you can allocate space for a map two ways: first, using
-Go's built-in <code>make()</code> function; and second, by creating
-and populating the map in one line.</p>
-<h3 id="using-make-with-maps">Using <code>make()</code> with maps</h3>
-<p>To allocate space for a map, you can use the <code>make()</code>
-function and pass it the map type. This will actually
-create space in memory for the map, and allow you to 
-add items or look up keys in the map.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span>
-<span class="nx">m</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">)</span>
-</code></pre></div>
-
-<h3 id="creating-and-populating">Creating and populating</h3>
-<p>If you want to create and populate the map in one line,
-you can specify the type, then have trailing brackets
-containing the items you want to add:</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Create an empty map</span>
-<span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{}</span>
-</code></pre></div>
-
-<div class="highlight"><pre><span></span><code><span class="c1">// Create and populate a map</span>
-<span class="nx">m</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span><span class="s">&quot;A&quot;</span><span class="p">:</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;T&quot;</span><span class="p">:</span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;G&quot;</span><span class="p">:</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;C&quot;</span><span class="p">:</span><span class="mi">25</span><span class="p">}</span>
-</code></pre></div>
-
-<h3 id="zero-values">Zero values</h3>
-<p>One feature of maps that makes them really easy to work
-with is, if you try and look up a key, and the key does
-not exist in the map, the map will not raise an exception
-(which Python does), it will return the zero value of 
-the value type. </p>
-<p>For example, the zero value of the <code>int</code> type is 0, 
-so if we create a map like <code>m := map[string]int{"A":10}</code>
-and we then look up a key that isn't in the map, like 
-<code>m["G"]</code>, Go will return 0.</p>
-<p>Similarly, the zero value for booleans is false, so you
-can utilize the zero value behavior to create a set data
-structure using maps. By creating a <code>map[keyType]bool</code>
-map, you can use the boolean value to indicate membership
-of a key in the given set. Then, if you look up keys that
-do not exist in the map, Go will return the zero value of
-booleans by default, which will be false.</p>
-<h3 id="easy-iterating-over-maps">Easy iterating over maps</h3>
-<p>It is easy to iterate over maps using the <code>range</code> keyword
-in Go, which will return the keys (optionally, both keys 
-and values) of the map in a loop:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{</span>
-<span class="w">        </span><span class="s">&quot;ABC&quot;</span><span class="p">:</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span>
-<span class="w">        </span><span class="s">&quot;DEF&quot;</span><span class="p">:</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span>
-<span class="w">        </span><span class="s">&quot;GHI&quot;</span><span class="p">:</span><span class="mi">30</span>
-<span class="p">}</span>
-
-<span class="k">for</span><span class="w"> </span><span class="nx">k</span><span class="p">,</span><span class="nx">v</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">m</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Key:&quot;</span><span class="p">,</span><span class="nx">k</span><span class="p">,</span><span class="s">&quot; --&gt; Value:&quot;</span><span class="p">,</span><span class="nx">v</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<h2 id="example-assembling-kmer-histogram">Example: Assembling kmer histogram</h2>
-<p>Here is an example using maps: this function assembles
-a kmer histogram from a strand of DNA base pairs. To do
-this, it loops over every codon in the DNA strand and
-increments a counter in a map. Finally, this histogram
-map is returned. (This function is useful for determining
-the most frequent kmer.)</p>
-<p>Here's the whole function that helps solve Rosalind problem
-BA1B. We'll look at it piece by piece below: </p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Return the histogram of kmers of length k </span>
-<span class="c1">// found in the given input</span>
-<span class="kd">func</span><span class="w"> </span><span class="nx">KmerHistogram</span><span class="p">(</span><span class="nx">input</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">k</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-
-<span class="w">    </span><span class="nx">result</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">{}</span>
-
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)&lt;</span><span class="mi">1</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Error: input string was not DNA. Only characters ATCG are allowed, you had %s&quot;</span><span class="p">,</span><span class="nx">input</span><span class="p">)</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">result</span><span class="p">,</span><span class="w"> </span><span class="nx">errors</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Number of substring overlaps</span>
-<span class="w">    </span><span class="nx">overlap</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">k</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span>
-
-<span class="w">    </span><span class="c1">// If overlap &lt; 1, we are looking</span>
-<span class="w">    </span><span class="c1">// for kmers longer than our input</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">overlap</span><span class="p">&lt;</span><span class="mi">1</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">result</span><span class="p">,</span><span class="kc">nil</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="c1">// Iterate over each position,</span>
-<span class="w">    </span><span class="c1">// extract the string,</span>
-<span class="w">    </span><span class="c1">// increment the count.</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="o">:=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="p">&lt;</span><span class="nx">overlap</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// Get the kmer of interest</span>
-<span class="w">        </span><span class="nx">substr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">:</span><span class="nx">i</span><span class="o">+</span><span class="nx">k</span><span class="p">]</span>
-
-<span class="w">        </span><span class="c1">// If it doesn&#39;t exist, the value is 0</span>
-<span class="w">        </span><span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">result</span><span class="p">,</span><span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<h3 id="function-walkthrough">Function Walkthrough</h3>
-<p>The first thing you'll notice is the comment style:
-there is a comment right before each function, which
-is common practice in Go, because comments that come
-before a function are picked up by <code>godoc</code> (the Go
-documentation tool) and turned into documentation.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Return the histogram of kmers of length k </span>
-<span class="c1">// found in the given input</span>
-<span class="kd">func</span><span class="w"> </span><span class="nx">KmerHistogram</span><span class="p">(</span><span class="nx">input</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">k</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">int</span><span class="p">,</span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</code></pre></div>
-
-<p>Go has internalized the idea that comments are a part
-of the documentation, so comments don't need to be 
-formatted in any special way (like <code>/// this</code> or <code>/** this */</code>
-business) to end up being picked up by godoc.</p>
-<p>Next, we create an empty map (kmer strings to integer
-frequency counters) and stride over the entire input string
-with a window the size of the kmers we are interested in,
-adding or incrementing each corresponding counter in the map
-as we go.</p>
-<p>The overlap variable is the number of possible kmers of length
-<code>k</code> in the entire input string, which requires a bit of algebra
-to gt the indices right:</p>
-<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="c1">// Number of substring overlaps</span>
-<span class="w">    </span><span class="nx">overlap</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">k</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span>
-</code></pre></div>
-
-<p>The for loop utilizes Go's slice notation to take a slice of
-the string (which does not require creating or duplicating any
-string data), and uses the extracted kmer as a key to add or 
-increment the counter: </p>
-<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="c1">// Iterate over each position,</span>
-<span class="w">    </span><span class="c1">// extract the string,</span>
-<span class="w">    </span><span class="c1">// increment the count.</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="o">:=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="p">&lt;</span><span class="nx">overlap</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// Get the kmer of interest</span>
-<span class="w">        </span><span class="nx">substr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">input</span><span class="p">[</span><span class="nx">i</span><span class="p">:</span><span class="nx">i</span><span class="o">+</span><span class="nx">k</span><span class="p">]</span>
-
-<span class="w">        </span><span class="c1">// If it doesn&#39;t exist, the value is 0</span>
-<span class="w">        </span><span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span>
-<span class="w">    </span><span class="p">}</span>
-</code></pre></div>
-
-<p>This is where the behavior of maps for non-existent keys comes
-in handy - in Go, if you ask for a key that does not exist
-in the map, the map will return the zero value of the specified
-type. </p>
-<p>This statement:</p>
-<div class="highlight"><pre><span></span><code><span class="w">        </span><span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span>
-</code></pre></div>
-
-<p>can also be written as:</p>
-<div class="highlight"><pre><span></span><code><span class="w">        </span><span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">result</span><span class="p">[</span><span class="nx">substr</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span>
-</code></pre></div>
-
-<p>So, the first time a kmer (stored in <code>substr</code>) is encountered, the
-kmer will not exist as a key in the map, and the key lookup on the 
-right hand side will return 0, incrementing the counter to 1
-the first time the kmer is encountered.</p>
-<p>Subsequent times the kmer is encountered, the value will be found 
-and substituted on the right side so it will be incremented by 1.</p>
-<p>Finally, when we return from the function, we can use a Python-like
-syntax of returning multiple values separated by commas, yet
-another great feature of Go: </p>
-<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">result</span><span class="p">,</span><span class="kc">nil</span>
-<span class="p">}</span>
-</code></pre></div>
-
-<p>By convention, the return types of functions will include an error type 
-at the very end, so if you had a function named <code>ExampleFunction</code> that 
-returned three integers, the function definition would look like this:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">func</span><span class="w"> </span><span class="nx">ExampleFunction</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="o">...</span><span class="w">    </span>
-<span class="p">}</span>
-</code></pre></div>
-
-<p>Additionally, we also see from the function's return statement
-above that we can use the reserved keyword <code>nil</code> to set a variable
-to a null value, and that the convention is to return <code>nil</code> in place
-of the error, so that in the calling function we can set up a structure
-like this:</p>
-<div class="highlight"><pre><span></span><code>a, b, c, err := ExampleFunction()
-
-if err != nil {
-    err := &quot;Please read this important message&quot;
-    return -1,-1,-1,errors.New(err)
-}
-</code></pre></div>
-
-<h2 id="summary">Summary</h2>
-<p>Maps are my favorite data structure, so I'm glad that they're
-easy to use in Go. Some important points about using
-maps in Go:</p>
+        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
 <ul>
-<li>
-<p>Declaring a variable as a map type does not allocate any space
-  for the map; saying <code>var m map[keyType]valueType</code> and then 
-  trying to access keys will cause an exception.</p>
-</li>
-<li>
-<p>To allcoate space for a map, use <code>make(map[keyType]valueType)</code> 
-  or instantiate with the <code>{}</code> notation, like 
-  <code>m := map[keyType]valueType{"asdf":1}</code></p>
-</li>
-<li>
-<p>To ask for a key, use the square bracket notation. To set a value
-  for a key, use the square bracket notation on the left and assign
-  a value on the right: <code>m[my_key] = my_value</code></p>
-</li>
-<li>
-<p>Asking for missing keys will return the zero value of whatever
-  type the map values are. </p>
-</li>
-<li>
-<p>Iterating over key-value pairs in a map using a for loop is easy
-  using the built-in <code>range</code> keyword.</p>
-</li>
+<li><a href="#fav">What's your favorite PEP?</a></li>
+<li><a href="#p0">PEP 0</a></li>
+<li><a href="#p8">PEP 8</a></li>
+<li><a href="#p20">PEP 20</a></li>
+<li><a href="#p3099">PEP 3099</a><ul>
+<li><a href="#2to3">Addendum: 2 to 3 Changes</a></li>
 </ul>
-<h2 id="addendum-check-if-a-key-is-in-a-map">Addendum: Check if a Key is in a Map</h2>
-<p>Because of the default behavior of maps, where they return a zero value for
-keys that do not exist in the map, it is not immediately obvious how to
-differentiate between the case where a key is in a map already and has a zero
-value, versus the case where the key does not yet exist in the map and the zero
-value is only being returned because the key can't be found.</p>
-<p>To resolve this, we can use two Go features: error-checking, and the underscore - 
-a variable that serves as a one-way sink for information, and serves a similar
-purpose to the underscore in Python.</p>
-<p>First, we mentioned above that various operations that can return errors will return
-an error type as the last return type, along with any other return values.
-This includes the operation of accessing a key. To assign the value and the error
-to variables at once:</p>
-<div class="highlight"><pre><span></span><code><span class="nx">v</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">[</span><span class="nx">my_key</span><span class="p">]</span>
+</li>
+<li><a href="#p202">PEP 202</a></li>
+<li><a href="#gh">All the PEPs on Github</a></li>
+</ul>
+<p><br />
+<br /></p>
+<p><a name="fav"></a></p>
+<h2 id="whats-your-favorite-pep">What's your favorite PEP?</h2>
+<p>PEPs, or <strong>Python Enhancement Proposals</strong>, are documents in which
+features, additions, or general ideas are proposed as additions
+to the core Python language.</p>
+<p>As a Python user, we believe it's important to ask questions like this.</p>
+<p>Picking a "favorite PEP" is not just about having a ready and clever
+answer to a question you might expect in a technical interview;
+the PEP documents really <em>are</em> important, and really <em>do</em> shape 
+where Python is today and where it will be in the future.</p>
+<p>So let's look at a few of our favorite PEPs.</p>
+<p><a name="p0"></a></p>
+<h2 id="pep-0-the-pep-index">PEP 0: The PEP Index</h2>
+<p>PEP0 - the easiest answer to the question, "what's your favorite PEP?"</p>
+<p><a href="https://www.python.org/dev/peps/">PEP 0 - Index of Python Enhancement Proposals (PEPs)</a>
+lists all PEPs, including PEPs about PEPs, accepted PEPs, open PEPs,
+finished PEPs, informational PEPs, and abandoned PEPs.</p>
+<p>This is also a good place to search for a keyword or browse PEPs.</p>
+<p>This PEP is the favorite of people who love enumerations, library card catalogs,
+biblical genealogies, and litanies.</p>
+<p><a name="p8"></a></p>
+<h2 id="pep-8-the-python-style-guide">PEP 8: The Python Style Guide</h2>
+<p><a href="https://www.python.org/dev/peps/pep-0008/">PEP 8</a>
+covers the recommended Python style.
+It is a surprisingly quick read.</p>
+<p>This PEP dishes "official" opinions about 
+controversial topics such as:</p>
+<ul>
+<li>tabs or spaces (spoiler: <strong><em>spaces</em></strong>)</li>
+<li>line width</li>
+<li>whitespace</li>
+<li>naming conventions for variables, classes, and modules</li>
+</ul>
+<p>This PEP is the chosen favorite of those programmers who keep their
+crayons organized in the correct color order.</p>
+<p><a name="p20"></a></p>
+<h2 id="pep-20-the-zen-of-python">PEP 20: The Zen of Python</h2>
+<p><a href="https://www.python.org/dev/peps/pep-0020/">PEP 20</a> contains
+20 aphorisms that compose the Zen of Python - only 19 of which
+are contained in the PEP...</p>
+<p>Also available from Python via:</p>
+<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; import this
 </code></pre></div>
 
-<p>Now, to check if the key exists in the map, we are only concerned with the variable
-<code>err</code> and we don't really need the variable <code>v</code>. Instead of assigning <code>v</code> to a variable
-that we never use, and then having the Go compiler complain about it, we can use the
-underscore as a placeholder:</p>
-<div class="highlight"><pre><span></span><code><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">[</span><span class="nx">my_key</span><span class="p">]</span>
+<p>Many of the aphorisms in PEP 20 come in pairs.</p>
+<p>The first seven alone compose an excellent philosophy of programming.
+Six symmetric rules:</p>
+<div class="highlight"><pre><span></span><code>Beautiful is better than ugly.
+
+Explicit is better than implicit.
+
+Simple is better than complex.
+
+Complex is better than complicated.
+
+Flat is better than nested.
+
+Sparse is better than dense.
 </code></pre></div>
 
-<p>Now, we just add a check for whether <code>err</code> is nil, and voila, we have our check of
-whether a key is in the map or not:</p>
-<div class="highlight"><pre><span></span><code><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">m</span><span class="p">[</span><span class="nx">my_key</span><span class="p">]</span>
+<p>The seventh, one of the principal ideas behind Python:</p>
+<div class="highlight"><pre><span></span><code>Readability counts.
+</code></pre></div>
 
-<span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// This key is missing from the map</span>
+<p>The next pair of aphorisms is important to our own style of programming:</p>
+<div class="highlight"><pre><span></span><code>Special cases aren&#39;t special enough to break the rules.
 
-<span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="c1">// This key already exists in the map</span>
+Although practicality beats purity.
+</code></pre></div>
 
-<span class="p">}</span>
-</code></pre></div></div>
+<p>The latter aphorism is an acknowledgement that, ultimately, programming
+is a means to an end, and Python (or whatever programming language you use)
+should not <em>get in the way</em> of reaching that end - especially not for the
+sake of some abstract principle or theory. </p>
+<p>PEP 20 weighs in on errors:</p>
+<div class="highlight"><pre><span></span><code>Errors should never pass silently.
+
+Unless explicitly silenced.
+</code></pre></div>
+
+<p>Slightly perplexing:</p>
+<div class="highlight"><pre><span></span><code>In the face of ambiguity, refuse the temptation to guess.
+</code></pre></div>
+
+<p>More pairs:</p>
+<div class="highlight"><pre><span></span><code>There should be one-- and preferably only one -- obvious way to do it.
+
+Although that way may not be obvious at first unless you&#39;re Dutch.
+</code></pre></div>
+
+<p>From the <a href="https://en.wikipedia.org/wiki/Guido_van_Rossum">Wikipedia page on Guido van Rossum</a>:</p>
+<blockquote>
+<p>Guido van Rossum is a Dutch programmer...</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code>Now is better than never.
+
+Although never is often better than *right* now.
+</code></pre></div>
+
+<p>That last one sounds like an excuse for procrastination.</p>
+<div class="highlight"><pre><span></span><code>If the implementation is hard to explain, it&#39;s a bad idea.
+
+If the implementation is easy to explain, it may be a good idea.
+</code></pre></div>
+
+<p>Finally, the last aphorism covers the reason you never see 
+<code>from module import *</code>:</p>
+<div class="highlight"><pre><span></span><code>Namespaces are one honking great idea - let&#39;s do more of those!
+</code></pre></div>
+
+<p>Namespaces, in this case, come from importing everything in 
+a Python package into a particular variable name - like 
+<code>import itertools</code> or <code>import numpy as np</code>.</p>
+<p>It turns out that, yes, in fact, namespaces are a great idea!</p>
+<p><a name="p3099"></a></p>
+<h2 id="pep-3099-things-that-will-not-change-in-python-3000">PEP 3099: Things That Will Not Change in Python 3000</h2>
+<p>We can't really decide what we enjoy most about <a href="https://www.python.org/dev/peps/pep-3099/">PEP 3099</a>.
+Maybe it's the fact that it does the opposite of what most 
+proclamations of a new major version do, which is, to say
+what new features it will <em>not</em> have.
+Maybe it's the way the language's creators demonstrate how well
+they have learned from the mistakes of others who adopt
+the "Burn it to the ground and rewrite from scratch"
+philosophy. Or maybe it's the delightful nostalgia of 
+"Python 3000".</p>
+<p>In any case, PEP 3099 is an instructive read, because any feature
+that will explicitly be kept during a major version bump is clearly
+either (a) useful, (b) important, or (c) both. Additionally, it 
+gives some insight into the design decisions made when Python
+was implemented ("Why does Python do X this way, instead of 
+some other easier way?").</p>
+<p>Not only that, you also get to walk through a graveyard of
+abandoned (but still interesting) ideas, and the links given
+in the PEP to the Python mailing list can provide additional
+useful information.</p>
+<p><a name="2to3"></a></p>
+<h2 id="addendum-peps-affecting-2-to-3-changes">Addendum: PEPs Affecting 2 to 3 Changes</h2>
+<p>In contrast to PEP 3099, which contains a list of all the things
+that <em>did not</em> change in Python 3, there were a large number of
+PEPs that <em>did</em> cause Python 3 to behave differently from Python 2.</p>
+<ul>
+<li><a href="https://www.python.org/dev/peps/pep-0237">PEP 237</a>: Unified long integers and integers</li>
+<li><a href="https://www.python.org/dev/peps/pep-0238">PEP 238</a>: Changed the division operator</li>
+<li><a href="https://www.python.org/dev/peps/pep-0412">PEP 412</a>: Key-sharing dictionary</li>
+<li><a href="https://www.python.org/dev/peps/pep-0428">PEP 428</a>: Object-oriented filesystem paths</li>
+<li><a href="https://www.python.org/dev/peps/pep-0435">PEP 435</a>: Adding enum type</li>
+<li><a href="https://www.python.org/dev/peps/pep-0448">PEP 448</a>: Unpacking</li>
+<li><a href="https://www.python.org/dev/peps/pep-0450">PEP 450</a>: Adding stats to standard library</li>
+<li><a href="https://www.python.org/dev/peps/pep-0498">PEP 498</a>: Literal string interpolation</li>
+<li><a href="https://www.python.org/dev/peps/pep-0515">PEP 515</a>: Underscores in numeric literals</li>
+<li><a href="https://www.python.org/dev/peps/pep-3101">PEP 3101</a>: Advanced string formatting</li>
+<li><a href="https://www.python.org/dev/peps/pep-3102">PEP 3102</a>: Keyword-only arguments</li>
+<li><a href="https://www.python.org/dev/peps/pep-3105">PEP 3105</a>: Make print a function</li>
+<li><a href="https://www.python.org/dev/peps/pep-3111">PEP 3111</a>: User input in Python 3000</li>
+<li><a href="https://www.python.org/dev/peps/pep-3114">PEP 3114</a>: Renaming <code>next()</code> to <code>__next__()</code></li>
+<li><a href="https://www.python.org/dev/peps/pep-3135">PEP 3135</a>: Super behavior</li>
+</ul>
+<p><a name="p202"></a></p>
+<h2 id="pep-202-list-comprehensions">PEP 202: List Comprehensions</h2>
+<p>Of course, picking your favorite PEP can also be an opportunity
+to make a statement about your favorite language feature of Python,
+since many of Python's most useful language features got their start 
+as PEPs.</p>
+<p>For us, list comprehensions (covered in <a href="https://www.python.org/dev/peps/pep-0202/">PEP 202</a>)
+area clear winner in any competition of most useful language features. 
+List comprehensions are a way of shortening for loop syntax, making it
+much easier to perform map and filtering operations. Some examples
+from PEP 202:</p>
+<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print([i for i in range(20) if i%2 == 0])
+[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+
+&gt;&gt;&gt; nums = [1, 2, 3, 4]
+
+&gt;&gt;&gt; fruit = [&quot;Apples&quot;, &quot;Peaches&quot;, &quot;Pears&quot;, &quot;Bananas&quot;]
+
+&gt;&gt;&gt; print [(i, f) for i in nums for f in fruit]
+[(1, &#39;Apples&#39;), (1, &#39;Peaches&#39;), (1, &#39;Pears&#39;), (1, &#39;Bananas&#39;),
+ (2, &#39;Apples&#39;), (2, &#39;Peaches&#39;), (2, &#39;Pears&#39;), (2, &#39;Bananas&#39;),
+ (3, &#39;Apples&#39;), (3, &#39;Peaches&#39;), (3, &#39;Pears&#39;), (3, &#39;Bananas&#39;),
+ (4, &#39;Apples&#39;), (4, &#39;Peaches&#39;), (4, &#39;Pears&#39;), (4, &#39;Bananas&#39;)]
+
+&gt;&gt;&gt; print([(i, f) for i in nums for f in fruit if f[0] == &quot;P&quot;])
+[(1, &#39;Peaches&#39;), (1, &#39;Pears&#39;),
+ (2, &#39;Peaches&#39;), (2, &#39;Pears&#39;),
+ (3, &#39;Peaches&#39;), (3, &#39;Pears&#39;),
+ (4, &#39;Peaches&#39;), (4, &#39;Pears&#39;)]
+
+&gt;&gt;&gt; print([(i, f) for i in nums for f in fruit if f[0] == &quot;P&quot; if i%2 == 1])
+[(1, &#39;Peaches&#39;), (1, &#39;Pears&#39;), (3, &#39;Peaches&#39;), (3, &#39;Pears&#39;)]
+
+&gt;&gt;&gt; print([i for i in zip(nums, fruit) if i[0]%2==0])
+[(2, &#39;Peaches&#39;), (4, &#39;Bananas&#39;)]
+</code></pre></div>
+
+<p>List comprehensions enable code to be short but expressive, 
+brief but elegant. Brevity is the soul of wit, after all.</p>
+<p><a name="gh"></a></p>
+<h2 id="all-the-peps-on-github">All the PEPs on Github</h2>
+<p><a href="https://github.com/python/peps">All the PEPs are available on Github.</a></p></div>
 
     </div>
 </div>
@@ -1316,17 +572,13 @@ whether a key is in the map or not:</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
+                    <a href="https://charlesreid1.github.io/tag/pep.html">pep</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/maps.html">maps</a>
+                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1369,8 +621,59 @@ whether a key is in the map or not:</p>
 
         <div class="well">
 
+            <h2>December 2022</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/notes-on-italo-calvinos-six-memos-for-the-next-millennium.html">Notes on Italo Calvino's <i>Six Memos for the Next Millennium</i></a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>November 2022</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-bums-peter-golenbocks-oral-history-of-the-brooklyn-dodgers.html">Reading <i>Bums</i>: Peter Golenbock's Oral History of the Brooklyn Dodgers</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>October 2022</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/generating-functions-part-3-ternary-strings-and-exponential-generating-functions.html">Generating Functions Part 3: Ternary Strings and Exponential Generating Functions</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/generating-functions-part-2-marbles-in-a-can.html">Generating Functions Part 2: Marbles in a Can</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/generating-functions-part-1-solving-the-quicksort-recurrence.html">Generating Functions Part 1: Solving the Quicksort Recurrence</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/a-pair-of-dice-games-or-why-chevalier-de-mere-lost-money.html">A Pair of Dice Games (or, Why Chevalier de Méré Lost Money)</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
             <h2>June 2022</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/installing-latex-packages-on-macos-the-librarytexmf-layout.html">Installing LaTeX Packages on macOS: The `~/Library/texmf` Layout</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/how-to-subscribe-to-infinite-mailing-lists.html">How to Subscribe to Infinite Mailing Lists</a>
             </p>

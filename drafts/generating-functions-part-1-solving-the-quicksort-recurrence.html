@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <title>charlesreid1</title>
+        <meta charset="utf-8" />
+
+        <!--
+        CSS styles
+        -->
+        <link href="https://charlesreid1.github.io/theme/css/bootstrap.css"       rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/slate.css"              rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/font-awesome.css"       rel="stylesheet" type="text/css"/>
+        <link href="https://charlesreid1.github.io/theme/css/pygment-solarized.css"  rel="stylesheet" type="text/css"/>
+
+        <!--
+        my CSS styles
+        -->
+        <link href="https://charlesreid1.github.io/theme/css/main.css"            rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/dox.css"             rel="stylesheet" type="text/css">
+
+
+        <!--
+        include Angular first
+        -->
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/angular-1.3.15.js"></script>
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/skrollr-0.6.29.js"></script>
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/d3-3.5.5.js"></script>
+
+        <!--
+        this seems like a bad idea.
+        but if I don't put jquery first, I get errors about unrecognized $s.
+        -->
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+
+</head>
+<body id="index">
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span> 
+            </button>
+            <a href="https://charlesreid1.github.io" class="navbar-brand">charlesreid1.github.io</a>
+        </div>
+        <div>
+            <div class="collapse navbar-collapse" id="myNavbar">
+                <ul class="nav navbar-nav">
+
+                    <li>
+                        <a href="https://charlesreid1.com/wiki">Wiki</a>
+                    </li>
+                    <li>
+                        <a href="https://git.charlesreid1.com/explore">Git</a>
+                    </li>
+                    <li>
+                        <a href="http://spotify.charlesreid1.com">Music</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.com/life">Life</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.github.io">Blog</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+
+<div class="container">
+
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Generating Functions Part 1: Solving the Quicksort Recurrence
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2022-10-23T12:00:00-07:00" pubdate>Sunday 10/23/2022</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/drafts/generating-functions-part-1-solving-the-quicksort-recurrence.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>This post is part 1 of a series on generating functions, based on notes
+we have been working through from Sedgewick and Flajolet's <em>Analysis of
+Algorithms</em> and Trotter's <em>Applied Combinatorics</em>. The full set of notes
+lives on our wiki:
+<a href="https://charlesreid1.com/wiki/Generating_Functions">Generating Functions</a>.</p>
+<p>Generating functions are one of those techniques that look completely
+mysterious the first time you see them, and then look like the obvious
+thing to do the tenth time you see them. They turn recurrences into
+functions, functions into series, and series back into closed forms for
+the coefficients you actually wanted. This post walks through one of the
+nicest applications: solving the recurrence relation for quicksort.</p>
+<h2 id="the-recurrence">The Recurrence</h2>
+<p>The average number of comparisons quicksort makes on an array of size $n$
+satisfies the recurrence</p>
+<p>$$
+C_n = n + 1 + \dfrac{2}{n} \sum_{1 \leq k \leq n} C_{k-1}
+$$</p>
+<p>The $n+1$ term is the cost of the partition step. The sum averages the cost
+of recursing on the two subarrays over all possible choices of pivot.</p>
+<p>Staring at that sum inside the recurrence is not a great starting point.
+Everything on the right depends on every $C_k$ that came before. Generating
+functions are how we get out.</p>
+<h2 id="setting-up-the-generating-function">Setting Up the Generating Function</h2>
+<p>The plan is to introduce a generating function</p>
+<p>$$
+C(z) = \sum_{n \geq 0} C_n z^n
+$$</p>
+<p>and then translate each piece of the recurrence into an operation on $C(z)$.</p>
+<p>Multiplying the recurrence by $n$ to clear the $\tfrac{2}{n}$, and then by
+$z^n$, and summing over $n$, we end up with</p>
+<p>$$
+\sum_{n \geq 1} n C_n z^n = \sum_{n \geq 1} n(n+1) z^n + 2 \sum_{n \geq 1} \sum_{1 \leq k \leq n} C_{k-1} z^n
+$$</p>
+<p>Each of these three terms turns into something in $C(z)$:</p>
+<ul>
+<li>The left side is $z C'(z)$, since taking a derivative and multiplying by $z$
+  pulls out an $n$ from each term of the series</li>
+<li>The first term on the right involves the second derivative of
+  $\tfrac{1}{1-z}$, and simplifies to $\tfrac{2}{(1-z)^3}$</li>
+<li>The double sum is a partial-sum operation, which corresponds to multiplying
+  by $\tfrac{1}{1-z}$</li>
+</ul>
+<p>Putting it all together, we get</p>
+<p>$$
+C'(z) = \dfrac{2}{(1-z)^3} + \dfrac{2 C(z)}{1 - z}
+$$</p>
+<p>The recurrence has become a first-order linear differential equation.</p>
+<h2 id="solving-the-ode">Solving the ODE</h2>
+<p>To solve</p>
+<p>$$
+C'(z) - \dfrac{2 C(z)}{1 - z} = \dfrac{2}{(1-z)^3}
+$$</p>
+<p>we look for an integrating factor $\rho(z)$ such that
+$\rho'(z) = -\dfrac{2 \rho(z)}{1-z}$. That works out to $\rho(z) = (1-z)^2$.</p>
+<p>Multiplying through:</p>
+<p>$$
+\left( (1-z)^2 C(z) \right)' = \dfrac{2}{1-z}
+$$</p>
+<p>Integrating both sides:</p>
+<p>$$
+(1-z)^2 C(z) = 2 \ln \left( \dfrac{1}{1-z} \right)
+$$</p>
+<p>And so</p>
+<p>$$
+C(z) = \dfrac{2}{(1-z)^2} \ln \left( \dfrac{1}{1-z} \right)
+$$</p>
+<p>That is the generating function for the average number of comparisons in
+quicksort. Not obvious.</p>
+<h2 id="reading-off-the-coefficient">Reading Off the Coefficient</h2>
+<p>Now we extract $C_n = [z^n] C(z)$. The expression $\tfrac{1}{(1-z)^2}$ has
+the well-known expansion $\sum (n+1) z^n$, and $\ln \left( \tfrac{1}{1-z} \right)$
+has the expansion $\sum \tfrac{z^k}{k}$, which is the generating function
+for the sequence $H_k = 1 + \tfrac{1}{2} + \dots + \tfrac{1}{k}$ (the
+harmonic numbers, once you divide by $\tfrac{1}{1-z}$ to accumulate).</p>
+<p>Working through the convolution, we land at</p>
+<p>$$
+C_n = 2(n+1)(H_{n+1} - 1)
+$$</p>
+<p>That is the closed form. Since $H_n \approx \ln n + \gamma$ for large $n$,
+this gives $C_n \sim 2 n \ln n$, which recovers the familiar
+$O(n \log n)$ average case for quicksort - with an actual constant in front
+of it.</p>
+<h2 id="why-this-is-worth-learning">Why This Is Worth Learning</h2>
+<p>The reason this technique is so satisfying is that we started with a
+recurrence that looked completely intractable - $C_n$ depends on the entire
+prefix $C_0, C_1, \dots, C_{n-1}$ - and ended with a clean closed form.</p>
+<p>The mechanical steps are:</p>
+<ol>
+<li>Turn the recurrence into a functional equation in $C(z)$ by multiplying
+   by $z^n$ and summing.</li>
+<li>Solve the functional equation. Sometimes it is algebraic, sometimes it
+   is a differential equation (as here).</li>
+<li>Extract the $n$-th coefficient of the solution.</li>
+</ol>
+<p>In upcoming posts in this series, we will look at simpler examples that
+show how the coefficient extraction step works, including a nice puzzle
+about distributing colored marbles into cans with weird constraints.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our full notes:
+  <a href="https://charlesreid1.com/wiki/Generating_Functions">Generating Functions</a>
+  on the wiki (Sedgewick/Flajolet and Trotter, side by side)</li>
+<li>Knuth-flavored coverage:
+  <a href="https://charlesreid1.com/wiki/AOCP/Generating_Functions">AOCP/Generating Functions</a></li>
+</ul></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/generating-functions.html">generating functions</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/quicksort.html">quicksort</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recurrence.html">recurrence</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sedgewick.html">sedgewick</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+
+</div>
+
+
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/bootstrap-3.3.4.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/d3-3.5.5.js"></script><script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/bootstrap-3.3.4.js"></script>
+
+<footer id="contentinfo" class="body">
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<center>
+	<hr />
+</center>
+<p>&nbsp;</p>
+<p style="text-align: center">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-terminal fa-stack-1x fa-inverse"></i>
+    </span>
+    Made from the command line with vim by 
+    <a href="http://charlesreid1.com">charlesreid1</a><br />
+    with help from <a href="https://getbootstrap.com/">Bootstrap</a> and <a href="http://getpelican.com">Pelican</a>.
+</p>
+
+<br />
+
+<p style="text-align: center">
+    <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-creative-commons fa-stack-1x fa-inverse"></i>
+    </span>
+    </a>
+    <br />
+    Licensed under the <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 License</a>.
+</p>
+
+<!-- Start of StatCounter Code for Default Guide -->
+<script type="text/javascript">
+var sc_project=11611748;
+var sc_invisible=1;
+var sc_security="9fcba820";
+</script>
+<script type="text/javascript"
+src="https://www.statcounter.com/counter/counter.js"
+async></script>
+
+<noscript><div class="statcounter"><a title="Web Analytics"
+href="http://statcounter.com/" target="_blank"><img
+class="statcounter"
+src="//c.statcounter.com/11611748/0/9fcba820/1/" alt="Web
+Analytics"></a></div></noscript>
+<!-- End of StatCounter Code for Default Guide -->
+</footer><!-- /#contentinfo -->
+</body>
+</html>

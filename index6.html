@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Creating Mock API Servers
+                August 2021 TILs
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2020-02-26T22:00:00-08:00" pubdate>Wednesday 02/26/2020</time>
+                <time datetime="2021-12-31T11:08:00-08:00" pubdate>Friday 12/31/2021</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                <a href="https://charlesreid1.github.io/category/til.html">TIL</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/creating-mock-api-servers.html">permalink</a>
+                <a href="https://charlesreid1.github.io/august-2021-tils.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,223 +127,40 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#mock-api-server-class">Mock API Server Class</a><ul>
-<li><a href="#startstop-serving">Start/Stop Serving</a><ul>
-<li><a href="#getting-bind-addressport">Getting Bind Address/Port</a></li>
-<li><a href="#start-serving">Start Serving</a></li>
-<li><a href="#stop-serving">Stop Serving</a></li>
-</ul>
-</li>
-<li><a href="#handling-requests">Handling Requests</a><ul>
-<li><a href="#defining-post-response-method">Defining POST Response Method</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#putting-it-all-together">Putting it all together</a></li>
-</ul>
-</div>
-<h1 id="overview">Overview</h1>
-<p>In this post we discuss a way of mocking an API server during tests.
-This technique will let you create a fake API server that can respond
-to API calls however you want.</p>
-<p>The technique is twofold:</p>
+        <div class="entry-content"><p>This year we've been keeping track of some of the surprising things that we have learned.
+For December, we're compiling a list of some of the things we've learned this year.</p>
+<p>Here are the "Today I Learned", or TILs, from August 2021.</p>
+<p>August 4, 2021:</p>
 <ul>
-<li>
-<p>First, we create a mock API handler that extends <code>BaseHTTPRequestHandler</code>, which is the built-in HTTP server
-  class in Python. We can extend the server class to control how it responds to requests - to implement a
-  method to respond to POST requests, we implement a <code>do_POST()</code> method, to respond to GET requests
-  we implement a <code>do_GET()</code> method, and so on. (In the example below, we restrict the types of requests
-  to JSON content only.)</p>
-</li>
-<li>
-<p>Second, we use the Singleton design pattern, by implementing 
-  two class methods, <code>start_serving()</code> and <code>stop_serving()</code>, that
-  we can call before and after our tests to set up and tear down
-  the fake API server. This method will take care of starting the
-  HTTP server on a separate thread, so that it does not block 
-  execution.</p>
-</li>
+<li>TIL the Boise, Idaho real estate market is booming. :expressionless:
+  (<a href="https://www.youtube.com/watch?v=E2joBjQKe50&amp;t=15m">Link</a>)</li>
 </ul>
-<h1 id="mock-api-server-class">Mock API Server Class</h1>
-<p>Let's start with the mock server class. This is going to extend the
-<code>BaseHTTPRequestHandler</code> class from the <code>http.server</code> module, and
-extend it.</p>
-<p>We implement a stub method for the POST response behavior; this is the
-only type of request that our mock API server will respond to.</p>
-<p>We also have two stub class methods to start and stop the server.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
-    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">pass</span>
-</code></pre></div>
-
-<h2 id="startstop-serving">Start/Stop Serving</h2>
-<p>We start with the two class methods to start and stop the server.</p>
-<h3 id="getting-bind-addressport">Getting Bind Address/Port</h3>
-<p>Define another static method to get the address to bind to, and the
-port to use; in this case we'll hard code values, but this function
-could also find unused networking ports, etc.</p>
-<div class="highlight"><pre><span></span><code>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
-        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
-        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
-        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
-</code></pre></div>
-
-<h3 id="start-serving">Start Serving</h3>
-<p>Next, the <code>start_serving()</code> method should start a thread
-(using the <code>cls._thread</code> attribute to store it for later)
-and create an underlying HTTP server (and using the <code>self._server</code>
-attribute to store it for later):</p>
-<div class="highlight"><pre><span></span><code>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Get the bind address and port</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
-
-        <span class="c1"># Create an HTTP server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
-
-        <span class="c1"># Create a thread to run the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
-
-        <span class="c1"># Start the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-</code></pre></div>
-
-<h3 id="stop-serving">Stop Serving</h3>
-<p>The <code>stop_serving()</code> method stops the thread</p>
-<div class="highlight"><pre><span></span><code>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Shut down the server</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
-
-        <span class="c1"># Let the thread rejoin the worker pool</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
-</code></pre></div>
-
-<h2 id="handling-requests">Handling Requests</h2>
-<p>The mock API server should only process POST requests, and should
-only accept JSON-formatted requests. We can implement those checks
-and have the server return a 500 error if clients do not send a
-properly formatted JSON request.</p>
-<h3 id="defining-post-response-method">Defining POST Response Method</h3>
-<p>To define a response to POST requests made to the API we are mocking,
-we start by validating the JSON request that is received.</p>
-<p>Note: this utilizes several built-in methods of the HTTP server class.</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
-        <span class="c1"># Enforce rule: JSON only</span>
-        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-            <span class="k">return</span>
-        <span class="c1"># Convert received JSON to dict</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
-        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
-
-        <span class="c1"># Process the json</span>
-        <span class="o">...</span>
-</code></pre></div>
-
-<p>Now, the JSON can be processed using a validate function,
-for example, or generic success/failure responses returned
-based on the contents of a request.</p>
-<p>Let's do something very simple: have the API server return
-whatever was sent in the request.</p>
-<p>We can turn the dictionary <code>message</code> (a dictionary containing
-the original request) back into a string, and the string into
-a stream of bytes. Then we can write headers and the stream of
-bytes into the response.</p>
-<div class="highlight"><pre><span></span><code>        <span class="c1"># Send a response</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-</code></pre></div>
-
-<p>The <code>_set_headers()</code> method is a short method that just sends
-(writes) the correct headers:</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-</code></pre></div>
-
-<p>Note: the <code>send_headers()</code> and <code>end_headers()</code> methods are built-in
-to the HTTP server base class we are using.</p>
-<h1 id="putting-it-all-together">Putting it all together</h1>
-<p>Putting it all together, we get one final mock API server class:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
-    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
-        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
-        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
-        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Get the bind address and port</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
-
-        <span class="c1"># Create an HTTP server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
-
-        <span class="c1"># Create a thread to run the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
-
-        <span class="c1"># Start the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Shut down the server</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
-
-        <span class="c1"># Let the thread rejoin the worker pool</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
-        <span class="c1"># Enforce rule: JSON only</span>
-        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-            <span class="k">return</span>
-        <span class="c1"># Convert received JSON to dict</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
-        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
-
-        <span class="c1"># Process the json</span>
-
-        <span class="c1"># Send a response</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-</code></pre></div></div>
+<p>August 6, 2021:</p>
+<ul>
+<li>TIL the Licklider Transmission Protocol is used for point-to-point networks in deep space.
+  (<a href="https://en.wikipedia.org/wiki/Licklider_Transmission_Protocol">Link</a>)</li>
+</ul>
+<p>August 9, 2021:</p>
+<ul>
+<li>TIL Bill Hwang lost $20 billion over the course of 10 days in March 2021.
+  Roughly $1.5M per second. I did not know money could travel at that velocity.
+  (<a href="https://en.wikipedia.org/wiki/Bill_Hwang">Link</a>)</li>
+</ul>
+<p>August 10, 2021:</p>
+<ul>
+<li>TIL you can open a wine bottle with a shoe.
+  (<a href="https://www.youtube.com/watch?v=pELPxMOKtew">Link</a>)</li>
+</ul>
+<p>August 11, 2021:</p>
+<ul>
+<li>TIL about the Dambusters, a Royal Air Force squadron specializing in precision bombing. 
+  (<a href="https://en.wikipedia.org/wiki/No._617_Squadron_RAF#Second_World_War">Link</a>)</li>
+</ul>
+<p>August 16, 2021:</p>
+<ul>
+<li>TIL about Isambard Kingdom Brunel, an English civil engineer considered one of the most ingenious and prolific figures in engineering history.
+  (<a href="https://en.wikipedia.org/wiki/Isambard_Kingdom_Brunel">Link</a>)</li>
+</ul></div>
 
     </div>
 </div>
@@ -355,21 +172,7 @@ to the HTTP server base class we are using.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/http.html">http</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/server.html">server</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/api.html">api</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/flask.html">flask</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/web-server.html">web server</a>
+                    <a href="https://charlesreid1.github.io/tag/til.html">til</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -387,18 +190,18 @@ to the HTTP server base class we are using.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Python: From Args to Kwargs
+                July 2021 TILs
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2020-02-25T16:00:00-08:00" pubdate>Tuesday 02/25/2020</time>
+                <time datetime="2021-12-31T11:07:00-08:00" pubdate>Friday 12/31/2021</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                <a href="https://charlesreid1.github.io/category/til.html">TIL</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/python-from-args-to-kwargs.html">permalink</a>
+                <a href="https://charlesreid1.github.io/july-2021-tils.html">permalink</a>
             </span>
             </p>
         </div>
@@ -415,126 +218,87 @@ to the HTTP server base class we are using.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#the-easy-way-locals">The Easy Way: locals()</a></li>
-<li><a href="#when-locals-wont-work-getting-a-method-signature-programmatically">When locals() Won't Work: Getting a Method Signature Programmatically</a></li>
-<li><a href="#args-to-kwargs-parameter-extraction-from-decorator">Args to Kwargs: Parameter Extraction from Decorator</a></li>
+        <div class="entry-content"><p>This year we've been keeping track of some of the surprising things that we have learned.
+For December, we're compiling a list of some of the things we've learned this year.</p>
+<p>Here are the "Today I Learned", or TILs, from July 2021.</p>
+<p>July 2, 2021:</p>
+<ul>
+<li>TIL Ted Kaczynski, the Unabomber, who went to Harvard to study mathematics when he was 16, was recruited in
+  his sophomore year to participate in a "purposely brutalizing psychological experiment" where students would
+  share their deepest-held beliefs, views, and goals, which were then used to belittle and verbally abuse the
+  students. The study was a part of the CIA's MK-Ultra program studying methods of mind control. 
+  (<a href="https://en.wikipedia.org/wiki/Ted_Kaczynski#Harvard_College">Link</a>)</li>
 </ul>
-</div>
-<h2 id="overview">Overview</h2>
-<p>In this short blog post, we talk about how and when you can take a method signature
-that defines input positional arguments by name, like this:</p>
-<div class="highlight"><pre><span></span><code>def foo(arg1, arg2, arg3):
-    pass
-</code></pre></div>
-
-<p>and write code that will return a dictionary containing a keyword arguments-like structure:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; foo(&#39;red&#39;, &#39;blue&#39;, &#39;green&#39;)
-{
-    &#39;arg1&#39;: &#39;red&#39;,
-    &#39;arg2&#39;: &#39;blue&#39;,
-    &#39;arg3&#39;: &#39;green&#39;
-}
-</code></pre></div>
-
-<p>We will cover an example of writing a decorator that utilizes input arguments from both
-the decorator and from the function it wraps, and how to keep all of that information
-straight.</p>
-<h2 id="the-easy-way-locals">The Easy Way: <code>locals()</code></h2>
-<p>We'll start with the easiest possible wyay to turn args into kwargs: <code>locals()</code>. The <code>locals()</code>
-function is one of the built-in methods provided by Python:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print(help(locals))
-
-Help on built-in function locals in module builtins:
-
-locals()
-    Return a dictionary containing the current scope&#39;s local variables.
-
-    NOTE: Whether or not updates to this dictionary will affect name lookups in
-    the local scope and vice-versa is *implementation dependent* and not
-    covered by any backwards compatibility guarantees.
-</code></pre></div>
-
-<p>This is a straightforward way to get a dictionary of input argument names mapping to
-the values provided by the user:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; def foo(arg1, arg2, arg3):
-...     print(locals())
-...
-&gt;&gt;&gt; foo(&#39;asdf&#39;, &#39;qwerty&#39;, &#39;oioioioi&#39;)
-{&#39;arg3&#39;: &#39;oioioioi&#39;, &#39;arg2&#39;: &#39;qwerty&#39;, &#39;arg1&#39;: &#39;asdf&#39;}
-</code></pre></div>
-
-<h2 id="when-locals-wont-work-getting-a-method-signature-programmatically">When <code>locals()</code> Won't Work: Getting a Method Signature Programmatically</h2>
-<p>Sometimes, <code>locals()</code> won't get you what you need - like when you're decorating a function,
-and you don't have the original method signature.</p>
-<p>In that case, you can still use a function handle and get the original positional argument
-names from the function signature.</p>
-<p>In Python, the signature of a method can be obtained using the <code>inspect</code> module's
-<code>signature()</code> method, which can be passed a function:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; import inspect
-&gt;&gt;&gt; def foo(arg1, arg2, arg3):
-...      pass
-...
-&gt;&gt;&gt; print(inspect.signature(foo))
-(arg1, arg2, arg3)
-</code></pre></div>
-
-<p>The <code>_parameters</code> attribute of the signature will yield an ordered list of parameters in the
-method signature, which is equivalent to the variable names that are used in the method
-definition (<code>arg1</code>, <code>arg2</code>, and <code>arg3</code> in the example <code>foo()</code> function above):</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print(list(inspect.signature(foo)._parameters))
-[&#39;arg1&#39;, &#39;arg2&#39;, &#39;arg3&#39;]
-</code></pre></div>
-
-<h2 id="args-to-kwargs-parameter-extraction-from-decorator">Args to Kwargs: Parameter Extraction from Decorator</h2>
-<p>We can use this to get the original variable names from a function handle, even if we don't
-have its original method signature (i.e., if we're a decorator and are just passed the function).</p>
-<p>Here is an example of a decorator that extracts positional arguments from the function it
-decorates (and prints them out!):</p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">inspect</span>
-
-<span class="k">def</span> <span class="nf">real_decorator</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
-    <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-
-        <span class="c1"># This is where the interesting stuff starts!</span>
-        <span class="c1"># We have a handle to a function that we&#39;re</span>
-        <span class="c1"># decorating, but we don&#39;t have its original</span>
-        <span class="c1"># method signature.</span>
-        <span class="c1"># No sweat. Turn positional args into augmented</span>
-        <span class="c1"># kwargs!</span>
-        <span class="n">func_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">sig</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">wrapper</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">sig</span><span class="o">.</span><span class="n">_parameters</span><span class="p">)):</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">func_kwargs</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
-                <span class="c1"># Unspecified positional argument</span>
-                <span class="c1"># (using default value)</span>
-                <span class="k">pass</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;wrapper extracted the following params: </span><span class="si">{</span><span class="n">func_kwargs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">wrapper</span>
-
-<span class="c1"># don&#39;t forget to top it off</span>
-<span class="c1"># by decorating a simple function</span>
-<span class="c1"># and calling it if script is run</span>
-<span class="nd">@real_decorator</span>
-<span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="p">,</span> <span class="n">arg3</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;hello world!&quot;</span><span class="p">)</span>
-
-<span class="k">if</span>  <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="n">foo</span><span class="p">(</span><span class="s1">&#39;asdf&#39;</span><span class="p">,</span> <span class="s1">&#39;qwerty&#39;</span><span class="p">,</span> <span class="s1">&#39;wioioioio&#39;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>And when run, the result is:</p>
-<div class="highlight"><pre><span></span><code>$ py five.py
-wrapper extracted the following params: {&#39;arg1&#39;: &#39;asdf&#39;, &#39;arg2&#39;: &#39;qwerty&#39;, &#39;arg3&#39;: &#39;wioioioio&#39;}
-hello world!
-</code></pre></div></div>
+<p>July 8, 2021:</p>
+<ul>
+<li>TIL Nunavut is a territory of Canada that was formed in 1999 and provided to the Inuit people for independent
+  governance. (<a href="https://en.wikipedia.org/wiki/Nunavut">Link</a>)</li>
+</ul>
+<p>July 9, 2021:</p>
+<ul>
+<li>
+<p>TIL people 55 and older own 72% of the wealth in the US; they make up 28.5% of the population. 
+  (Source: USA FACTS, via PBS News Hour)</p>
+</li>
+<li>
+<p>TIL that throughout most of the 2010s, the population of millennials was soaring, but number of households headed
+  by people under 35 was declining. But since 2016, household formation rates among millennials have been rising,
+  with the pandemic having only a short term negative impact on that trend. 
+  (Source: Harvard report, <a href="https://www.jchs.harvard.edu/sites/default/files/reports/files/Harvard_JCHS_State_Nations_Housing_2021.pdf">"The State of the Nation's
+  Housing"</a>)</p>
+</li>
+</ul>
+<p>July 10, 2021:</p>
+<ul>
+<li>TIL how modifying the number of suits and number of cards per suit in a deck of cards can affect the relative
+  probability of the most rare outcomes (straight, flush, and full house). <ul>
+<li>For example, for regular deck of cards, 13 cards per suit, 4 suits, the ranking is straights lose to flushes lose
+  to full houses. </li>
+<li>But if you use a modified deck with 13 cards per suit and 8 suits
+  (clubs/spades/diamonds/hearts/tridents/roses/hatchets/doves), straights are easier, as are full houses, so
+  the ranking becomes straights lose to full houses lose to flushes. </li>
+<li>Related: <a href="https://charlesreid1.com/wiki/Cards">https://charlesreid1.com/wiki/Cards</a></li>
+</ul>
+</li>
+</ul>
+<p>July 11, 2021:</p>
+<ul>
+<li>TIL about apscheduler (advanced Python scheduler), which allows you to run Python code at specified dates, intervals,
+  or schedules. (<a href="https://apscheduler.readthedocs.io/en/stable/userguide.html">Link</a>)</li>
+</ul>
+<p>July 15, 2021:</p>
+<ul>
+<li>TIL that giant brushes make cows very happy. (<a href="https://www.youtube.com/watch?v=h3SG72cKA9o">Link</a>)</li>
+</ul>
+<p>July 16, 2021:</p>
+<ul>
+<li>TIL about the gamer motivation model. There is a survey by the inventors to see what kind of a gamer you are.
+  I am a bounty hunter. (<a href="https://quantic.page.link/cUacLBeXB2tdmEm67">Link</a>)</li>
+</ul>
+<p>July 17, 2021:</p>
+<ul>
+<li>TIL that China was formerly referred to as the Celestial Empire. It was common in 19th century US, Canada, and Australia.
+  The name originates from how the Chinese characters for "China" are translated (basically, celestial/heavenly dynasty)</li>
+</ul>
+<p>July 18, 2021:</p>
+<ul>
+<li>TIL you can calculate the perimeter of a Möbius strip, all you have to do is integrate a complex parametric curve from
+  0 to 4π (also fun fact, it can't be done analytically). (<a href="https://mathworld.wolfram.com/MoebiusStrip.html">Link</a>)</li>
+</ul>
+<p>July 30, 2021:</p>
+<ul>
+<li>TIL: Monrovia, the capital of Liberia, is named after US President James Monroe. (It's the second capital city
+  named after a US president, the other being Washington DC.) It was called that because in 1816 a group of
+  emancipated slaves arrived there under the American Colonization Society, with support from the US government.
+  They named the city after James Monroe because of his support of the colony as a place for emancipated slaves to go,
+  if they preferred that to life as an emancipated slave in the US.</li>
+</ul>
+<p>July 31, 2021:</p>
+<ul>
+<li>TIL there's a branch of mathematics called braid theory, that is a kind of intersection of topology and
+  linear algebra, and has some really interesting applications (and visualizations). 
+  (<a href="https://encyclopediaofmath.org/wiki/Braid_theory">Link</a>)</li>
+</ul></div>
 
     </div>
 </div>
@@ -546,17 +310,7 @@ hello world!
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/arguments.html">arguments</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/functions.html">functions</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/methods.html">methods</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/parameters.html">parameters</a>
+                    <a href="https://charlesreid1.github.io/tag/til.html">til</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -574,18 +328,18 @@ hello world!
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Confuse-A-Constructor: When Class A's Constructor Returns Objects of Type B
+                June 2021 TILs
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2020-02-22T13:00:00-08:00" pubdate>Saturday 02/22/2020</time>
+                <time datetime="2021-12-31T11:06:00-08:00" pubdate>Friday 12/31/2021</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                <a href="https://charlesreid1.github.io/category/til.html">TIL</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/confuse-a-constructor-when-class-as-constructor-returns-objects-of-type-b.html">permalink</a>
+                <a href="https://charlesreid1.github.io/june-2021-tils.html">permalink</a>
             </span>
             </p>
         </div>
@@ -602,215 +356,45 @@ hello world!
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#confuse-a-constructor">Confuse-A-Constructor</a></li>
-<li><a href="#what-is-the-constructor">What is the constructor?</a></li>
-<li><a href="#rewiring-the-constructor-to-do-weird-stuff">Rewiring the constructor to do... weird stuff</a></li>
-<li><a href="#a-simple-example-class">A simple example class</a></li>
-<li><a href="#adding-a-__new__-method">Adding a __new__ method</a></li>
-<li><a href="#when-__new__-returns-objects-not-classes">When __new__ returns objects, not classes</a></li>
-<li><a href="#moving-beyond-argparse">Moving beyond argparse</a></li>
-<li><a href="#using-__new__-in-your-patterns">Using __new__ in your patterns</a></li>
-</ul>
-</div>
-<h2 id="confuse-a-constructor">Confuse-A-Constructor</h2>
-<p>Today, we are going to confuse a constructor.</p>
-<iframe allowFullScreen="allowFullScreen" src="https://www.youtube.com/embed/1tsIxNci_dE?ecver=1&amp;iv_load_policy=1&amp;rel=0&amp;yt:stretch=16:9&amp;autohide=1&amp;color=red&amp;width=560&amp;width=560" width="560" height="315" allowtransparency="true" frameborder="0">
-    <script type="text/javascript">function execute_YTvideo(){return youtube.query({ids:"channel==MINE",startDate:"2019-01-01",endDate:"2019-12-31",metrics:"views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained",dimensions:"day",sort:"day"}).then(function(e){},function(e){console.error("Execute error",e)})}</script>
-</iframe>
-
-<h2 id="what-is-the-constructor">What is the constructor?</h2>
-<p>One of the first concepts encountered in object-oriented programming
-is that of the <em>constructor</em>, the method that is run immediately after
-an object is instantiated that configures and initializes the object.</p>
-<p>In Python, a constructor is defined by the <code>__init__</code> function.
-The constructor is not permitted to return a value, because
-constructing a new instance of class A should result in an object
-of type A. Returning something would just be confusing things.</p>
-<p>But does it ever make sense for a constructor of class A to return
-an object of type B? And if it does make sense, how do we go about
-doing it?</p>
-<h2 id="rewiring-the-constructor-to-do-weird-stuff">Rewiring the constructor to do... weird stuff</h2>
-<p>The answer lies in Python's <code>__new__</code> method, which is a method called
-when a class is defined (not instantiated). The <code>__new__</code> method is
-different from the <code>__init__</code> method, and does not do the same thing.</p>
-<p>The <code>__new__</code> method for class A should only return the type of class A.
-If <code>__new__</code> returns anything else, Python will not run the <code>__init__</code>
-method for class A.</p>
-<p>For example, suppose we want a wrapper class that transparently constructs
-different kinds of objects conditionally - based on a configuration file,
-or the state of a file, or some other condition. We want to construct an
-object of type A and get back an object of type B, C, or D. How to do that?</p>
-<p>First, let's look at how the <code>__new__</code> method works.</p>
-<h2 id="a-simple-example-class">A simple example class</h2>
-<p>Start with a simple example class:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instance of class A created&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Executing this gives:</p>
-<div class="highlight"><pre><span></span><code>In [3]: my_object = A()
-Instance of class A created
-
-In [4]: my_object.hello()
-Hello world
-</code></pre></div>
-
-<h2 id="adding-a-__new__-method">Adding a <code>__new__</code> method</h2>
-<p>Now let's look at a class A where we define the <code>__new__</code> method. This method
-controls how the instantiation of objects of type A work, so we can do something
-like limiting the creation of objects of type A to when a certain condition is
-met:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">random</span>
-
-<span class="k">def</span> <span class="nf">tossCoin</span><span class="p">():</span>
-    <span class="k">if</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">True</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">False</span>
-
-<span class="k">class</span> <span class="nc">A5050</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">tossCoin</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Count not create instance&quot;</span><span class="p">)</span>
-        <span class="n">instance</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">A5050</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">instance</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instance of class A5050 created&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Now we can run this block of code:</p>
-<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">make_a5050</span><span class="p">():</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">my_object</span> <span class="o">=</span> <span class="n">A5050</span><span class="p">()</span>
-        <span class="n">my_object</span><span class="o">.</span><span class="n">hello</span><span class="p">()</span>
-    <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Better luck next time!&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>It takes a few tries:</p>
-<div class="highlight"><pre><span></span><code>In [9]: make_a5050()
-Better luck next time!
-
-In [10]: make_a5050()
-Instance of class A5050 created
-Hello world
-</code></pre></div>
-
-<p>The <code>__new__</code> method for the <code>A5050</code> class raises a runtime error
-with a 50% probability. Otherwise, it calls the <code>__new__</code> method
-of the parent class (<code>object</code>, which returns a class of type <code>object</code>).
-We pass the same arguments and keyword arguments (args/kwargs) on to the
-super class <code>__new__</code>, but we could optionally modify them here (say, add
-a keyword, or check the state of a file, or etc.).</p>
-<p>This is just an example of how the instantiation behavior of a class
-can be modified before its constructor is even called by using the
-<code>__new__</code> method.</p>
-<h2 id="when-__new__-returns-objects-not-classes">When <code>__new__</code> returns objects, not classes</h2>
-<p>In the above example, our <code>__new__</code> method returned the result of
-a call to <code>__new__</code> of a parent class. What happens if <code>__new__</code>
-returns something else?</p>
-<p>First, repeating an important point made above: if <code>__new__</code> for a class
-returns anything <em>other</em> than that class type, then <code>__init__</code> will not 
-be called for that class.</p>
-<p>That means that the <code>__new__</code> method should <em>either</em> return a class (if
-returning the type of its parent class, like a normal <code>__new__</code> method
-does), <em>or</em> it should return an instantiated object.</p>
-<p>Let's imagine that we want to create different instances of different
-classes based on a command line flag passed to the script:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">BaseClass</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world from class </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
-
-<span class="k">class</span> <span class="nc">B</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">C</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">D</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">B</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">B</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">C</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">C</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">D</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">D</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Could not create instance&quot;</span><span class="p">)</span>
-
-<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="nn">argparse</span>
-
-    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-B&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type B&#39;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-C&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type C&#39;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-D&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type D&#39;</span><span class="p">)</span>
-
-    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-
-    <span class="n">a</span> <span class="o">=</span> <span class="n">A</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
-</code></pre></div>
-
-<p>Now if we run this script and pass it different flags, we get
-a variable <code>a</code> with different types:</p>
-<div class="highlight"><pre><span></span><code>$ py wat2.py -h
-usage: wat2.py [-h] [-B] [-C] [-D]
-
-optional arguments:
-  -h, --help  show this help message and exit
-  -B          Return object of type B
-  -C          Return object of type C
-  -D          Return object of type D
-</code></pre></div>
-
-<p>Now try the three flags:</p>
-<div class="highlight"><pre><span></span><code>$ py wat2.py -B
-&lt;class &#39;__main__.B&#39;&gt;
-
-$ py wat2.py -C
-&lt;class &#39;__main__.C&#39;&gt;
-
-$ py wat2.py -D
-&lt;class &#39;__main__.D&#39;&gt;
-</code></pre></div>
-
-<h2 id="moving-beyond-argparse">Moving beyond argparse</h2>
-<p>The example above shows how the constructor can use
-argparse options to determine what kind of object
-to return with <code>__new__</code>, but you can use other
-types of conditions as well:</p>
+        <div class="entry-content"><p>This year, we've been keeping track of some of the surprising things that we have learned.</p>
+<p>We call these "Today I Learned", or TILs. We have a private Slack channel set up to keep track
+of these, and occasionally we scrape the channel and collect the new TILs into a list.</p>
+<p>Once you have a list, it makes it easy to review the things you've learned, and share it with
+other people!</p>
+<p>Here are the "Today I Learned", or TILs, from June 2021.</p>
+<p>June 27, 2021:</p>
 <ul>
-<li>using command line options (see argparse example above)</li>
-<li>using configuration file options</li>
-<li>using environment variable values</li>
-<li>checking status of a file or port</li>
-<li>checking whether internet connection is available</li>
+<li>TIL "headship" is a word.</li>
 </ul>
-<h2 id="using-__new__-in-your-patterns">Using <code>__new__</code> in your patterns</h2>
-<p>We have already covered the <a href="#">Registry</a>
-pattern in a prior blog post, but the
-<code>__new__</code> method lends itself well to
-all kinds of other patterns, including the
-Singleton pattern and the Factory pattern.</p>
-<p>There are some very useful patterns covered
-in this Github repository: <a href="https://github.com/faif/python-patterns">https://github.com/faif/python-patterns</a></p></div>
+<p>June 29, 2021:</p>
+<ul>
+<li>
+<p>TIL Superfund sites name a Potentially Responsible Party (PRP) who is held responsible (through legal and administrative actions) for cleaning up the site.
+  (<a href="https://www.epa.gov/superfund/superfund-glossary#p">Link</a>)</p>
+</li>
+<li>
+<p>TIL that Operation Valuable/Fiend, an early CIA operation to overthrow the leftist government of
+  Albania. It was sabotaged by Kim Philby, a Cambridge-educated double agent working as a Soviet mole inside MI6
+  (British Intelligence Service). (<a href="https://en.wikipedia.org/wiki/Operation_Valuable#Valuable_Project/Fiend">Link</a>)</p>
+</li>
+<li>
+<p>TIL about the Philby Tape. In a secret videotape from 1981, discovered by the BBC in the Stasi
+  (East German Secret Police) archives in 2016, Philby describes his experience being recruited as a Soviet spy,
+  his role in sabotaging various operations, and why he believes that his sabotage of Operation Valuable/Fiend
+  prevented World War 3. (<a href="https://www.bbc.co.uk/sounds/play/b076v1zq">Link</a>)</p>
+</li>
+</ul>
+<p>June 30, 2021:</p>
+<ul>
+<li>
+<p>TIL ginger, cardamom, and tumeric are all in the same plant family.
+  (<a href="https://en.wikipedia.org/wiki/Ginger">Link</a>)</p>
+</li>
+<li>
+<p>TIL the world produced 2.8 million tons of ginger in 2018. (I have no idea how to put that into
+  perspective.) (<a href="https://en.wikipedia.org/wiki/Ginger">Link</a>)</p>
+</li>
+</ul></div>
 
     </div>
 </div>
@@ -822,13 +406,7 @@ in this Github repository: <a href="https://github.com/faif/python-patterns">htt
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/constructor.html">constructor</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/object-oriented-programming.html">object oriented programming</a>
+                    <a href="https://charlesreid1.github.io/tag/til.html">til</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -871,8 +449,59 @@ in this Github repository: <a href="https://github.com/faif/python-patterns">htt
 
         <div class="well">
 
+            <h2>December 2022</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/notes-on-italo-calvinos-six-memos-for-the-next-millennium.html">Notes on Italo Calvino's <i>Six Memos for the Next Millennium</i></a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>November 2022</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-bums-peter-golenbocks-oral-history-of-the-brooklyn-dodgers.html">Reading <i>Bums</i>: Peter Golenbock's Oral History of the Brooklyn Dodgers</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>October 2022</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/generating-functions-part-3-ternary-strings-and-exponential-generating-functions.html">Generating Functions Part 3: Ternary Strings and Exponential Generating Functions</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/generating-functions-part-2-marbles-in-a-can.html">Generating Functions Part 2: Marbles in a Can</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/generating-functions-part-1-solving-the-quicksort-recurrence.html">Generating Functions Part 1: Solving the Quicksort Recurrence</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/a-pair-of-dice-games-or-why-chevalier-de-mere-lost-money.html">A Pair of Dice Games (or, Why Chevalier de Méré Lost Money)</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
             <h2>June 2022</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/installing-latex-packages-on-macos-the-librarytexmf-layout.html">Installing LaTeX Packages on macOS: The `~/Library/texmf` Layout</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/how-to-subscribe-to-infinite-mailing-lists.html">How to Subscribe to Infinite Mailing Lists</a>
             </p>
