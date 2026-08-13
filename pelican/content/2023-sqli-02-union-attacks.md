@@ -2,7 +2,6 @@ Title: SQL Injection UNION Attacks: Turning a Product Listing Into a User Dump
 Date: 2023-05-21 17:00
 Category: Security
 Tags: security, sql injection, sqli, union, portswigger, burp suite
-Status: draft
 
 Part 3 of our
 [PortSwigger Web Security Academy series](working-through-the-portswigger-web-security-academy.html).

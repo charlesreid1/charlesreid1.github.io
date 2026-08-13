@@ -2,7 +2,6 @@ Title: Blind SQL Injection with Conditional Errors (and Oracle's `dual` Table)
 Date: 2023-05-22 21:00
 Category: Security
 Tags: security, sql injection, sqli, blind sqli, oracle, burp suite, portswigger
-Status: draft
 
 Part 5 of our
 [PortSwigger Web Security Academy series](working-through-the-portswigger-web-security-academy.html).

@@ -2,7 +2,6 @@ Title: Blind SQL Injection with Conditional Responses
 Date: 2023-05-22 14:00
 Category: Security
 Tags: security, sql injection, sqli, blind sqli, portswigger, burp suite
-Status: draft
 
 Part 4 of our
 [PortSwigger Web Security Academy series](working-through-the-portswigger-web-security-academy.html).

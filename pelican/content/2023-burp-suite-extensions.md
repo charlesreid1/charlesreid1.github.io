@@ -2,7 +2,6 @@ Title: Two Burp Suite Extensions Worth Installing: JWT Editor and Hackvertor
 Date: 2023-06-04 20:30
 Category: Security
 Tags: security, burp suite, extensions, jwt, encoding, portswigger
-Status: draft
 
 Short post, high signal-to-noise. If you're using
 [Burp Suite](https://charlesreid1.com/wiki/Burp_Suite) for web security

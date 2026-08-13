@@ -2,7 +2,6 @@ Title: Working Through the PortSwigger Web Security Academy
 Date: 2023-05-20 20:00
 Category: Security
 Tags: security, web security, portswigger, burp suite, owasp, pentesting
-Status: draft
 
 This post is part 1 of a series. We spent a chunk of May and June 2023
 working through the [PortSwigger Web Security Academy](https://portswigger.net/web-security)

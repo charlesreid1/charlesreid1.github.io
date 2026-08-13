@@ -2,7 +2,6 @@ Title: SQL Injection Fundamentals: Four Attack Shapes
 Date: 2023-05-21 14:00
 Category: Security
 Tags: security, sql injection, sqli, portswigger, web security, owasp
-Status: draft
 
 This is part 2 of our series on working through the
 [PortSwigger Web Security Academy](working-through-the-portswigger-web-security-academy.html).
