@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Approximating Pi (Happy Pi Day)
+                Graphs for Bioinformatics, Part 2: Finding Eulerian Paths
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-03-14T16:20:00-07:00" pubdate>Thursday 03/14/2019</time>
+                <time datetime="2019-05-07T16:00:00-07:00" pubdate>Tuesday 05/07/2019</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/approximating-pi-happy-pi-day.html">permalink</a>
+                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-2-finding-eulerian-paths.html">permalink</a>
             </span>
             </p>
         </div>
@@ -128,293 +128,361 @@
     <div class="col-md-12" style="text-align: left;">
 
         <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#favorite-pi-approximations">Favorite Pi Approximations</a></li>
-<li><a href="#continued-fractions-and-convergents">Continued Fractions and Convergents</a></li>
-<li><a href="#simple-continued-fractions-to-approximate-pi">Simple Continued Fractions to Approximate Pi</a></li>
-<li><a href="#general-continued-fractions-to-approximate-pi">General Continued Fractions to Approximate Pi</a></li>
-<li><a href="#odd-squares-and-twos">Odd Squares and Twos</a></li>
-<li><a href="#odd-squares-threes-and-sixes">Odd Squares, Threes, and Sixes</a></li>
-<li><a href="#when-to-use-simple-vs-general-continued-fractions">When to Use Simple Vs. General Continued Fractions</a></li>
-<li><a href="#a-note-on-the-program">A Note on the Program</a></li>
+<li><a href="#the-context-de-bruijn-graphs">The Context: de Bruijn Graphs</a></li>
+<li><a href="#assembling-the-de-bruijn-graph">Assembling the de Bruijn Graph</a><ul>
+<li><a href="#directed-graph-representation-adjacency-list">Directed Graph Representation: Adjacency List</a></li>
+<li><a href="#a-quick-example">A Quick Example</a></li>
+<li><a href="#python-vs-go">Python vs Go</a></li>
+<li><a href="#directed-graph-class-python-implementation">Directed Graph Class: Python Implementation</a></li>
+</ul>
+</li>
+<li><a href="#checking-for-eulerian-paths-and-cycles">Checking for Eulerian Paths and Cycles</a></li>
+<li><a href="#algorithm-building-blocks">Algorithm Building Blocks</a><ul>
+<li><a href="#depth-first-search">Depth First Search</a></li>
+<li><a href="#kosarajus-algorithm-connected-components">Kosaraju's Algorithm: Connected Components</a></li>
+</ul>
+</li>
+<li><a href="#to-be-continued">To Be Continued...</a></li>
 </ul>
 </div>
-<h2 id="favorite-pi-approximations">Favorite Pi Approximations</h2>
-<p>What's your favorite <span class="math">\(\pi\)</span> approximation?</p>
-<p>Some of my favorite approximations of <span class="math">\(\pi\)</span> come from
-<a href="https://en.wikipedia.org/wiki/Ramanujan%E2%80%93Sato_series">Ramanujan-Sato series</a>.
-These are mathematical series that generalize from 
-a remarkable formula for <span class="math">\(\pi\)</span> given by <a href="https://en.wikipedia.org/wiki/Srinivasa_Ramanujan">Srinivasa Ramanujan</a>,
-an Indian mathematician:</p>
-<div class="math">$$
-\pi^{-1} = \dfrac{\sqrt{8}}{99^2} \sum_{k \geq 0} \dfrac{ (4k)! }{ \left( 4^k k! \right)^4 } \dfrac{ 1103 + 26390k }{ 99^{4k} } 
-$$</div>
-<p>This completely novel formula opened up new branches of mathematics
-and provided a whole new class of <span class="math">\(\pi\)</span> approximations (the Ramanujan-Sato
-series) and approximations that are extremely accurate, making them
-very useful for computer applications. (Each term of the above sequence 
-yields 8 additional decimal points of accuracy of <span class="math">\(\pi\)</span>.) These 
-approximations have also enabled world record calculations of 
-numbers of digits of <span class="math">\(\pi\)</span>.</p>
-<p>But those are not the <span class="math">\(\pi\)</span> approximations that this blog post is about. </p>
-<p>This blog post is about another set of <span class="math">\(\pi\)</span> approximations
-that I like - these come from another field Ramanujan had mastery
-over, continued fractions. </p>
-<p>Continued fractions provide a whole alternative way of representing
-all the real numbers - rational and irrational.</p>
-<h2 id="continued-fractions-and-convergents">Continued Fractions and Convergents</h2>
-<p>Back in <a href="https://charlesreid1.github.io/computing-square-roots-part-2-using-continued-fractions.html">July of 2017</a>, 
-we wrote a blog post about how to find rational approximations
-of square roots using continued fractions and convergents, and we
-implemented a Java program to represent the irrational number 
-<span class="math">\(\sqrt{n}\)</span> (where <span class="math">\(n\)</span> is not a perfect square).</p>
-<p>In short, continued fractions are a way of expressing numbers, 
-rational and irrational, in terms of recursive fractions, which 
-look something like this:</p>
-<div class="math">$$
-x = b_0 + \cfrac{1}{
-        b_1 + \cfrac{1}{
-            b_2 + \cfrac{1}{
-                b_3 + \cfrac{1}{
-                    b_4 + \cfrac{1}{
-                        b_5 + \dots
-                    }
-                }
-            }
-        }
-    }
-$$</div>
-<p>denoted</p>
-<div class="math">$$
-[b_0; b_1, b_2, b_3, \dots]
-$$</div>
-<p>and, when evaluated, results in a series of fractions
-(rational approximations) called the convergents of 
-the continued fraction.</p>
-<p>In the denominator of the above representation, we have
-a 1 in each position, which makes the continued fraction
-a <em>simple</em> continued fraction. If the denominators are 
-not 1, the continued fraction is a <em>general</em> continued
-fraction.</p>
-<p>The continued fraction expansion of any rational number
-(or equivalently, the sequence of convergents) must 
-terminate at some point (even if the number of terms
-ends up being very large).</p>
-<p>The convergents always terminate if a number is rational.
-Conversely, if you can prove a number's continued fraction
-representation is a repeated sequence or continues forever,
-you can prove a number is irrational (a strategy employed in
-several proofs about properties of <span class="math">\(\pi\)</span>).</p>
-<h2 id="simple-continued-fractions-to-approximate-pi">Simple Continued Fractions to Approximate Pi</h2>
-<p>For <span class="math">\(\pi\)</span>, the convergents of the simple continued fraction
-(there is a single unique simple continued fraction representation 
-of <span class="math">\(\pi\)</span>) are unpredictable; the first few are:</p>
-<div class="math">$$
-\pi = [3; 7, 15, 1, 292, 1, 1, 1, 2, 1, 3, 1, 14, 2...]
-$$</div>
-<p>Each additional term leads to increasingly precise
-fractional approximations for <span class="math">\(\pi\)</span>; they are:</p>
-<div class="math">$$
-[3;7] = \dfrac{22}{7} = 3.\overline{142857}
-$$</div>
-<div class="math">$$ 
-[3;7,15] = \dfrac{333}{106} = 3.1415094...
-$$</div>
-<div class="math">$$ 
-[3;7,15,1] = \dfrac{355}{113} = 3.1415929...
-$$</div>
-<div class="math">$$ 
-[3;7,15,1,292] = \dfrac{103993}{33102} = 3.14159265...
-$$</div>
-<h2 id="general-continued-fractions-to-approximate-pi">General Continued Fractions to Approximate Pi</h2>
-<p>Every number has exactly one representation as a
-simple continued fraction, if we restrict the
-values of <span class="math">\(b_i\)</span> to be positive.</p>
-<p>However, if we generalize the simple continued
-fraction to allow any integer in the numerator
-of the continued fractions, we get a general
-continued fraction:</p>
-<div class="math">$$
-x = b_0 + \cfrac{a_1}{
-        b_1 + \cfrac{a_2}{
-            b_2 + \cfrac{a_3}{
-                b_3 + \cfrac{a_4}{
-                    b_4 + \cfrac{a_5}{
-                        b_5 + \dots
-                    }
-                }
-            }
-        }
-    }
-$$</div>
-<p>Unlike simple continued fractions, one number can
-be expressed in many ways with many different
-general continued fractions.</p>
-<p>We use two general continued fractions as well
-as the simple continued fraction representation
-of <span class="math">\(\pi\)</span> to generate some <span class="math">\(\pi\)</span> approximations 
-below.</p>
-<h2 id="odd-squares-and-twos">Odd Squares and Twos</h2>
-<p>The following general continued fraction</p>
-<div class="math">$$
-\dfrac{4}{\pi} = 1 + \cfrac{1^2}{
-                        2 + \cfrac{3^2}{
-                            2 + \cfrac{5^2}{
-                                2 + \cfrac{7^2}{
-                                    2 + \cfrac{9^2}{
-                                        2 + \dots
-                                    }
-                                }
-                            }
-                        }
-                    }
-$$</div>
-<p>can be turned into approximations for <span class="math">\(\pi\)</span> by finding
-the convergents of the above continued fraction, then
-reversing the numerator and denominator and multilpying
-the new numerator by 4.</p>
-<p>Implementing a recurrence to turn the above
-into convergents and printing the first 24
-terms and their approximate value:</p>
-<div class="highlight"><pre><span></span><code>                                      Pi
-Convergent                                                          Approx 
---------------------------------------------------------------------------------
-8 / 3                                                               2.6666666666666665
-52 / 15                                                             3.4666666666666668
-304 / 105                                                           2.8952380952380952
-3156 / 945                                                          3.3396825396825398
-30936 / 10395                                                       2.9760461760461761
-443748 / 135135                                                     3.2837384837384835
-6115680 / 2027025                                                   3.0170718170718169
-112074660 / 34459425                                                3.2523659347188758
-1991580840 / 654729075                                              3.0418396189294024
-44442113940 / 13749310575                                           3.2323158094055926
-967171378320 / 316234143225                                         3.0584027659273318
-25444221030900 / 7905853580625                                      3.2184027659273320
-655370553511800 / 213458046676875                                   3.0702546177791836
-19859578238549700 / 6190283353629375                                3.2081856522619421
-590885791980523200 / 191898783962510625                             3.0791533941974261
-20266826271207308100 / 6332659870762850625                          3.2003655154095472
-684008280009204381000 / 221643095476699771875                       3.0860798011238333
-26194878742247361184500 / 8200794532637891559375                    3.1941879092319412
-988797092817095519958000 / 319830986772877770815625                 3.0916238066678385
-41820004752592427401540500 / 13113070457687988603440625             3.1891847822775947
-1745807922530722423852479000 / 563862029680583509947946875          3.0961615264636411
-80816804632604843113153342500 / 25373791335626257947657609375       3.1850504153525301
-3696894652389922594527576660000 / 1192568192774434123539907640625   3.0999440323738066
+<h1 id="the-context-de-bruijn-graphs">The Context: de Bruijn Graphs</h1>
+<p>In <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Part 1 of this post</a>
+we discussed a data structure called a de Bruijn graph and covered its application
+to genome assembly. To summarize, a de Bruijn graph is a type of graph that represents
+a set of k-mers as a set of directed edges on a graph, connecting the k-mer's (k-1)-mer prefix
+(the source vertex) to the k-mer's (k-1)-mer suffix (the destination vertex).</p>
+<p>As an example, if <span class="math">\(k = 5\)</span>, we can represent the k-mer "AAGCT" as an edge connecting the vertex
+<code>AAGC</code> to the vertex <code>AGCT</code>.</p>
+<p>The de Bruijn graph is used to solve a set of problems on <a href="https://rosalind.info">Rosalind.info</a>,
+a website with bioinformatics programming challenges, as part of working through the
+textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
+and its associated website (<a href="https://rosalind.info">Rosalind.info</a>).</p>
+<h1 id="assembling-the-de-bruijn-graph">Assembling the de Bruijn Graph</h1>
+<p>The problems from Rosalind.info that require the use of a de Bruijn graph come from
+Chapter 3. These problems generally give the user either a list of k-mers (to assemble
+into a de Bruijn graph, as in problem <a href="http://rosalind.info/problems/ba3e/">BA3E</a>) 
+or a long sequence of DNA (which can be turned into a list of
+k-mers and assembled into a de Bruijn graph, as in problem <a href="http://rosalind.info/problems/ba3d/">BA3D</a>).</p>
+<p>If we are starting with a long string of DNA, we can run through the entire string
+and extract k-mers using a sliding window. For a string of DNA of length <span class="math">\(d\)</span>, this procedure
+will create <span class="math">\(d - k + 1\)</span> k-mers.</p>
+<h2 id="directed-graph-representation-adjacency-list">Directed Graph Representation: Adjacency List</h2>
+<p>The de Bruijn graph is a directed graph. To represent this
+graph in memory, we utilize an adjacency list data structure.
+An adjacency list is a key-value lookup table (implemented using
+a hash map) wherein each <em>source vertex</em> in the graph is a key 
+in the lookup table, and the corresponding value is a list of
+all <em>destination vertices</em> (all vertices that have a directed
+edge starting from the source vertex and ending at that vertex).</p>
+<p>A Python dictionary can be used to implement the adjacency list
+hash table. The dictionary keys are the source vertices (or rather,
+their string labels), and the dictionary values are a list of 
+destination vertices (a list of their string labels).</p>
+<p>Thus, the graph <code>AA -&gt; BB -&gt; CC -&gt; DD</code> would be represented with
+the hash table:</p>
+<div class="highlight"><pre><span></span><code>adjacency_list[&#39;AA&#39;] = [&#39;BB&#39;]
+adjacency_list[&#39;BB&#39;] = [&#39;CC&#39;]
+adjacency_list[&#39;CC&#39;] = [&#39;DD&#39;]
 </code></pre></div>
 
-<p>(16 decimal points are printed for decimal approximations above.)</p>
-<p>This exhibits a pattern seen with general
-continued fractions, which is that they tend
-to jump above and below the value they approximate,
-depending on whether there are an even or odd
-number of terms in the continued fraction
-being included.</p>
-<h2 id="odd-squares-threes-and-sixes">Odd Squares, Threes, and Sixes</h2>
-<p>Another related continued fraction, this one for
-<span class="math">\(\pi\)</span> and with a more predictable pattern,
-is given by:</p>
-<div class="math">$$
-\pi = 3 + \cfrac{1^2}{
-                6 + \cfrac{3^2}{
-                    6 + \cfrac{5^2}{
-                        6 + \cfrac{7^2}{
-                            6 + \cfrac{9^2}{
-                                6 + \dots
-                            }
-                        }
-                    }
-                }
-            }
-$$</div>
-<p>Implementing a computer program to evaluate
-the convergents from the above patterns yields
-even more <span class="math">\(\pi\)</span> approximations:</p>
-<div class="highlight"><pre><span></span><code>                                Even More Pi
-Convergent                                                          Approx 
---------------------------------------------------------------------------------
-19 / 6                                                              3.1666666666666665
-141 / 45                                                            3.1333333333333333
-1321 / 420                                                          3.1452380952380952
-14835 / 4725                                                        3.1396825396825396
-196011 / 62370                                                      3.1427128427128426
-2971101 / 945945                                                    3.1408813408813407
-50952465 / 16216200                                                 3.1420718170718169
-974212515 / 310134825                                               3.1412548236077646
-20570537475 / 6547290750                                            3.1418396189294020
-475113942765 / 151242416325                                         3.1414067184965018
-11922290683065 / 3794809718700                                      3.1417360992606653
-322869019821075 / 102776096548125                                   3.1414796890042549
-9388645795842075 / 2988412653476250                                 3.1416831892077552
-291703390224616125 / 92854250304440625                              3.1415189855952756
-9646071455650881825 / 3070380543400170000                           3.1416533941974261
-338203386739761387075 / 107655217802968460625                       3.1415419859977827
-12533792135642378629875 / 3989575718580595893750                    3.1416353566793886
-489501901570061970946125 / 155815096120119939628125                 3.1415563302845726
-20095772843114788169975625 / 6396619735457555416312500              3.1416238066678388
-865107029346752986828909875 / 275374479611447760672253125           3.1415657346585473
-38971636325356476834702484875 / 12404964652972837218854831250       3.1416160719181865
-1833412715214285133654869268125 / 583597200719403932796125015625    3.1415721544829651
-89918039850132576392201747480625 / 28621636626586418964957783375000 3.1416106990404735
+<p>(Notice from this example that the keys of the adjacency list
+gives a list of <em>source vertices only</em>, to get all vertices we
+need to look at the values of the adjacency list too.)</p>
+<h2 id="a-quick-example">A Quick Example</h2>
+<p>As a simple example, consider the de Bruijn graph formed from
+the DNA string <code>AAGATTCTCTAC</code> and <span class="math">\(k = 4\)</span>.</p>
+<p>This is first turned into a bag of <span class="math">\(d - k + 1 = 9\)</span> 
+4-mers (our edges):</p>
+<div class="highlight"><pre><span></span><code>Sequence:   AAGATTCTCTAC
+4-mers:     AAGA
+             AGAT
+              GATT
+               ATTC
+                TTCT
+                 TCTC
+                  CTCT
+                   TCTA
+                    CTAC
 </code></pre></div>
 
-<h2 id="when-to-use-simple-vs-general-continued-fractions">When to Use Simple Vs. General Continued Fractions</h2>
-<p>While general continued fractions are more flexible,
-allowing a given rational or irrational number to be
-expressed in a wider variety of ways, it is important
-to point out how much faster the simple continued
-fractions converge - with 15 terms, we arrive
-at around 15 accurate decimal places, versus the 1-3
-decimal places of accuracy from over 20 terms in the
-above approximations.</p>
-<p>Using the simple continued fraction representation of <span class="math">\(\pi\)</span>,</p>
-<div class="math">$$
-\pi = 3 + \cfrac{1}{
-                7 + \cfrac{1}{
-                    15 + \cfrac{1}{
-                        1 + \cfrac{1}{
-                            292 + \cfrac{1}{
-                                1 + \dots
-                            }
-                        }
-                    }
-                }
-            }
-$$</div>
-<p>and implementing it with a computer, we get the 
-following table of convergents and their approximate 
-values:</p>
-<div class="highlight"><pre><span></span><code>                               Pi Simple
-Convergent                                                          Approx 
---------------------------------------------------------------------------------
-22 / 7                                                          3.1428571428571428
-333 / 106                                                       3.1415094339622640
-355 / 113                                                       3.1415929203539825
-103993 / 33102                                                  3.1415926530119025
-104348 / 33215                                                  3.1415926539214212
-208341 / 66317                                                  3.1415926534674368
-312689 / 99532                                                  3.1415926536189365
-833719 / 265381                                                 3.1415926535810779
-1146408 / 364913                                                3.1415926535914038
-4272943 / 1360120                                               3.1415926535893890
-5419351 / 1725033                                               3.1415926535898153
-80143857 / 25510582                                             3.1415926535897927
-165707065 / 52746197                                            3.1415926535897936
+<p>Next, we also create a bag of <span class="math">\(d - k + 1 = 10\)</span> 
+3-mers (vertices):</p>
+<div class="highlight"><pre><span></span><code>Sequence:   AAGATTCTCTAC
+3-mers:     AAG
+             AGA
+              GAT
+               ATT
+                TTC
+                 TCT
+                  CTC
+                   TCT
+                    CTA
+                     TAC
 </code></pre></div>
 
-<h2 id="a-note-on-the-program">A Note on the Program</h2>
-<p>We implemented a program to convert terms in a continued fraction
-representation (simple or general) into convergents (rational 
-approximations).</p>
-<p>We covered how to do this with Java in a previous blog post,
-but this time we re-implemented it in Python and used some
-basic object-oriented Python techniques and class decorators
-(class methods, memoized functions, etc.)</p>
-<p>You can find the code here: <a href="https://git.charlesreid1.com/cs/python/src/branch/master/math/pi_continued_fraction_convergents.py">https://git.charlesreid1.com/cs/python/src/branch/master/math/pi_continued_fraction_convergents.py</a></p>
-<p>We will return to the topic of continued fractions and cover 
-general continued fractions (and importantly, the recurrence
-relation used to convert them into convergents in the above
-program) in a future blog post.</p>
+<p>Now we can iterate over every 4-mer edge, find its
+prefix 3-mer and suffix 3-mer, and create a corresponding
+entry in the adjacency list hash table.</p>
+<p>The list of edges looks like this:</p>
+<div class="highlight"><pre><span></span><code>AAG -&gt; AGA
+AGA -&gt; GAT
+ATT -&gt; TTC
+CTA -&gt; TAC
+CTC -&gt; TCT
+GAT -&gt; ATT
+TCT -&gt; CTA,CTC
+TTC -&gt; TCT
+</code></pre></div>
+
+<p>The corresponding dictionary should look like this:</p>
+<div class="highlight"><pre><span></span><code>adjacency_list[&#39;AAG&#39;] = [&#39;AGA&#39;]
+adjacency_list[&#39;AGA&#39;] = [&#39;GAT&#39;]
+adjacency_list[&#39;ATT&#39;] = [&#39;TTC&#39;]
+adjacency_list[&#39;CTA&#39;] = [&#39;TAC&#39;]
+adjacency_list[&#39;CTC&#39;] = [&#39;TCT&#39;]
+adjacency_list[&#39;GAT&#39;] = [&#39;ATT&#39;]
+adjacency_list[&#39;TCT&#39;] = [&#39;CTA&#39;,&#39;CTC&#39;]
+adjacency_list[&#39;TTC&#39;] = [&#39;TCT&#39;]
+</code></pre></div>
+
+<h2 id="python-vs-go">Python vs Go</h2>
+<p>Now that we're ready to implement a directed graph object
+and populate it using the data given in the problem, we 
+have to make the difficult choice of what language we
+want to use to implement the directed graph.</p>
+<p>We have covered our use of the Go programming language 
+for Rosalind.info problems before (we have previously 
+covered recursion for Chapter 2 problems in 
+<a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1</a>,
+<a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">Part 2</a>,
+and <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Part 3</a>
+of another post, and we also wrote <a href="https://charlesreid1.github.io/learning-bioinformatics-with-go-and-rosalind.html">this post</a>
+on our impression of Go and its usefulness in
+bioinformatics.</p>
+<p>We are also implementing all of the solutions to the
+Rosalind.info problems in our Go libarary, <a href="https://github.com/charlesreid1/go-rosalind">go-rosalind</a>
+(see <a href="https://godoc.org/github.com/charlesreid1/go-rosalind/rosalind">corresponding documentation on godoc.org</a>).</p>
+<p><strong>However,</strong> we have learned the hard way that Go requires
+a lot of boilerplate code (boilerplate code that is necessary,
+mind you, because all of that boilerplate will eventually
+morph into something problem-specific).</p>
+<p>This all means that Go is a very cumbersome language to use
+to get an algorithm prototype up and running.</p>
+<p>Python, on the other hand, is a very easy language for
+prototyping and has plenty of handy built-in functions
+and modules that make prototyping an algorithm far 
+easier and faster than doing it in Go.</p>
+<p>Our strategy, therefore, is to prototype our algorithm
+and corresponding graph object in Python, get the
+algorithm working and tested, then convert the code 
+to Go when we are finished.</p>
+<h2 id="directed-graph-class-python-implementation">Directed Graph Class: Python Implementation</h2>
+<p>Note that while we could simply use the dictionary object
+itself as the graph data structure, this is somewhat
+inelegant, and we would like instead to define a class
+to bundle related behavior and data together.</p>
+<p>We implement the directed graph by defining an <code>AdjacencyGraph</code>
+class. This is just a glorified wrapper around the ajacency
+list dictionary, with some extra methods.</p>
+<p>We start by defining the class (it inherits from <code>object</code> so
+it has no parent type):</p>
+<div class="highlight"><pre><span></span><code>class AdjacencyGraph(object):
+    &quot;&quot;&quot;Directed graph stored using an adjacency list&quot;&quot;&quot;
+    def __init__(self):
+        &quot;&quot;&quot;Constructor&quot;&quot;&quot;
+        self.adj = {}
+        self.dfs_started = False
+</code></pre></div>
+
+<p>The constructor just initializes an empty adjacency list dictionary.</p>
+<p>We also define two built-in methods for convenience:
+<code>__str__</code> for the string representation of the graph 
+(so we can pass the graph object to <code>print()</code>), and
+<code>__len__</code> for getting the number of (source) vertices 
+on the graph.</p>
+<div class="highlight"><pre><span></span><code>    def __str__(self):
+        &quot;&quot;&quot;String representation&quot;&quot;&quot;
+        s = []
+        for source in self.adj.keys():
+            sinks = self.adj[source]
+            for sink in sinks:
+                m = &quot;%s -&gt; %s\n&quot;%(source,sink)
+                s.append(m)
+        return &quot;&quot;.join(s)
+
+    def __len__(self):
+        &quot;&quot;&quot;Number of vertices on graph&quot;&quot;&quot;
+        s = set()
+        for source in self.adj.keys():
+            s.add(source)
+            for sink in self.adj[k]:
+                s.add(sink)
+        return len(s)
+</code></pre></div>
+
+<p>Next, we define some basic functionality useful for all graphs:</p>
+<ul>
+<li>Getting the in-degree and out-degree of a vertex</li>
+</ul>
+<div class="highlight"><pre><span></span><code>    def in_degree(self,u):
+        n = 0
+        for v in self.adj.keys():
+            sinks = self.adj[v]
+            if u in sinks:
+                n += 1
+        return n
+
+    def out_degree(self,u):
+        if u in self.adj.keys():
+            return len(self.adj[u])
+        else:
+            return 0
+</code></pre></div>
+
+<p>We also define a generator for creating vertices:</p>
+<div class="highlight"><pre><span></span><code>    def vertices(self):
+        vertices = set()
+        for k in self.adj.keys():
+            vertices.add(k)
+            for m in self.adj[k]:
+                vertices.add(m)
+        for v in vertices:
+            yield v
+
+    def n_vertices(self):
+        return len(self)
+
+    def n_edges(self):
+        n = 0
+        for source in self.adj.keys():
+            try:
+                n += len(self.adj[source])
+            except:
+                # in case value is None
+                pass
+        return n
+
+    def get_neighbors(self,u):
+        &quot;&quot;&quot;Get all neighbors of node u&quot;&quot;&quot;
+        # Note: neighbors are stored in
+        # sorted order
+        if u in self.adj.keys():
+            return self.adj[u]
+        else:
+            return []
+</code></pre></div>
+
+<p>Finally, we add a method <code>add_edge()</code> that allows us
+to create an edge from vertex u to vertex v (and add
+the vertices to the graph if either do not yet exist
+on the graph).</p>
+<p>For convenience, we maintain the adjacency list values
+(the list of destination vertices) in lexicographic
+order.</p>
+<div class="highlight"><pre><span></span><code>    def add_edge(self, u, v):
+        &quot;&quot;&quot;Add an edge from u to v&quot;&quot;&quot;
+        # For each source vertex:
+        if u in self.adj.keys():
+
+            # Get existing sink list
+            t = self.adj[u]
+
+            # Append to it
+            t.append(v)
+
+            # Keep list of sinks sorted
+            # (lexicographic string sorting)
+            t.sort()
+
+            # Create the new edge 
+            # from source to sink
+            self.adj[u] = t
+
+        else:
+            # Initialize the list of sinks (v)
+            # for the given source (u)
+            self.adj[u] = [v]
+</code></pre></div>
+
+<p>Now, to assemble the de Bruijn graph, we can iterate
+over every k-mer edge, form the prefix and suffix vertices,
+and call the <code>add_edge()</code> function on the graph.</p>
+<h1 id="checking-for-eulerian-paths-and-cycles">Checking for Eulerian Paths and Cycles</h1>
+<p>To recap Eulerian paths versus Eulerian cycles (discussed in
+<a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Part 1 of this post</a>:</p>
+<ul>
+<li>An Eulerian path is a path that visits every edge of a given graph exactly once.</li>
+<li>An Eulerian cycle is an Eulerian path that begins and ends at the ''same vertex''.</li>
+</ul>
+<p>According to Steven Skienna's <u>Algorithm Design Handbook</u>,
+there are two conditions that must be met for an Eulerian path or
+cycle to exist. These conditions are different for undirected graphs
+versus directed graphs.</p>
+<p><strong>Undirected graphs:</strong> </p>
+<ul>
+<li>
+<p>An undirected graph contains an Euler <strong>cycle</strong> iff
+  (1) it is connected, and (2) each vertex is of even
+  degree.</p>
+</li>
+<li>
+<p>An undirected graph contains an Euler <strong>path</strong> iff (1)
+  it is connected, and all but two vertices are of even
+  degree. These two vertices will be the start and end
+  vertices for the Eulerian path.</p>
+</li>
+</ul>
+<p><strong>Directed graphs:</strong></p>
+<ul>
+<li>
+<p>A directed graph contains an Euler cycle iff (1) it is
+  strongly-connected, and (2) each vertex has the same
+  in-degree as out-degree</p>
+</li>
+<li>
+<p>A directed graph contains an Euler path iff (1) it is
+  connected, and (2) all vertices except two (x,y) have
+  the same in-degree as out-degree, and (x,y) are
+  vertices with in-degree one less than and one more
+  than out-degree</p>
+</li>
+</ul>
+<h1 id="algorithm-building-blocks">Algorithm Building Blocks</h1>
+<p>Algorithm to find Eulerian paths/cycles consists of several steps using several algorithms.</p>
+<p>Undirected graphs are the simpler case; directed graphs are more complicated.</p>
+<h2 id="depth-first-search">Depth First Search</h2>
+<p>To perform a DFS on a directed graph, implement two functions:</p>
+<ol>
+<li>
+<p>Write a DFS function that takes a graph as an input argument and that visits each node of the
+   graph in a depth-first search.</p>
+</li>
+<li>
+<p>Write a visitation function that takes a node as an input argument and that performs some action
+   on the node. This visitation function is called by the DFS function on each node that it visits.</p>
+</li>
+</ol>
+<h2 id="kosarajus-algorithm-connected-components">Kosaraju's Algorithm: Connected Components</h2>
+<p>On an undirected graph, can use Fleury's Algorithm
+to follow edges (classify edges as bridge or non-bridge,
+then leave bridges for last).</p>
+<p>On a directed graph, we have twice the amount of work:
+we are not just checking that all vertices are reachable
+from a given vertex, we are also checking that all vertices
+can also reach that vertex.</p>
+<h1 id="to-be-continued">To Be Continued...</h1>
+<p>In the next part of this post, we will start with the slightly simpler case of finding an Euler cycle
+(which has no start or end vertices). Then we will show how finding the Euler path is actually a special
+case of finding the Euler cycle.</p>
+<p>First, we will use <a href="https://charlesreid1.com/wiki/Graphs/Euler_Circuit#Directed_Graphs:_Hierholzer.27s_Algorithm">Hierholzer's
+Algorithm</a>
+to find Euler cycles (this is the simpler case). Order does not matter because it is a cycle;
+Hierholzer's algorithm is used to find the Euler cycle.</p>
+<p>Next, we will modify the above algorithm to find Euler paths. This requires keeping track of
+the start and end candidate nodes. We verify only one each; we complete the cycle by adding an edge.
+Once we find the cycle, we remove the edge. Finally, we rearrange the cycle to have the correct
+start and end nodes.</p>
+<p>Stay tuned for Part 3...</p>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var align = "center",
         indent = "0em",
@@ -488,17 +556,29 @@ program) in a future blog post.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/pi.html">pi</a>
+                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/continued-fractions.html">continued fractions</a>
+                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/number-theory.html">number theory</a>
+                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/irrational-numbers.html">irrational numbers</a>
+                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -516,18 +596,18 @@ program) in a future blog post.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Five Letter Words: Part 5: The Try Trie Tree
+                Graphs for Bioinformatics, Part 1: de Bruijn Graphs, Hamiltonian Paths, and Eulerian Paths
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-03-11T18:00:00-07:00" pubdate>Monday 03/11/2019</time>
+                <time datetime="2019-05-02T19:00:00-07:00" pubdate>Thursday 05/02/2019</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/five-letter-words-part-5-the-try-trie-tree.html">permalink</a>
+                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">permalink</a>
             </span>
             </p>
         </div>
@@ -545,728 +625,216 @@ program) in a future blog post.</p>
     <div class="col-md-12" style="text-align: left;">
 
         <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#about-the-five-letter-words">About the Five-Letter Words</a></li>
-<li><a href="#introduction-to-the-try-trie-tree-problem">Introduction to the Try Trie Tree Problem</a></li>
-<li><a href="#the-try-trie-tree">The Try Trie Tree</a></li>
-<li><a href="#constructing-the-try-trie-tree">Constructing the Try Trie Tree</a><ul>
-<li><a href="#checking-for-minimum-number-of-matching-words">Checking for Minimum Number of Matching Words</a></li>
-<li><a href="#assemble-method">Assemble Method</a></li>
-<li><a href="#verifying-branches-and-bubbling-up-counts">Verifying Branches and Bubbling Up Counts</a></li>
-<li><a href="#bubble-up-method">Bubble Up Method</a></li>
+<li><a href="#the-context-rosalindinfo">The Context: Rosalind.info</a></li>
+<li><a href="#graphs-for-bioinformatics">Graphs for Bioinformatics</a><ul>
+<li><a href="#building-a-k-mer-graph-the-wrong-graph">Building a K-mer Graph (The Wrong Graph)</a></li>
+<li><a href="#building-a-de-bruijn-graph-the-right-graph">Building a De Bruijn Graph (The Right Graph)</a></li>
+<li><a href="#transform-the-problem-hamiltonian-paths-to-eulerian-paths">Transform the Problem: Hamiltonian Paths to Eulerian Paths</a></li>
 </ul>
 </li>
-<li><a href="#try-trie-tree-code">Try Trie Tree Code</a><ul>
-<li><a href="#try-trie-trie-class">Try Trie Trie Class</a></li>
-<li><a href="#code-for-assembling-the-tree">Code for Assembling the Tree</a></li>
-<li><a href="#code-for-bubbling-up-large-children-counts">Code for Bubbling Up Large Children Counts</a></li>
-</ul>
-</li>
-<li><a href="#wrap-it-in-a-bow">Wrap it in a Bow</a></li>
-<li><a href="#output">Output</a></li>
+<li><a href="#an-example">An Example</a></li>
+<li><a href="#back-to-dna">Back to DNA</a></li>
 </ul>
 </div>
-<h2 id="about-the-five-letter-words">About the Five-Letter Words</h2>
-<p>In Volume 4 Fascicle 0 of Donald Knuth's <u>Art of Computer Programming</u>, 
-Knuth introduces a tool for exploring concepts in graph theory: the five-letter
-words. This is a collection of 5,757 five-letter words compiled by Knuth
-and useful in exploring ways of constructing efficient algorithms.</p>
-<p>The word list is large enough that an <span class="math">\(O(N^2)\)</span> algorithm will take a solid
-chunk of CPU time, so there's a definite incentive to think carefully about
-implementation.</p>
-<p>Knuth introduces a list of five-letter words, as well as associated exercises
-utilizing techniques from dynamic programming and graph theory, among other 
-topics.</p>
-<p>We have covered this topic before in prior blog posts:</p>
-<ul>
-<li><a href="https://charlesreid1.github.io/five-letter-words-part-1-getting-familiar-with-the-list.html">Five Letter Words: Part 1: Getting Familiar With The List</a></li>
-<li><a href="https://charlesreid1.github.io/five-letter-words-part-2-more-five-word-algorithms.html">Five Letter Words: Part 2: More Five-Word Algorithms</a></li>
-<li><a href="https://charlesreid1.github.io/five-letter-words-part-3-letter-coverage-and-dynamic-programming.html">Five Letter Words: Part 3: Letter Coverage and Dynamic Programming</a></li>
-</ul>
-<p>and a recent addendum to Part 1:</p>
-<ul>
-<li><a href="https://charlesreid1.github.io/five-letter-words-part-4-revisiting-diff-by-one.html">Five Letter Words: Part 4: Revisiting Diff by One</a></li>
-</ul>
-<p>We continue our coverage in this blog post with a newer problem,
-one that is rated by Knuth at 26, on his scale of 0 to 50:</p>
-<div class="highlight"><pre><span></span><code>00  Immediate
-10  Simple (1 minute)
-20  Medium (quarter hour)
-30  Moderately hard
-40  Term project
-50  Research problem
+<h1 id="the-context-rosalindinfo">The Context: Rosalind.info</h1>
+<p>To provide a bit of context for a discussion of Euler paths and Euler cycles:
+starting around December, a group of us in the <a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology (DIB Lab)</a>
+started working through the textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
+and the associated website, <a href="https://rosalind.info">Rosalind.info</a>.</p>
+<p>Rosalind.info is a site that is similar in style to <a href="https://projecteuler.net/">Project Euler</a>,
+a <a href="https://charlesreid1.github.io/tag/project-euler.html">familiar topic on this blog</a>.
+Project Euler poses computationally challenging problems in the domain of mathematics.</p>
+<p>Like Project Euler, the visitor is given one small example input and the corresponding 
+correct output, and one large example input and corresponding output. Also like Project
+Euler, the problems vary in how much computer science versus domain expertise is needed,
+but they are largely focused on writing algorithms rather than on the science behind the
+computations.</p>
+<p>Unlike Project Euler, however, Rosalind.info does give plenty of hints (via the textbook,
+if you have a copy), and sometimes even gives pseudocode for the algorithm. <strong>The book is
+required to get enough context to answer some of the Rosalind.info problems.</strong></p>
+<h1 id="graphs-for-bioinformatics">Graphs for Bioinformatics</h1>
+<p>The textbook focuses on different problems in each chapter. For example, Chapter 1 uses
+the example of a string of DNA that marks where replication begins to introduce some
+basic bioinformatics concepts and algorithms. Chapter 2 uses the concept of molecular
+clocks to introduce motifs and motif-finding, the focus of most of the problems in
+Chapter 2.</p>
+<p>Chapter 3 focuses on the problem of genome assembly - how we assemble an entire genome
+from short segments alone. In particular, the chapter focuses on de Bruijn graphs, 
+which are graphs that, given a sequence of symbols drawn from an alphabet, are composed 
+of edges (one for each <strong>k-mer</strong>, that is, a chunk of the sequence of length k),
+and vertices (one for each k-mer prefix and k-mer suffix, connected by a directed edge
+of the k-mer). We will cover more of the details of these graphs shortly.</p>
+<h2 id="building-a-k-mer-graph-the-wrong-graph">Building a K-mer Graph (The Wrong Graph)</h2>
+<p>The Bioinformatics Algorithm book starts with a general discussion of how to 
+represent a sequence of DNA nucleotides using a graph. The idea they discuss 
+initially (which is an obvious, but not necessarily good, one) is splitting
+the sequence into k-mer chunks, like so:</p>
+<div class="highlight"><pre><span></span><code>      Sequence:   TAATGCCATGGGATGTT
+      Pieces:     TAA 
+                   AAT
+                    ATG 
+                     TGC
+                      GCC 
+                       CCA
+                        CAT 
+                         ATG
+                          TGG 
+                           GGG
+                            GGA 
+                             GAT
+                              ATG 
+                               TGT
+                                GTT
 </code></pre></div>
 
-<p>(from Volume 1, Notes on the Exercises.)</p>
-<p>Here's the <a href="https://github.com/charlesreid1/five-letter-words/blob/master/sgb-words.txt">list of words</a>
-if you want to play along.</p>
-<p>Link to the <a href="http://www3.cs.stonybrook.edu/~algorith/implement/graphbase/implement.shtml">Stanford Graph Base</a>.</p>
-<p>Visit <a href="https://charlesreid1.com/wiki/Five_Letter_Words">Five Letter Words</a>
-on the charlesreid1.com wiki for details.</p>
-<h2 id="introduction-to-the-try-trie-tree-problem">Introduction to the Try Trie Tree Problem</h2>
-<p>In this blog post, we'll cover Exercise 35 of Volume 4, Fascicle 
-of Donald Knuth's <u>Art of Computer Programming</u>.</p>
-<p>The problem is as follows:</p>
+<p>and letting one k-mer be represented by one vertex. Then the sequence
+above could be turned into the graph:</p>
+<div class="highlight"><pre><span></span><code>TAA -&gt; AAT -&gt; ATG -&gt; TGC -&gt; GCC -&gt; CCA -&gt; CAT -&gt; ATG -&gt; TGG -&gt; GGG -&gt; GGA -&gt; GAT -&gt; ATG -&gt; TGT -&gt; GTT
+</code></pre></div>
+
+<p>On this graph, every edge has the property that the first (k-1)
+nucleotides of the destination match the last (k-1) nucleotides
+of the source. </p>
+<p>If we did not know this sequence in advance, we could draw <em>every</em>
+edge with that property - every time the last (k-1) characters of
+a k-mer match the first (k-1) characters of another k-mer, an edge
+is drawn between those two vertices. </p>
+<p>That graph would result in <em>many</em> more edges than the graph shown above.</p>
+<p>Furthermore, in theory, if each read sequence came from a single genome
+and we had the entire genome covered by read sequences, a path through
+the graph that visits every vertex (every k-mer) would yield the full
+genome.</p>
+<p>A path through a graph that visits every vertex once is called a 
+<strong>Hamiltonian path</strong>.</p>
+<p>Why is this hard? Because the problem of proving a Hamiltonian
+path exists, let alone finding it, becomes very difficult for
+large graphs.</p>
+<h2 id="building-a-de-bruijn-graph-the-right-graph">Building a De Bruijn Graph (The Right Graph)</h2>
+<p>Nicolaas de Bruijn introduced (in 1946, in a paper entitled simply
+<a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>)
+a new way of representing a sequence with a graph. He split a given
+sequence into k-mers, as before, but instead of representing
+each k-mer as a <em>vertex</em> on the graph, he represented each 
+k-mer as an <em>edge</em> on the graph.</p>
+<p>This type of graph is called a <strong>de Bruijn graph</strong>.</p>
+<p>Specifically, for a DNA sequence, each k-mer from the sequence is
+represented by an edge, where the source vertex
+is that k-mer's (k-1)-nucleotide suffix and the destination vertex
+is that k-mer's (k-1)-nucleotide prefix.</p>
+<div class="highlight"><pre><span></span><code>      Sequence:   TAATGCCATGGGATGTT
+      Pieces:     TA  
+                   AA
+                    AT 
+                     TG
+                      GC 
+                       CC
+                        CA 
+                         AT
+                          TG 
+                           GG
+                            GG 
+                             GA 
+                              AT  
+                               TG 
+                                GT 
+                                 TT
+</code></pre></div>
+
+<p>Now this sequence is written as the graph:</p>
+<div class="highlight"><pre><span></span><code>TA -&gt; AA -&gt; AT -&gt; TG -&gt; GC -&gt; CC -&gt; CA -&gt; AT -&gt; TG -&gt; GG -&gt; GG -&gt; GA -&gt; AT -&gt; TG -&gt; GT -&gt; TT
+</code></pre></div>
+
+<p>so that the original breakup of the sequence into k-mers is still
+represented, but now as edges rather than as vertices. That is, the 
+k-mer <code>TAA</code> is represented by the edge <code>TA -&gt; AA</code>.</p>
+<h2 id="transform-the-problem-hamiltonian-paths-to-eulerian-paths">Transform the Problem: Hamiltonian Paths to Eulerian Paths</h2>
+<p>The change in the problem representation (k-mers as vertices to k-mers
+as edges) changes the problem of finding the <strong>Hamiltonian path</strong> 
+(a path through the graph that visits every <em>vertex</em> exactly once) 
+into the problem of finding the <strong>Eulerian path</strong>
+(a path through the graph that visits every <em>edge</em> exactly once).</p>
+<h1 id="an-example">An Example</h1>
+<p>Let's look at a slightly simpler example - the one de Bruijn was
+originally considering - so we can see de Bruijn graphs in action
+in a slightly simpler case.</p>
+<p>In his 1946 paper <a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>,
+de Bruijn describes the problem thus:</p>
 <blockquote>
-<p>Sixteen well-chosen elements of <code>WORDS(1000)</code> lead to the 
-branching pattern (figure), which is a complete binary 
-trie of words that begin with the letter <code>s</code>.
-But there's no such pattern of words beginning with <code>a</code>,
-even if we consider the full collection <code>WORDS(5757)</code>.</p>
-<p>What letters of the alphabet can be used as the starting
-letter of sixteen words that form a complete binary trie
-within <code>WORDS(n)</code>, given n?</p>
+<p>Some years ago Ir. K. Posthumus stated an interesting conjecture
+concerning certain cycles of digits 0 or 1, which we shall call
+<span class="math">\(P_n\)</span> cycles. For <span class="math">\(n = 1, 2, 3, \dots\)</span>, a <span class="math">\(P_n\)</span> cycle be an ordered
+cycle of <span class="math">\(2^n\)</span> digits 0 or 1, such that the <span class="math">\(2^n\)</span> possible ordered
+sets of <span class="math">\(n\)</span> consecutive digits of that cycle are all different.
+As a consequence, any ordered set of <span class="math">\(n\)</span> digits 0 or 1 occurs exactly
+once in that cycle.</p>
+<p>For example, a <span class="math">\(P_3\)</span> cycle is <span class="math">\(00010111\)</span>, respectively showing the
+triples 000, 001, 010, 011, 111, 100, 100, which are all the possible
+triples indeed.</p>
 </blockquote>
-<p>For the benefit of those without the book, here is an attempt
-to represent the trie that Knuth includes in the exercise:</p>
-<div class="highlight"><pre><span></span><code>                     s
-
-            h                 t
-
-        e       o         a       e
-
-      e   l   r   w     l   r   a   e
-
-      sheep             stalk
-      sheet             stall
-
-          shelf             stars
-          shell             start
-
-              shore             steal
-              short             steam
-
-                  shown             steel
-                  shows             steep
+<p>In this case, de Bruijn is discussing <em>complete</em> de Bruijn graphs - he
+constructs a de Bruijn graph of all possible 3-mers (our k-mers, <span class="math">\(k = 3\)</span>),
+and constructs a path through the graph that visits every edge of the
+graph. Here is the sequence broken down as above:</p>
+<div class="highlight"><pre><span></span><code>      Sequence:   00010111
+      Pieces:     00  
+                   00
+                    01
+                     10
+                      01
+                       11
+                        11
 </code></pre></div>
 
-<p>To answer the question, of whether a complete binary
-trie can be completed for a given letter, given a
-set of n words, we construct a "try trie tree,"
-which is a tree data structure that greedily builds
-a trie with as many branches as possible.</p>
-<p>The full trie of <span class="math">\(26^4+1 = 456,977\)</span> nodes
-would be expensive to assemble in full, for each
-starting letter. Instead we use the word list 
-to build up a tree of possible candidate branches
-for the trie. Once we've constructed all possible
-branches using the faster but less precise method,
-we verify that each candidate branch we have
-constructed either meets our criteria (can be
-included as a branch in a complete binary trie),
-or is pruned.</p>
-<h2 id="the-try-trie-tree">The Try Trie Tree</h2>
-<p>To solve this problem, we define a TryTrieTree
-class that holds the nodes and links that make
-up our tree. We define some methods for it
-to perform the assembly and verification operations
-described below, then assemble one try trie tree
-for each letter of the alphabet to come up with 
-an answer to the exercise.</p>
-<h2 id="constructing-the-try-trie-tree">Constructing the Try Trie Tree</h2>
-<p>The construction procedure for the try trie tree
-proceeds in two steps:</p>
-<p>Step 1 is to assemble a tree, from the top down,
-by searching the entire space of <span class="math">\(456,977\)</span> nodes
-and marking particular nodes and paths on this tree
-as candidates for the final perfect binary trie.</p>
-<p>Step 2 is to revisit the candidate branches,
-proceeding from the bottom up, and determine
-if the candidate branches do, in fact, have
-enough sibling nodes and word matches to form
-a complete branch in a perfect binary trie.</p>
-<p>We start Step 1 at the root node (the starting
-letter) and proceed from the root down, going
-level by level.</p>
-<h3 id="checking-for-minimum-number-of-matching-words">Checking for Minimum Number of Matching Words</h3>
-<p>Step 1 proceeds from the top down and marks
-branches that are candidates to end up in the
-final perfect binary trie.</p>
-<p>At each level of the trie, we count
-the number of words in the overall word set 
-that have a prefix matching the prefix
-corresponding to that node.</p>
-<p>For example, the trie node <code>b</code> on the path
-<code>s-a-b</code> would yield four words:</p>
-<div class="highlight"><pre><span></span><code>saber
-sable
-sabre
-sabra
+<p>The alphabet here is binary: 0 and 1. </p>
+<p>This (seemingly simple) example is a bit confusing, but here's
+what's going on: we have four vertices on the de Bruijn graph,
+consisting of the 2-mers:</p>
+<div class="highlight"><pre><span></span><code>00
+01
+10
+11
 </code></pre></div>
 
-<p>If enough words match, that branch of the trie
-is a possible candidate to end up in the perfect
-binary trie (but may be trimmed in Step 2).</p>
-<p><strong>Example:</strong> If we are assembling the complete
-trie for <code>s</code> given by the author in the exercise,
-we can verify that there are at least 16 words that
-begin with the letter <code>s</code>. We would then verify that
-there are at least 8 words that begin with <code>sa</code>,
-which there are. Then we would verify that there
-are at least 4 words that begin with <code>saa</code>, which
-there are not, so we would move on to verifying
-that there are at least 4 words that begin with
-<code>sab</code>, which there are. We would proceed in this
-fashion until we had assembled a candidate trie
-branch, <code>s-a-b-r</code> (which contains two words,
-<code>sabra</code> and <code>sabre</code>). For Step 1, we keep <code>s-a-b-r</code>
-as a candidate branch. (We will see in Step 2
-that this branch will get trimmed.)</p>
-<p>At each level of the trie, we apply the procedure:
-- At level 1, we require a minimum of <span class="math">\(2^{5-1} = 16\)</span> words.
-- At level 2, we require a minimum of <span class="math">\(2^{5-2} = 8\)</span> words.
-- At level 3, we require a minimum of <span class="math">\(2^{5-3} = 4\)</span> words.
-- At level 4, we require a minimum of <span class="math">\(2^{5-4} = 2\)</span> words.</p>
-<p><strong>NOTE:</strong> We are not explicitly constructing the trie,
-so we don't need to assemble the word leaves.</p>
-<h3 id="assemble-method">Assemble Method</h3>
-<p>See the <a href="#try-trie-tree-code">Try Trie Tree Code</a> section 
-for the code for the public and private assembly methods.</p>
-<p>To peform the assembly of all possible branches of the
-try trie, we use the <code>assemble()</code> method. This is a 
-public method that starts a recursive call to a private
-method <code>_assemble()</code>.</p>
-<p>We are given a starting letter (in the example given
-by the author, the starting letter is "s").
-We explore every possible prefix that starts with the
-root letter, "sa", "sb", "sc", "sd", and so on.</p>
-<p>For each of those possible prefixes, we explore every possible
-third letter, "saa", "sab", and so on, and then once more
-in a fourth step, "saaa", "saab", ..., for a total of 
-<span class="math">\(26^4 = 456,976\)</span> iterations (checks for existence
-of words starting with a given substring).</p>
-<p>A substantial number of these checks will do nothing - 
-from the fact that</p>
-<p><span class="math">\(\frac{5757}{456976} \sim 5e3/5e5 \sim 0.01\)</span> </p>
-<p>we know that the maximum number of loops that would actually
-lead to a branch being added will be 1% of that <span class="math">\(26^4\)</span> total.</p>
-<p>We also know that any efforts to speed up this program
-should focus on the way we are checking the number of
-words that start with a given substring - since that's
-where we'll spend most of our time.</p>
-<p>The recursive assembly method takes a prefix string input
-(which maps to a location in the tree), and it explores
-all 26 possible children of that prefix (location in the trie).</p>
-<p>When a leaf node is reached, at the fourth level, it represents
-the longest prefix in our trie. This is the base case of the
-recursive assembly function; the recursive function terminates
-at a fixed depth of 4.</p>
-<h3 id="verifying-branches-and-bubbling-up-counts">Verifying Branches and Bubbling Up Counts</h3>
-<p>However, as we noted, the counts we are using above in Step 1
-are just approximations (checking there are a <em>minimum</em> number of
-words with a given prefix). There is no way to guarantee that a 
-trie branch can be used in the final complete perfect binary trie
-until all child leaf nodes have been visited.</p>
-<p>This is where Step 2 comes in. In Step 2 we perform a pre-order
-depth-first traversal of the tree, visiting the leaf nodes first
-and proceeding from the bottom up. The number of words matching
-the prefix of each leaf node must be 2, to keep the leaf node.</p>
-<p>We then proceed up the tree, level by level, and at each level
-we require that each node have at least 2 "large" children.
-This is a recursive definition - for a child to be "large", it
-must itself have 2 "large" children, or (if it is a leaf node)
-it must have at least 2 words that match the 4-letter prefix.</p>
-<p>In our TryTrieTree, a complete binary trie is 
-only possible if each node at each level has
-<em>two or more</em> children that are "large enough",
-where "large enough" means that either (a) both child
-nodes have <em>two or more</em> children that are
-"large enough", or (b) if we are at a leaf node
-(representing 4 characters), and there are
-<em>two or more</em> words that begin with the 4 characters
-corresponding to this trie node.</p>
-<p>Let's go through an example.</p>
-<p>Continuing with the example above for <code>s</code>, we
-assembled the branch <code>s-a-b-r</code>, which contains
-the minimum two words required. However, <code>s-a-b</code>
-is not a common enough prefix! The only child
-of <code>s-a-b</code> with two or more words matching
-is <code>s-a-b-r</code>, which means we can't form a complete
-binary trie using this <code>s-a-b</code> branch.</p>
-<p>We call this procedure a "bubble up" procedure,
-since it is <em>bottom-up</em>.</p>
-<h3 id="bubble-up-method">Bubble Up Method</h3>
-<p>See the <a href="#try-trie-tree-code">Try Trie Tree Code</a> section 
-for the code for the public and private bubble up methods.</p>
-<p>Similar to the assembly method, our bubble up method
-is also a recursive method, performing a depth-first
-pre-order traversal. This ensures we reach leaf nodes
-before beginning our task, and that counts proceed
-from bottom-up.</p>
-<h2 id="try-trie-tree-code">Try Trie Tree Code</h2>
-<p>Below we go through some of the code
-for the Try Trie Tree problem.</p>
-<h3 id="try-trie-trie-class">Try Trie Trie Class</h3>
-<p>When dealing with trees, it's always a safe bet
-that we'll need a Node class, so we start with
-a utility class for tree nodes:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">letter</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">letter</span> <span class="o">=</span> <span class="n">letter</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="n">count</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="kc">None</span>
+<p>Now, if we draw an edge for every possible 3-mer, we would 
+start with the 3-mer <code>000</code>, which is actually represented
+by a self-edge from vertex <code>00</code> to vertex <code>00</code>, because the
+prefix matches the suffix.</p>
+<p>Similarly, the 3-mer <code>111</code> is represented by a self-edge
+from vertex <code>11</code> to vertex <code>11</code>.</p>
+<p>The other 3-mers are represented by their corresponding edges:
+<code>001</code> is represented by the edge <code>00 -&gt; 01</code>, <code>010</code> by the edge
+<code>01 -&gt; 10</code>, etc.</p>
+<p>By drawing <strong>every possible edge</strong> (to represent every possible
+3-mer), we assemble the <strong>complete de Bruijn graph</strong> (that is,
+the de Bruijn graph containing vertices for all possible
+2-mers connected by edges representing every possible 3-mer
+in the given alphabet).</p>
+<p>The sequence de Bruijn gives in his paper is an Euler path
+through the <em>complete</em> (de Bruijn) graph (that is, a path 
+through the de Bruijn graph that visits every edge exactly 
+once):</p>
+<div class="highlight"><pre><span></span><code>Sequence: 00010111
+
+00 -&gt; 00 -&gt; 01 -&gt; 10 -&gt; 01 -&gt; 11 -&gt; 11
 </code></pre></div>
 
-<p>The TryTrieTree class has a constructor that 
-starts with an empty root. The tree
-should also contain a pointer to the original
-word set, so that we can reference it in later
-methods where needed.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">TryTrieTree</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">words</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">words</span> <span class="o">=</span> <span class="n">words</span>
-</code></pre></div>
-
-<p>In the final class we defined a <code>__str__()</code>
-method to create a string representation
-of the TryTrieTree, but we will skip that
-for now.</p>
-<p>Next we have a method to set the root to
-a given Node:</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">set_root</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">root_letter</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">root_letter</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Additionally, we have two utility methods that 
-help us navigate between locations in the tree 
-and the corresponding string prefixes. These two
-methods convert between string prefixes (like
-<code>s-a-b-r</code>) and locations in the trie (like the
-<code>r</code> trie node at the end of the path <code>s-a-b-r</code>):</p>
-<ul>
-<li>
-<p><code>get_prefix_from_node()</code> (utility method): given a
-  Node in the trie, return the string prefix that would
-  lead to that Node.</p>
-</li>
-<li>
-<p><code>get_node_from_prefix()</code> (utility method): given a
-  string prefix, return the Node in the trie that 
-  corresponds to the given string prefix.
-  Return None if no such Node exists.</p>
-</li>
-</ul>
-<p>These methods are given below.</p>
-<p>First, to convert a particular node location to a string
-prefix, we use the parent pointer of each node to traverse
-up the tree and assemble the corresponding prefix string
-from the path (so that traversing from <code>b</code> to <code>a</code> to the 
-root <code>s</code> would yield <code>sab</code>):</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">get_prefix_from_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">node</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Given a node in the trie,</span>
-<span class="sd">        return the string prefix that</span>
-<span class="sd">        would lead to that node.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">node</span><span class="o">==</span><span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">&quot;&quot;</span>
-        <span class="k">elif</span> <span class="n">node</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">&quot;&quot;</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-            <span class="k">while</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">node</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">parent</span>
-                <span class="n">prefix</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">letter</span> <span class="o">+</span> <span class="n">prefix</span>
-            <span class="k">return</span> <span class="n">prefix</span>
-</code></pre></div>
-
-<p>and the reverse, to convert a string prefix
-into a location in the trie:</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">get_node_from_prefix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">prefix</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Given a string prefix,</span>
-<span class="sd">        return the node that represents</span>
-<span class="sd">        the tail end of that sequence</span>
-<span class="sd">        of letters in this trie. Return</span>
-<span class="sd">        None if the path does not exist.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">!=</span><span class="kc">None</span>
-
-        <span class="k">if</span> <span class="n">prefix</span><span class="o">==</span><span class="s1">&#39;&#39;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
-
-        <span class="k">assert</span> <span class="n">prefix</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">letter</span>
-
-        <span class="c1"># Base case</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span>
-
-        <span class="c1"># Recursive case</span>
-        <span class="n">parent_prefix</span><span class="p">,</span> <span class="n">suffix</span> <span class="o">=</span> <span class="n">prefix</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">prefix</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node_from_prefix</span><span class="p">(</span><span class="n">parent_prefix</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">parent</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">letter</span> <span class="o">==</span> <span class="n">suffix</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">child</span>
-
-        <span class="c1"># We know this will end because we handle</span>
-        <span class="c1"># the base case of prefix=&quot;&quot;, and prefix</span>
-        <span class="c1"># is cut down by one letter each iteration.</span>
-</code></pre></div>
-
-<h3 id="code-for-assembling-the-tree">Code for Assembling the Tree</h3>
-<p>We assemble the tree using a private recursive
-method. Here is how that looks (again, these
-methods are defined on the <code>TryTrieTree</code>
-class):</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">assemble</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble the trie from the set of words</span>
-<span class="sd">        passed to the constructor.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">!=</span><span class="kc">None</span>
-
-        <span class="n">words</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">words</span>
-
-        <span class="c1"># start with an empty prefix</span>
-        <span class="n">prefix</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-        <span class="n">candidate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">letter</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_assemble</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span><span class="n">candidate</span><span class="p">,</span><span class="n">words</span><span class="p">)</span>
-</code></pre></div>
-
-<p>In the private recursive method, we assemble the branches
-of the tree, only checking to make sure each branch has
-the minimum number of words required.</p>
-<p>At the start of each assemble method, we whittle the set
-of words down to only the words that start with the prefix
-for the given node. This trick uses a little extra space
-but the payoff is avoiding searching the entire word set
-for each node to count the number of words matching a given
-prefix. If a node's parent is <code>s-a-b</code> and we have already done
-the work of filtering all words starting with <code>sab</code>, 
-there is no need to repeat that work when finding 
-and filtering all words that start with <code>sabr</code>.</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">_assemble</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">prefix</span><span class="p">,</span><span class="n">candidate</span><span class="p">,</span><span class="n">words</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Recursive private method called by assemble().</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">prefix_depth</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span>
-        <span class="n">candidate_depth</span> <span class="o">=</span> <span class="n">prefix_depth</span><span class="o">+</span><span class="mi">1</span>
-
-        <span class="n">ppc</span> <span class="o">=</span> <span class="n">prefix</span><span class="o">+</span><span class="n">candidate</span>
-        <span class="n">words_with_candidate</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span> <span class="k">if</span> <span class="n">w</span><span class="p">[:</span><span class="n">candidate_depth</span><span class="p">]</span><span class="o">==</span><span class="n">ppc</span><span class="p">]</span>
-</code></pre></div>
-
-<p>Next lines are the checks to ensure we have the minimum
-number of words required to form a candidate branch in
-the trie.</p>
-<p>If we do, we will create a new child node for that 
-branch and recurse by calling assemble on it.</p>
-<p>Of course, we have to check for the base case, which in
-this scenario checks when we have reached the fixed
-trie depth of 4.</p>
-<div class="highlight"><pre><span></span><code>        <span class="n">min_branches_req</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">5</span><span class="o">-</span><span class="n">candidate_depth</span><span class="p">))</span>
-        <span class="n">max_number_branches</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">words_with_candidate</span><span class="p">)</span>
-
-        <span class="c1"># If we exceed the minimum number of </span>
-        <span class="c1"># branches required, add candidate</span>
-        <span class="c1"># as a new node on the trie.</span>
-        <span class="k">if</span> <span class="n">max_number_branches</span> <span class="o">&gt;=</span> <span class="n">min_branches_req</span><span class="p">:</span>
-
-            <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node_from_prefix</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span>
-
-            <span class="c1"># If we are looking at the root node,</span>
-            <span class="k">if</span> <span class="n">prefix</span><span class="o">==</span><span class="s1">&#39;&#39;</span><span class="p">:</span>
-                <span class="c1"># parent will be None.</span>
-                <span class="c1"># In this case don&#39;t worry about</span>
-                <span class="c1"># creating new child or introducing</span>
-                <span class="c1"># parent and child, b/c the &quot;new child&quot;</span>
-                <span class="c1"># is the root (already exists).</span>
-                <span class="k">pass</span>
-
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># Otherwise, create the new child,</span>
-                <span class="c1"># and introduce the parent &amp; child.</span>
-                <span class="n">new_child</span> <span class="o">=</span> <span class="n">Node</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
-                <span class="n">new_child</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
-                <span class="n">parent</span><span class="o">.</span><span class="n">children</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_child</span><span class="p">)</span>
-
-            <span class="c1"># Base case</span>
-            <span class="k">if</span> <span class="n">candidate_depth</span><span class="o">==</span><span class="mi">4</span><span class="p">:</span>
-                <span class="n">new_child</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="n">max_number_branches</span>
-                <span class="k">return</span>
-
-            <span class="c1"># Recursive case</span>
-            <span class="k">for</span> <span class="n">new_candidate</span> <span class="ow">in</span> <span class="n">ALPHABET</span><span class="p">:</span>
-                <span class="n">new_prefix</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">candidate</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_assemble</span><span class="p">(</span><span class="n">new_prefix</span><span class="p">,</span><span class="n">new_candidate</span><span class="p">,</span><span class="n">words_with_candidate</span><span class="p">)</span>
-
-        <span class="c1"># otherwise, we don&#39;t have enough</span>
-        <span class="c1"># branches to continue downward,</span>
-        <span class="c1"># so stop here and do nothing.</span>
-        <span class="k">return</span>
-</code></pre></div>
-
-<h3 id="code-for-bubbling-up-large-children-counts">Code for Bubbling Up Large Children Counts</h3>
-<p>These are a little shorter and simpler than the
-assembly method above:</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">bubble_up</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Do a depth-first traversal of the</span>
-<span class="sd">        entire trytrietree, pruning as we go.</span>
-<span class="sd">        This is a pre-order traversal,</span>
-<span class="sd">        meaning we traverse children first,</span>
-<span class="sd">        then the parents, so we always </span>
-<span class="sd">        know the counts of children</span>
-<span class="sd">        (or we are on a leaf node).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_bubble_up</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root</span><span class="p">)</span>
-
-
-    <span class="k">def</span> <span class="nf">_bubble_up</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">node</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pre-order depth-first traversal</span>
-<span class="sd">        starting at the leaf nodes and proceeding</span>
-<span class="sd">        upwards.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
-            <span class="c1"># Base case</span>
-            <span class="c1"># Leaf nodes already have counts          </span>
-            <span class="c1"># Do nothing</span>
-            <span class="k">return</span>
-
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Recursive case</span>
-            <span class="c1"># Pre-order traversal: visit/bubble up children first</span>
-            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_bubble_up</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
-
-            <span class="c1"># Now that we&#39;ve completed leaf node counts, we can do interior node counts.</span>
-            <span class="c1"># Interior node counts are equal to number of large (&gt;=2) children.</span>
-            <span class="n">large_children</span> <span class="o">=</span> <span class="p">[</span><span class="n">child</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">children</span> <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">count</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">]</span>
-            <span class="n">node</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">large_children</span><span class="p">)</span>
-</code></pre></div>
-
-<p>You can see how we converted the definition of
-"large children" into a rule above - we use the
-recursive case of the "large children" definition
-in the recursive case, and we use the base case
-of the "large children definition" (for leaf nodes)
-when we are on the base case.</p>
-<p>Also note that each leaf node was initialized with
-the number of words that start with the corresponding
-4-letter prefix (that was done in the assembly method),
-but we could just as easily do it in the base case,
-as the leaf nodes are the base case.</p>
-<h2 id="wrap-it-in-a-bow">Wrap it in a Bow</h2>
-<p>We can add some extra wrapping around our class,
-and call each of the methods in order for the
-various letters of the alphabet.</p>
-<p>Below, we process an input argument n (which is
-the size of the wordlist, 5757, if the user does
-not specify n). It then creates a TryTrieTree
-for each letter, and determines if a complete
-binary trie can be constructed. Finally, it prints
-a summary of the results.</p>
-<div class="highlight"><pre><span></span><code><span class="ch">#!/usr/bin/env python</span>
-<span class="kn">from</span> <span class="nn">get_words</span> <span class="kn">import</span> <span class="n">get_words</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">math</span>
-
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">tries.py</span>
-
-<span class="sd">Donald Knuth, Art of Computer Programming, Volume 4 Fascicle 0</span>
-<span class="sd">Exercise #35</span>
-
-<span class="sd">Problem:</span>
-<span class="sd">What letters of the alphabet can be used</span>
-<span class="sd">as the starting letter of sixteen words that</span>
-<span class="sd">form a complete binary trie within</span>
-<span class="sd">WORDS(n), given n?</span>
-<span class="sd">&quot;&quot;&quot;</span>
-
-<span class="n">ALPHABET</span> <span class="o">=</span> <span class="s2">&quot;abcdefghijklmnopqrstuvwxyz&quot;</span>
-<span class="n">FIVE</span> <span class="o">=</span> <span class="mi">5</span>
-
-
-<span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="o">...</span>
-
-
-<span class="k">class</span> <span class="nc">TryTrieTree</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="o">...</span>
-
-<span class="k">def</span> <span class="nf">trie_search</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-
-    <span class="n">words</span> <span class="o">=</span> <span class="n">get_words</span><span class="p">()</span>
-    <span class="n">words</span> <span class="o">=</span> <span class="n">words</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span>
-
-    <span class="n">perfect_count</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">imperfect_count</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">for</span> <span class="n">letter</span> <span class="ow">in</span> <span class="n">ALPHABET</span><span class="p">:</span>
-
-        <span class="n">tree</span> <span class="o">=</span> <span class="n">TryTrieTree</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
-        <span class="n">tree</span><span class="o">.</span><span class="n">set_root</span><span class="p">(</span><span class="n">letter</span><span class="p">)</span>
-        <span class="n">tree</span><span class="o">.</span><span class="n">assemble</span><span class="p">()</span>
-        <span class="n">tree</span><span class="o">.</span><span class="n">bubble_up</span><span class="p">()</span>
-        <span class="c1">#print(tree)</span>
-
-        <span class="k">if</span> <span class="n">tree</span><span class="o">.</span><span class="n">root</span><span class="o">.</span><span class="n">count</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
-
-            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The letter </span><span class="si">{0:s}</span><span class="s2"> has a perfect binary trie in WORDS(</span><span class="si">{1:d}</span><span class="s2">).&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                    <span class="n">letter</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
-            <span class="n">perfect_count</span> <span class="o">+=</span> <span class="mi">1</span>
-
-        <span class="k">else</span><span class="p">:</span>
-
-            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The letter </span><span class="si">{0:s}</span><span class="s2"> has no perfect binary trie in WORDS(</span><span class="si">{1:d}</span><span class="s2">).&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                    <span class="n">letter</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
-            <span class="n">imperfect_count</span> <span class="o">+=</span> <span class="mi">1</span>
-
-    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Perfect count: </span><span class="si">{:d}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">perfect_count</span><span class="p">))</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Imperfect count: </span><span class="si">{:d}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">imperfect_count</span><span class="p">))</span>
-
-    <span class="k">return</span> <span class="n">perfect_count</span><span class="p">,</span> <span class="n">imperfect_count</span>
-
-
-
-<span class="k">def</span> <span class="nf">trie_table</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute and print a table of</span>
-<span class="sd">    number of words n versus number of</span>
-<span class="sd">    perfect tries formed.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%8s</span><span class="se">\t</span><span class="si">%8s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="s2">&quot;n&quot;</span><span class="p">,</span><span class="s2">&quot;perfect tries&quot;</span><span class="p">))</span>
-
-    <span class="n">ns</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="mi">5757</span><span class="p">,</span><span class="mi">500</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ns</span><span class="p">:</span>
-        <span class="n">p</span><span class="p">,</span><span class="n">i</span> <span class="o">=</span> <span class="n">trie_search</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%8d</span><span class="se">\t</span><span class="si">%8d</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="n">p</span><span class="p">))</span>
-
-    <span class="n">n</span> <span class="o">=</span> <span class="mi">5757</span>
-    <span class="n">p</span><span class="p">,</span><span class="n">i</span> <span class="o">=</span> <span class="n">trie_search</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%8d</span><span class="se">\t</span><span class="si">%8d</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="n">p</span><span class="p">))</span>
-
-
-<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span><span class="o">&lt;</span><span class="mi">2</span><span class="p">:</span>
-        <span class="n">n</span> <span class="o">=</span> <span class="mi">5757</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-        <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">5757</span><span class="p">:</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="mi">5757</span>
-
-    <span class="n">_</span><span class="p">,</span><span class="n">_</span> <span class="o">=</span> <span class="n">trie_search</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="c1">#trie_table()</span>
-</code></pre></div>
-
-<h2 id="output">Output</h2>
-<p>When we run with n = 1000, we can see that <code>s</code> is the only letter
-that forms a perfect binary trie for that value of n:</p>
-<div class="highlight"><pre><span></span><code>$ python tries.py 1000
-The letter a has no perfect binary trie in WORDS(1000).
-The letter b has no perfect binary trie in WORDS(1000).
-The letter c has no perfect binary trie in WORDS(1000).
-The letter d has no perfect binary trie in WORDS(1000).
-The letter e has no perfect binary trie in WORDS(1000).
-The letter f has no perfect binary trie in WORDS(1000).
-The letter g has no perfect binary trie in WORDS(1000).
-The letter h has no perfect binary trie in WORDS(1000).
-The letter i has no perfect binary trie in WORDS(1000).
-The letter j has no perfect binary trie in WORDS(1000).
-The letter k has no perfect binary trie in WORDS(1000).
-The letter l has no perfect binary trie in WORDS(1000).
-The letter m has no perfect binary trie in WORDS(1000).
-The letter n has no perfect binary trie in WORDS(1000).
-The letter o has no perfect binary trie in WORDS(1000).
-The letter p has no perfect binary trie in WORDS(1000).
-The letter q has no perfect binary trie in WORDS(1000).
-The letter r has no perfect binary trie in WORDS(1000).
-The letter s has a perfect binary trie in WORDS(1000).
-The letter t has no perfect binary trie in WORDS(1000).
-The letter u has no perfect binary trie in WORDS(1000).
-The letter v has no perfect binary trie in WORDS(1000).
-The letter w has no perfect binary trie in WORDS(1000).
-The letter x has no perfect binary trie in WORDS(1000).
-The letter y has no perfect binary trie in WORDS(1000).
-The letter z has no perfect binary trie in WORDS(1000).
-
-Perfect count: 1
-Imperfect count: 25
-</code></pre></div>
-
-<p>In fact, 978 is the smallest number of words to find any perfect tries:</p>
-<div class="highlight"><pre><span></span><code>$ python tries.py 978
-The letter a has no perfect binary trie in WORDS(978).
-The letter b has no perfect binary trie in WORDS(978).
-The letter c has no perfect binary trie in WORDS(978).
-The letter d has no perfect binary trie in WORDS(978).
-The letter e has no perfect binary trie in WORDS(978).
-The letter f has no perfect binary trie in WORDS(978).
-The letter g has no perfect binary trie in WORDS(978).
-The letter h has no perfect binary trie in WORDS(978).
-The letter i has no perfect binary trie in WORDS(978).
-The letter j has no perfect binary trie in WORDS(978).
-The letter k has no perfect binary trie in WORDS(978).
-The letter l has no perfect binary trie in WORDS(978).
-The letter m has no perfect binary trie in WORDS(978).
-The letter n has no perfect binary trie in WORDS(978).
-The letter o has no perfect binary trie in WORDS(978).
-The letter p has no perfect binary trie in WORDS(978).
-The letter q has no perfect binary trie in WORDS(978).
-The letter r has no perfect binary trie in WORDS(978).
-The letter s has a perfect binary trie in WORDS(978).
-The letter t has no perfect binary trie in WORDS(978).
-The letter u has no perfect binary trie in WORDS(978).
-The letter v has no perfect binary trie in WORDS(978).
-The letter w has no perfect binary trie in WORDS(978).
-The letter x has no perfect binary trie in WORDS(978).
-The letter y has no perfect binary trie in WORDS(978).
-The letter z has no perfect binary trie in WORDS(978).
-
-Perfect count: 1
-Imperfect count: 25
-</code></pre></div>
-
-<p>Running with the full 5757 words leads to 11 more perfect tries:</p>
-<div class="highlight"><pre><span></span><code>$ python tries.py 5757
-The letter a has no perfect binary trie in WORDS(5757).
-The letter b has a perfect binary trie in WORDS(5757).
-The letter c has a perfect binary trie in WORDS(5757).
-The letter d has a perfect binary trie in WORDS(5757).
-The letter e has no perfect binary trie in WORDS(5757).
-The letter f has a perfect binary trie in WORDS(5757).
-The letter g has no perfect binary trie in WORDS(5757).
-The letter h has a perfect binary trie in WORDS(5757).
-The letter i has no perfect binary trie in WORDS(5757).
-The letter j has no perfect binary trie in WORDS(5757).
-The letter k has no perfect binary trie in WORDS(5757).
-The letter l has a perfect binary trie in WORDS(5757).
-The letter m has a perfect binary trie in WORDS(5757).
-The letter n has no perfect binary trie in WORDS(5757).
-The letter o has no perfect binary trie in WORDS(5757).
-The letter p has a perfect binary trie in WORDS(5757).
-The letter q has no perfect binary trie in WORDS(5757).
-The letter r has a perfect binary trie in WORDS(5757).
-The letter s has a perfect binary trie in WORDS(5757).
-The letter t has a perfect binary trie in WORDS(5757).
-The letter u has no perfect binary trie in WORDS(5757).
-The letter v has no perfect binary trie in WORDS(5757).
-The letter w has a perfect binary trie in WORDS(5757).
-The letter x has no perfect binary trie in WORDS(5757).
-The letter y has no perfect binary trie in WORDS(5757).
-The letter z has no perfect binary trie in WORDS(5757).
-
-Perfect count: 12
-Imperfect count: 14
-</code></pre></div>
-
-<p>If we assemble a table of number of five letter words n
-versus number of perfect tries formed, nearly half show up
-only after we include 4,500 words.</p>
-<div class="highlight"><pre><span></span><code>       n    perfect tries
-    1000           1
-    1500           1
-    2000           1
-    2500           1
-    3000           3
-    3500           3
-    4000           4
-    4500           6
-    5000          11
-    5500          12
-    5757          12
-</code></pre></div>
-
+<h1 id="back-to-dna">Back to DNA</h1>
+<p>Now the utility of the de Bruijn methodology is more clear:
+if we can come up with fast, efficient algorithms to find
+Euler paths on large graphs, we can transform the assembly 
+problem (given fragments of a long sequence, reconstruct
+the sequence) into the problem of finding an Eulerian path,
+which is tractable even for large graphs.</p>
+<p>Compare this with string matching algorithms utilizing
+dynamic programming, which can cost <span class="math">\(O(N^2)\)</span> and make
+genome assembly computationally infeasible.</p>
+<p>Part 1 (this post) has covered the basic idea behind 
+assembling DNA sequences using de Bruijn graphs. In
+Part 2 of this post, we will move on to a discussion
+of the "real world" problem, warts and all, and how 
+we can relax some of the strict assumptions (like assuming
+perfect coverage of the original sequence and assuming
+that all reads are perfect).</p>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var align = "center",
         indent = "0em",
@@ -1340,23 +908,29 @@ only after we include 4,500 words.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
                     &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
                     &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/art-of-computer-programming.html">art of computer programming</a>
+                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/knuth.html">knuth</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/five-letter-words.html">five letter words</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/tries.html">tries</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/trees.html">trees</a>
+                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1374,18 +948,18 @@ only after we include 4,500 words.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Five Letter Words: Part 4: Revisiting Diff by One
+                The Git-Commit-Ectomy
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-03-10T10:00:00-07:00" pubdate>Sunday 03/10/2019</time>
+                <time datetime="2019-04-17T12:00:00-07:00" pubdate>Wednesday 04/17/2019</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/five-letter-words-part-4-revisiting-diff-by-one.html">permalink</a>
+                <a href="https://charlesreid1.github.io/the-git-commit-ectomy.html">permalink</a>
             </span>
             </p>
         </div>
@@ -1402,164 +976,63 @@ only after we include 4,500 words.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#about-the-five-letter-words">About the Five-Letter Words</a></li>
-<li><a href="#different-by-1-revisited">Different by 1, Revisited</a></li>
-<li><a href="#different-by-n-revisited">Different by N, Revisited</a></li>
-</ul>
-</div>
-<h2 id="about-the-five-letter-words">About the Five-Letter Words</h2>
-<p>In Volume 4, Facsimile 0 of Donald Knuth's <u>Art of Computer Programming</u>, 
-in which Knuth covers graph theory, he introduces a list of five-letter words
-as part of a data set useful in exploring graph theory and graph algorithms.</p>
-<p>The <a href="https://github.com/charlesreid1/five-letter-words/blob/master/sgb-words.txt">list of words</a> 
-is part of the <a href="http://www3.cs.stonybrook.edu/~algorith/implement/graphbase/implement.shtml">Stanford Graph Base</a>, 
-a set of data sets that are useful for studying graph theory and networks.</p>
-<p>See <a href="https://charlesreid1.com/wiki/Five_Letter_Words">Five Letter Words</a>
-on the charlesreid1.com wiki for details.</p>
-<h2 id="different-by-1-revisited">Different by 1, Revisited</h2>
-<p>This post is revisiting an exercise from the above volume,
-Exercise 28:</p>
-<blockquote>
-<p>Find pairs of SGB word vectors that differ by
-+/- 1 in each component.</p>
-</blockquote>
-<p>In a prior blog post (<a href="#">Part 1</a>),
-we had inerpreted the question as finding
-word vectors whose Euclidean distance differed
-by 1 total, which is the same as a Hamming
-distance of 1.</p>
-<p>However, on revisiting the (more interesting)
-question actually being posed by the author,
-we find a different and more difficult problem.</p>
-<p>As an example of what Knuth is asking for:</p>
-<div class="highlight"><pre><span></span><code>rover -&gt; spuds
-</code></pre></div>
-
-<p>Each letter of the words are within an edit
-distance of 1, at each position.</p>
-<p>There are 38 such pairs:</p>
-<div class="highlight"><pre><span></span><code>$ python diff_by_one_fixed.py
-abaft babes
-absit baths
-adder beefs
-ambit blahs
-anger boffs
-anode boned
-bider chefs
-bidet chefs
-biffs cheer
-ghost hints
-hobos inapt
-holds inker
-honed inode
-hoods inner
-hoofs inner
-hoots input
-hoped inode
-ingot johns
-needs odder
-needs offer
-rider sheds
-rifer sheds
-rinds shoer
-robed spade
-robot snaps
-robot spans
-rover spuds
-ruffs steer
-runts stout
-rusts strut
-sheer tiffs
-sheet tiffs
-shout tints
-sides theft
-sneer toffs
-splat tombs
-spuds toter
-stuns tutor
-Found 38 pairs of words that differ by +/-1 in each component.
-</code></pre></div>
-
-<p>The approach we used was as follows:</p>
-<ul>
-<li>Iterate over each word in the wordlist
-  (use the first 1,000 words to keep it
-  shorter for testing)</li>
-<li>For each word:</li>
-<li>Generate all variations that are within +/-1 
-    using recursive backtracking (could also use
-    algorithm to generate all 32 binary codes of 
-    length 5, where 0 = -1, 1 = +1)</li>
-<li>For each of the 32 variations,<ul>
-<li>Check if the word is in the wordset
-  (O(1) cost if using a hash table/set)</li>
-<li>If so, add ordered pair (word1,word2)
-  to a set of solutions (to avoid dupes)</li>
-</ul>
-</li>
-</ul>
-<h2 id="different-by-n-revisited">Different by N, Revisited</h2>
-<p>We went back and modified the code to take a
-distance parameter d, but storage and compute
-cost, as well as the sparsity of the graph of
-shared bigrams and trigrams among these 5,000
-words, means the number of pairs increases 
-exponentially.</p>
-<div class="highlight"><pre><span></span><code>| Distance  | Number of pairs   | Walltime       |
-|-----------|-------------------|----------------|
-| 1         | 38                |     0.26 s     |
-| 2         | 525               |     5.26 s     |
-| 3         | 4982              |    38.87 s     |
-| 4         | ?? (10^5 est.)    |  10 min (est.) |
-</code></pre></div>
-
-<p>You can find the <code>diff_by_n.py</code> script here:
-<a href="https://git.charlesreid1.com/cs/five-letter-words/">https://git.charlesreid1.com/cs/five-letter-words/</a></p>
-<p>The output:</p>
-<div class="highlight"><pre><span></span><code>$ python diff_by_n.py
-abaft babes
-absit baths
-adder beefs
-ambit blahs
-anger boffs
-anode boned
-bider chefs
-bidet chefs
-biffs cheer
-ghost hints
-..
-Found 38 pairs of words that differ by +/-1 in each component.
-Time: 0.2673 s
-
-aback babel
-aback cabal
-abaft babes
-abash cacti
-abide baked
-abide caged
-abide caked
-abler bands
-abler bangs
-abode caned
-...
-Found 525 pairs of words that differ by +/-2 in each component.
-Time: 5.2617 s
-
-abaca ceded
-abaci babel
-abaci cabal
-abaci decaf
-abaci decal
-aback babel
-aback cabal
-aback decal
-abaft babes
-abaft bedew
-...
-Found 4982 pairs of words that differ by +/-3 in each component.
-Time: 38.8743 s
-</code></pre></div></div>
+        <div class="entry-content"><p>TLDR: Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p>
+<p><br /></p>
+<p>Consider the following <em>completely hypothetical</em>
+scenario.</p>
+<p>Suppose you've been working for a while on your latest
+invention, a brand-new whiz-bang command line
+tool that's fast and solves an important problem
+and you're chugging your way to the finish line.</p>
+<p>As part of preparing to release your software tool,
+you add some tests, because that's what you do.</p>
+<p>Those tests require some data, so you add a few test
+data sets, a few hundred kilobytes each, nothing fancy.</p>
+<p>Then one day, <strong>the intern</strong> (who is just trying to be 
+helpful by adding a new test) slips in a 70 MB test
+data set, and slips it in with a string of commits
+that somehow get incorporated into the master branch.</p>
+<p>(Side note: you turned on branch protection to prevent
+this whole mess, didn't you? <em>Didn't you??</em> 
+'Course you did. This is all
+just a hypothetical scenario.)</p>
+<p>Now, the situation is complicated: there are several
+open pull requests and active branches, and a non-trivial
+amount of history that's been added since the time the
+large test data set was accidentally added.</p>
+<p><strong>The intern</strong> apologizes profusely and promises to 
+bring in donuts every day next week. But the damage 
+is done.</p>
+<p><strong>The intern</strong>, a git novice, pulls out a laptop
+and runs a <code>git rm</code> on the files, pushing to the
+remote and happily, ignorantly believing the problem
+has been solved.</p>
+<p>But <strong>the intern</strong> does not understand how git works.
+It has a perfect memory, and remembers every file in
+every commit. Since the problematic first commit that
+added the large files, git has remembered and will always
+remember that large file. It's in git's blood. 
+It's what git was designed to do.</p>
+<p>Once the intern has been, ahem, moved along,
+and branch protection has been turned on,
+it's time to find a git surgeon to perform a 
+git-commit-ectomy to remove the problematic
+large files from the repository entirely.</p>
+<h2 id="dr-reids-patented-git-commit-ectomy">Dr. Reid's Patented Git-Commit-Ectomy</h2>
+<p>If it's a git-commit-ectomy you need,
+try Dr. Reid's Patented Git-Commit-Ectomy
+to ease your git commit pains.</p>
+<p>Whether you want to keep thing simple
+and remove a git commit from a single branch,
+or if you've got multiple branches, Dr. Reid's
+Patented Git-Commit-Ectomy will get you back
+on your feet.</p>
+<p>Dr. Reid's Patented Git-Commit-Ectomy can handle
+even the most messy, confused, and tangled git 
+commit history - with a bit of work and a gifted
+surgeon the git-commit-ectomy can smooth things 
+out and get you feeling right as rain.</p>
+<p>Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p></div>
 
     </div>
 </div>
@@ -1571,19 +1044,15 @@ Time: 38.8743 s
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/art-of-computer-programming.html">art of computer programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/knuth.html">knuth</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/five-letter-words.html">five letter words</a>
+                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1622,6 +1091,44 @@ Time: 38.8743 s
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>June 2023</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/two-burp-suite-extensions-worth-installing-jwt-editor-and-hackvertor.html">Two Burp Suite Extensions Worth Installing: JWT Editor and Hackvertor</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>May 2023</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/blind-sql-injection-with-conditional-errors-and-oracles-dual-table.html">Blind SQL Injection with Conditional Errors (and Oracle's `dual` Table)</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/blind-sql-injection-with-conditional-responses.html">Blind SQL Injection with Conditional Responses</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/sql-injection-union-attacks-turning-a-product-listing-into-a-user-dump.html">SQL Injection UNION Attacks: Turning a Product Listing Into a User Dump</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/sql-injection-fundamentals-four-attack-shapes.html">SQL Injection Fundamentals: Four Attack Shapes</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/working-through-the-portswigger-web-security-academy.html">Working Through the PortSwigger Web Security Academy</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

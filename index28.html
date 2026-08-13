@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Stunnel
+                CSE 143 Final Project: Hilbert Sort: 1. The Problem
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2017-04-30T20:00:00-07:00" pubdate>Sunday 04/30/2017</time>
+                <time datetime="2017-06-23T16:30:00-07:00" pubdate>Friday 06/23/2017</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
+                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/stunnel.html">permalink</a>
+                <a href="https://charlesreid1.github.io/cse-143-final-project-hilbert-sort-1-the-problem.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,272 +127,711 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><ul>
-<li>
-<p><a href="#stunnel-intro">Introduction</a></p>
+        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
+<p>This is the first in a series of three posts 
+detailing the Hilbert Sort problem,
+its solution, and its implementation.
+This post sets up the problem.</p>
 <ul>
-<li><a href="#stunnel-what">What Does Stunnel Do?</a></li>
-<li><a href="#stunnel-work">How Does Stunnel Work?</a> </li>
+<li><a href="#hilbert-motivation">Hilbert Sort: Motivation</a></li>
+<li><a href="#hilbert-spacefilling">Hilbert, Peano, and Space-Filling Curves</a></li>
+<li><a href="#hilbert-curve">Constructing a Hilbert Curve</a></li>
+<li><a href="#hilbert-sort">Performing a Hilbert Sort</a></li>
+<li><a href="#hilbert-problem">Problem Statement</a></li>
+<li><a href="#hilbert-refs">References</a></li>
 </ul>
-</li>
-<li>
-<p><a href="#stunnel-server">Setting Up an Stunnel Server</a></p>
-<ul>
-<li><a href="#stunnel-server-resoures">Charlesreid1.com Resources for Stunnel Servers</a></li>
-</ul>
-</li>
-<li>
-<p><a href="#stunnel-client">Setting Up an Stunnel Client</a></p>
-</li>
-<li>
-<p><a href="#stunnel-protocols">Example Protocols</a></p>
-</li>
-<li>
-<p><a href="#stunnel-docker">Stunnel with Docker</a></p>
-</li>
-<li>
-<p><a href="#stunnel-troubleshooting">Troubleshooting Stunnel Connections</a></p>
-</li>
-<li>
-<p><a href="#stunnel-refs">References</a></p>
-</li>
-</ul>
-<p><a name="stunnel-intro"></a></p>
-<h2 id="introduction">Introduction</h2>
-<p><a name="stunnel-what"></a></p>
-<h3 id="what-does-stunnel-do">What Does Stunnel Do?</h3>
-<p>Stunnel is a tool for creating SSL tunnels between a client and a server.</p>
-<p>Creating SSL connections is a general task that is very useful.
-In particular, any packet of any protocol can always be wrapped in an
-additional SSL layer, with packets embedded within packets, so this means 
-you can wrap arbitrary traffic protocols in SSL using Stunnel.</p>
-<p>Stunnel requires a client and a server on either end of the tunnel.</p>
-<p>This writeup assumes access to both the server and the client.
-If you don't have access to the client, the server certificate
-needs to be signed by a certificate authority that the client trusts.
-You can either:</p>
-<ul>
-<li>
-<p>Shell out big bucks for a certificate signed by a certificate authority company, thereby contributing to the ongoing racketeering of said companies;</p>
-</li>
-<li>
-<p>Use a LetsEncrypt certificate, signed by a certificate authority for free; or</p>
-</li>
-<li>
-<p>Use a self-signed certificate and install the certificate authority onto the client computer.</p>
-</li>
-</ul>
-<p>(These are all difficult and confusing processes, 
-compounded by OpenSSL's lack of documentation
-and a proliferation of incorrect terminology.
-Good luck.)</p>
-<p><a name="stunnel-work"></a></p>
-<h3 id="how-does-stunnel-work">How Does Stunnel Work?</h3>
-<p>The client stunnel instance will encrypt traffic, 
-and the server stunnel instance will decrypt traffic.</p>
-<p>When encrypting traffic, stunnel accepts incoming traffic by listening on
-a port (almost always a local port). It will wrap the traffic in an encrypted
-SSL layer (TCP wrapping) using the SSL certificate/key that is shared between
-the client and the server. The client then sends out the encrypted traffic 
-over an external connection, and on to the stunnel server.</p>
-<p>When decrypting traffic, stunnel will listen on an external connection for 
-incoming, encrypted SSL traffic. It will use its SSL certificate/key to 
-decrypt the traffic and unwrap the SSL layer. It will then forward this traffic
-on to another (usually local) port.</p>
-<p><img alt="Stunnel flowchart schematic" src="/images/stunnel1.png"></p>
-<p><a name="stunnel-server"></a></p>
-<h2 id="setting-up-an-stunnel-server">Setting Up an Stunnel Server</h2>
-<p>Stunnel servers can listen on any port, and the port you choose depends on the application. 
-The configuration we're showing here is intended to bypass a network that is tightly controlled
-and locked down except for HTTP and HTTPS traffic (ports 80 and 443).</p>
-<p>Consider an example of connecting a local service on local port 8443 (not open to the outside world)
-to an stunnel server listening on port 443 (open to the outside world).</p>
-<p>stunnel will listen on port 443, open to external traffic, for SSL-encrypted stunnel traffic. 
-This means that only stunnel can listen on 443 (so this cannot be a server for an HTTPS web 
-site - if a user points their browser to https://yourstunnelserver.com stunnel will not understand
-the HTTPS request and will discard it). 
-We can use stunnel on any port that we want, but communicating between stunnel clients 
-and servers on port 443 allows us to disguise arbitrary traffic (HTTP, HTTPS, SSH, database, 
-etc.) as legitimate HTTPS. </p>
-<p>This is very useful if we have a firewall that is actively inspecting
-the type of traffic inside of packets, and dropping packets with particular protocols like 
-SSH or OpenVPN. By wrapping that traffic in an SSL layer, there is no way for the 
-firewall to inspect the contents of the packet, so it just looks like ordinary HTTPS traffic.
-The firewall can't decrypt the packet contents, so it doesn't know if you are visiting 
-your bank, checking your email, or sneaking SSH/OpenVPN traffic through the firewall. </p>
-<p>(Note that other services like Iodine allow you to do similar things with other protocols,
-like disguising network connections using encrypted DNS on port 53.)</p>
-<p>Typically, stunnel is forwarding that traffic on to a local port, something like 8443. 
-(The common scenario is if you have a service only exposed to LOCAL traffic from localhost or 127.0.0.1 
-and not bound to an EXTERNAL ip address like 0.0.0.0). </p>
-<p><a name="stunnel-server-resources"></a></p>
-<h3 id="charlesreid1com-resources-for-stunnel-servers">Charlesreid1.com Resources for Stunnel Servers</h3>
-<p>The charlesreid1.com wiki has an extensive guide to setting up an Stunnel server: </p>
-<ul>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/Server">charlesreid1.com/wiki/Stunnel/Server</a></p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/Docker">charlesreid1.com/wiki/Stunnel/Docker</a> - wiki page detailing the use of Docker and Docker containers to run an stunnel server.</p>
-</li>
-</ul>
-<p>The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel server: </p>
-<ul>
-<li><a href="https://git.charlesreid1.com/docker/d-stunnel">d-stunnel repository</a> - repo containing Docker configuration files, for creating a Docker container that runs an stunnel server.
-    This repository contains example stunnel configuration files for running a number of different protocols over stunnel (ssh, http, and rsync).</li>
-</ul>
-<p><a name="stunnel-client"></a></p>
-<h2 id="setting-up-an-stunnel-client">Setting Up an Stunnel Client</h2>
-<p>Running an stunnel client requires installing stunnel and 
-setting up a configuration file just like if you were setting up an Stunnel/Server, 
-except swapping the accept and connect ports, since we want the client to accept local 
-traffic (e.g., on port 8443) and send it on to the server that it connects to with SSL 
-(e.g., on port 443).</p>
-<p><a name="stunnel-client-resources"></a></p>
-<h2 id="charlesreid1com-resources-for-stunnel-clients">Charlesreid1.com Resources for Stunnel Clients</h2>
-<p>The charlesreid1.com wiki has an extensive guide to setting up an Stunnel client: </p>
-<ul>
-<li><a href="https://charlesreid1.com/wiki/Stunnel/Client">charlesreid1.com/wiki/Stunnel/Client</a> - wiki page detailing the stunnel configuration process for stunnel servers.</li>
-</ul>
-<p>The charlesreid1.com git server has several repositories with configuration files for setting up an stunnel client: </p>
-<ul>
-<li>
-<p><a href="https://git.charlesreid1.com/mac/m-stunnel">m-stunnel repository</a> - stunnel configuration files for running an stunnel client on Mac OS X</p>
-</li>
-<li>
-<p><a href="https://git.charlesreid1.com/rpi/pi-stunnel">pi-stunnel repository</a> - stunnel configuration files for running an stunnel client on Raspberry Pi</p>
-</li>
-</ul>
-<p><a name="stunnel-protocols"></a></p>
-<h2 id="example-protocols">Example Protocols</h2>
-<p>One of the most beautiful aspects of networking is that packets can be wrapped within other packets - 
-so theoretically it can be packets all the way down. This allows us to use stunnel's SSL TCP wrappers to wrap
-just about any traffic we want. This means we can run various services (encrypted or not) through stunnel,
-including but not limited to:</p>
-<ul>
-<li>
-<p>SSH (secure shell)</p>
-</li>
-<li>
-<p>SCP (secure copy)</p>
-</li>
-<li>
-<p>OpenVPN (virtual network)</p>
-</li>
-<li>
-<p>Rsync (file transfer)</p>
-</li>
-<li>
-<p>MongoDB (NoSQL database)</p>
-</li>
-<li>
-<p>Redis (local-only NoSQL database)</p>
-</li>
-</ul>
-<p>While stunnel has a few pre-configured services that it can deal with, 
-users can also define their own custom protocols, over whatever port they please.</p>
-<p>The charlesreid1.com wiki details stunnel configuration for all of the above protocols,
-excepting MongoDB and redis. Here are links to pages specifying how to configure stunnel
-for each protocol:</p>
-<ul>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/SSH">SSH over stunnel</a></p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/Scp">SCP over stunnel</a></p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/HTTP">HTTP over stunnel</a></p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/OpenVPN">OpenVPN over stunnel</a></p>
-</li>
-<li>
-<p><a href="https://charlesreid1.com/wiki/Stunnel/Rsync">Rsync over stunnel</a></p>
-</li>
-</ul>
-<p>The <a href="https://charlesreid1.com/wiki/Stunnel/Rsync">Rsync over stunnel</a> page, in particular,
-details the steps needed to define your own custom protocol and have stunnel wrap it 
-in an SSL layer <em>correctly</em>.</p>
-<p><a name="stunnel-docker"></a></p>
-<h2 id="stunnel-with-docker">Stunnel with Docker</h2>
-<p>Docker is a useful way of managing services in a self-contained and reproducible manner.
-Running stunnel through a Docker container is surprisingly easy: 
-once you've installed stunnel into the docker container, you just need to map 
-the incoming port (containing incoming encrypted traffic from the client, linked to the external network interface)
-to the outgoing port (containing decrypted traffic from stunnel, linked to a local-only service on a closed port).</p>
-<p>The charlesreid1.com wiki details how to create set up SSH over stunnel at the following page:
-* <a href="https://charlesreid1.com/wiki/Stunnel/Docker">charlesreid1.com/wiki/Stunnel/Docker</a></p>
-<p>The charlesreid1.com git server has an stunnel docker repository with configuration files
-for running a Docker stunnel server, along with several example stunnel server configuration files
-for handling protocols like rsync, ssh, and http:
-* <a href="https://git.charlesreid1.com/docker/d-stunnel">d-stunnel repository</a></p>
-<p><a name="stunnel-troubleshooting"></a></p>
-<h2 id="troubleshooting-stunnel-connections">Troubleshooting Stunnel Connections</h2>
-<p>In the <a href="https://git.charlesreid1.com/docker/d-stunnel">d-stunnel repository</a> is a document called <code>DEBUGGING.md</code> 
-that contains a number of techniques for debugging an stunnel connection. </p>
-<p><a href="https://git.charlesreid1.com/docker/d-stunnel/src/master/DEBUGGING.md">Here is the direct link to DEBUGGING.md</a>.</p>
-<p>The techniques covered include:</p>
-<ul>
-<li>
-<p>Configuring stunnel to run in the foreground (print log messages to console instead of to log file)</p>
-</li>
-<li>
-<p>Configuring stunnel to output debugging information </p>
-</li>
-<li>
-<p>Poking the stunnel server with telnet</p>
-</li>
-<li>
-<p>Inspecting open ports with nmap</p>
-</li>
-<li>
-<p>Watching <code>/var/log/syslog</code> for activity</p>
-</li>
-</ul>
-<p>See <a href="https://git.charlesreid1.com/docker/d-stunnel/src/master/DEBUGGING.md">DEBUGGING.md</a> for details.</p>
-<p><a name="stunnel-refs"></a></p>
-<h2 id="references">References</h2>
+<p><a name="hilbert-motivation"></a></p>
+<h1 id="hilbert-sort-motivation">Hilbert Sort: Motivation</h1>
+<p>In the next few series of posts, we will cover the Hilbert Sort problem,
+how it works, and how to implement it.<br>
+However, before we describe the problem further, 
+let's start with some motivation for solving this problem.</p>
+<p>Suppose we're dealing with a very large number of independent objects
+on a 2D coordinate grid, each with a coordinate location <span class="math">\((x,y)\)</span>.
+(For example, a large population of particles moving in a fluid, or a large number 
+of characters on a map in a game.) </p>
+<p>Here is our box of particles:</p>
+<p><img alt="Box of Particles" src="/images/hilbert1a.png"></p>
+<p>Now, suppose that we have more data than can be handled by a single computer,
+and we want to arrange the data on different computers. However, we want to 
+arrange the data in such a way that we preserve the spatial characteristics
+of the data.</p>
+<p>If we implement a naive sort method for Cartesian points that sorts points by
+x coordinate value, breaking ties with the y coordinate value, 
+we end up with points that are neighbors in space, but far away 
+in the data container's storage (like an array). 
+This is particularly true if there are large crowds of points in the grid.</p>
+<p>Here is an illustration of a set of points and their resulting 
+storage schema in an array that sorts points by x coordinate.
+It shows two purple particles, close by in space, but with<br>
+several green particles further away distance-wise but 
+not with respect to the x coordinate. The spatial locality
+of points is not preserved in the data container, 
+so clearly, a better method of sorting and organizing points is needed.</p>
+<p><img alt="Bad Schema" src="/images/hilbert1b.png"></p>
+<p>An alternative to this schema that yields better locality properties,
+but that leads to a much higher cost for sorting points, involves 
+iterating over each point, and for each point, finding the closest points to it
+in space. However, this itself requires iterating over each point.
+This approach ends up walking over each point (the point whose nearest neighbors we are finding),
+and doing a second nested walk over each point (checking if a point is a nearest neighbor
+to this one). The overall cost of doing this is <span class="math">\(O(N^2)\)</span>.</p>
+<p>It is a deceptively tricky problem: how to organize a large group of points 
+in a way that preserves spatial locality?</p>
+<p>But first, we'll cover the topic of space filling curves, then return to this topic.</p>
+<p><a name="hilbert-spacefilling"></a></p>
+<h1 id="space-filling-curves">Space Filling Curves</h1>
+<p>Mathematician Giuseppe Peano was a prolific teacher and researcher known for many things,
+but one of his more curious ideas is known as the Peano Curve. Peano was attempting to
+answer the question of whether a continuous curve could be bounded by a finite space,
+and he invented a counter-example: a recipe for breaking a curve into parts
+that can be replicated and repeated and applied to the copies as many times as 
+desired, and always result in a continuous curve.</p>
+<p>The way that space-filling curves in general are constructed is to 
+create a pattern, then scale it down and repeat it, 
+attaching subsequent scaled-down, repeated curves.
+Peano simply invented the first curve; there are many variations 
+on the original space-filling curve idea (including the Hilbert Curve - 
+more on that in a moment).</p>
+<p>The <a href="/files/PeanoCurve.pdf">original 1890 paper by Giuseppe Peano</a> is entitled "Sur une courbe,
+qui remplit toute une aire plane", published in 1890 in Mathematische Annalen I, 
+Issue 36. Unfortunately, it has no pictures, but here is a rendering from 
+Wikimedia Commons:</p>
+<p><img alt="Peano Curve" src="/images/PeanoCurve-Many.png"></p>
+<p><a href="https://commons.wikimedia.org/wiki/File:Peano_curve.png">(Link to original on Mediawiki Commons)</a></p>
+<p>Now, the Peano curve was nice, but it had some mathematical properties 
+that made it difficult to deal with. So in 1890,
+<a href="/files/HilbertCurve.pdf">David Hilbert published a follow-up paper</a> 
+in Mathematische Annalen I Issue 38, entitled 
+"Ueber die stetige Abbildung einer Linie auf ein Flächenstück",
+which slightly modified the recipe to create a curve with more 
+elegant mathematical properties. </p>
+<p>Also, he included pictures.</p>
+<p>Here is the first set of figures from Hilbert's 
+<a href="/files/HilbertCurve.pdf">original 1890 paper</a>:</p>
+<p><img alt="Hilbert Curve" src="/images/HilbertCurve-OriginalPaper.png"></p>
+<p>And here is a slightly cleaner rendering of the Hilbert Curve pattern 
+repeated six times:</p>
+<p><img alt="Hilbert Curve" src="/images/HilbertCurve-Many.png"></p>
+<p><a href="https://commons.wikimedia.org/wiki/File:Hilbert_curve.svg">(Link to original on Wikimedia Commons)</a></p>
+<p>From the abstract of Hilbert's paper:</p>
+<blockquote>
+Peano has recently shown in the Mathematical Annals, 2 by an arithmetical observation, 
+how the points of a line can be mapped continuously to the points of a surface part. 
+The functions required for such a mapping can be produced more clearly by using the 
+following geometrical view. Let us divide the line to be represented-about a straight 
+line of the length 1-into four equal parts 1, 2, 3, 4, and the surface which we assume 
+in the form of a square of the side length 1 Straight into 4 equal squares 1, 2, 3, 4 
+(Fig. 1). Secondly, we divide each of the partial sections 1, 2, 3, 4 again into 4 equal
+parts so that we obtain on the straight the 16 partial sections 1, 2, 3, ..., 16; At the 
+same time, each of the 4 squares 1, 2, 3, 4 is divided into 4 equal squares, and the numbers 
+1, 2, ..., 16 are then written to the resulting 16 squares, That each successive square 
+follows the previous one with one side (Fig. 2). If we think of this method, as shown in 
+Fig. 3, the next step, it is easy to see how to assign a single definite point of the 
+square to any given point of the line. It is only necessary to determine the partial 
+stretches of the line to which the given point falls. The squares indicated by the same 
+numbers are necessarily in one another and include a certain point of the surface piece 
+in the boundary. This is the point assigned to the given point. The image thus found is 
+unambiguous and continuous, and vice versa, each point of the square corresponds to 
+one, two, or four points of the line. Moreover, it appears remarkable that, by a 
+suitable modification of the partial lines in the squares, a clear and continuous 
+representation can easily be found, the reversal of which is nowhere more than 
+three-fold.
+
+<br />
+
+- David Hilbert, "Über die stetige Abbildung einer Linie auf ein Flächenstück", Mathematische Annalen Vol 38 
+
+</blockquote>
+
+<p>Thanks to Google Translate for an incredible job.</p>
+<p><a name="hilbert-curve"></a></p>
+<h1 id="constructing-a-hilbert-curve">Constructing a Hilbert Curve</h1>
+<p>To construct a Hilbert curve, you just have to follow the recipe.
+It doesn't matter what your square contains so far,
+or how many levels in you are, whether it's the first curve
+or the five hundredth:</p>
 <ol>
 <li>
-<p>"Stunnel". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel">https://charlesreid1.com/wiki/Stunnel</a>&gt;</p>
+<p>First, take yer square. </p>
 </li>
 <li>
-<p>"Category: Stunnel". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Category:Stunnel">https://charlesreid1.com/wiki/Category:Stunnel</a>&gt;</p>
+<p>Second, quadruple yer square. That means, make four copies, that all make a square.</p>
 </li>
 <li>
-<p>"Stunnel/Server". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Server">https://charlesreid1.com/wiki/Stunnel/Server</a>&gt;</p>
+<p>Now rotate the bottom left and bottom right via diagonal reflection.</p>
 </li>
 <li>
-<p>"Stunnel/Client". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Client">https://charlesreid1.com/wiki/Stunnel/Client</a>&gt;</p>
+<p>Fourth step is, you're done - that's you're new square!</p>
+</li>
+</ol>
+<p><a name="hilbert-sort"></a></p>
+<h1 id="performing-a-hilbert-sort">Performing a Hilbert Sort</h1>
+<p>We will omit a proof of the statement, but given a set of unique (x,y) points,
+we can always construct a minimal-size Hilbert Curve that visits each point only
+once. </p>
+<p>Points can be sorted, then, according to when they would be visited by 
+said Hilbert Curve. And this ordering provides better preservation of spatial 
+locality and structure of points when aligning them in memory, because 
+these space-filling curves are recursive and preserve spatial locality
+in a top-down fashion.</p>
+<p>For example, if we have two points in our square, one in the lower left 
+and one in the lower right, and we are sorting them via a Hilbert Sort,
+we definitely know that a Hilbert curve constructed to visit both of these points
+will definitely visit the lower left point (the quadrant where the Hilbert curve starts)
+before it visits the lower right point (in the quadrant where the Hilbert curve stops).</p>
+<p>This requires thinking about <span class="math">\((x,y)\)</span> points in the box in terms of quadrants, 
+and the order in which the Hilbert curve will visit each quadrant or region,
+rather than thinking in terms of the explicit Hilbert curve that will visit each 
+particular <span class="math">\((x,y)\)</span> point:</p>
+<p><img alt="Box of Particles, Divided Into Quadrants" src="/images/hilbert2a.png"></p>
+<p>This is a subtle shift in the thinking about this problem, but it is crucial
+to a successful implementation of a Hilbert sort. The problem that will follow,
+which asks to implement the Hilbert sort, has many distracting details, 
+including the Hilbert curve itself. </p>
+<p><strong>Remember, in Hilbert sort, the end goal is not the curve itself, but the sort order.</strong></p>
+<p>Here is how the quadrant-by-quadrant partitioning to sort elements ends up looking 
+when applied repeatedly: </p>
+<p><img alt="Repeated Applications" src="/images/hilbert2b.png"></p>
+<p>It is important to note that the two diagonal reflections happening in the corners
+are the trickiest part of this problem. We will cover this operation in greater detail
+in the solution blog post.</p>
+<p><a name="hilbert-problem"></a></p>
+<h1 id="problem-statement">Problem Statement</h1>
+<p>Following is a paraphrased problem statement from the <a href="/files/HilbertSort.pdf">original
+ACM ICPC Regional Programming Competition
+problem statement</a> that this problem and its solution was based on.</p>
+<p>"If points <span class="math">\((x,y)\)</span> are sorted primarily by x, breaking ties by y, then points that are 
+adjacent in memory will have similar x coordinates but not necessarily similar y,
+potentially placing them far apart on the grid. To better preserve distances, we may 
+sort the data along a continuous space-filling curve.</p>
+<p>"We consider one such space-filling curve called the Hilbert curve...</p>
+<p>"Given some locations of interest, you are asked to sort them according to when the 
+Hilbert curve visits them. Note that while the curve intersects itself at 
+infinitely many places, e.g., at <span class="math">\((\frac{S}{2}, \frac{S}{2})\)</span>, making S odd 
+guarantees all integer points are visited just once."</p>
+<p>Here is an example input file, giving a set of points 
+on an <span class="math">\(M \times N\)</span> grid:</p>
+<div class="highlight"><pre><span></span><code>    14 25
+    5 5 Honolulu
+    5 10 PugetSound
+    5 20 Victoria
+    10 5 Berkeley
+    10 10 Portland
+    10 15 Seattle
+    10 20 Vancouver
+    15 5 LasVegas
+    15 10 Sacramento
+    15 15 Kelowna
+    15 20 PrinceGeorge
+    20 5 Phoenix
+    20 10 SaltLakeCity
+    20 20 Calgary
+</code></pre></div>
+
+<p>The corresponding output can be verified intuitively,
+assuming the coordinates given above are accurate!
+Here is the output. Indeed, the order in which each
+city is visited is what we would expect if we drew
+a space-filling Hilbert curve over a map of the western
+United States and Canada.</p>
+<div class="highlight"><pre><span></span><code>    Honolulu
+    Berkeley
+    Portland
+    PugetSound
+    Victoria
+    Vancouver
+    Seattle
+    Kelowna
+    PrinceGeorge
+    Calgary
+    SaltLakeCity
+    Sacramento
+    LasVegas
+    Phoenix
+</code></pre></div>
+
+<p>Now that we've used up all of our space here describing the problem,
+in a follow-up post we will go into greater detail about
+how to solve the problem conceptually, and come up with some 
+pseudocode for a recursive method (since this is a recursive task).
+Then, a third post will go into greater detail about the 
+final Java code to perform this task.</p>
+<p><a name="hilbert-refs"></a></p>
+<h1 id="references">References</h1>
+<ol>
+<li>
+<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
+&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
 </li>
 <li>
-<p>"Stunnel/Docker". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Docker">https://charlesreid1.com/wiki/Stunnel/Docker</a>&gt;</p>
+<p>"Sur une courbe, qui remplit toute une aire plane." G. Peano. 
+<strong>Mathematische Annalen</strong> 36 (1890), 157–160. <a href="/files/PeanoCurve.pdf">(pdf)</a></p>
 </li>
 <li>
-<p>"Stunnel/Certificates". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Certificates">https://charlesreid1.com/wiki/Stunnel/Certificates</a>&gt;</p>
+<p>"Über die stetige Abbildung einer Linie auf ein Flächenstück." D. Hilbert. 
+<strong>Mathematische Annalen</strong> 38 (1891), 459–460. <a href="/files/HilbertCurve.pdf">(pdf)</a></p>
 </li>
 <li>
-<p>"Stunnel/Rsync". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Rsync">https://charlesreid1.com/wiki/Stunnel/Rsync</a>&gt;</p>
+<p>"Hilbert Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 29 April 2017. Accessed 23 June 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Hilbert_curve">https://en.wikipedia.org/wiki/Hilbert_curve</a>&gt;</p>
 </li>
 <li>
-<p>"Stunnel/SSH". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/SSH">https://charlesreid1.com/wiki/Stunnel/SSH</a>&gt;</p>
+<p>"Peano Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 16 October 2016. Accessed 23 June 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Peano_curve">https://en.wikipedia.org/wiki/Peano_curve</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hilbert-sort.html">hilbert sort</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                CSE 143 Final Project: Classy
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-06-23T09:00:00-07:00" pubdate>Friday 06/23/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/cse-143-final-project-classy.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
+<ul>
+<li><a href="#classy-problem">Problem Description</a></li>
+<li><a href="#classy-approach">Solution Approach</a></li>
+<li><a href="#classy-algo">Algorithm</a></li>
+<li><a href="#classy-pseudo">Pseudocode</a></li>
+<li><a href="#classy-oop">Using an Object-Oriented Approach</a></li>
+<li><a href="#classy-code">Code</a></li>
+<li><a href="#classy-refs">References</a></li>
+</ul>
+<p><a name="classy-problem"></a></p>
+<h1 id="problem-description">Problem Description</h1>
+<p>Comedian John Cleese, in his memoir <strong>So Anyway...</strong>, described the social classes of his
+mother and father as "upper-uper-lower-middle class" and "middle-middle-middle-lower-middle class",
+respectively. Write a program that will sort individuals based on a labeling of their 
+social standing by class.</p>
+<p>The three main classes are upper, middle, and lower. Classes progress hierarchically
+from right to left. For example, lower-upper would come before lower-lower.
+There is also ordering within a class, so upper-upper is a higher class than middle-upper.</p>
+<p>Once you have reached the lowest level of detail of one of the classes, assume that
+all further classes are equivalent to middle. This means upper and middle-upper are
+equivalent, and middle-middle-lower-middle and lower-middle are equivalent.</p>
+<p>Input files have a line with the number of names, then one name per line,
+with the name, a colon, then the title. For example:</p>
+<div class="highlight"><pre><span></span><code>5
+mom: upper upper lowre middle class
+dad: middle middle lower middle class
+queen_elizabeth: upper upper class
+chair: lower lower class
+unclebob: middle lower middle class
+</code></pre></div>
+
+<p>The proper output should be the name of each person,
+sorted in order according to their social status, e.g.,</p>
+<div class="highlight"><pre><span></span><code>queenelizabeth
+mom
+dad
+unclebob
+chair
+</code></pre></div>
+
+<p><a name="classy-approach"></a></p>
+<h1 id="solution-approach">Solution Approach</h1>
+<p>(This discusses an approach specific to Java, 
+but a similar approach could be adopted for other languages
+in which comparison operators can be overloaded for objects.)</p>
+<p>The problem lays out all of the essential components that a solution requires.
+This can most easily be implemented using an object and a comparator: 
+the object represents a person, and has a field to store their name and a field
+to store their titles (array-like container for Strings). These objects
+would then implement comparators so that individuals could be compared. 
+This functionality then allows the array to be sorted, using the built-in 
+Collections sort function or a custom sort function.</p>
+<p><a name="classy-algo"></a></p>
+<h1 id="algorithm">Algorithm</h1>
+<p>The classy algorithm can be briefly described in this way: we are iterating over two lists of strings,
+of possibly unequal length, and comparing them right to left. We have a few very simple rules that 
+determine whether one title comes before the other. We have a few simple rules for breaking ties.</p>
+<p>The core of the algorithm is the comparison operation, in which we are assuming that these two things 
+are equal, until we encounter evidence to the contrary. Briefly, the pseudocode can be expressed as follows
+(where we adopt the Java convention that a negative result means the first item comes before the second item):</p>
+<div class="highlight"><pre><span></span><code>if item1 &lt; item2:
+    return -1
+else if item1 &gt; item2: 
+    return 1
+else:
+    # keep going
+</code></pre></div>
+
+<p>If we find a difference, we stop and return right away, 
+but otherwise we continue, and assume the two are equal.</p>
+<p>The problem statement tells us that if a title is missing, and the title lengths are mismatched, we should 
+fill in with "middle". This translates into a second comparison block, in which one of the items is 
+hard-coded as "middle", due to an empty list of titles:</p>
+<div class="highlight"><pre><span></span><code>if item &lt; &quot;middle&quot;:
+    return -1
+else if item &gt; &quot;middle&quot;
+    return 1
+else:
+    # keep going
+</code></pre></div>
+
+<p>Here is how these fit together:
+* Start by splitting the input titles, most likely strings, into lists
+* Iterate over each title, from right to left, and compare the titles.
+* When we reach the end of the shorter list, continue comparing titles right to left, filling in "middle".
+* If the titles are tied, break ties with name.
+* The algorithm should be implemented in a way that has access to both the titles and the names of the two people being compared.
+* In Java, we can define people objects, then we can either have People objects implement Comparable, or we can define our own Comparator for two People objects.</p>
+<p><a name="classy-pseudo"></a></p>
+<h1 id="pseudocode">Pseudocode</h1>
+<p>When we translate the above procedure into Python-like pseudocode, here is the result:</p>
+<div class="highlight"><pre><span></span><code>define compare_lengths(title1, title2):
+    list1 = title1.split()
+    list2 = title2.split()
+    for i in min(list1.size, list2.size):
+        sal1 = list1.reverse[i]
+        sal2 = list2.reverse[i]
+        if sal1 &lt; sal2:
+            return -1
+        else if sal1 &gt; sal2:
+            return 1
+
+    larger_list = &lt;point to larger list&gt;
+    for i in ( min(list1.size,list2.size)+1 ... max(list1.size, list2.size) ):
+        salX = larger_list.reverse[i]
+        if SalX &lt; &quot;middle&quot;:
+            return -1
+        if salX &gt; &quot;middle&quot;
+            return 1
+
+    # If you get here, it&#39;s a tie. Use names for tie-breaker.
+</code></pre></div>
+
+<p><a name="classy-oop"></a></p>
+<h1 id="using-an-object-oriented-approach">Using an Object-Oriented Approach</h1>
+<p>To apply object-oriented principles in this situation, 
+we want to bundle together related data, and abstract 
+away details. That means we want to create an object
+to associate the name and titles of a given person,
+and implement functionality to allow each person
+to be compared with other people. </p>
+<p>This will allow us to create two people 
+and compare them with greater than, less than, or 
+equal to operators. More importantly, this will also allow us 
+to perform sorting.</p>
+<p>Our Java program Classy is a simple driver that loads the names and titles
+of people from standard input.</p>
+<p>The Person class stores associated name and title data for each person.
+This class implements the Comparable interface, which requires it 
+to implement a <code>compareTo()</code> method.</p>
+<div class="highlight"><pre><span></span><code>class Person implements Comparable&lt;Person&gt; {
+
+    ...
+
+    public int compareTo(Person p2) { 
+</code></pre></div>
+
+<p>The Person class constructor just tokenizes one line of input,
+populating the titles list and the person's name. Here is the 
+declaration of those private fields:</p>
+<div class="highlight"><pre><span></span><code>class Person implements Comparable&lt;Person&gt; {
+    private String name;
+    private ArrayList&lt;String&gt; titles;
+
+    ...
+</code></pre></div>
+
+<p>The implementation of the compareTo method 
+utilized Stack objects to examine the 
+sequence of titles in reverse.</p>
+<p>Pop the stacks until one of them is empty.
+Then, keep popping until both are empty, 
+using "middle" in place of the empty stack.</p>
+<div class="highlight"><pre><span></span><code>    /** Compare a person to another person. */
+    public int compareTo(Person p2) { 
+
+        Stack&lt;String&gt; st1 = new Stack&lt;String&gt;();
+        Stack&lt;String&gt; st2 = new Stack&lt;String&gt;();
+
+        // Add names to stack, left to right
+        for(String title : this.getTitles()) {
+            st1.push(title);
+        }
+        for(String title : p2.getTitles()) { 
+            st2.push(title);
+        }
+
+        // Compare each name, from right-to-left.
+        // If stack 1 is not empty, pop next item, otherwise use &quot;middle&quot;
+        // If stack 2 is not empty, pop next item, otherwise use &quot;middle&quot;
+
+        int max = Math.max(this.getTitles().size(), p2.getTitles().size());
+        for(int i=0; i&lt;max; i++) {
+
+            // Pop names from the stack, right to left.
+            String s1, s2;
+
+            if(!st1.isEmpty()) {
+                s1 = st1.pop();
+            } else {
+                s1 = &quot;middle&quot;;
+            }
+
+            if(!st2.isEmpty()) {
+                s2 = st2.pop();
+            } else {
+                s2 = &quot;middle&quot;;
+            }
+
+            // Rather than converting strings to numbers,
+            // compare the strings directly (lower &lt; middle &lt; upper).
+            int res = s2.compareTo(s1);
+
+            // Return the first non-zero value
+            if( res != 0 ) {
+                return res;
+            }
+        }
+
+        // If we reach here, there was a tie.
+        // Use name as tie breaker.
+        return this.getName().compareTo(p2.getName());
+    }
+</code></pre></div>
+
+<p><a name="classy-code"></a></p>
+<h1 id="code">Code</h1>
+<p>Here is the entire Classy code, also available on 
+<a href="https://git.charlesreid1.com/cs/finalproject-143/src/master/classy/Classy.java">git.charlesreid1.com</a>:</p>
+<div class="highlight"><pre><span></span><code>import java.util.*; 
+import java.io.*;
+public class Classy { 
+
+    public static void main(String[] args) { 
+        Scanner s = new Scanner(new BufferedReader(new InputStreamReader(System.in)));
+
+        // Read the input file: new Person for each line
+        int n = Integer.parseInt(s.nextLine());
+        ArrayList&lt;Person&gt; people = new ArrayList&lt;Person&gt;();
+        while(s.hasNextLine()) {
+            String line = s.nextLine();
+            String[] deets = line.split(&quot; &quot;);
+            Person p = new Person(deets);
+            people.add(p);
+        }
+
+        Collections.sort(people);
+        for(Person p : people) { 
+            System.out.println(p);
+        }
+    }
+}
+
+class Person implements Comparable&lt;Person&gt; {
+    private String name;
+    private ArrayList&lt;String&gt; titles;
+
+    /** Person constructor - pass in a String array with the deets. */
+    public Person(String[] deets) { 
+        name = deets[0];
+        // Remove : from name
+        name = name.substring(0,name.length()-1);
+
+        // initialize list of classes 
+        titles = new ArrayList&lt;String&gt;();
+        for(int i=1; i&lt;deets.length-1; i++) { 
+            titles.add(deets[i]);
+        }
+        // Last word will be &quot;class&quot;, so ignore.
+    }
+
+    /** Get a person&#39;s name. */
+    public String getName() { return name; }
+
+    /** Get a person&#39;s titles in an ArrayList. */
+    public ArrayList&lt;String&gt; getTitles() { return titles; }
+
+    /** Get a string representation of a person. */
+    public String toString() { return getName(); }
+
+    /** Compare a person to another person. */
+    public int compareTo(Person p2) { 
+
+        Stack&lt;String&gt; st1 = new Stack&lt;String&gt;();
+        Stack&lt;String&gt; st2 = new Stack&lt;String&gt;();
+
+        // Add names to stack, left to right
+        for(String title : this.getTitles()) {
+            st1.push(title);
+        }
+        for(String title : p2.getTitles()) { 
+            st2.push(title);
+        }
+
+        // Compare each name, from right-to-left.
+        // If stack 1 is not empty, pop next item, otherwise use &quot;middle&quot;
+        // If stack 2 is not empty, pop next item, otherwise use &quot;middle&quot;
+
+        int max = Math.max(this.getTitles().size(), p2.getTitles().size());
+        for(int i=0; i&lt;max; i++) {
+
+            // Pop names from the stack, right to left.
+            String s1, s2;
+
+            if(!st1.isEmpty()) {
+                s1 = st1.pop();
+            } else {
+                s1 = &quot;middle&quot;;
+            }
+
+            if(!st2.isEmpty()) {
+                s2 = st2.pop();
+            } else {
+                s2 = &quot;middle&quot;;
+            }
+
+            // Rather than converting strings to numbers,
+            // compare the strings directly (lower &lt; middle &lt; upper).
+            int res = s2.compareTo(s1);
+
+            // Return the first non-zero value
+            if( res != 0 ) {
+                return res;
+            }
+        }
+
+        // If we reach here, there was a tie.
+        // Use name as tie breaker.
+        return this.getName().compareTo(p2.getName());
+    }
+}
+</code></pre></div>
+
+<p><a name="classy-refs"></a></p>
+<h1 id="references">References</h1>
+<ol>
+<li>
+<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
+&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
 </li>
 <li>
-<p>"Stunnel/Scp". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/Scp">https://charlesreid1.com/wiki/Stunnel/Scp</a>&gt;</p>
-</li>
-<li>
-<p>"Stunnel/OpenVPN". Charlesreid1.com wiki. 30 April 2017. 
-&lt;<a href="https://charlesreid1.com/wiki/Stunnel/OpenVPN">https://charlesreid1.com/wiki/Stunnel/OpenVPN</a>&gt;</p>
+<p>"finalproject-143 (git repository)." Charles Reid. Modified 16 June 2017. Accessed 23 June 2017.
+&lt;<a href="https://git.charlesreid1.com/cs/finalproject-143/src/master/classy/Classy.java">https://git.charlesreid1.com/cs/finalproject-143/src/master/classy/Classy.java</a>&gt;</p>
 </li>
 </ol></div>
 
@@ -406,413 +845,19 @@ that contains a number of techniques for debugging an stunnel connection. </p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/stunnel.html">stunnel</a>
+                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ssl.html">SSL</a>
+                    <a href="https://charlesreid1.github.io/tag/comparison.html">comparison</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/encryption.html">encryption</a>
+                    <a href="https://charlesreid1.github.io/tag/sorting.html">sorting</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ssh.html">SSH</a>
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/networking.html">networking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/openvpn.html">OpenVPN</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Traveling Schoolteacher Problem
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-04-30T13:00:00-07:00" pubdate>Sunday 04/30/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/java.html">Java</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/traveling-schoolteacher-problem.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><ul>
-<li><a href="#tstp-intro">The Traveling Schoolteacher Problem</a></li>
-<li><a href="#tstp-math">The Mathematical Model</a></li>
-<li><a href="#tstp-pseudocode">The Pseudocode</a> </li>
-<li><a href="#tstp-java">The Java Code</a> <ul>
-<li><a href="#tstp-classes">TSTP Class Fields and Methods</a> </li>
-<li><a href="#tstp-base">Explore: Base Case</a> </li>
-<li><a href="#tstp-recursive">Explore: Recursive Case</a> </li>
-</ul>
-</li>
-<li><a href="#tstp-graphs">Example Graphs</a> </li>
-<li><a href="#tstp-results">Results</a><ul>
-<li><a href="#tstp-walltime-nodes">Walltime vs Number of Nodes</a></li>
-</ul>
-</li>
-<li><a href="#tstp-conclusion">Conclusion</a></li>
-<li><a href="#tstp-references">References</a></li>
-</ul>
-<p><a name="tstp-intro"></a></p>
-<h2 id="the-traveling-schoolteacher-problem">The Traveling Schoolteacher Problem</h2>
-<p>The Traveling Schoolteacher Problem (TSTP) is a variation on the Traveling Salesperson Problem (TSP).</p>
-<p>The Traveling Schoolteacher Problem supposes a schoolteacher that is traveling from school to school
-in order to give lessons at different schools. Being a poor schoolteacher, they are only able to afford an older car that gets bad mileage and has a small gas tank.</p>
-<p>After visiting each school, the schoolteacher receives payment from the school, in the currency of <span class="math">\(P\)</span> gallons of gasoline. 
-Different schools pay the teacher different amounts of gasoline, further complicating matters. The schoolteacher's car has a 
-small gas tank that can only hold a maximum of <span class="math">\(M\)</span> gallons of gas, and the schoolteacher cannot travel with cans of gasoline. 
-Any gasoline the schoolteacher receives above <span class="math">\(M\)</span> gallons of gas must be left behind. </p>
-<p>Traveling from a source node to a target node incurs a cost of <span class="math">\(C\)</span> gallons of gas, deducted from the gas tank's total at the source node.</p>
-<p>In an attempt to minimize losses and avoid running out of gas, the traveling schoolteacher must plan out a route 
-that both avoids running out of gas and minimizes the total distance traveled.</p>
-<p><a name="tstp-math"></a></p>
-<h2 id="the-mathematical-model">The Mathematical Model</h2>
-<p>To represent this problem in the computer, we can use a graph - just like the Traveling Salesperson Problem solution - but modified a bit. Like the TSP, we can also solve the Traveling Schoolteacher Problem with recursive backtracking.</p>
-<p>Each edge will represent a cost in gas, and each school arrived at will result in a payment in gas. Thus, the "real cost" of an edge will change depending on the state of the gas tank and the path taken to arrive there. </p>
-<p>We can add a number to each node to represent the amount of gas that that school pays the schoolteacher.
-We can use a number in each edge to represent the amount of gas that it costs to travel from one school to another.
-The backtracking solution will explore various paths through teh graph, keeping track of the gas tank's running total and rejecting any paths that lead to an empty gas tank.</p>
-<p><a name="tstp-pseudocode"></a></p>
-<h2 id="the-pseudocode">The Pseudocode</h2>
-<p>Revisiting the original Traveling Salesperson Problem, the recursive backtracking method we implemented was described with the following pseudocode:</p>
-<div class="highlight"><pre><span></span><code>explore(neighbors):
-
-    if(no more unvisited neighbors):
-        # This is the base case.
-        if total distance is less than current minimum:
-            save path and new minimum
-
-    else:
-        # This is the recursive case.
-        if current distance is greater than current minimum:
-            skip
-        else:
-            for neighbor in unvisited neighbors:
-                visit neighbor
-                explore(new_neighbors)
-                unvisit neighbor
-</code></pre></div>
-
-<p>To modify this to solve the Traveling Schoolteacher Problem, we want to make a few additions:</p>
-<ul>
-<li>Check if the gas tank is empty, and if so, don't explore this path</li>
-<li>Check if the current distance is greater than our current minimum-distance path through the graph</li>
-<li>Add gas from each school to the gas tank (up to the tank's maximum), subtract gas from each path from the gas tank</li>
-</ul>
-<p>This results in the following pseudocode:</p>
-<div class="highlight"><pre><span></span><code>explore(neighbors):
-
-    if(no more unvisited neighbors):
-        # This is the base case.
-        if total distance is less than current minimum:
-            save path and new minimum
-
-    else:
-        # This is the recursive case.
-        if gas tank is below empty:
-            skip
-        if current distance is greater than current minimum:
-            skip
-        else:
-            add gas from this school to gas tank
-            for neighbor in unvisited neighbors:
-                visit neighbor
-                deduct gas to get to neighbor from gas tank
-
-                explore(new_neighbors)
-
-                unvisit neighbor
-                add gas back into gas tank
-</code></pre></div>
-
-<p>Once you have a backtracking algorithm for the original Traveling Salesperson Problem TSP, it's quite easy to make the few modifications required to solve the Traveling Schoolteacher Problem TSTP.</p>
-<p><a name="tstp-java"></a></p>
-<h2 id="the-java-code">The Java Code</h2>
-<p>The Java code to solve the TSTP is organized into several classes:</p>
-<ul>
-<li>TSTP class - implements the recursive backtracking solution method, and owns temporary variables used by backtracking.</li>
-<li>Node class - the Node is a lightweight class that stores an integer, representing the amount of gas this school pays the teacher. (Note, Node stores no links. Graph links handled by Guava.)</li>
-<li>Edge class - the Edge class is a lightweight class that stores an integer for each edge, representing the amount of gas this path costs to travel.</li>
-<li>RandomNodeGraph - a static class that builds random graphs with nodes and edges pre-populated with values. Parameters like connectivity and maximum gas tank capacity can be passed to introduce variation and ensure the graph is solvable (or not).</li>
-</ul>
-<p><a name="tstp-classes"></a></p>
-<h3 id="tstp-class-fields-and-methods">TSTP Class Fields and Methods</h3>
-<p>The TSTP class implements several fields to store the graph, and to store temporary information about the current solution during recursive backtracking (such that it is accessible by each instance of the recursive method). </p>
-<p>The class stores the current route in an integer array, along with the current path distance, the current minimum distance, and the current state of the gas tank.</p>
-<p>The TSTP class has a public <code>solve()</code> method, which calls a private recursive backtracking <code>explore()</code> method to solve the problem. </p>
-<p>The recursive method will have a base case and a recursive case.</p>
-<ul>
-<li>
-<p>The <strong>base case</strong> is that we have visited all cities on the graph. Check if this is a new solution, and if so, save it.</p>
-</li>
-<li>
-<p>In the <strong>recursive case</strong>, we explore all solutions possible starting at the current node (passed in as a parameter), having already made N choices (passed in as a parameter). We do this by making a choice (and marking the node as visited), then exploring the consequences (through a recursive call), then unmaking the choice (rmarking the node as unvisited).</p>
-</li>
-</ul>
-<p>Here is the explore method header:</p>
-<div class="highlight"><pre><span></span><code>    /** Recursive backtracking method: 
-        explore possible solutions starting 
-        at this node, having made nchoices */
-    public void explore(Node node, int nchoices) {
-</code></pre></div>
-
-<p><a name="tstp-base"></a></p>
-<h3 id="explore-base-case">Explore: Base Case</h3>
-<p>The base case begins by checking if the minimum distance has been set, and if so, whether the current distance is larger than the minimum distance. If so, this route is abandoned; otherwise, we have a new solution.</p>
-<div class="highlight"><pre><span></span><code>        if(nchoices == graphSize) {
-            // 
-            // BASE CASE
-            //
-            if(this.this_distance &lt; this.min_distance || this.min_distance &lt; 0) {
-                this.min_distance = this.this_distance;
-                printSolution();
-            } else {
-                printFailure();
-            }
-
-        } else {
-</code></pre></div>
-
-<p><a name="tstp-recursive"></a></p>
-<h3 id="explore-recursive-case">Explore: Recursive Case</h3>
-<p>Next, the recursive case will explore each of the possible choices open to it by iterating over each choice available at a node, and for each node, choosing it, exploring the results, and unchoosing it. </p>
-<div class="highlight"><pre><span></span><code>        } else {
-            //
-            // RECURSIVE CASE
-            //  
-            if(this.gas_tank &lt;= 0) {
-                // Bummer, man.
-                return;
-            }
-            if(this.min_distance &gt; 0 &amp;&amp; this.this_distance &gt; this.min_distance) {
-                // Give up, there&#39;s no hope.
-                return;
-            }
-
-            // Now the teacher teaches,
-            // Now the teacher gets some gas. 
-            // If the tank is full...  bummer, man.
-            this.gas_tank += Math.min(this.tankSize, this.gas_tank + node.pay);
-
-            // For each neighbor:
-            Set&lt;Node&gt; neighbors = graph.adjacentNodes(node);
-            for(Node neighbor : neighbors) {
-                if(neighbor.visited == false) {
-
-                    int distance_btwn = -10000;
-
-                    // Using a for loop, 
-                    // but there should only be one edge.
-                    for( Edge edge : graph.edgesConnecting(node, neighbor) ) {
-                        distance_btwn = edge.cost;
-                    }
-
-                    // Make a choice
-                    this.route[nchoices] = neighbor.id;
-                    neighbor.visit();
-                    this.this_distance += distance_btwn;
-
-                    // Explore the consequences
-                    explore(neighbor,nchoices+1);
-
-                    // Unmake the choice
-                    this.route[nchoices] = -1;
-                    neighbor.unvisit();
-                    this.this_distance -= distance_btwn;
-                }
-                // Move on to the next choice (continue loop)
-            }               
-        } // End base/recursive case
-    }
-</code></pre></div>
-
-<p><a name="tstp-graphs"></a></p>
-<h2 id="example-graphs">Example Graphs</h2>
-<p>Just so you can see what they look like, here are a couple of graphs 
-generated for the traveling schoolteacher problem:</p>
-<p><img src="/images/graphviz_tstp_6.png" width="400px" /></p>
-<p><img src="/images/graphviz_tstp_8.png" width="400px" /></p>
-<p><img src="/images/graphviz_tstp_12.png" width="400px" /></p>
-<p><a name="tstp-results"></a></p>
-<h2 id="results">Results</h2>
-<p><a name="tstp-walltime-nodes"></a></p>
-<h3 id="walltime-vs-number-of-nodes">Walltime vs. Number of Nodes</h3>
-<p>The following is a plot of walltime versus number of nodes:</p>
-<p><img src="/images/tstp-java-scaling.png" width="500px" /></p>
-<p>This plot shows that the traveling schoolteacher problem 
-is solved faster than the traveling salesperson problem.
-This makes sense - for a given city, many of the possible routes can be
-eliminated from the list of routes to explore, due to the additional constraint
-of the gas tank needing to remain full. If there are only 2 gallons of gas 
-in the tank, this constrains the choices of nodes to explore to those 
-requiring 2 gallons of gas or less.</p>
-<p>This is particularly true for the scenario used when generating the above graph - 
-the constraint of the gas tank size is used to construct an "interesting" graph
-tand ensure that we don't end up with a graph where the traveling schoolteacher 
-gets "stuck" somewhere without enough gas to continue. Here is the relevant section
-of the <code>RandomNodeGraph.java</code> class. </p>
-<p>The <code>getNextCost()</code> method generates a random edge
-between two cities, with a <span class="math">\(\frac{T}{T+1}\)</span> percent chance of it being impossible for the 
-teacher to travel that route due to a gas tank that's too small:</p>
-<div class="highlight"><pre><span></span><code>    private static int getNextCost(int T) {
-        Random r = new Random();
-        return 1+r.nextInt(T);
-    }
-</code></pre></div>
-
-<p>Likewise, here is the <code>getNextPay()</code> method, which generates a random 
-amount of pay (in gas) that the </p>
-<div class="highlight"><pre><span></span><code>    private static int getNextPay(int T) {
-        Random r = new Random();
-        return (int)(0.5*T + 0.5*(r.nextInt(T)+1));
-    }
-</code></pre></div>
-
-<p>Here is a link to the full <code>RandomNodeGraph.java</code> file on the charlesreid1.com git server, 
-contained in the <code>tsp</code> repository (which has several codes related to the traveling salesperson problem):
-<a href="https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava/RandomNodeGraph.java">https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava/RandomNodeGraph.java</a></p>
-<p>And here is a link to the <code>tsp</code> repository on the same charlesreid1.com git server:
-<a href="https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava">https://git.charlesreid1.com/charlesreid1/tsp/src/master/schoolteacher-guava</a></p>
-<p>In a city with 10 routes connecting to other cities, having edges that the schoolteacher
-cannot travel, or nodes that limit the amount of gas the schoolteacher receives, 
-can constrain the number of possible routes and reduce the number of routes that need to be 
-explored. The methods above ensure that this will not happen very often, but that it will happen
-some of the time. These routes that can be eliminated can lead to a significant reduction
-in computational time.</p>
-<p><a name="tstp-conclusion"></a></p>
-<h2 id="conclusion">Conclusion</h2>
-<p>This project shows how easy it is to utilize the Guava library to solve computational problems
-in Java and create computing benchmarks and graphs of scaling behavior. The original code to 
-solve the traveling salesperson problem using recursive backtracking was fairly straightforward to 
-implement on a graph, and extending this code to implement additional constraints and solve the 
-traveling schoolteacher problem was surprisingly easy to do. </p>
-<p>Fitting the scaling behavior to a line and computing the slope would make the scaling study
-more quantitative, and needs to be done, but unfortunately the Google Sheets tool does not have 
-this capability, so this information will be done with Python (scipy linear algebra package)
-and comparisons between the TSP and TSTP slopes will be added later.</p>
-<p><a name="tstp-references"></a></p>
-<h2 id="references">References</h2>
-<ol>
-<li>
-<p>"tsp (git repository)." Charles Reid. Modified 7 April 2017. Accesssed 30 April 2017.
-&lt;<a href="https://git.charlesreid1.com/charlesreid1/tsp">https://git.charlesreid1.com/charlesreid1/tsp</a>&gt;</p>
-</li>
-<li>
-<p>"Solving the Traveling Salesperson Problem with Java and Guava." Charles Reid. 23 March 2017. Accessed 30 April 2017.
-&lt;<a href="https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html">https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html</a>&gt;</p>
-</li>
-<li>
-<p>"Better Timing of Guava Traveling Salesperson Problem Code: Timing Scripts." Charles Reid. 1 April 2017. Accessed 30 April 2017.
-&lt;<a href="https://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html">https://charlesreid1.github.io/better-timing-of-guava-traveling-salesperson-problem-code-timing-scripts.html</a>&gt;</p>
-</li>
-</ol>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/guava.html">guava</a>
+                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graph.html">graph</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/tsp.html">TSP</a>
+                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -830,18 +875,18 @@ and comparisons between the TSP and TSTP slopes will be added later.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                The Z-Machine: A Simple Turing Machine
+                CSE 143 Final Project: Checkers
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2017-04-24T20:00:00-07:00" pubdate>Monday 04/24/2017</time>
+                <time datetime="2017-06-19T11:00:00-07:00" pubdate>Monday 06/19/2017</time>
                 in 
                 <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-z-machine-a-simple-turing-machine.html">permalink</a>
+                <a href="https://charlesreid1.github.io/cse-143-final-project-checkers.html">permalink</a>
             </span>
             </p>
         </div>
@@ -858,259 +903,246 @@ and comparisons between the TSP and TSTP slopes will be added later.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
+        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
 <ul>
-<li><a href="#z-bkg">Background</a></li>
-<li><a href="#z-setup">The Z-Machine: Setup</a></li>
-<li><a href="#z-instructions">The Z-Machine: Instructions</a></li>
-<li><a href="#z-loop">Simple Example: Loop</a></li>
-<li><a href="#z-addition">Implementing an Addition Operator on the Z-Machine</a><ul>
-<li><a href="#z-solution-approach">The Solution Approach (The Maths)</a></li>
-<li><a href="#z-addition1">Solution 1: Positive Integers Only</a></li>
-<li><a href="#z-addition2">Solution 2: Dealing with Zeros</a></li>
+<li><a href="#checkers-intro">The Problem</a><ul>
+<li><a href="#checkers-problem">Problem Description: Checkers</a></li>
+<li><a href="#checkers-input">Input File</a></li>
+<li><a href="#checkers-output">Output</a></li>
 </ul>
 </li>
-<li><a href="#z-subtraction">Implementing a Decrement Operator on the Z-Machine</a></li>
-<li><a href="#z-lessthan">Implementing a Less Than Operator on the Z-Machine</a></li>
-<li><a href="#z-whocares">Who Cares? (Or, How To Build A Computer)</a></li>
-<li><a href="#z-sources">Sources</a></li>
+<li><a href="#checkers-solution">The Solution</a><ul>
+<li><a href="#checkers-kiss">Keep It Simple</a></li>
+<li><a href="#checkers-parity">Solution Analysis: Parity</a></li>
+<li><a href="#checkers-euler">Solution Analysis: Graphs and Euler Tours</a></li>
+<li><a href="#checkers-algo">Solution Algorithm</a></li>
+<li><a href="#checkers-pseudocode">Solution Pseudocode</a></li>
+<li>Solution Code</li>
 </ul>
-<p><a name="z-bkg"></a></p>
-<h2 id="background">Background</h2>
-<p>Recently I discovered the wonderful blog of <a href="http://blog.jgc.org/2013/05/the-two-problems-i-had-to-solve-in-my.html">John Graham-Cumming</a>.
-One of hist posts, from 2013, details a question that he had to answer for the Oxford University Department of Computer Science's "interviews" 
-(which, I believe, are a kind of final examination "interview" to graduate, not an interview for admittance to the program).
-Graham-Cumming describes one of the quetions he was presented with during his interview.</p>
-<p><a name="z-setup"></a></p>
-<h2 id="the-z-machine-setup">The Z-Machine: Setup</h2>
-<p>Here is the problem setup:</p>
-<p>Suppose you have a computer with a very simple memory layout. 
-The memory consists of a series of numbered locations, each of which can store numbers. 
-These numbers are positive or negative integers. Here is an illustration of an example of this memory layout:</p>
-<p><img alt="Z Machine Memory Layout" src="https://charlesreid1.com/w/images/2/22/Z-Machine1.png"></p>
-<p><a name="z-instructions"></a></p>
-<h2 id="the-z-machine-instructions">The Z-Machine: Instructions</h2>
-<p>Z-Machine Instructions</p>
-<p>The machine can only perform three instructions: Zero (Z), Increment (I), and Jump (J).</p>
-<p>The <strong>Z operator</strong> zeros out a location in memory. The operation specifies which index should be zeroed out. For example, Z4 will zero out index 4 (which is the 5th item in memory, since indexing starts at 0).</p>
-<p>The <strong>I operator</strong> increments the value at a location in memory by 1. The operation specifies which index should be incremented. For example, I6 will increment index 6 (the 7th item in memory) by 1.</p>
-<p>The <strong>J operator</strong> compares two locations in memory. If the values are different, the jump operator will branch (that is, jump to a different location in the code). The two locations are specified when calling the operator, and an arrow (or operation number) indicates where the operator should branch TO if the values are not the same. If the values are the same, the code continues.</p>
-<p>The program stops when it reaches the end of the instruction list.</p>
-<p><a name="z-loop"></a></p>
-<h2 id="simple-example-loop">Simple Example: Loop</h2>
-<p>Here is an example of a loop program. This program sets memory index 4 to zero, 
-then increments it until it is equal to the value in memory index 20:</p>
-<div class="highlight"><pre><span></span><code>001   Z4
-002   I4
-003   J4,20 --&gt; 002
+</li>
+<li><a href="#checkers-refs">References</a></li>
+</ul>
+<p><a name="checkers-intro"></a></p>
+<h1 id="the-problem">The Problem</h1>
+<p>This is a programming challenge that was assigned to some of my CSE 143 students 
+as a final project for their class.</p>
+<p>The origin of this problem was the Association of Computing Machinery (ACM)'s 
+International Collegiate Programming Competition (ICPC),
+in particular the Pacific Northwest Regional Competition, Division 1 challenges from 2015.</p>
+<p><a href="http://acmicpc-pacnw.org/">Link to Pacific NW ACM ICPC page.</a></p>
+<p><a name="checkers-problem"></a></p>
+<h2 id="problem-description-checkers">Problem Description: Checkers</h2>
+<p>In the Checkers problem, you are presented with a checkerboard consisting of 
+black and white squares. The boards follow a normal checkers layout, that is,
+all of the pieces occupy only the light or dark squares on the board.</p>
+<p>There are several white and black pieces arranged on the checkerboard.
+Your goal is to answer the following question: can any one single 
+black piece be used to jump and capture all of the white pieces 
+in a single move? This assumes that each of the black pieces are 
+"king" pieces and can jump in either direction.</p>
+<p>For example, the following 7x7 board configuration has one black piece 
+that can jump all of the white pieces on the board with a single sequence
+of moves. The black piece at B2 jumps to D4, then to F2.</p>
+<p><img alt="Checkerboard 1 - demonstrate solution" src="/images/checkers1.png"></p>
+<p>If an additional white piece is added, there is no sequence of moves
+that will allow any black piece to jump all of the white pieces.</p>
+<p><img alt="Checkerboard 2 - demonstrate no solution" src="/images/checkers2.png"></p>
+<p><a name="checkers-input"></a></p>
+<h2 id="input-file">Input File</h2>
+<p>The input file consists of one line with a single integer, 
+representing the size of the (square) board. 
+Following are characters representing the board state.</p>
+<p><code>.</code> represents a square that pieces cannot occupy - the off-color squares.</p>
+<p><code>_</code> represents an unoccupied but valid square.</p>
+<p><code>B</code> represents a black piece. <code>W</code> represents a white piece.</p>
+<p>Example:</p>
+<div class="highlight"><pre><span></span><code>8
+._._._._
+_._._._.
+.W._.B._
+_.W.W._.
+.W.B._._
+_._._._.
+.W._.W._
+_._._._.
 </code></pre></div>
 
-<p>The instruction <code>J4,20 --&gt; 002</code> indicates that the values in cell 4 and cell 20 
-should be compared, and if they are not equal, the machine should jump to instruction <code>002</code>.</p>
-<p><a name="z-addition"></a></p>
-<h2 id="implementing-an-addition-operation-on-the-z-machine">Implementing an Addition Operation on the Z-Machine</h2>
-<p>Graham-Cumming includes the following programming challenge in his <a href="http://blog.jgc.org/2013/05/the-two-problems-i-had-to-solve-in-my.html">blog post</a>:</p>
-<p>Suppose a machine has two numbers in the first two locations in memory. Utilize these three operations to add the two numbers together and put the result into the third location in memory.</p>
-<p>Under what circumstances does the program fail?</p>
-<p><a name="z-solution-approach"></a></p>
-<h3 id="the-solution-approach-the-maths">The Solution Approach (The Maths)</h3>
-<p>To approach the solution, start with the maths. What we're doing is trying to define a "complex" arithmetical operation (addition) from simpler "unit" operations (increment by one), so it will be helpful to wipe our mental slate clean and start at the very beginning of the problem.</p>
-<p>When I teach a math class, whether it be a developmental math class, an algebra class, or a calculus class, I always spend the first "full" lecture by guiding the students through this very procedure. Here's how I set the tone: "Imagine that you are stranded on a desert island, with no calculators, no math books, nothing but your fingers and toes. Now suppose you are tasked with reinventing all of mathematics, entirely from scratch. How would you do it?"</p>
-<p>This is a challenging task - and part of the challenge is just knowing where to begin (just how clean should you wipe the mental slate?). The Z-Machine problem formulation resolves that problem by explicitly enumerating valid operations. But let's continue with the desert island analogy for a bit.</p>
-<p>If we begin at what is truly the beginning, we can start with a single unit, the number 1. (If we want to fast forward through thousands of years of human history, we can instead start with the number 0 in addition to the number 1.) Having only a single number is boring, because we can't count anything. We need a way to generate more numbers. So, we begin by defining an increment operation. We begin with the unit, 1. We declare that we can combine 1 with any other number. When we combine 1 with another 1, we get a new, larger number - which we arbitrarily call two, and represent using this funny squiggle: 2.</p>
-<p>Now that we have defined the increment operation, adding a unit, we can begin to generate new numbers. We start with 1+1, which gives 2. The next number can be found by adding 1 to 2, which gives us a new number that we arbitrarily call three, and represent with a funny squiggle: 3.</p>
-<p>We continue in this manner, until we reach 9, and run out of squiggles to write. The next number we will get is a special number, because it is equal to the total number of fingers. When we get to 9, and add one more, we get "two hands", which we arbitrarily call ten. If we want to keep counting beyond ten, we're stuck, because we've run out of fingers. But we can take a shortcut - we can let one toe represent "two hands". So, we hold up one toe, to represent ten. To write ten, we can let the first digit represent how many toes we are holding up, and the second digit represent how many fingers we are holding up. That means we can write our "two hands" quantity as 10 - one toe, no fingers.</p>
-<p>We can keep on incrementing by 1, and using this system we can count all the way up to 99, at which point we will need another pair of hands or feet to keep generating new numbers, or we can suppose that after counting to 99, we are able to hold numbers in our head.</p>
-<p>But once again, we're generating numbers slowly. We want a way to generate more numbers, faster, so we can count higher. So, we define a new addition operation. Rather than adding 1, we define the general operation of addition recursively. To add two numbers like a and b, we can define this addition in terms of a unit increment:</p>
-<div class="math">$$
-a + b = a + 1 + 1 + 1 + \dots + 1
-$$</div>
-<p>We increment the quantity a by 1, b times. This gives us a way to add arbitrary numbers together, so now we can reach much larger numbers by taking the largest number that we can count to, and adding that number to itself.</p>
-<p>Extending this approach can lead us from an increment operation (performed b times) to an addition operation (<code>+b</code>).</p>
-<p>It can also lead from an addition operation (performed b times) to a multiplication operation (<code>*b</code>).</p>
-<p>Extending the idea further, we can apply the multiplication operation (performed b times) and obtain an exponentiation operation (<code>^b</code>).</p>
-<p>This recursive definition of new operations can continue as long as we'd like: applying the exponentiation operation b times yields tetration (<code>^b^b^b^b^b...^b</code>).</p>
-<p>But let's get back to addition.</p>
-<p><a name="z-addition1"></a></p>
-<h3 id="solution-1-positive-integers-only">Solution 1: Positive Integers Only</h3>
-<p>Adding two positive integers is the simplest case. 
-Essentially, we just perform two loops: 
-the first loop increments the result and increments a temporary variable 1, 
-and does that until the temporary variable 1 is equal to the first number. 
-The second loop increments the result and increments the result by 1 
-for a number of times equal to the number at index 1.</p>
-<div class="highlight"><pre><span></span><code>001   Z2                    // clear space for the result
-002   Z3                    // clear space for temp variable 1
-003   I2                    // increment result
-004   I3                    // increment temp variable 1
-005   J3,0 --&gt; 003
-006   Z4                    // clear space for temp variable 2
-007   I2                    // increment result
-008   I3                    // increment temp variable 2
-009   J4,1 --&gt; 007
-010   Z3                    // clean up
+<p><a name="checkers-output"></a></p>
+<h2 id="output">Output</h2>
+<p>The output is simple: simply state which of the black checkers is capable of 
+jumping each of the white checkers. If none, say "None". If multiple, say "Multiple".</p>
+<p><a name="checkers-solution"></a></p>
+<h1 id="the-solution">The Solution</h1>
+<p><a name="checkers-kiss"></a></p>
+<h2 id="keep-it-simple">Keep It Simple</h2>
+<p>To successfully solve the checkers problem, it is important to <strong>keep it simple</strong>. 
+There are different ways of representing the checkers problem abstractly,
+but the best representation in a program is the simplest one - 
+use a 2D array of chars to represent the board.</p>
+<p>Also as usual with permutations of arrangements on boards of fixed size,
+recursion will be useful here.</p>
+<p><a name="checkers-parity"></a></p>
+<h2 id="solution-analysis-parity">Solution Analysis: Parity</h2>
+<p>We can begin our analysis of the checkers problem with a few observations.</p>
+<p>First, we know that the valid squares for checkers are squares that are off by two.
+But we know further that the black checkers must only move in jumps, which mean that
+a piece at <span class="math">\((i,j)\)</span> can only reach squares indexed by 
+<span class="math">\((i + 4m, j + 4m)\)</span> or <span class="math">\((i + 4m + 2, j + 4n + 2)\)</span>, 
+where <span class="math">\(m, n\)</span> are positive/negative integers.</p>
+<p>That is, the checker pieces can make jumps of 2 squares at a time.  For example, if a checker
+starts at the square <span class="math">\((3,3)\)</span> and jumps a white piece down and to the right, it moves
+to square <span class="math">\((5,5)\)</span> or <span class="math">\((3+2, 3+2)\)</span>. If it jumps another white piece up and to the right,
+it moves to square <span class="math">\((3, 7)\)</span> or <span class="math">\((3, 3 + 4)\)</span>.</p>
+<p>Further, we know that a black checker can only jump checkers at 
+squares of the form <span class="math">\((a + 2m + 1, b + 2n + 1)\)</span>. Thus, black checkers either
+have the correct parity to jump all of the white checkers, or they have
+the same parity as the white checkers (in which case they can be ignored).</p>
+<p>If a black checker does not have the correct parity to jump white checkers, 
+we can save ourselves time by not checking it.</p>
+<p>For example, in the checkerboard below, there are four black checkers,
+but only one (row 2, column 3) has the correct parity to jump each of the 
+white pieces. The other three are </p>
+<p>The other three 
+has the correct parity, while the black checker in the right do not.</p>
+<p><img alt="Checkerboard 3 - illustrate parity" src="/images/checkers3.png"></p>
+<p><a name="checkers-euler"></a></p>
+<h2 id="solution-analysis-graphs-and-euler-tours">Solution Analysis: Graphs and Euler Tours</h2>
+<p>If we examine the squares with correct parity, we can translate the board
+into a graph representation. Squares with the "jump" parity are nodes
+on the graph that can perform jumps. (No whites should have jump parity,
+otherwise the board is impossible.) </p>
+<p>Squares with the "jumped" (i.e., white pieces) parity are nodes that are 
+being jumped. These nodes form the edges between jump parity nodes,
+and these edges must be occupied by a white piece for a black piece
+to be able to pass through them. In this way, we can think of white pieces
+as "bridges" between jump parity squares.</p>
+<p>This representation leads to thinking about the tour the black checker takes
+through the checkerboard as an Euler tour across the graph. </p>
+<p>An Euler Tour, made famous by the 
+<a href="https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg">Seven Bridges of Königsberg</a>
+problem solved by Euler in 1736, 
+is a path that visits each node of the graph, traversing 
+each edge once and only once.</p>
+<p>Euler showed that an Euler path visiting each edge of the graph
+depends on the degree of each node in the graph.
+For an Euler path to exist, the graph must be connected
+and there must be exactly zero or two nodes of 
+odd degree.</p>
+<p>If we walk through the checker board and construct the graph
+(or assemble the information that the graph would have told us), 
+we can determine whether an Euler tour exists, and find the Euler tour.</p>
+<p>The example above shows a checkerboard with two white pieces
+forming two edges. The first white piece connects a jump parity square 
+with a black piece on it to a jump parity square that is empty.
+The second white piece connects two empty jump parity squares.</p>
+<p>The black "entrance" node has an odd degree (1).
+The second, unoccupied node has an even degree (2).
+The third, unoccupied node has an odd degree (1).
+Therefore the graph has two nodes of odd degree, so an Euler tour exists. </p>
+<p>If we modify this example to add one additional white checker piece
+on a square with correct parity, the Euler Path analysis identifies this 
+as a board with no solution:</p>
+<p><img alt="Checkerboard 4 - illustrate no Euler tour" src="/images/checkers4.png"></p>
+<p>This is because three of the nodes have degree 1 and one node has degree 3,
+for a total of 4 nodes with odd degree. The requirements for an Euler Tour 
+to exist (equivalent to saying a solution to the Checkers problem can be found
+for a given black checker) are violated, so no solution can be found.</p>
+<p>If we were to add a second black checker piece two squares away,
+an alternate graph (highlighted in blue) can be constructed, 
+and an alternate Euler path through the graph is available.</p>
+<p><img alt="Checkerboard 5 - illustrate alternate Euler tour" src="/images/checkers5.png"></p>
+<p>On the red graph, each node has an odd degree, so the number of nodes with odd degree is not 0 or 2.
+On the blue graph, only the start and end nodes have an odd degree (1), while the rest of the nodes 
+have a degree of 2 (one input and one output). This means an Euler Tour exists on the blue graph.</p>
+<p>In practice, a given black piece has a given graph connecting squares on the checkerboard - 
+we can ask each node on that graph for its degree, and the degree of its neighbors,
+and if a black piece results in an invalid number of odd nodes, we can abandon it.</p>
+<p><a name="checkers-algo"></a></p>
+<h2 id="solution-algorithm">Solution Algorithm</h2>
+<p>The algorithm to find solutions to this problem very roughly follows this pattern:
+* First, perform a parity check to determine if a solution is impossible.
+* Loop over each square of the board, looking for black pieces
+* For each black piece:
+    * Look at each neighbor:
+        * Determine if there is a square to jump to if neighbor is white 
+        * Determine number of odd neighbors
+    * Fail if more than 2 odd neighbors, or 2 odd neighbors and odd self
+    * Backtracking: explore neighbors, determine if all whites can be jumped</p>
+<p><a name="checkers-pseudocode"></a></p>
+<h2 id="solution-pseudocode">Solution Pseudocode</h2>
+<p>The solution code has three basic parts (four, including the input parser):
+* Initialize and parse the board
+* Loop over each square, checking if black piece is a solution
+* Function to check if black piece is a solution piece 
+* (Recursive backtracking) function to jump each white piece possible to jump.</p>
+<p>Start with the initialization of the board and looping over each 
+black piece to check if it is a solution piece:</p>
+<div class="highlight"><pre><span></span><code>initialize solutions counter
+initialize board
+
+for each s in squares:
+    if s is black piece:
+        if s is solution piece:
+            increment solutions counter
+            save location
+
+print summary
 </code></pre></div>
 
-<p>(Because we only have an increment operation at our disposal, 
-there is no way for us to deal with negative numbers. 
-Dittos for non-integer real numbers.) </p>
-<p>This method will fail when either of the two numbers we are adding are zero.</p>
-<p><a name="z-addition2"></a></p>
-<h3 id="solution-2-dealing-with-zeros">Solution 2: Dealing With Zeros</h3>
-<p>A second solution that is a bit more challenging is dealing with the case of possible zeros 
-in the first or second position. The algorithm above will increment the result and the 
-temporary variable <em>at least once</em> (similar to a do-while loop structure), 
-which will always cause the comparison operation <code>J2,0</code> or <code>J3,1</code> to fail
-if either cell 0 or cell 1 holds a zero.</p>
-<p>Here is code that can deal more gracefully with a zero in either 
-the first or second positions. This utilizes some extra space in memory
-to keep track of whether index 0 is a zero and whether index 1 is a zero.</p>
-<div class="highlight"><pre><span></span><code>// initialize
-001     Z3
-002     Z4 // temp 0
-003     Z5 // temp 1
-004     Z6 // is index 0 a zero?
-005     Z7 // is index 1 a zero?
-006     Z8 // zero
-007     Z9 // one
-008     I9
+<p>Now we just need to implement functions that can (a) check if a square
+contains a black piece (easy) and (b) check if a black piece is a 
+solution piece (uh... kind of what the whole problem boils down to, no?)</p>
+<p>We break that functionality into a separate function. Here is the 
+pseudocode to check if a black piece in a particular square 
+is a solution piece. This function iterates over squares 
+with jump parity - that means this function traverses the 
+<strong>nodes only</strong> in the graph representation of the checkerboard.</p>
+<p>This function enforces the requirement that no node can have more than 2 odd neighbors,
+or be odd if it has more than 2 odd neighbors, since a graph must have 0 or 2 nodes
+with odd degree in the graph for an Euler Tour to exist. </p>
+<p>While we're at it, we also check if there are any white checker pieces
+without a square to land in when they are jumped (i.e., landing square blocked 
+by another black piece or at edge of board).</p>
+<div class="highlight"><pre><span></span><code>function is solution piece:
+    for each square of similar &quot;jump&quot; parity:
+        for each neighbor:
+            check if neighbor is odd 
+            if a neighbor square is white:
+                if next square is not empty:
+                    fail fast
 
-// increment by amount in index 0
-009     J0,8 --&gt; 014
-010     I6
-011     J4,6 --&gt; 014
-012     I4
-013     I3
-014     J0,4 --&gt; 009
+    if more than 2 odd neighbors, or 2 neighbors and odd:
+        fail fast
 
-// increment by amount in index 1
-015     J1,8 --&gt; 020
-016     I7
-017     J7,8 --&gt; 020
-018     I5
-019     I3
-020     J1,5 --&gt; 017
+    # we have a viable solution
 
-// clean up
-021     Z4
-022     Z5
-023     Z6
-024     Z7
+    recursively count number of jumped white checkers 
+
+    if number of jumped white checkers equals number of white checkers on board:
+        return true
 </code></pre></div>
 
-<p>The central idea behind this algorithm is, we keep incrementing the target cell while a 
-condition is false, and the condition we are checking is based on a separate, independent counter.
-That allows us to correctly increment (and stop incrementing) based on the two numbers 
-in index 0 and index 1. 
-(We don't want the final result cell to be involved in our final condition check.) </p>
-<p>This pattern can also be expanded to work for adding an arbitrary number of numbers; 
-one simply needs to add an additional temp variable and an additional "is zero" variable 
-for each new number being added to the total, then another block of 6 statements
-to increment by the amount in the given index.
-The block of 6 statements checks if the number we are adding is zero, 
-and if it is not, the result is incremented by that many times. </p>
-<p><a name="z-decrement"></a></p>
-<h2 id="implementing-a-decrement-operator-on-the-z-machine">Implementing a Decrement Operator on the Z-Machine</h2>
-<p>Suppose an operator places a number into cell 0 of the Z-Machine's memory. 
-We require that the Z-Machine subtract 1 from that number, and place it in cell 1. </p>
-<p>The pseudocode approach here is to increment two cells in a particular order:
-cell 2, which contains a sentinel value, is incremented. The program them checks if 
-cell 2 is equal to cell 0. If it is not, the program increments cell 1, and repeats.
-If cell 2 is equal to cell 0, the program stops before cell 1 is incremented, leaving it 
-one less than the original value in cell 0.</p>
-<div class="highlight"><pre><span></span><code>001   Z1            // decrement result
-002   Z2            // zero
-003   Z3            // one
-004   I3
-005   J2,3 --&gt; 007  // always false
-006   I1
-007   I2
-008   J2,0 --&gt; 006
+<p>Finding squares of similar jump parity is as easy as looping over each row and column, 
+and checking if it is off by 2 with the row/column of the black checker piece that we are
+currently checking. Checking if a neighbor is odd is as straightforward as counting its degree - 
+checking each of its four neighbors and determining which ones are open.
+This leaves finding the number of jumped white checkers as the only functionality left to define.</p>
+<div class="highlight"><pre><span></span><code>define number of jumped white checkers:
+    initialize white checkers jumped counter
+    for each neighbor:
+        if white piece, unvisited, with an empty place to jump to:
+            visit white piece
+            increment white checkers jumped
+            call number of jumped white checkers on next next neighbor
+            # this should be the empty space
+    return number white checkers jumped
 </code></pre></div>
 
-<p>This pseudocode uses hard-coded constants (zero and one) to create a jump condition
-that is always false and therefore always followed. This allows the machine to 
-skip a line of code like instruction 006, and perform the increment operation 
-in a staggered manner, as described above.</p>
-<p><a name="z-lessthan"></a></p>
-<h2 id="implementing-a-less-than-operator-on-the-z-machine">Implementing a Less Than Operator on the Z-Machine</h2>
-<p>Another challenging operation to implement with the Z-Machine is a comparison operator. 
-Suppose that an operator places two numbers into the first two memory positions of 
-the Z-Machine. That is, index 0 contains a number A, and index 1 contains a number B. 
-Supposing these numbers are both natural numbers (either 0 or positive integers), 
-a comparison operator will compare the two numbers, select the smaller of the two numbers, 
-and place it into the third position in memory (index 2).</p>
-<p>The pseudocode approach to implement the comparison operator is to create 
-a counter that start at zero, and check if it is equal to A or B 
-(the numbers at index 0 and index 1). 
-If we continue to increment our counter, and check if it is equal to A or B, 
-and stop when it reaches either A or B, we can guarantee that we will stop 
-when the counter reaches the smaller of the two numbers.</p>
-<p>In order to increment the memory cell at index 2 to hold the smaller of the two numbers 
-at index 0 and index 1, we can use the following Z-Machine code, 
-which continually checks if the number at index 2 is equal to 
-either the number at index 0 or the number at index 1, increments if false, 
-and stops when true (when it reaches the smaller of the two). </p>
-<div class="highlight"><pre><span></span><code>001     Z2 // smaller of the two numbers
-002     Z3 // zero
-003     Z4 // one
-004     I4
-
-005     J0,2 --&gt; 007
-006     J3,4 --&gt; 011
-007     J1,2 --&gt; 009
-008     J3,4 --&gt; 011
-009     I2
-010     J3,4 --&gt; 005
-011     Z4
-</code></pre></div>
-
-<p>Note that this code successfully handles the case where either number (or both) 
-is 0 or any positive integer.</p>
-<p><a name="z-whocares"></a></p>
-<h2 id="who-cares-or-how-to-build-a-computer">Who Cares? (Or, How To Build A Computer)</h2>
-<p>This whole exercise may appear, at first glance, to be an exercise in trivial pursuit. 
-Why bother reinventing the wheel? Isn't this nothing more than an entertaining puzzle?</p>
-<p>To the contrary - the process of assembling a sequence of simple operations into a cascade of
-more complex operations is precisely how computational devices are assembled from 
-circuit components. For example, a <a href="https://en.wikipedia.org/wiki/Flip-flop_%28electronics%29">flip flop circuit</a>
-utilizes a pair of NOR (negation of OR) gates to store bits. The <a href="https://en.wikipedia.org/wiki/Apollo_Guidance_Computer">Apollo Guidance Computer</a>
-was composed entirely of NOR gates. </p>
-<p>In fact, the Apollo Guidance Computer is a fantastic example of a computational device 
-constructed from a set of such simple instructions as the ones available in the Z-Machine.
-A few example operations from the Wikipedia article on the Apollo Guidance Computer:</p>
-<div class="highlight"><pre><span></span><code>AD (add)
-    Add the contents of memory to register A and store the result in A.
-
-INDEX
-    Add the data retrieved at the address specified by the instruction 
-    to the next instruction. INDEX can be used to add or subtract 
-    an index value to the base address specified by the operand 
-    of the instruction that follows INDEX. This method is used 
-    to implement arrays and table look-ups.
-</code></pre></div>
-
-<p>It is not unusual for a hardware platform to have a small set of basic commands or instructions
-that can be carried out, and for that set of instructions to be different from hardware platform
-to hardware platform. Designing a new computational device requires the system designer
-to adapt to the hardware's capabilities - not the other way around. 
-For that reason, it is important to keep those engineering and puzzle-solving skills sharp.
-You never know when you'll be designing a new computer device.</p>
-<p><a name="z-sources"></a></p>
-<h2 id="sources">Sources</h2>
+<p><a name="checkers-refs"></a></p>
+<h2 id="references">References</h2>
 <ol>
-<li>
-<p>"The Two Problems I Had To Solve In My Oxford Interview." John Graham-Cumming. Published 2 May 2013. Accessed 24 April 2017.
-&lt;<a href="http://blog.jgc.org/2013/05/the-two-problems-i-had-to-solve-in-my.html">http://blog.jgc.org/2013/05/the-two-problems-i-had-to-solve-in-my.html</a>&gt;</p>
-</li>
-<li>
-<p>"Flip Flop (electronics)." Wikipedia. The Wikimedia Foundation. Edited 13 April 2017. Accessed 24 April 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Flip-flop_%28electronics%29">https://en.wikipedia.org/wiki/Flip-flop_%28electronics%29</a>&gt;</p>
-</li>
-<li>
-<p>"Apollo Guidance Computer." Wikipedia. The Wikimedia Foundation. Edited 5 April 2017. Accessed 24 April 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Apollo_Guidance_Computer">https://en.wikipedia.org/wiki/Apollo_Guidance_Computer</a>&gt;</p>
-</li>
+<li>"ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
+&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</li>
 </ol>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var align = "center",
@@ -1185,15 +1217,13 @@ You never know when you'll be designing a new computer device.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/turing-machine.html">turing machine</a>
+                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
                     &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-engineering.html">computer engineering</a>
+                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/apollo.html">apollo</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/assembly.html">assembly</a>
+                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1232,6 +1262,44 @@ You never know when you'll be designing a new computer device.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>June 2023</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/two-burp-suite-extensions-worth-installing-jwt-editor-and-hackvertor.html">Two Burp Suite Extensions Worth Installing: JWT Editor and Hackvertor</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>May 2023</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/blind-sql-injection-with-conditional-errors-and-oracles-dual-table.html">Blind SQL Injection with Conditional Errors (and Oracle's `dual` Table)</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/blind-sql-injection-with-conditional-responses.html">Blind SQL Injection with Conditional Responses</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/sql-injection-union-attacks-turning-a-product-listing-into-a-user-dump.html">SQL Injection UNION Attacks: Turning a Product Listing Into a User Dump</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/sql-injection-fundamentals-four-attack-shapes.html">SQL Injection Fundamentals: Four Attack Shapes</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/working-through-the-portswigger-web-security-academy.html">Working Through the PortSwigger Web Security Academy</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

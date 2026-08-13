@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <title>charlesreid1</title>
+        <meta charset="utf-8" />
+
+        <!--
+        CSS styles
+        -->
+        <link href="https://charlesreid1.github.io/theme/css/bootstrap.css"       rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/slate.css"              rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/font-awesome.css"       rel="stylesheet" type="text/css"/>
+        <link href="https://charlesreid1.github.io/theme/css/pygment-solarized.css"  rel="stylesheet" type="text/css"/>
+
+        <!--
+        my CSS styles
+        -->
+        <link href="https://charlesreid1.github.io/theme/css/main.css"            rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/dox.css"             rel="stylesheet" type="text/css">
+
+
+        <!--
+        include Angular first
+        -->
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/angular-1.3.15.js"></script>
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/skrollr-0.6.29.js"></script>
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/d3-3.5.5.js"></script>
+
+        <!--
+        this seems like a bad idea.
+        but if I don't put jquery first, I get errors about unrecognized $s.
+        -->
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+
+</head>
+<body id="index">
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span> 
+            </button>
+            <a href="https://charlesreid1.github.io" class="navbar-brand">charlesreid1.github.io</a>
+        </div>
+        <div>
+            <div class="collapse navbar-collapse" id="myNavbar">
+                <ul class="nav navbar-nav">
+
+                    <li>
+                        <a href="https://charlesreid1.com/wiki">Wiki</a>
+                    </li>
+                    <li>
+                        <a href="https://git.charlesreid1.com/explore">Git</a>
+                    </li>
+                    <li>
+                        <a href="http://spotify.charlesreid1.com">Music</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.com/life">Life</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.github.io">Blog</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+
+<div class="container">
+
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                SQL Injection Fundamentals: Four Attack Shapes
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2023-05-21T14:00:00-07:00" pubdate>Sunday 05/21/2023</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/sql-injection-fundamentals-four-attack-shapes.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>This is part 2 of our series on working through the
+<a href="working-through-the-portswigger-web-security-academy.html">PortSwigger Web Security Academy</a>.
+This one covers SQL injection at a bird's-eye view - the four main attack
+shapes that show up over and over, with the smallest possible example of
+each. Later posts will drill into specific attack types.</p>
+<p>Full notes on our wiki:
+<a href="https://charlesreid1.com/wiki/SQL_Injection">SQL Injection</a>.</p>
+<h2 id="what-sql-injection-is">What SQL Injection Is</h2>
+<p>SQL injection is a web security bug that lets attackers execute their own
+SQL against your database, by taking advantage of user inputs that are
+not sanitized before being pasted into a SQL query.</p>
+<p>The reason it is worth caring about is impact vs. effort. SQL injection
+is one of the highest-impact web vulnerabilities (attacker can potentially
+read or modify anything in the database), and one of the lowest-effort
+to actually pull off. That combination is why it has been in the
+<a href="https://charlesreid1.com/wiki/OWASP">OWASP Top 10</a> since forever.</p>
+<h2 id="the-four-shapes">The Four Shapes</h2>
+<p>Our notes group SQL injection into four attack shapes:</p>
+<ol>
+<li>Retrieving hidden data</li>
+<li>Subverting application logic</li>
+<li>UNION attacks</li>
+<li>Blind SQL injection</li>
+</ol>
+<p>The rest of this post walks through the smallest example of each.</p>
+<h2 id="shape-1-retrieving-hidden-data">Shape 1: Retrieving Hidden Data</h2>
+<p>Suppose a shopping site has this URL for showing product listings:</p>
+<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts
+</code></pre></div>
+
+<p>Behind the scenes, that URL runs this SQL query:</p>
+<div class="highlight"><pre><span></span><code>SELECT * FROM products WHERE category = &#39;Gifts&#39; AND released = 1
+</code></pre></div>
+
+<p>The <code>released = 1</code> clause hides unreleased products from the public. If
+the <code>category</code> parameter is not sanitized, we can smuggle in SQL that
+comments out the rest of the query:</p>
+<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts&#39;--
+</code></pre></div>
+
+<p>The <code>--</code> starts a SQL comment. Everything after it is ignored, including
+the <code>AND released = 1</code> check. Result: all products, including
+unreleased ones, get returned.</p>
+<p>Same trick with an unconditional truthy clause:</p>
+<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts&#39;+OR+1=1--
+</code></pre></div>
+
+<h2 id="shape-2-subverting-application-logic">Shape 2: Subverting Application Logic</h2>
+<p>Same idea, applied to authentication. If a login form runs</p>
+<div class="highlight"><pre><span></span><code>SELECT * FROM users WHERE username = &#39;user&#39; AND password = &#39;nopass&#39;
+</code></pre></div>
+
+<p>and doesn't sanitize the username field, you can log in as anyone by
+supplying the username:</p>
+<div class="highlight"><pre><span></span><code>administrator&#39;--
+</code></pre></div>
+
+<p>Everything after the <code>--</code> (including the entire password check) becomes
+a comment. The query returns the administrator row. You are logged in.</p>
+<p>You have to guess the username - <code>admin</code>, <code>administrator</code>, <code>root</code>,
+<code>superuser</code> - so this is not a one-shot attack, but it is not a hard
+attack either. If you see a login page throwing internal server errors
+when you put a single quote in the username field, that is your signal.</p>
+<h2 id="shape-3-union-attacks">Shape 3: UNION Attacks</h2>
+<p>UNION attacks use SQL's <code>UNION</code> operator to piggyback data from other
+tables into the results of the original query. If a shopping site runs</p>
+<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;Gifts&#39;
+</code></pre></div>
+
+<p>and the <code>category</code> parameter is injectable, we can attach a UNION:</p>
+<div class="highlight"><pre><span></span><code>&#39; UNION SELECT username, password FROM users--
+</code></pre></div>
+
+<p>The final query becomes</p>
+<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;&#39;
+UNION SELECT username, password FROM users--&#39;
+</code></pre></div>
+
+<p>which returns product listings and every username/password pair. Whatever
+UI was going to display product name and description now also displays
+usernames and passwords.</p>
+<p>The oversimplified version above works out cleanly, but in practice you
+need to figure out the column count of the outer query first, then make
+sure the columns you union in are type-compatible. We covered that in
+<a href="sql-injection-union-attacks.html">the next post</a>.</p>
+<h2 id="shape-4-blind-sql-injection">Shape 4: Blind SQL Injection</h2>
+<p>Blind SQLi is what you do when the application is vulnerable but the
+query results don't come back to you in the HTTP response. Cookie tracking
+IDs are the classic example - the ID gets fed to a SQL query on every
+request, but the query result is never rendered on the page.</p>
+<p>Even without seeing the result directly, you can often <em>infer</em> it from
+how the page behaves. Ship one of these two requests:</p>
+<div class="highlight"><pre><span></span><code>xyz&#39; AND &#39;1&#39;=&#39;1
+xyz&#39; AND &#39;1&#39;=&#39;2
+</code></pre></div>
+
+<p>If the page renders differently in the two cases (say, one shows a
+"Welcome back" banner and the other doesn't), congratulations, you have
+a boolean oracle. Now you can ask the database yes/no questions and get
+answers via page behavior. Wrap the boolean around anything you want to
+know:</p>
+<div class="highlight"><pre><span></span><code>xyz&#39; AND SUBSTRING((SELECT Password FROM Users WHERE Username = &#39;Administrator&#39;), 1, 1) &gt; &#39;m
+</code></pre></div>
+
+<p>That request returns "Welcome back" if the first character of the
+administrator's password is greater than <code>m</code>, and doesn't otherwise. Do
+that in a binary search per character, and you have the whole password.</p>
+<p>Blind SQLi comes in a few flavors - conditional responses (above),
+conditional errors, and time-based. We cover the first two in
+<a href="blind-sql-injection-with-conditional-responses.html">the next</a>
+<a href="blind-sql-injection-with-conditional-errors.html">couple</a> of posts.</p>
+<h2 id="what-ties-them-together">What Ties Them Together</h2>
+<p>Every one of these attacks is a variation on the same theme: a user input
+is being pasted directly into a SQL query, and the attacker can supply
+SQL syntax that changes the meaning of the query. The fix is the same in
+every case: parameterized queries. Not string concatenation. Not escaping.
+Parameterized queries.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our wiki: <a href="https://charlesreid1.com/wiki/SQL_Injection">SQL Injection</a></li>
+<li><a href="https://portswigger.net/web-security/sql-injection/cheat-sheet">PortSwigger SQL Injection cheat sheet</a></li>
+<li><a href="https://portswigger.net/web-security/sql-injection">Web Security Academy - SQL Injection</a></li>
+</ul></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sql-injection.html">sql injection</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sqli.html">sqli</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/portswigger.html">portswigger</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/web-security.html">web security</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/owasp.html">owasp</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+
+</div>
+
+
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/bootstrap-3.3.4.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/d3-3.5.5.js"></script><script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/bootstrap-3.3.4.js"></script>
+
+<footer id="contentinfo" class="body">
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<center>
+	<hr />
+</center>
+<p>&nbsp;</p>
+<p style="text-align: center">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-terminal fa-stack-1x fa-inverse"></i>
+    </span>
+    Made from the command line with vim by 
+    <a href="http://charlesreid1.com">charlesreid1</a><br />
+    with help from <a href="https://getbootstrap.com/">Bootstrap</a> and <a href="http://getpelican.com">Pelican</a>.
+</p>
+
+<br />
+
+<p style="text-align: center">
+    <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-creative-commons fa-stack-1x fa-inverse"></i>
+    </span>
+    </a>
+    <br />
+    Licensed under the <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 License</a>.
+</p>
+
+<!-- Start of StatCounter Code for Default Guide -->
+<script type="text/javascript">
+var sc_project=11611748;
+var sc_invisible=1;
+var sc_security="9fcba820";
+</script>
+<script type="text/javascript"
+src="https://www.statcounter.com/counter/counter.js"
+async></script>
+
+<noscript><div class="statcounter"><a title="Web Analytics"
+href="http://statcounter.com/" target="_blank"><img
+class="statcounter"
+src="//c.statcounter.com/11611748/0/9fcba820/1/" alt="Web
+Analytics"></a></div></noscript>
+<!-- End of StatCounter Code for Default Guide -->
+</footer><!-- /#contentinfo -->
+</body>
+</html>

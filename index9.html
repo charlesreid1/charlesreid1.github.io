@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Confuse-A-Constructor: When Class A's Constructor Returns Objects of Type B
+                Copying LetsEncrypt Certs Between Machines
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2020-02-22T13:00:00-08:00" pubdate>Saturday 02/22/2020</time>
+                <time datetime="2020-08-11T17:00:00-07:00" pubdate>Tuesday 08/11/2020</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/confuse-a-constructor-when-class-as-constructor-returns-objects-of-type-b.html">permalink</a>
+                <a href="https://charlesreid1.github.io/copying-letsencrypt-certs-between-machines.html">permalink</a>
             </span>
             </p>
         </div>
@@ -128,214 +128,134 @@
     <div class="col-md-12" style="text-align: left;">
 
         <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#confuse-a-constructor">Confuse-A-Constructor</a></li>
-<li><a href="#what-is-the-constructor">What is the constructor?</a></li>
-<li><a href="#rewiring-the-constructor-to-do-weird-stuff">Rewiring the constructor to do... weird stuff</a></li>
-<li><a href="#a-simple-example-class">A simple example class</a></li>
-<li><a href="#adding-a-__new__-method">Adding a __new__ method</a></li>
-<li><a href="#when-__new__-returns-objects-not-classes">When __new__ returns objects, not classes</a></li>
-<li><a href="#moving-beyond-argparse">Moving beyond argparse</a></li>
-<li><a href="#using-__new__-in-your-patterns">Using __new__ in your patterns</a></li>
+<li><a href="#https-ssl-certificates-and-letsencrypt">HTTPS, SSL Certificates, and LetsEncrypt</a></li>
+<li><a href="#create-certificates">Create Certificates</a><ul>
+<li><a href="#certbot-command">Certbot Command</a></li>
+<li><a href="#tar-compress-certs-command">Tar Compress Certs Command</a></li>
+<li><a href="#secure-copy-certs-command">Secure Copy Certs Command</a></li>
+<li><a href="#untar-certs-command">Untar Certs Command</a></li>
+</ul>
+</li>
+<li><a href="#renew-certificates">Renew Certificates</a></li>
 </ul>
 </div>
-<h2 id="confuse-a-constructor">Confuse-A-Constructor</h2>
-<p>Today, we are going to confuse a constructor.</p>
-<iframe allowFullScreen="allowFullScreen" src="https://www.youtube.com/embed/1tsIxNci_dE?ecver=1&amp;iv_load_policy=1&amp;rel=0&amp;yt:stretch=16:9&amp;autohide=1&amp;color=red&amp;width=560&amp;width=560" width="560" height="315" allowtransparency="true" frameborder="0">
-    <script type="text/javascript">function execute_YTvideo(){return youtube.query({ids:"channel==MINE",startDate:"2019-01-01",endDate:"2019-12-31",metrics:"views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained",dimensions:"day",sort:"day"}).then(function(e){},function(e){console.error("Execute error",e)})}</script>
-</iframe>
-
-<h2 id="what-is-the-constructor">What is the constructor?</h2>
-<p>One of the first concepts encountered in object-oriented programming
-is that of the <em>constructor</em>, the method that is run immediately after
-an object is instantiated that configures and initializes the object.</p>
-<p>In Python, a constructor is defined by the <code>__init__</code> function.
-The constructor is not permitted to return a value, because
-constructing a new instance of class A should result in an object
-of type A. Returning something would just be confusing things.</p>
-<p>But does it ever make sense for a constructor of class A to return
-an object of type B? And if it does make sense, how do we go about
-doing it?</p>
-<h2 id="rewiring-the-constructor-to-do-weird-stuff">Rewiring the constructor to do... weird stuff</h2>
-<p>The answer lies in Python's <code>__new__</code> method, which is a method called
-when a class is defined (not instantiated). The <code>__new__</code> method is
-different from the <code>__init__</code> method, and does not do the same thing.</p>
-<p>The <code>__new__</code> method for class A should only return the type of class A.
-If <code>__new__</code> returns anything else, Python will not run the <code>__init__</code>
-method for class A.</p>
-<p>For example, suppose we want a wrapper class that transparently constructs
-different kinds of objects conditionally - based on a configuration file,
-or the state of a file, or some other condition. We want to construct an
-object of type A and get back an object of type B, C, or D. How to do that?</p>
-<p>First, let's look at how the <code>__new__</code> method works.</p>
-<h2 id="a-simple-example-class">A simple example class</h2>
-<p>Start with a simple example class:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instance of class A created&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Executing this gives:</p>
-<div class="highlight"><pre><span></span><code>In [3]: my_object = A()
-Instance of class A created
-
-In [4]: my_object.hello()
-Hello world
-</code></pre></div>
-
-<h2 id="adding-a-__new__-method">Adding a <code>__new__</code> method</h2>
-<p>Now let's look at a class A where we define the <code>__new__</code> method. This method
-controls how the instantiation of objects of type A work, so we can do something
-like limiting the creation of objects of type A to when a certain condition is
-met:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">random</span>
-
-<span class="k">def</span> <span class="nf">tossCoin</span><span class="p">():</span>
-    <span class="k">if</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">True</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">False</span>
-
-<span class="k">class</span> <span class="nc">A5050</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">tossCoin</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Count not create instance&quot;</span><span class="p">)</span>
-        <span class="n">instance</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">A5050</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">instance</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instance of class A5050 created&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Now we can run this block of code:</p>
-<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">make_a5050</span><span class="p">():</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">my_object</span> <span class="o">=</span> <span class="n">A5050</span><span class="p">()</span>
-        <span class="n">my_object</span><span class="o">.</span><span class="n">hello</span><span class="p">()</span>
-    <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Better luck next time!&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>It takes a few tries:</p>
-<div class="highlight"><pre><span></span><code>In [9]: make_a5050()
-Better luck next time!
-
-In [10]: make_a5050()
-Instance of class A5050 created
-Hello world
-</code></pre></div>
-
-<p>The <code>__new__</code> method for the <code>A5050</code> class raises a runtime error
-with a 50% probability. Otherwise, it calls the <code>__new__</code> method
-of the parent class (<code>object</code>, which returns a class of type <code>object</code>).
-We pass the same arguments and keyword arguments (args/kwargs) on to the
-super class <code>__new__</code>, but we could optionally modify them here (say, add
-a keyword, or check the state of a file, or etc.).</p>
-<p>This is just an example of how the instantiation behavior of a class
-can be modified before its constructor is even called by using the
-<code>__new__</code> method.</p>
-<h2 id="when-__new__-returns-objects-not-classes">When <code>__new__</code> returns objects, not classes</h2>
-<p>In the above example, our <code>__new__</code> method returned the result of
-a call to <code>__new__</code> of a parent class. What happens if <code>__new__</code>
-returns something else?</p>
-<p>First, repeating an important point made above: if <code>__new__</code> for a class
-returns anything <em>other</em> than that class type, then <code>__init__</code> will not 
-be called for that class.</p>
-<p>That means that the <code>__new__</code> method should <em>either</em> return a class (if
-returning the type of its parent class, like a normal <code>__new__</code> method
-does), <em>or</em> it should return an instantiated object.</p>
-<p>Let's imagine that we want to create different instances of different
-classes based on a command line flag passed to the script:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">BaseClass</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world from class </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
-
-<span class="k">class</span> <span class="nc">B</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">C</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">D</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">B</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">B</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">C</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">C</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">D</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">D</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Could not create instance&quot;</span><span class="p">)</span>
-
-<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="nn">argparse</span>
-
-    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-B&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type B&#39;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-C&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type C&#39;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-D&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type D&#39;</span><span class="p">)</span>
-
-    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-
-    <span class="n">a</span> <span class="o">=</span> <span class="n">A</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
-</code></pre></div>
-
-<p>Now if we run this script and pass it different flags, we get
-a variable <code>a</code> with different types:</p>
-<div class="highlight"><pre><span></span><code>$ py wat2.py -h
-usage: wat2.py [-h] [-B] [-C] [-D]
-
-optional arguments:
-  -h, --help  show this help message and exit
-  -B          Return object of type B
-  -C          Return object of type C
-  -D          Return object of type D
-</code></pre></div>
-
-<p>Now try the three flags:</p>
-<div class="highlight"><pre><span></span><code>$ py wat2.py -B
-&lt;class &#39;__main__.B&#39;&gt;
-
-$ py wat2.py -C
-&lt;class &#39;__main__.C&#39;&gt;
-
-$ py wat2.py -D
-&lt;class &#39;__main__.D&#39;&gt;
-</code></pre></div>
-
-<h2 id="moving-beyond-argparse">Moving beyond argparse</h2>
-<p>The example above shows how the constructor can use
-argparse options to determine what kind of object
-to return with <code>__new__</code>, but you can use other
-types of conditions as well:</p>
+<p>A quick post that details a useful operation: copying LetsEncrypt certificates
+from one machine to another.</p>
+<p>(We also cover our use case: setting up certificates for private VPN networks
+that use public DNS entries.)</p>
+<h2 id="https-ssl-certificates-and-letsencrypt">HTTPS, SSL Certificates, and LetsEncrypt</h2>
+<p>As a bit of background, the whole reason this is necessary, the whole reason we are dealing with
+the hassle of setting up SSL certificates, is to enable end-to-end encrypted connections to
+a server.</p>
+<p>For example, we might have a web application that we want to make available over a VPN network.
+The web application would have a private IP address on the VPN network, say <code>10.0.0.101</code>.</p>
+<p>Now, what we want is for clients connected to the VPN to be able to visit a domain, say
+<code>foobar.limo</code>, and be able to make encrypted connections to the web service at <code>10.0.0.101</code>.</p>
+<p>We can do this (assuming we control the foobar.limo domain) by creating a public DNS entry
+for <code>foobar.limo</code> to point to <code>10.0.0.101</code>. Then when visitors type <code>foobar.limo</code> into their
+browser, if they are connected to the VPN they will reach the web service at <code>10.0.0.101</code>.</p>
+<p>To make connections encrypted, however, so that users can type <code>https://foobar.limo</code> and make an
+encrypted connection to the server at <code>10.0.0.101</code>, the server must have an SSL certificate
+for the <code>foobar.limo</code> domain.</p>
+<p>Assuming the web service at <code>10.0.0.101</code> cannot be reached from the outside world,
+it becomes necessary to perform several extra steps to enable SSL on the <code>10.0.0.101</code> server:</p>
 <ul>
-<li>using command line options (see argparse example above)</li>
-<li>using configuration file options</li>
-<li>using environment variable values</li>
-<li>checking status of a file or port</li>
-<li>checking whether internet connection is available</li>
+<li>
+<p>First, the DNS entry for <code>foobar.limo</code> must be temporarily updated to point to a server that:</p>
+<ul>
+<li>has a publicly-accessible IP address,</li>
+<li>has LetsEncrypt and certbot installed,</li>
+<li>is connected to or can connect to the VPN or private <code>10.0.0.101</code> server,</li>
+<li>has no services running on port 80</li>
 </ul>
-<h2 id="using-__new__-in-your-patterns">Using <code>__new__</code> in your patterns</h2>
-<p>We have already covered the <a href="#">Registry</a>
-pattern in a prior blog post, but the
-<code>__new__</code> method lends itself well to
-all kinds of other patterns, including the
-Singleton pattern and the Factory pattern.</p>
-<p>There are some very useful patterns covered
-in this Github repository: <a href="https://github.com/faif/python-patterns">https://github.com/faif/python-patterns</a></p></div>
+</li>
+<li>
+<p>Second, the certbot utility must be run on the publicly-accessible server to request a new or renewed
+  certificate <code>foobar.limo</code>. This will put the new or renewed <code>foobar.limo</code> cert files into
+  <code>/etc/letsencrypt/live</code>.</p>
+</li>
+<li>
+<p>Third, the LetsEncrypt certificates are owned by the root user, they must be owned by the root user on the
+  remote machine they are copied to, and SSH/SCP via the root user is (or should be!) prohibited,
+  the certificate files must be compressed using tar, so they can be copied as a non-root user;
+  and on the remote machine, they must be uncompressed to the appropriate location.</p>
+</li>
+</ul>
+<p>(Yes, there is always a <a href="https://xkcd.com/1168/">relevant XKCD</a>.)</p>
+<p>In this post, we cover how this works, and why you might want to do this.</p>
+<h2 id="create-certificates">Create Certificates</h2>
+<p>The first time you create a private VPN certificate on a machine:</p>
+<ul>
+<li>Log into the DNS provider</li>
+<li>Create a DNS record - type A, pointing to the IP address of the public server.</li>
+<li>Run the certbot command to create a certificate on the public server (see below).</li>
+<li>Copy the certificates to the private VPN node using scp (see below).</li>
+<li>Update the DNS record - type A, to point to the private VPN IP address of the private server.</li>
+</ul>
+<h3 id="certbot-command">Certbot Command</h3>
+<p>Command to create a certbot certificate (must be run as sudo):</p>
+<div class="highlight"><pre><span></span><code>#!/bin/bash
+if [ &quot;$(id -u)&quot; != &quot;0&quot; ]; then
+    echo &quot;&quot;
+    echo &quot;&quot;
+    echo &quot;This script should be run as root.&quot;
+    echo &quot;&quot;
+    echo &quot;&quot;
+    exit 1;
+fi
+
+set -x
+
+DOM=&quot;foobar.limo&quot;
+
+certbot certonly \
+    --standalone \
+    --non-interactive \
+    --agree-tos \
+    --email test@example.com \
+    -d ${DOM}
+</code></pre></div>
+
+<p>This command requires port 80 be available (the <code>--standalone</code> flag starts a standalone web server
+that binds to port 80). If port 80 is being used this command will fail to run and the cert will not be created.</p>
+<h3 id="tar-compress-certs-command">Tar Compress Certs Command</h3>
+<p>Archive on the public server:</p>
+<div class="highlight"><pre><span></span><code>DOM=&quot;foobar.limo&quot;
+sudo tar -chvzf foobar_certs.tar.gz \
+    /etc/letsencrypt/archive/${DOM} \
+    /etc/letsencrypt/renewal/${DOM}.conf \
+    /etc/letsencrypt/live/${DOM}
+</code></pre></div>
+
+<h3 id="secure-copy-certs-command">Secure Copy Certs Command</h3>
+<p>Use scp to copy certs to private remote machine:</p>
+<div class="highlight"><pre><span></span><code>scp foobar_certs.tar.gz user@10.0.0.101:~/
+</code></pre></div>
+
+<h3 id="untar-certs-command">Untar Certs Command</h3>
+<p>On the private remote machine, untar the certs file copied over:</p>
+<div class="highlight"><pre><span></span><code>cd /
+sudo tar -xvf ~/foobar_certs.tar.gz
+</code></pre></div>
+
+<p>Last, fix permissions for cert directories:</p>
+<div class="highlight"><pre><span></span><code>sudo chmod 700 /etc/letsencrypt/archive
+sudo chmod -R 755 /etc/letsencrypt/archive/*
+sudo chmod 700 /etc/letsencrypt/live
+sudo chmod -R 755 /etc/letsencrypt/live/*
+sudo chmod 700 /etc/letsencrypt/archive
+</code></pre></div>
+
+<h2 id="renew-certificates">Renew Certificates</h2>
+<p>When you renew a private VPN certificate on a machine:</p>
+<ul>
+<li>Log into the DNS provider</li>
+<li>Update the DNS record to a type A, pointing to the IP adress of the public server.</li>
+<li>Run the certbot command to renew a certificate on the public server (see above).</li>
+<li>Copy the certificates to the private VPN node (see above).</li>
+<li>Untar the certificates into place on the private VPN node (see above).</li>
+<li>Restore the DNS record - type A, to point to the private VPN IP address of private server again.</li>
+</ul></div>
 
     </div>
 </div>
@@ -347,13 +267,13 @@ in this Github repository: <a href="https://github.com/faif/python-patterns">htt
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    <a href="https://charlesreid1.github.io/tag/letsencrypt.html">letsencrypt</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/constructor.html">constructor</a>
+                    <a href="https://charlesreid1.github.io/tag/ssl.html">ssl</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    <a href="https://charlesreid1.github.io/tag/https.html">https</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/object-oriented-programming.html">object oriented programming</a>
+                    <a href="https://charlesreid1.github.io/tag/certificates.html">certificates</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -371,18 +291,383 @@ in this Github repository: <a href="https://github.com/faif/python-patterns">htt
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Python Patterns: The Registry
+                Applied Gitflow
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2020-02-20T22:22:00-08:00" pubdate>Thursday 02/20/2020</time>
+                <time datetime="2020-07-01T12:00:00-07:00" pubdate>Wednesday 07/01/2020</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/applied-gitflow.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#how-we-apply-gitflow">How We Apply Gitflow</a></li>
+<li><a href="#the-tools">The Tools</a></li>
+<li><a href="#recap-of-gitflow">Recap of Gitflow</a></li>
+<li><a href="#deploying-and-releasing">Deploying and Releasing</a></li>
+<li><a href="#environment-file">Environment File</a></li>
+<li><a href="#deploy-action">Deploy Action</a></li>
+<li><a href="#release-action">Release Action</a></li>
+<li><a href="#release-script">Release Script</a><ul>
+<li><a href="#breaking-it-down">Breaking It Down</a></li>
+</ul>
+</li>
+<li><a href="#makefile">Makefile</a></li>
+<li><a href="#more-details">More Details</a></li>
+</ul>
+</div>
+<p><strong>This is a retroactive blog post. This post was authored in February 2022,
+using material authored in July 2020.</strong></p>
+<p>The most up-to-date version of this content is here: <a href="https://charlesreid1.com/wiki/Applied_Gitflow">https://charlesreid1.com/wiki/Applied_Gitflow</a></p>
+<h2 id="how-we-apply-gitflow">How We Apply Gitflow</h2>
+<p>In some prior blog posts, we've covered a few patterns that we use for software development,
+including:</p>
+<ul>
+<li>
+<p><a href="https://charlesreid1.github.io/automatically-generating-up-to-date-requirementstxt-for-python-projects.html">Automatically generating requirements.txt files with pinned versions for Python
+  projects</a>,
+  which covered a Makefile rule that would programmatically generate a fresh, up-to-date requirements.txt file
+  for a Python project</p>
+</li>
+<li>
+<p><a href="https://charlesreid1.github.io/incorporating-terraform-commands-into-makefiles.html">Incorporating Terraform commands into
+  Makefiles</a> to make it easy
+  to use <code>make</code> and terraform to manage multiple cloud deployments</p>
+</li>
+<li>
+<p><a href="https://charlesreid1.github.io/git-workflows-part-1-supercharging-your-git-config.html">Git workflows: supercharging your git
+  config</a>, which covers
+  some tricks and aliases for the git configuration file that makes some git operations a lot easier</p>
+</li>
+<li>
+<p><a href="https://charlesreid1.github.io/git-workflows-part-3-refactoring-large-branches-and-pull-requests.html">Git workflows: refactoring large branches and pull
+  requests</a>,
+  which covered strategies and techniques for refactoring a large set of changes
+  or pull request into smaller chunks that are simpler and easier to review,
+  without having to start from scratch</p>
+</li>
+</ul>
+<p>In this post, we'll get into some details about how we manage software in git repositories.</p>
+<p>Specifically, we want to provide some details about how gitflow looks
+when it's being used to manage software with different versions,
+and when that software is being deployed in multiple environments.</p>
+<p>The original gitflow pattern doesn't talk much about how software
+deployments in multiple environments fits in with the gitflow model,
+or even <em>if</em> it fits in the gitflow model.</p>
+<p>With a few adjustments and patterns, gitflow can easily handle both.
+In this post we'll share patterns we have found useful when using
+gitflow to manage both deployments and releases.</p>
+<h2 id="the-tools">The Tools</h2>
+<p>The main tool for this writeup is git, used for version control of the repository. GitHub and Gitea provide an
+interface to manage the git repository and to collaborate/review code. We use the gitflow model for managing
+branches and code, so we'll summarize it, and provide a link with the details. </p>
+<p>We are also using a cloud provider where we upload the code to the cloud, and the code is run there. 
+(Think AWS lambda function.) That code is separate from the git repository, so we need a way to track
+what code is in what environment. We'll cover how we do that, too. </p>
+<h2 id="recap-of-gitflow">Recap of Gitflow</h2>
+<p>Since this post is talking about how to apply <a href="https://nvie.com/posts/a-successful-git-branching-model/">Gitflow</a>,
+let's go through a quick recap of how it works.</p>
+<p>Gitflow requires that a few branches be created, but
+let's assume you're working in a repo already set up with Gitflow.
+In that case, regular development work looks like thi:</p>
+<ul>
+<li>The <code>develop</code> branch is where the newest version is being worked on</li>
+<li>Specific fixes or features go into their own feature branch</li>
+<li>Feature branches are reviewed/tested before being merged into <code>develop</code></li>
+<li>When it is time for a new version, the accumulated features on <code>develop</code> are
+  put into a new branch for the new version.</li>
+<li>When the new version is ready, the <code>main</code> branch is updated to point to the new version branch.
+  A new release is made from the main branch.</li>
+</ul>
+<p>There is also a workflow for bug fixes for versions that have already been released:</p>
+<ul>
+<li>A new hotfix branch is created from the version branch (which is also what the <code>main</code> branch is pointing to)</li>
+<li>The changes are added to the hotfix branch</li>
+<li>The hotfix branch is merged back into the version branch, the version number is bumped, and a new release is cut.</li>
+<li>The hotfix branch is also merged into the <code>develop</code> branch, so that it will make it into future releases.</li>
+</ul>
+<h2 id="deploying-and-releasing">Deploying and Releasing</h2>
+<p>As the original author himself says on the page describing Gitflow,
+this model doesn't say much about how to handle deployments into
+multiple cloud environments.</p>
+<p>There are two main actions that an operator can take, using the system we have devised:</p>
+<ul>
+<li>deploy code (upload the code to a cloud stage, and have that version of the code running in the cloud)</li>
+<li>release code (update which version of the code is considered the "latest version")</li>
+</ul>
+<p>Additionally, the actions the operator can take will require certain variables to be defined - the location of the
+source code, and which cloud environment (development, integration, production) we're deploying to, for example. Those
+variables are defined using environment variables, so that we can use scripts to do deploy or release actions.</p>
+<h2 id="environment-file">Environment File</h2>
+<p>Before covering the deploy and release scripts, here is an example environment file. The example release script
+below refers to these variables. The deploy script (no example provided, since it will inevitably be case-specific)
+also uses these environment variables. More environment variables can be added as needed, to grow with the
+complexity of the software and deployment process.</p>
+<div class="highlight"><pre><span></span><code>#!/bin/bash
+
+export PROJECTNAME_PACKAGENAME_HOME=&quot;${HOME}/path/to/package&quot;
+export PROJECTNAME_PACKAGENAME_STAGE=&quot;dev&quot;
+</code></pre></div>
+
+<h2 id="deploy-action">Deploy Action</h2>
+<p>The deploy action is the action that takes the code in its current state and uploads it to the cloud. That can take
+many forms depending on the cloud service being used, but for example deploying an AWS lambda function would mean
+creating a new .zip file from the lambda function code, and uploading that zip file to the corresponding lambda
+function using the AWS CLI.</p>
+<p>The deploy action is a script that is run. It deploys the code in its current state in the repository. Environment
+variables are used to parameterize the script. There are environment variables to specify the repository location
+on disk, to specify the deployment stage, and any others that are needed.</p>
+<p>The deploy script is also the place to assert certain conditions are true before the deploy action is taken. We
+keep it simple, but these can be expanded on:</p>
+<ul>
+<li>Check various environment variables are set</li>
+<li>Check environment variable values</li>
+</ul>
+<p>These can be done in the deploy script directly, if the checks are simple, or they can be moved to an entire
+separate script like a hypothetical <code>check_env.sh</code>, which would be run before the deploy script (using a make rule
+dependency).</p>
+<p>(Note that if checks are TOO strict, they can interfere with deployment, so they should be adjusted accordingly.) </p>
+<p>Another step the deployment action might have before the actual deployment is to assemble any deployment
+configuration files. For example, if the deployment process requires a JSON file that is dynamically assembled from
+other bits of information, that could go in its own script that would be run before the deploy script (using a make
+rule dependency).</p>
+<p>For this writeup, we keep things simple and do all the checks in the deploy script.</p>
+<h2 id="release-action">Release Action</h2>
+<p>The release action can be thought of as a git repository operation.</p>
+<p><strong>When does a release happen?</strong></p>
+<p>When using gitflow, features and bugfixes will accumulate in the develop branch. Eventually the time for a new
+release will come (scheduled, or because enough changes have accumulated). A new branch will be created that will
+"freeze" the code in whatever state the develop branch is in. (Freeze is in quotes, because there are small changes
+that need to be made to that "frozen" code before a release happens, but those are changes like bumping the version
+number - no core changes.)</p>
+<p><strong>Where does the release script come in?</strong></p>
+<p>Once the code in the release branch is ready to go, the release script is run. The script will create a git tag, reset the head of the branch corresponding to the release (the "stable release" branch, usually main) to the head of the pre-release branch - whatever branch you're on when the release script is being run. Using our convention, we name this branch release/v1 (prefixed with release/ and a v plus the major version number only). </p>
+<p><strong>What does the release script do?</strong></p>
+<p>The release script starts by running some checks to make sure the code is in a state that's ready to release. There
+must be no uncommitted files in the repo, there must be no changes to tracked files, and there must be no unpushed
+changes in the repository (local commits that haven't been pushed to the remote).</p>
+<p>If those conditions are met, then the release script proceeds. The release script will start by creating a git tag,
+which records the date, time, and branch being released to. Next, the head of the branch to release to (usually
+main) will be reset to the head of the branch to release from (the "frozen" code that's all fixed up for the
+release). Finally, the release script will push the results of the reset operation, and the new tag, to the remote.</p>
+<p>To keep it more general, the release script uses the concept of a "source" and "destination" branch - the source is
+the branch to release from, the destination is the branch to release to. The destination branch is the one whose
+head is reset to the source branch's head. (That should help clarify the script below a bit more.) </p>
+<p>Also, the Makefile (which we cover below) will take care of providing the right destination and source branch
+names.</p>
+<h2 id="release-script">Release Script</h2>
+<p>Here is an example release script, which we would add to our repository at <code>scripts/release.sh</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
+<span class="nb">set</span><span class="w"> </span>-x
+
+<span class="nv">REMOTE</span><span class="o">=</span><span class="s2">&quot;origin&quot;</span>
+
+<span class="c1"># Check that environment file has been sourced</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECTNAME_PACKAGENAME_HOME</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;You must set the $PROJECTNAME_PACKAGENAME_HOME environment variable to proceed.&#39;</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="c1"># Check the script is being called correctly</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="nv">$#</span><span class="w"> </span>!<span class="o">=</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Given a source (pre-release) branch and a destination (release) branch,&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;this script does the following:&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot; - create a git tag&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot; - reset head of destination branch to head of source branch&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot; - push result to git repo&quot;</span>
+<span class="w">    </span><span class="nb">echo</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Usage: </span><span class="k">$(</span>basename<span class="w"> </span><span class="nv">$0</span><span class="k">)</span><span class="s2"> source_branch dest_branch&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Example: </span><span class="k">$(</span>basename<span class="w"> </span><span class="nv">$0</span><span class="k">)</span><span class="s2"> release/v2 main&quot;</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="c1"># Check that all changes are committed</span>
+<span class="k">if</span><span class="w"> </span>!<span class="w"> </span>git<span class="w"> </span>diff-index<span class="w"> </span>--quiet<span class="w"> </span>HEAD<span class="w"> </span>--<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;You have uncommitted files in your Git repository. Please commit or stash them.&quot;</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="nb">export</span><span class="w"> </span><span class="nv">PROMOTE_FROM_BRANCH</span><span class="o">=</span><span class="nv">$1</span><span class="w"> </span><span class="nv">PROMOTE_DEST_BRANCH</span><span class="o">=</span><span class="nv">$2</span>
+
+<span class="c1"># Check that there are no local commits that haven&#39;t been pushed yet</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>git<span class="w"> </span>log<span class="w"> </span><span class="si">${</span><span class="nv">REMOTE</span><span class="si">}</span>/<span class="si">${</span><span class="nv">PROMOTE_FROM_BRANCH</span><span class="si">}</span>..<span class="si">${</span><span class="nv">PROMOTE_FROM_BRANCH</span><span class="si">}</span><span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;You have unpushed changes on your promote from branch </span><span class="si">${</span><span class="nv">PROMOTE_FROM_BRANCH</span><span class="si">}</span><span class="s2">! Aborting.&quot;</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="nv">RELEASE_TAG</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>-u<span class="w"> </span>+<span class="s2">&quot;%Y-%m-%d-%H-%M-%S&quot;</span><span class="k">)</span>-<span class="si">${</span><span class="nv">PROMOTE_DEST_BRANCH</span><span class="si">}</span>.release
+
+<span class="c1"># Check whether there are commits on the destination branch that aren&#39;t on the source branch (changes would be thrown away)</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>git<span class="w"> </span>--no-pager<span class="w"> </span>log<span class="w"> </span>--graph<span class="w"> </span>--abbrev-commit<span class="w"> </span>--pretty<span class="o">=</span>oneline<span class="w"> </span>--no-merges<span class="w"> </span>--<span class="w"> </span><span class="nv">$PROMOTE_DEST_BRANCH</span><span class="w"> </span>^<span class="nv">$PROMOTE_FROM_BRANCH</span><span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>!<span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Warning: The following commits are present on </span><span class="nv">$PROMOTE_DEST_BRANCH</span><span class="s2"> but not on </span><span class="nv">$PROMOTE_FROM_BRANCH</span><span class="s2">&quot;</span>
+<span class="w">    </span>git<span class="w"> </span>--no-pager<span class="w"> </span>log<span class="w"> </span>--graph<span class="w"> </span>--abbrev-commit<span class="w"> </span>--pretty<span class="o">=</span>oneline<span class="w"> </span>--no-merges<span class="w"> </span><span class="nv">$PROMOTE_DEST_BRANCH</span><span class="w"> </span>^<span class="nv">$PROMOTE_FROM_BRANCH</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;\nYou must transfer them, or overwrite and discard them, from branch </span><span class="nv">$PROMOTE_DEST_BRANCH</span><span class="s2">.&quot;</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="c1"># Check that untracked files are not present</span>
+<span class="k">if</span><span class="w"> </span>!<span class="w"> </span>git<span class="w"> </span>--no-pager<span class="w"> </span>diff<span class="w"> </span>--ignore-submodules<span class="o">=</span>untracked<span class="w"> </span>--exit-code<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Working tree contains changes to tracked files. Please commit or discard your changes and try again.&quot;</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="c1"># Perform the actual release operations</span>
+git<span class="w"> </span>fetch<span class="w"> </span>--all
+git<span class="w"> </span>-c<span class="w"> </span>advice.detachedHead<span class="o">=</span><span class="nb">false</span><span class="w"> </span>checkout<span class="w"> </span><span class="si">${</span><span class="nv">REMOTE</span><span class="si">}</span>/<span class="nv">$PROMOTE_FROM_BRANCH</span>
+git<span class="w"> </span>checkout<span class="w"> </span>-B<span class="w"> </span><span class="nv">$PROMOTE_DEST_BRANCH</span>
+git<span class="w"> </span>tag<span class="w"> </span><span class="nv">$RELEASE_TAG</span>
+git<span class="w"> </span>push<span class="w"> </span>--force<span class="w"> </span><span class="nv">$REMOTE</span><span class="w"> </span><span class="nv">$PROMOTE_DEST_BRANCH</span>
+git<span class="w"> </span>push<span class="w"> </span>--tags<span class="w"> </span><span class="nv">$REMOTE</span>
+</code></pre></div>
+
+<h3 id="breaking-it-down">Breaking It Down</h3>
+<p>Let's break down the essential commands, starting with the checks: </p>
+<p><code>git diff-index --quiet HEAD --</code></p>
+<ul>
+<li>Checks that all changes are committed</li>
+<li>git diff-index is basically the same as git diff, but restricted to the working tree or index only</li>
+<li>See <a href="https://stackoverflow.com/q/24197606">https://stackoverflow.com/q/24197606</a></li>
+</ul>
+<p><code>git log ${REMOTE}/${PROMOTE_FROM_BRANCH}..${PROMOTE_FROM_BRANCH}</code></p>
+<ul>
+<li>Checks the difference between the remote and local versions of the promote from branch</li>
+<li>If this command turns up any commits, those are all local, unpushed commits</li>
+</ul>
+<p><code>RELEASE_TAG=$(date -u +"%Y-%m-%d-%H-%M-%S")-${PROMOTE_DEST_BRANCH}.release</code></p>
+<ul>
+<li>Creates a name for the git tag with the date and time, and branch being released to</li>
+<li>This stores the release history in git tags</li>
+</ul>
+<p><code>git --no-pager log --graph --abbrev-commit --pretty=oneline --no-merges -- $PROMOTE_DEST_BRANCH ^$PROMOTE_FROM_BRANCH)</code></p>
+<ul>
+<li>This command checks for any commits that are on the destination branch and not on the source branch</li>
+<li>Because the destination branch's head will be reset, commits on the destination branch but not on the source branch would be lost</li>
+<li>(This script could optionally add a --force flag, to power through the release even if this check fails)</li>
+</ul>
+<p><code>git --no-pager diff --ignore-submodules=untracked --exit-code</code></p>
+<ul>
+<li>Checks if there are any untracked changes in the working tree</li>
+<li>If there are, the release can't proceed</li>
+</ul>
+<p>Now here's a breakdown of the release process commands:</p>
+<p><code>git fetch --all</code></p>
+<ul>
+<li>Ensures we have an up-to-date picture of where the remotes are at</li>
+</ul>
+<p><code>git -c advice.detachedHead=false checkout ${REMOTE}/$PROMOTE_FROM_BRANCH</code></p>
+<ul>
+<li>Checks out the source branch from the remote</li>
+<li>This command is the reason why we have to make sure all local commits are pushed to the remote</li>
+<li>The release process uses the remote version of the source/destination branches</li>
+</ul>
+<p><code>git checkout -B $PROMOTE_DEST_BRANCH</code></p>
+<ul>
+<li>This step forces the destination branch to be the same as the source branch.</li>
+</ul>
+<p><code>git tag $RELEASE_TAG</code></p>
+<ul>
+<li>Creates a record of what was released and when via a git tag</li>
+</ul>
+<p><code>git push --force $REMOTE $PROMOTE_DEST_BRANCH</code></p>
+<p><code>git push --tags $REMOTE</code></p>
+<ul>
+<li>Pushes the results of the operations to the remote</li>
+</ul>
+<h2 id="makefile">Makefile</h2>
+<p>Now we add a Makefile with rules for releasing and deploying.</p>
+<p>The first rule is the release rule - run this when the current branch is release/vX and it's ready for it's final release.</p>
+<div class="highlight"><pre><span></span><code><span class="nv">CB</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">$(</span>shell<span class="w"> </span>git<span class="w"> </span>branch<span class="w"> </span>--show-current<span class="k">)</span>
+
+<span class="nf">release_mainx</span><span class="o">:</span>
+<span class="w">    </span>@echo<span class="w"> </span><span class="s2">&quot;Releasing current branch </span><span class="k">$(</span>CB<span class="k">)</span><span class="s2"> to mainx&quot;</span>
+<span class="w">    </span>scripts/release.sh<span class="w"> </span><span class="k">$(</span>CB<span class="k">)</span><span class="w"> </span>mainx
+</code></pre></div>
+
+<p>The <code>$(CB)</code> is short for current branch.</p>
+<p>Now on to the deploy rule.</p>
+<p>Because we might want to deploy the code in an arbitrary state (temporarily deploying a feature branch to the development stage, for example), the deploy script and deploy rule are intended to deploy the code in its current state, and don't have the same kinds of checks as the release script. </p>
+<div class="highlight"><pre><span></span><code><span class="nf">deploy</span><span class="o">:</span>
+<span class="w">    </span>scripts/deploy.sh
+</code></pre></div>
+
+<p>As mentioned above, the deploy script will be case-specific so we don't provide an example.</p>
+<p>How does the deploy script know which environment to deploy to? It depends on the environment file that was
+sourced, and the value of the <code>PROJECTNAME_PACKAGENAME_STAGE</code> variable. The deploy script should be checking that
+that environment variable is set to a valid value before proceeding with the deploy.</p>
+<h2 id="more-details">More Details</h2>
+<p>For more details, see the full writeup on our wiki here:
+<a href="https://charlesreid1.com/wiki/Applied_Gitflow">https://charlesreid1.com/wiki/Applied_Gitflow</a></p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/github.html">github</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/gitflow.html">gitflow</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hubflow.html">hubflow</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/patterns.html">patterns</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                A Singleton Configuration Class in Python
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2020-04-28T16:00:00-07:00" pubdate>Tuesday 04/28/2020</time>
                 in 
                 <a href="https://charlesreid1.github.io/category/python.html">Python</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/python-patterns-the-registry.html">permalink</a>
+                <a href="https://charlesreid1.github.io/a-singleton-configuration-class-in-python.html">permalink</a>
             </span>
             </p>
         </div>
@@ -401,379 +686,247 @@ in this Github repository: <a href="https://github.com/faif/python-patterns">htt
 
         <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
 <li><a href="#overview">Overview</a></li>
-<li><a href="#what-is-the-registry-pattern">What is the Registry Pattern?</a><ul>
-<li><a href="#the-registry-base-type">The Registry Base Type</a></li>
-<li><a href="#the-base-registered-class">The Base Registered Class</a></li>
-<li><a href="#extending-the-base-registered-class">Extending the Base Registered Class</a></li>
-<li><a href="#seeing-it-in-action">Seeing it in action</a></li>
-</ul>
-</li>
-<li><a href="#examples">Examples</a><ul>
-<li><a href="#example-search-engine">Example: Search Engine</a><ul>
-<li><a href="#registry-subclasses">Registry Subclasses</a></li>
-<li><a href="#doctype-registry-base-type">Doctype Registry Base Type</a></li>
-<li><a href="#base-registered-doctype-class">Base Registered Doctype Class</a></li>
-<li><a href="#derived-registered-doctype-class">Derived Registered Doctype Class</a></li>
-<li><a href="#using-the-registry">Using the Registry</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#further-modifications">Further Modifications</a></li>
-<li><a href="#summary">Summary</a></li>
+<li><a href="#the-singleton-pattern">The Singleton Pattern</a></li>
+<li><a href="#get-variable-functions">Get Variable Functions</a></li>
+<li><a href="#config-functions">Config Functions</a></li>
+<li><a href="#reset-method">Reset method</a></li>
+<li><a href="#creating-a-configuration-context-manager">Creating a configuration context manager</a></li>
+<li><a href="#next-steps">Next steps</a></li>
 </ul>
 </div>
 <h1 id="overview">Overview</h1>
-<p>This post is a summary of a useful Python programming pattern called the Registry pattern.</p>
-<p>The Registry pattern is a way of keeping track of all subclasses of a given class.</p>
-<p>More details about this pattern are available at <a href="https://github.com/faif/python-patterns">https://github.com/faif/python-patterns</a>.</p>
-<h1 id="what-is-the-registry-pattern">What is the Registry Pattern?</h1>
-<p>Let's start with a common scenario: you have some kind of manager class that is
-managing multiple related subclasses, and you are looking for a simpler way to
-manage the subclasses.</p>
-<p>The registry pattern creates a map of labels to class types, and allows you to
-access a single registry common to all of those classes. The registry is updated
-every time a new class is added.</p>
-<p>This is useful for several situations, including these two examples:</p>
-<ul>
-<li>You want the manager class to iterate over every available subclass and call a
-  particular method on each subclass</li>
-<li>You want to streamline a factory class, which takes an input label (like the name
-  of a class) and creates/returns an object of that type</li>
-</ul>
-<h2 id="the-registry-base-type">The Registry Base Type</h2>
-<p>We start by defining a registry base type (or class). This class defines one behavior,
-which is adding itself to the class registry. It creates a shared instance variable called
-<code>REGISTRY</code> which is shared amongst all of the classes, and is also accessible via a class
-method.</p>
-<p>This is the base class; any class we want registered should inherit from this class.
-It should also extend the <code>type</code> class, since it is itself a class type:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">RegistryBase</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
+<p>In this post we cover a strategy for managing configurations for programs using
+a Singleton pattern to create a static <code>Config</code> class.</p>
+<p>This allows the user to create an instance of the <code>Config</code> class, pointing it
+to a specific config file, which it loads into memory.</p>
+<p>The <code>Config</code> class provides several static methods for accessing configuration
+options from the config file. Here's an example of its usage:</p>
+<div class="highlight"><pre><span></span><code>Config(&#39;/path/to/config.json&#39;)
 
-    <span class="n">REGISTRY</span> <span class="o">=</span> <span class="p">{}</span>
+if Config.get_foo() == &quot;bar&quot;:
+    do_stuff()
+</code></pre></div>
 
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="c1"># instantiate a new type corresponding to the type of class being defined</span>
-        <span class="c1"># this is currently RegisterBase but in child classes will be the child class</span>
-        <span class="n">new_cls</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">REGISTRY</span><span class="p">[</span><span class="n">new_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_cls</span>
-        <span class="k">return</span> <span class="n">new_cls</span>
+<p>The principle is to <strong>define one configuration file location, and be done with it.</strong>
+The configuration file is JSON formatted, but the pattern can be adapted to use
+any format.</p>
+<p>The <code>Config</code> class can also be used to wrap and process both variables in the configuration
+file <em>and</em> environment variables.</p>
+<p>The <code>Config</code> class implements a <strong>separation of concerns</strong> by only processing top-level
+configuration variable options, and leaving more detailed configuration file parsing
+to the classes that need it. This allows for more flexible config files.</p>
+<h1 id="the-singleton-pattern">The Singleton Pattern</h1>
+<p>The Singleton pattern involves the use of instance variables, which the variables
+<code>_CONFIG_FILE</code> and <code>_CONFIG</code> are. These are shared across all instances of class
+<code>Config</code> and can be accessed via <code>Config._CONFIG_FILE</code>, etc.</p>
+<p>The location of the config file can be set in the constructor,
+or can be provided via the <code>CONFIG_FILE</code> environment variable.
+The config class also provides a method for accessing environment
+variables that are required by the Config class, and raising a
+custom exception if it is not present.</p>
+<p>The constructor starts by checking that the configuration file exists, then loads
+the configuration file into memory (at <code>Config._CONFIG</code> as a dictionary):</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="c1">#########################</span>
+    <span class="c1"># Begin Singleton Section</span>
+    <span class="c1">#########################</span>
+
+    <span class="n">_CONFIG_FILE</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_CONFIG</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">config_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">config_file</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_env_var</span><span class="p">(</span><span class="s2">&quot;CONFIG_FILE&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check that specified config file exists</span>
+        <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
+
+        <span class="c1"># Use singleton pattern to store config file location/load config once</span>
+        <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG_FILE</span> <span class="o">=</span> <span class="n">config_file</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_config_file</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG_FILE</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_required_env_var</span><span class="p">(</span><span class="n">envvar</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">envvar</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ConfigException</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Please set the </span><span class="si">{</span><span class="n">envvar</span><span class="si">}</span><span class="s2"> environment variable&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">envvar</span><span class="p">]</span>
+</code></pre></div>
+
+<p>Aside from the constructor, every method in the <code>Config</code> class is a
+<code>@staticmethod</code> or a <code>@classmethod</code>.</p>
+<h1 id="get-variable-functions">Get Variable Functions</h1>
+<p>We add two additional methods to get configuration variables: one to get variables
+from the config file, one to get environment variables. Here they are:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="o">...</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_required_env_var</span><span class="p">(</span><span class="n">envvar</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">envvar</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Please set the </span><span class="si">{envvar}</span><span class="s2"> environment variable&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">envvar</span><span class="p">]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_required_config_var</span><span class="p">(</span><span class="n">configvar</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span>
+        <span class="k">if</span> <span class="n">configvar</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Please set the </span><span class="si">{</span><span class="n">configvar</span><span class="si">}</span><span class="s2"> variable in the config file </span><span class="si">{</span><span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG_FILE</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">[</span><span class="n">configvar</span><span class="p">]</span>
+</code></pre></div>
+
+<p>We saw the get_required_env_var()<code>function in action in the constructor.
+The</code>get_required_config_var()` can be useful for config variables that
+are dependent on other config variables.</p>
+<h1 id="config-functions">Config Functions</h1>
+<p>Continuing with the <code>Config</code> class defined above,
+we now define methods that implement logic for specific 
+configuration variables.</p>
+<p>Here are two example config variables.</p>
+<p>The variable <code>foo</code> is set using the configuration file.
+The configuration file is a dictionary, meaning it consists
+of key-value pairs, so the variable <code>foo</code> is set by the value
+corresponding to the <code>foo</code> key in the config file.</p>
+<p>For example, using the following simple configuration file:</p>
+<div class="highlight"><pre><span></span><code>{
+    &quot;foo&quot;: &quot;hello world&quot;
+}
+</code></pre></div>
+
+<p>if the <code>Config</code> class is initialized with that configuration file,
+<code>Config.get_foo_var()</code>  will return the string <code>hello world</code>.</p>
+<p>Similarly, the <code>bar</code>variable is set using the environment variable <code>BAR</code>.
+If the <code>BAR</code> variable is not set, the program will raise an exception
+when <code>Config.get_bar_var()</code> is called.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="o">...</span><span class="n">see</span> <span class="n">singleton</span> <span class="n">section</span> <span class="n">above</span><span class="o">...</span>
+
+    <span class="c1">#############################</span>
+    <span class="c1"># Begin Configuration Section</span>
+    <span class="c1">#############################</span>
+
+    <span class="n">_FOO</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_BAR</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_registry</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">REGISTRY</span><span class="p">)</span>
-</code></pre></div>
-
-<p>The design here is subtle, but the details are important to understand how it works.</p>
-<p>A few important things to note, progressing from top to bottom:</p>
-<ul>
-<li>
-<p>The <code>REGISTRY</code> variable is defined outside the scope of any class methods, meaning it is a
-  shared instance variable (a variable that is shared across all instances of <code>RegistryBase</code>);
-  this is an example of the Borg pattern.</p>
-</li>
-<li>
-<p>The <code>RegistryBase</code> class defines <code>__new__</code>, not <code>__init__</code>; the <code>__new__</code> method is run when
-  the class is defined, while <code>__init__</code> is run when the classs is instantiated. This ensures
-  that any subclasses that inherit from <code>RegistryBase</code> add themselves to the registry when they
-  are defined, not when they are instantiated.</p>
-</li>
-<li>
-<p>In the constructor, we store a reference to the current class using this line:</p>
-</li>
-</ul>
-<p><code>new_cls = type.__new__(cls, name, bases, attrs)</code></p>
-<p>This creates a new class, but of type <code>type</code> (confusing, but basically it means we store
-  a reference to this <em><strong>type</strong></em> of object, not just a reference to a particular object).</p>
-<p>It is important to note that once we use the registry, the value that is returned is callable,
-  and will create an object corresponding to that type.</p>
-<ul>
-<li>We define a <code>get_registry</code> method to return a copy of the registry; this must be decorated with
-  a <code>@classmethod</code> decorator (not a <code>@staticmethod</code> decorator) so that it has access to the registry,
-  which is a class instance variable.</li>
-</ul>
-<p><strong>BONUS NOTE:</strong> From prior experience, we have found it easiest to ignore the case of the
-label (uppercase, lowercase, CamelCase, etc) and convert all class names to lowercase in the
-registry:</p>
-<div class="highlight"><pre><span></span><code>        <span class="bp">cls</span><span class="o">.</span><span class="n">REGISTRY</span><span class="p">[</span><span class="n">new_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="n">new_cls</span>
-</code></pre></div>
-
-<h2 id="the-base-registered-class">The Base Registered Class</h2>
-<p>Now we can define a base class that will extend the <code>RegistryBase</code> class. However, because <code>RegistryBase</code>
-is a <code>type</code> class, we shouldn't extend it directly - we should use it as a <em>metaclass</em>.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">BaseRegisteredClass</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">RegistryBase</span><span class="p">):</span>
-    <span class="k">pass</span>
-</code></pre></div>
-
-<p>Any class that inherits from this <code>BaseRegisteredClass</code> will now be included in the registry when it is
-defined.</p>
-<h2 id="extending-the-base-registered-class">Extending the Base Registered Class</h2>
-<p>The next step is to use the base registered class to start creating interesting classes:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">ExtendedRegisteredClass</span><span class="p">(</span><span class="n">BaseRegisteredClass</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">pass</span>
-</code></pre></div>
-
-<p>We skip defining constructor behavior, as the call order is what's important.</p>
-<h2 id="seeing-it-in-action">Seeing it in action</h2>
-<p>Now we can see the process of adding subclasses to the registry in action.</p>
-<p>Start by checking the registry before we have created any subclasses:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print(RegistryHolder.REGISTRY)
-[&#39;BaseRegisteredClass&#39;]
-</code></pre></div>
-
-<p>Next, define the extended registered class:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; class ExtendedRegisteredClass(BaseRegisteredClass):
-...     def __init__(self, *args, **kwargs):
-...         pass
-</code></pre></div>
-
-<p>Remember, we add the new class to the registry in the <code>__new__</code> method, not the
-<code>__init__</code> method, so we don't even need to instantiate an <code>ExtendedRegisteredClass</code>
-object for it to be added to the registry. Check the registry again:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print(RegistryHolder.REGISTRY)
-[&#39;BaseRegisteredClass&#39;, &#39;ExtendedRegisteredClass&#39;]
-</code></pre></div>
-
-<h1 id="examples">Examples</h1>
-<p>Let's consider a specific example to help illustrate the usefulness of the Registry pattern:
-adding the ability to index different kinds of documents to a search engine.</p>
-<h2 id="example-search-engine">Example: Search Engine</h2>
-<p>Suppose we are writing a search engine, and we are working on the search engine
-backend. Specifically, consider the backend portion that iterates over a group of
-documents, checks if the document is already in the search index, and either adds
-a new item to the search index, updates an existing item in the search index, or
-deletes an item from the search index.</p>
-<h3 id="registry-subclasses">Registry Subclasses</h3>
-<p>A search engine may index multiple kinds of documents, each living in different locations.
-For example, a search index may index .docx files in a Google Drive folder,
-Github issues, and/or a local folder full of Markdown files. For each of these
-document types, we must define:</p>
-<ul>
-<li>
-<p>How to add or update all documents in the document storage system (Google Drive, Github
-  API, local filesystem, etc.); this method should be able to get a list of documents of this
-  document type that are already in the search index, either by running a query itself, or by
-  accepting a list of documents already in the index as an input argument</p>
-</li>
-<li>
-<p>What schema to use (mapping various field names to data types) for documents of this type</p>
-</li>
-<li>
-<p>How to display search results when they are documents of this type (i.e., how to display
-  what fields when showing the user search results)</p>
-</li>
-</ul>
-<p>This can be done by defining classes corresponding to different document types, where
-each class defines how to do the above actions, and wraps them in high-level API methods
-that the manager classes can call.</p>
-<p>The manager classes want a way to get a list of available document types, and to call
-each document type's high-level API methods. This can be done with the registry.</p>
-<h3 id="doctype-registry-base-type">Doctype Registry Base Type</h3>
-<p>Start by defining a base type that will register new subclasses in a doctype registry. Note that
-as per the <a href="https://docs.python.org/3/reference/datamodel.html#object.__new__"><code>__new__</code> documentation</a>,
-the <code>__new__</code> method takes the class (in our case, a class of type <code>type</code>) as the first argument <code>cls</code>,
-and it should return a new object instance (which, again, is an instance of type <code>type</code>).</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">DoctypeRegistryBase</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
-
-    <span class="n">DOCTYPE_REGISTRY</span> <span class="o">=</span> <span class="p">{}</span>
-
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="n">new_cls</span> <span class="o">=</span> <span class="nb">type</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">[</span><span class="n">new_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="n">new_cls</span>
-        <span class="k">return</span> <span class="n">new_cls</span>
+    <span class="k">def</span> <span class="nf">get_foo_var</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Example variable that is set in the config file (preferred)&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_FOO</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_FOO</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_config_var</span><span class="p">(</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_FOO</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_doctype_registry</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_bar_var</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Example variable that is set via env var (not preferred)&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_BAR</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_BAR</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_env_var</span><span class="p">(</span><span class="s1">&#39;BAR&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_BAR</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_wuz</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;wuz&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_env_var</span><span class="p">(</span><span class="s1">&#39;WUZ&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">[</span><span class="s1">&#39;wuz&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: Path </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span><span class="si">}</span><span class="s2"> is not a directory&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span>
 </code></pre></div>
 
-<h3 id="base-registered-doctype-class">Base Registered Doctype Class</h3>
-<p>Next, we define a base class for any document type that we want registered in the doctype
-registry, using <code>DoctypeRegistryBase</code> as our metaclass (because it is a class of type <code>type</code>,
-as opposed to a normal class).  All document types are required to define three bits of behavior
-(interacting with the document storage system to iterate over all documents; extracting information
-from individual documents; and displaying a given document type when it is a search result. We
-define these virtual methods on the base registered doctype class.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">BaseRegisteredDoctypeClass</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">DoctypeRegistryBase</span><span class="p">):</span>
+<p>The <code>wuz</code> variable, in this example, is a variable that can be set with a config
+file variable, or (if it is not present in the config file) with an environment
+variable. The <code>wuz</code> variable msut also be a path, so there is logic for checking
+whether the path exists.</p>
+<h1 id="reset-method">Reset method</h1>
+<p>It can be useful to clear out an existing config file in order to
+load a new config file - specifically, when testing. Here we define a <code>reset()</code>
+method that clears out variable values. We will show an example of how to
+use the <code>reset()</code> method below.</p>
+<div class="highlight"><pre><span></span><code>    @classmethod
+    def reset(cls) -&gt; None:
+        cls._CONFIG_FILE = None
+        cls._CONFIG = None
+        cls._FOO = None
+        cls._BAR = None
+        cls._WUZ = None
+</code></pre></div>
 
-    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<p>This could be done more gracefully by iterating over each attribute of the Config class
+and only nullifying those attributes whose variable name matches the given pattern (start
+with an underscore, only contain capital letters and underscores) using a regular expression.</p>
+<h1 id="creating-a-configuration-context-manager">Creating a configuration context manager</h1>
+<p>To make tests more convenient, we define a context manager that takes
+a dictionary as an input. The context manager creates a temporary file
+with the contents of that dictionary, and resets the Config class using
+the temporary file as the new config file. This allows tests to be written
+using different configurations on the fly, very useful when testing
+different configuration options:</p>
+<div class="highlight"><pre><span></span><code><span class="n">cfg</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;peanut_butter&quot;</span><span class="p">:</span> <span class="s2">&quot;jelly&quot;</span><span class="p">}</span>
+<span class="k">with</span> <span class="n">TempConfig</span><span class="p">(</span><span class="n">cfg</span><span class="p">)</span> <span class="k">as</span> <span class="n">config_file</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Temporary configuration file is at </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">val</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_config_var</span><span class="p">(</span><span class="s2">&quot;peanut_butter&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">val</span><span class="o">==</span><span class="s2">&quot;jelly&quot;</span>
+</code></pre></div>
+
+<p>Here is the context manager class to temporarily replace the configuration
+wrapped by the <code>Config</code> class:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">TempConfig</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Temporarily patch the Config class to use the config</span>
+<span class="sd">    dictionary specified in the constructor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_dict</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;This is the step that&#39;s run when object constructed&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># This is the temp configuration the user specified</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_dict</span> <span class="o">=</span> <span class="n">config_dict</span>
+        <span class="c1"># Make a temp dir for our temp config file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+        <span class="c1"># Make a temp config file</span>
+        <span class="n">_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.json&quot;</span><span class="p">,</span> <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span><span class="p">)</span>
+        <span class="c1"># Set the wuz variable to the temporary directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;wuz&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;This is what&#39;s returned to the &quot;as X&quot; portion of the context manager&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_dict</span><span class="p">))</span>
+        <span class="c1"># Re-init Config with new config file</span>
+        <span class="n">Config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Iterate over all documents in the document storage system</span>
-<span class="sd">        and add/update/delete documents as needed.</span>
+<span class="sd">        Close the context and clean up; the *args are needed in case there is</span>
+<span class="sd">        an exception (we don&#39;t deal with those here)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+        <span class="c1"># Delete temp file</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span><span class="p">)</span>
+        <span class="c1"># Delete temp dir</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span><span class="p">)</span>
+        <span class="c1"># Reset all config variables</span>
+        <span class="n">Config</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">get_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Assemble and return the schema (map of field names to data types)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">render_search_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Use a Jinja template to render a single search result of type doctype</span>
-<span class="sd">        to display to the user via the web interface</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">_write_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">contents</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Utility method: write string contents to config file&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="derived-registered-doctype-class">Derived Registered Doctype Class</h3>
-<p>Now that we have a base class, we can define child classes that have the specific
-API functionality needed.</p>
-<p>Here is a high-level sketch of what the Github issue document type class might look like,
-starting with the add/update/delete method, which boils down to some set operations to determine
-what documents to add, update, or delete from the search index.</p>
-<p>(Also note, these methods are defined as class methods because they are called once for each
-doctype class, but this does not necessarily need to be the case.)</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">GithubIssueDoctype</span><span class="p">(</span><span class="n">BaseRegisteredDoctypeClass</span><span class="p">):</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="c1"># Get set of indexed document IDs</span>
-        <span class="n">indexed_docs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="n">results</span> <span class="o">=</span> <span class="n">run_search_index_query</span><span class="p">(</span><span class="n">doctype</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
-        <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-            <span class="n">indexed_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-
-        <span class="c1"># Get set of remote document IDs</span>
-        <span class="n">remote_docs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">org_name</span> <span class="ow">in</span> <span class="n">get_org_names</span><span class="p">():</span>
-            <span class="k">for</span> <span class="n">repo_name</span> <span class="ow">in</span> <span class="n">get_repo_names</span><span class="p">(</span><span class="n">org_name</span><span class="p">):</span>
-                <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">get_repo_files</span><span class="p">(</span><span class="n">repo_name</span><span class="p">,</span> <span class="n">org_name</span><span class="p">):</span>
-                    <span class="n">remote_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-
-        <span class="c1"># Do some set math to figure out what to add/update/delete</span>
-        <span class="n">add_ids</span> <span class="o">=</span> <span class="n">remote_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">indexed_docs</span><span class="p">)</span>
-        <span class="n">update_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
-        <span class="n">delete_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
-
-        <span class="c1"># Do the operations</span>
-        <span class="k">for</span> <span class="n">add_id</span> <span class="ow">in</span> <span class="n">add_ids</span><span class="p">:</span>
-            <span class="n">add_document_to_index</span><span class="p">(</span><span class="n">add_id</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">update_id</span> <span class="ow">in</span> <span class="n">update_ids</span><span class="p">:</span>
-            <span class="n">update_document_in_index</span><span class="p">(</span><span class="n">update_id</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">delete_id</span> <span class="ow">in</span> <span class="n">delete_ids</span><span class="p">:</span>
-            <span class="n">delete_document_in_index</span><span class="p">(</span><span class="n">delete_id</span><span class="p">)</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="o">...</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">render_search_result</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="o">...</span>
-</code></pre></div>
-
-<p>Now we do the same for documents on Google Drive, defining a different <code>add_update_delete()</code> method
-specific to Google Drive documents (note that while the sketch of this method looks similar to the
-Github doctype above, the implementation will look more and more different as we include more and more
-detail in our method and API calls).</p>
-<p>As before, we make these methods class methods.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">GoogleDocsDoctype</span><span class="p">(</span><span class="n">BaseRegisteredDoctypeClass</span><span class="p">):</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="c1"># Get set of indexed document IDs</span>
-        <span class="n">indexed_dcos</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="n">results</span> <span class="o">=</span> <span class="n">run_search_index_query</span><span class="p">(</span><span class="n">doctype</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
-        <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-            <span class="n">indexed_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-
-        <span class="c1"># Get set of remote document IDs</span>
-        <span class="n">remote_docs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">get_gdrive_file_list</span><span class="p">():</span>
-            <span class="n">remote_docs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-
-        <span class="c1"># Do some math to figure out what to add/update/delete</span>
-        <span class="n">add_ids</span> <span class="o">=</span> <span class="n">remote_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">indexed_docs</span><span class="p">)</span>
-        <span class="n">update_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
-        <span class="n">delete_ids</span> <span class="o">=</span> <span class="n">indexed_docs</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">remote_docs</span><span class="p">)</span>
-
-        <span class="c1"># Do the operations</span>
-        <span class="k">for</span> <span class="n">add_id</span> <span class="ow">in</span> <span class="n">add_ids</span><span class="p">:</span>
-            <span class="n">add_document_to_index</span><span class="p">(</span><span class="n">add_id</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">update_id</span> <span class="ow">in</span> <span class="n">update_ids</span><span class="p">:</span>
-            <span class="n">update_document_in_index</span><span class="p">(</span><span class="n">update_id</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">delete_id</span> <span class="ow">in</span> <span class="n">delete_ids</span><span class="p">:</span>
-            <span class="n">delete_document_in_index</span><span class="p">(</span><span class="n">delete_id</span><span class="p">)</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_schema</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="o">...</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">render_search_result</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="o">...</span>
-</code></pre></div>
-
-<h3 id="using-the-registry">Using the Registry</h3>
-<p>The last step is to actually use the registry from the class that manages all of our subclasses.
-In this case, we have a <code>Search</code> class that defines high-level operations (such as, "add/update/delete
-all documents indexed by this search engine") and in turn calls the corresponding method for each doctype
-that has been registered.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Search</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="nf">add_update_delete_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-
-        <span class="c1"># Iterate over every doc type</span>
-        <span class="k">for</span> <span class="n">doctype_name</span> <span class="ow">in</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">:</span>
-
-            <span class="c1"># Get a handle to the doctype class</span>
-            <span class="n">doctype_class</span> <span class="o">=</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">[</span><span class="n">doctype_name</span><span class="p">]</span>
-
-            <span class="c1"># Call the class method add_update_delete on the doctype class</span>
-            <span class="n">doctype_class</span><span class="o">.</span><span class="n">add_update_delete</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-            <span class="c1"># Note: if we need to create an instance first</span>
-            <span class="c1"># doctype_instance = doctype_class()</span>
-            <span class="c1"># doctype_instance.add_update_delete(*args, **kwargs)</span>
-</code></pre></div>
-
-<h1 id="further-modifications">Further Modifications</h1>
-<p>In the example above, we don't have any need to create specific instances of the document type classes,
-since they do not need to preserve their state between calls, and we only need one instance of the doctype
-class per search engine.</p>
-<p>We could re-implement this pattern, modifying the search engine doctype classes to be normal, non-static
-classes. This would allow us to have, say, two instances of the Github issues doctype class (corresponding
-to two different sets of Github API credentials, or two different Github accounts), or two instances of the
-Google Drive doctype class (corresponding to two different Google Drive folders). In this case, we would
-want to restructure the Search class to instantiate and save doctype class instances in the constructor,
-and use them later.</p>
-<p>Here's an example <code>Search</code> class that would instantiate one of each subclass in the constructor, to be used
-in later methods:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Search</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-
-        <span class="c1"># Store instances of each doctype</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">all_doctypes</span> <span class="o">=</span> <span class="p">[]</span>
-
-        <span class="c1"># Iterate over every doc type</span>
-        <span class="k">for</span> <span class="n">doctype_name</span> <span class="ow">in</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">:</span>
-
-        <span class="c1"># Get a handle to the doctype class</span>
-        <span class="n">doctype_class</span> <span class="o">=</span> <span class="n">DoctypeRegistryBase</span><span class="o">.</span><span class="n">DOCTYPE_REGISTRY</span><span class="p">[</span><span class="n">doctype_name</span><span class="p">]</span>
-
-        <span class="c1"># Create an instance of type doctype_class</span>
-        <span class="n">doctype_instance</span> <span class="o">=</span> <span class="n">doctype_class</span><span class="p">()</span>
-
-        <span class="c1"># Save for later</span>
-        <span class="n">all_doctypes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doctype_instance</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">add_update_delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-
-        <span class="c1"># Call the add_update_delete method on each doctype instance</span>
-        <span class="k">for</span> <span class="n">doctype_name</span><span class="p">,</span> <span class="n">doctype_instance</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_doctypes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">doctype_instance</span><span class="o">.</span><span class="n">add_update_delete</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</code></pre></div>
-
-<p>(Note that this would work best if we removed the <code>@classmethod</code> decorators from the doctype classes
-defined above.)</p>
-<h1 id="summary">Summary</h1>
-<p>In this post, we covered a useful programming pattern, the Registry, and showed it in action for one
-example - allowing a search engine index to register various document type subclasses, then use those
-registered subclasses to propagate calls to all document types later.</p></div>
+<h1 id="next-steps">Next steps</h1>
+<p>That's it for now. This singleton configuration class is being written into a
+new version of <a href="https://charlesreid1.github.io/centillion-a-document-search-engine.html">centillion</a>,
+which will be <a href="https://github.com/chmreid/centillion/pull/3">centillion version 2.0</a>.
+This is still a pull request in a centillion fork, though, so it's a work in progress.
+Stay tuned!</p></div>
 
     </div>
 </div>
@@ -796,512 +949,6 @@ registered subclasses to propagate calls to all document types later.</p></div>
                     <a href="https://charlesreid1.github.io/tag/registry.html">registry</a>
                     &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Incorporating Terraform Commands into Makefiles
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2020-02-15T12:00:00-08:00" pubdate>Saturday 02/15/2020</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/terraform.html">Terraform</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/incorporating-terraform-commands-into-makefiles.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#summary">Summary</a></li>
-<li><a href="#step-0-directory-and-file-layout">Step 0: Directory and File Layout</a><ul>
-<li><a href="#environment-variables">Environment Variables</a></li>
-</ul>
-</li>
-<li><a href="#step-1-top-level-makefile">Step 1: Top Level Makefile</a></li>
-<li><a href="#step-2-infra-level-makefile">Step 2: Infra Level Makefile</a><ul>
-<li><a href="#fake-targets">Fake Targets</a></li>
-<li><a href="#commands-for-single-components">Commands for Single Components</a></li>
-<li><a href="#commands-for-all-components">Commands for All Components</a></li>
-<li><a href="#variables">Variables</a></li>
-<li><a href="#final-makefile">Final Makefile</a></li>
-</ul>
-</li>
-<li><a href="#step-3-writing-terraform-components">Step 3: Writing Terraform Components</a></li>
-<li><a href="#step-4-initializing-terraform-components">Step 4: Initializing Terraform Components</a></li>
-<li><a href="#workflow">Workflow</a><ul>
-<li><a href="#plan">Plan</a></li>
-<li><a href="#deploy">Deploy</a></li>
-<li><a href="#update">Update</a></li>
-<li><a href="#destroy">Destroy</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<h1 id="summary">Summary</h1>
-<p>This blog post covers a useful pattern for incorporating terraform commands
-into a Makefile.</p>
-<p>This is useful for cases where terraform is being used to manage infrastructure.
-In the end you will be able to run a command like</p>
-<div class="highlight"><pre><span></span><code>make plan-infra
-make deploy-infra
-</code></pre></div>
-
-<p>and and have this call the corresponding terraform commands to plan and deploy your
-terraformed cloud infrastructure.</p>
-<p>The post is divided into a few steps:</p>
-<ul>
-<li>Directory and file layout - how we lay out the files for this tutorial</li>
-<li>Top level Makefile - make commands to add to the top level Makefile</li>
-<li>Infra level Makefile - make commands to add to the infra level Makefile</li>
-<li>Writing Terraform component - how to write a configurable component that is ready to terraform</li>
-<li>Initializing Terraform component - script to initialize terraform components</li>
-<li>Workflow - plan, deploy, update, destroy</li>
-</ul>
-<h1 id="step-0-directory-and-file-layout">Step 0: Directory and File Layout</h1>
-<p>This tutorial presumes you have a top level directory corresponding to a git repository.
-We will use the following directory structure for this example:</p>
-<div class="highlight"><pre><span></span><code>my-project/
-    Readme.md
-    environment
-    Makefile
-    infra/
-        Makefile
-        component-1/
-            variables.tf
-            main.tf
-</code></pre></div>
-
-<h2 id="environment-variables">Environment Variables</h2>
-<p>In order to keep track of environment variables used in the terraform
-process, we use the file <code>envronment</code> in the top level project directory
-to keep all environment variable values under version control.</p>
-<div class="highlight"><pre><span></span><code><span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span>
-<span class="k">while</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-h<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>readlink<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">done</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">PROJECT_HOME</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">cd</span><span class="w"> </span>-P<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">pwd</span><span class="k">)</span><span class="s2">&quot;</span>
-
-<span class="nb">set</span><span class="w"> </span>-a
-<span class="nv">PROJECT_DEPLOYMENT_STAGE</span><span class="o">=</span><span class="s2">&quot;dev&quot;</span>
-
-<span class="c1"># bucket name</span>
-<span class="nv">PROJECT_S3_BUCKET</span><span class="o">=</span><span class="s2">&quot;my-organization-my-project-my-bucket&quot;</span>
-
-<span class="c1"># aws tags</span>
-<span class="nv">PROJECT_INFRA_TAG_PROJECT</span><span class="o">=</span><span class="s2">&quot;my-project&quot;</span>
-<span class="nv">PROJECT_INFRA_TAG_SERVICE</span><span class="o">=</span><span class="s2">&quot;my-service&quot;</span>
-<span class="nv">PROJECT_INFRA_TAG_OWNER</span><span class="o">=</span><span class="s2">&quot;whoami@email.com&quot;</span>
-
-<span class="c1"># aws settings</span>
-<span class="nv">AWS_DEFAULT_OUTPUT</span><span class="o">=</span>json
-<span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span>us-east-1
-<span class="nb">set</span><span class="w"> </span>+a
-</code></pre></div>
-
-<p>Optionally, a local environment file can contain environment variable values
-that are sensitive or should not be kept under version control, so add this
-to the bottom of the <code>environment</code> file too:</p>
-<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-<span class="w">    </span><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span>
-<span class="k">fi</span>
-</code></pre></div>
-
-<h1 id="step-1-top-level-makefile">Step 1: Top Level Makefile</h1>
-<p>Start by creating the <code>plan-infra</code> and <code>deploy-infra</code> commands in your top-level
-Makefile. These commands will, in turn, call make commands defined in <code>infra/Makefile</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="nf">plan-infra</span><span class="o">:</span>
-<span class="w">    </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>-C<span class="w"> </span>infra<span class="w"> </span>plan-all
-
-<span class="nf">deploy-infra</span><span class="o">:</span>
-<span class="w">    </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>-C<span class="w"> </span>infra<span class="w"> </span>apply-all
-</code></pre></div>
-
-<p>The <code>-C infra</code> flag indicates make should use a Makefile in a subdirectory.</p>
-<h1 id="step-2-infra-level-makefile">Step 2: Infra Level Makefile</h1>
-<p>Next we define <code>infra/Makefile</code>. This Makefile will have two parts:</p>
-<ul>
-<li>terraform commands for a single component (example: init, plan, apply, destroy)</li>
-<li>wrapper commands to run the above commands for every component (example: for each component,
-  run the plan terraform command)</li>
-</ul>
-<p>We cover the Makefile from the bottom up.</p>
-<h2 id="fake-targets">Fake Targets</h2>
-<p>Start by defining "fake" targets or rules, that is, make rules whose names are not file names:</p>
-<div class="highlight"><pre><span></span><code><span class="nf">.PHONY</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
-</code></pre></div>
-
-<h2 id="commands-for-single-components">Commands for Single Components</h2>
-<p>Next, above that, we define terraform commands for a single component:</p>
-<div class="highlight"><pre><span></span><code><span class="nf">init</span><span class="o">:</span>
-<span class="w">    </span>rm<span class="w"> </span>-rf<span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span>/.terraform/*.tfstate
-<span class="w">    </span>./build_deploy_config.py<span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span>
-<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>init<span class="p">;</span>
-
-<span class="nf">plan</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
-<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>plan<span class="w"> </span>-detailed-exitcode
-
-<span class="nf">apply</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
-<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>apply
-
-<span class="nf">destroy</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
-<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>destroy
-
-<span class="nf">clean</span><span class="o">:</span>
-<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>.terraform
-</code></pre></div>
-
-<p>Note that the <code>init</code> command is running a <code>build_deploy_config.py</code> script,
-which we will cover in a moment. This script creates the terraform variables
-file <code>variables.tf</code> and populates the variable values using environment
-variables.</p>
-<h2 id="commands-for-all-components">Commands for All Components</h2>
-<p>Above that, we have commands to perform each action on all components:</p>
-<div class="highlight"><pre><span></span><code><span class="nf">all</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>-<span class="n">all</span>
-
-<span class="nf">init-all</span><span class="o">:</span>
-<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
-<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>init<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span><span class="k">done</span>
-
-<span class="nf">plan-all</span><span class="o">:</span>
-<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
-<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>plan<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span><span class="k">done</span>
-
-<span class="nf">apply-all</span><span class="o">:</span>
-<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
-<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>apply<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span><span class="k">done</span>
-
-<span class="nf">destroy-all</span><span class="o">:</span>
-<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
-<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>destroy<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span><span class="k">done</span>
-
-<span class="nf">clean-all</span><span class="o">:</span>
-<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
-<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>clean<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span><span class="k">done</span>
-</code></pre></div>
-
-<h2 id="variables">Variables</h2>
-<p>Last but not least, we define a few variables at the top of the Makefile:
-most importantly, the list of infrastructure components. This is created by
-extracting the names of subdirectories in <code>infra/</code> containing <code>*.tf</code> files:</p>
-<div class="highlight"><pre><span></span><code><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span><span class="w"> </span><span class="se">\;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>--unique<span class="o">}</span>
-<span class="nv">COMPONENTS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> for d in </span><span class="k">$(</span>DIRS<span class="k">)</span><span class="p">; do basename </span><span class="nv">$$d</span><span class="p">; done</span><span class="si">}</span>
-</code></pre></div>
-
-<h2 id="final-makefile">Final Makefile</h2>
-<p>Here is the final <code>infra/Makefile</code>:</p>
-<p><strong><code>infra/Makefile</code>:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span><span class="w"> </span><span class="se">\;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>--unique<span class="o">}</span>
-<span class="nv">COMPONENTS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> for d in </span><span class="k">$(</span>DIRS<span class="k">)</span><span class="p">; do basename </span><span class="nv">$$d</span><span class="p">; done</span><span class="si">}</span>
-
-<span class="nf">all</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>-<span class="n">all</span>
-
-<span class="nf">init-all</span><span class="o">:</span>
-<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
-<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>init<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span><span class="k">done</span>
-
-<span class="nf">plan-all</span><span class="o">:</span>
-<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
-<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>plan<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span><span class="k">done</span>
-
-<span class="nf">apply-all</span><span class="o">:</span>
-<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
-<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>apply<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span><span class="k">done</span>
-
-<span class="nf">destroy-all</span><span class="o">:</span>
-<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
-<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>destroy<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span><span class="k">done</span>
-
-<span class="nf">clean-all</span><span class="o">:</span>
-<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
-<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>clean<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
-<span class="w">    </span><span class="k">done</span>
-
-<span class="nf">plan</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
-<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>plan<span class="w"> </span>-detailed-exitcode
-
-<span class="nf">apply</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
-<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>apply
-
-<span class="nf">destroy</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
-<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>destroy
-
-<span class="nf">init</span><span class="o">:</span>
-<span class="w">    </span>rm<span class="w"> </span>-rf<span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span>/.terraform/*.tfstate
-<span class="w">    </span>./build_deploy_config.py<span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span>
-<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>init<span class="p">;</span>
-
-<span class="nf">clean</span><span class="o">:</span>
-<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>.terraform
-
-<span class="nf">.PHONY</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
-</code></pre></div>
-
-<h1 id="step-3-writing-terraform-components">Step 3: Writing Terraform Components</h1>
-<p>As an example, we will consider an example of terraform-managed buckets.</p>
-<p>Start by creating a directory called <code>infra/buckets/</code> to store terraform
-files for creating and managing the buckets.</p>
-<p>We can create one file per cloud provider. As an example, here is <code>s3.tf</code>:</p>
-<p><strong><code>s3.tf</code></strong>:</p>
-<div class="highlight"><pre><span></span><code>data &quot;aws_caller_identity&quot; &quot;current&quot; {}
-
-locals {
-  common_tags = &quot;${map(
-    &quot;project&quot;   , &quot;${var.PROJECT_INFRA_TAG_PROJECT}&quot;,
-    &quot;env&quot;       , &quot;${var.PROJECT_DEPLOYMENT_STAGE}&quot;,
-    &quot;service&quot;   , &quot;${var.PROJECT_INFRA_TAG_SERVICE}&quot;
-  )}&quot;
-  aws_tags = &quot;${map(
-  &quot;Name&quot;      , &quot;${var.PROJECT_INFRA_TAG_SERVICE}-s3-storage&quot;,
-  &quot;owner&quot;     , &quot;${var.PROJECT_INFRA_TAG_OWNER}&quot;,
-  &quot;managedBy&quot; , &quot;terraform&quot;
-  )}&quot;
-}
-
-resource aws_s3_bucket dss_s3_bucket {
-  count = length(var.PROJECT_S3_BUCKET) &gt; 0 ? 1 : 0
-  bucket = var.PROJECT_S3_BUCKET
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = &quot;AES256&quot;
-      }
-    }
-  }
-  tags = merge(local.common_tags, local.aws_tags)
-}
-</code></pre></div>
-
-<p>Note that this requires several environment variables to be
-defined in <code>environment</code> and requires the operator to run:</p>
-<div class="highlight"><pre><span></span><code>source environment
-</code></pre></div>
-
-<h1 id="step-4-initializing-terraform-components">Step 4: Initializing Terraform Components</h1>
-<p>The following script will automatically generate terraform files for
-our component that are populated with the correct environment variable
-values.</p>
-<p>It is called <code>build_deploy_config.py</code>.</p>
-<p>Start with a simple argument parser that just accepts a single argument,
-the component to make terraform files for:</p>
-<div class="highlight"><pre><span></span><code><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">)</span>
-<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;component&quot;</span><span class="p">)</span>
-<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-</code></pre></div>
-
-<p>Next, we define several terraform file templates using Python's
-bracket template syntax. Start with a template for defining a
-terraform variable:</p>
-<div class="highlight"><pre><span></span><code>terraform_variable_template = &quot;&quot;&quot;
-variable &quot;{name}&quot; {{
-  default = &quot;{val}&quot;
-}}
-&quot;&quot;&quot;
-</code></pre></div>
-
-<p>Next, define a template for the terraform backend buket:</p>
-<div class="highlight"><pre><span></span><code>terraform_backend_template = &quot;&quot;&quot;# Auto-generated during infra build process.
-# Please edit infra/build_deploy_config.py directly.
-terraform {{
-  backend &quot;s3&quot; {{
-    bucket = &quot;{bucket}&quot;
-    key = &quot;{comp}-{stage}.tfstate&quot;
-    region = &quot;{region}&quot;
-    {profile_setting}
-  }}
-}}
-&quot;&quot;&quot;
-</code></pre></div>
-
-<p>Next define terraform cloud providers:</p>
-<div class="highlight"><pre><span></span><code>terraform_providers_template = &quot;&quot;&quot;# Auto-generated during infra build process.
-# Please edit infra/build_deploy_config.py directly.
-provider aws {{
-  region = &quot;{aws_region}&quot;
-}}
-&quot;&quot;&quot;
-</code></pre></div>
-
-<p>Provide a list of environment variables that should also be defined as
-terraform variables:</p>
-<div class="highlight"><pre><span></span><code><span class="nv">env_vars_to_infra</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[</span>
-<span class="nv">PROJECT_DEPLOYMENT_STAGE</span><span class="o">=</span><span class="s2">&quot;dev&quot;</span>
-
-<span class="c1"># bucket name</span>
-<span class="nv">PROJECT_S3_BUCKET</span><span class="o">=</span><span class="s2">&quot;my-organization-my-project-my-bucket&quot;</span>
-
-<span class="c1"># aws tags</span>
-<span class="nv">PROJECT_INFRA_TAG_PROJECT</span><span class="o">=</span><span class="s2">&quot;my-project&quot;</span>
-<span class="nv">PROJECT_INFRA_TAG_SERVICE</span><span class="o">=</span><span class="s2">&quot;my-service&quot;</span>
-<span class="nv">PROJECT_INFRA_TAG_OWNER</span><span class="o">=</span><span class="s2">&quot;whoami@email.com&quot;</span>
-
-<span class="c1"># aws settings</span>
-<span class="nv">AWS_DEFAULT_OUTPUT</span><span class="o">=</span>json
-<span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span>us-east-1
-
-<span class="w">    </span><span class="s2">&quot;AWS_DEFAULT_REGION&quot;</span>,
-<span class="w">    </span><span class="s2">&quot;PROJECT_DEPLOYMENT_STAGE&quot;</span>,
-<span class="w">    </span><span class="s2">&quot;PROJECT_S3_BUCKET&quot;</span>,
-<span class="w">    </span><span class="s2">&quot;PROJECT_INFRA_TAG_PROJECT&quot;</span>,
-<span class="w">    </span><span class="s2">&quot;PROJECT_INFRA_TAG_SERVICE&quot;</span>,
-<span class="w">    </span><span class="s2">&quot;PROJECT_INFRA_TAG_OWNER&quot;</span>
-<span class="o">]</span>
-</code></pre></div>
-
-<p>Finally, substitute environment variable values into the templates, and write
-the templated content to the appropriate <code>*.tf</code> file. First, the backend:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Write backend.tf</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;backend.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-    <span class="n">caller_info</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;sts&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get_caller_identity</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">):</span>
-        <span class="n">profile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">]</span>
-        <span class="n">profile_setting</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;profile = &quot;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">profile_setting</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_backend_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-        <span class="n">bucket</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DSS_TERRAFORM_BACKEND_BUCKET_TEMPLATE&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">account_id</span><span class="o">=</span><span class="n">caller_info</span><span class="p">[</span><span class="s1">&#39;Account&#39;</span><span class="p">]),</span>
-        <span class="n">comp</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span>
-        <span class="n">stage</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DSS_DEPLOYMENT_STAGE&#39;</span><span class="p">],</span>
-        <span class="n">region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
-        <span class="n">profile_setting</span><span class="o">=</span><span class="n">profile_setting</span><span class="p">,</span>
-    <span class="p">))</span>
-</code></pre></div>
-
-<p>Next, the <code>variables.tf</code> for the component:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Write variables.tf</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;variables.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Auto-generated during infra build process.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
-    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Please edit infra/build_deploy_config.py directly.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">env_vars_to_infra</span><span class="p">:</span>
-        <span class="n">val</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
-        <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_variable_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">val</span><span class="p">))</span>
-</code></pre></div>
-
-<p>Finally, the cloud providers file <code>providers.tf</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;providers.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
-    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_providers_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-        <span class="n">aws_region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
-        <span class="n">gcp_project_id</span><span class="o">=</span><span class="n">GCP_PROJECT_ID</span><span class="p">,</span>
-    <span class="p">))</span>
-</code></pre></div>
-
-<h1 id="workflow">Workflow</h1>
-<p>We now have a top-level Makefile that wraps the plan and apply commands directly,
-and we have an infra-level Makefile with additional commands for managing infrastructure
-(plan, apply, destroy).</p>
-<h2 id="plan">Plan</h2>
-<p>The terraform plan step assembles the various templated terraform files and substitutes
-environment variables into them, creating a new version of them with up-to-date values.</p>
-<p>The plan step (<code>make plan-infra</code>) calls the <code>build_deploy_config.py</code> script (detailed above)
-to regenerate the terraform files when environment variables are changed.</p>
-<div class="highlight"><pre><span></span><code>make plan-infra
-</code></pre></div>
-
-<p>This script will iterate over each cloud infrastructure component in <code>infra/</code>, use terraform
-to plan the changes it would make to cloud resources, and print a summary of those changes
-to the screen.</p>
-<p><strong>The <code>make plan-infra</code> command does not change any cloud infra.</strong></p>
-<h2 id="deploy">Deploy</h2>
-<p>The terraform deploy step makes the changes summarized in the <code>make plan-infra</code> step. This
-command automates the terraform commands, but still requires interactive "yes" responses
-to commands.</p>
-<h2 id="update">Update</h2>
-<p>Using the <code>make plan-infra</code> command will remake the terraform files using environment variable
-values, and will display any changes that will be made to cloud infra. This includes updates to
-existing infrastructure.</p>
-<p>When you finish deploying infrastructure, store the version of your <code>environment</code> file in version
-control and tag it as the current deployed infra. This will make it easier to delete infra later.</p>
-<p>If you need to rename infra, use the following workflow:</p>
-<ol>
-<li>
-<p>Source the old <code>environment</code> file</p>
-</li>
-<li>
-<p>Destroy the old infra with the old names using:</p>
-<p><code>text
-make -C infra COMPONENT=buckets destroy</code></p>
-<p>Or destroy all infra with the <code>destroy-all</code> command:</p>
-<p><code>text
-make -C infra destroy-all</code></p>
-</li>
-<li>
-<p>Update the environment file with the new names, and source the new <code>environment</code> file</p>
-</li>
-<li>
-<p>Plan the new infra with</p>
-<p><code>text
-make plan-infra</code></p>
-</li>
-<li>
-<p>Deploy the new infra with</p>
-<p><code>text
-make deploy-infra</code></p>
-</li>
-</ol>
-<h2 id="destroy">Destroy</h2>
-<p>As seen above, infrastructure components can be deleted with the <code>delete</code> command in the infra
-Makefile, and all infrastructure components can be deleted with the <code>delete-all</code> command.</p>
-<p>To delete a particular component:</p>
-<div class="highlight"><pre><span></span><code>make -C infra COMPONENT=buckets destroy
-</code></pre></div>
-
-<p>To destroy all infra:</p>
-<div class="highlight"><pre><span></span><code>make -C infra destroy-all
-</code></pre></div></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/terraform.html">terraform</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/makefile.html">makefile</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/make.html">make</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1340,6 +987,44 @@ Makefile, and all infrastructure components can be deleted with the <code>delete
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>June 2023</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/two-burp-suite-extensions-worth-installing-jwt-editor-and-hackvertor.html">Two Burp Suite Extensions Worth Installing: JWT Editor and Hackvertor</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>May 2023</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/blind-sql-injection-with-conditional-errors-and-oracles-dual-table.html">Blind SQL Injection with Conditional Errors (and Oracle's `dual` Table)</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/blind-sql-injection-with-conditional-responses.html">Blind SQL Injection with Conditional Responses</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/sql-injection-union-attacks-turning-a-product-listing-into-a-user-dump.html">SQL Injection UNION Attacks: Turning a Product Listing Into a User Dump</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/sql-injection-fundamentals-four-attack-shapes.html">SQL Injection Fundamentals: Four Attack Shapes</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/working-through-the-portswigger-web-security-academy.html">Working Through the PortSwigger Web Security Academy</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
