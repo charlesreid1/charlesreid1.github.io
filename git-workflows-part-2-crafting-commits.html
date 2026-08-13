@@ -132,7 +132,7 @@
 </li>
 <li><a href="#modifying-commits">Modifying Commits</a><ul>
 <li><a href="#git-rebase_1">git rebase</a><ul>
-<li><a href="#rebasing-a-range-of-commits">rebasing a range of commits</a></li>
+<li><a href="#rebasing-the-last-n-commits-of-a-branch">rebasing the last N commits of a branch</a></li>
 <li><a href="#rebasing-onto-another-branch">rebasing onto another branch</a></li>
 </ul>
 </li>
@@ -177,14 +177,18 @@ your changes, the second step memorializes those staged changes
 into a commit that can now be shared with others by pushing it
 to git remotes.</p>
 <h2 id="git-add">git add</h2>
-<p>It is important to know that git does not keep track of changes at
-the file level, it keeps track of changes at the character/line level.</p>
-<p>What that means is, when you modify a line in a file that is in your
-git repository, and run <code>git add</code> to stage your change, git has created
-an object under the hood called a <em>blob</em> to represent that one line change.</p>
-<p>If you change two lines in two different parts of a file, and stage those
-changes using <code>git add</code>, git will treat this as two separate changes, and
-represent the changes with two different blobs.</p>
+<p>Under the hood, git stores the full contents of each file at each snapshot
+in an object called a <em>blob</em>. When you modify a file and run <code>git add</code>,
+git writes a new blob containing the entire new contents of the file, and
+updates the staging area (the index) to point at that new blob. The diff
+between the old and new versions is not stored — it is computed on demand
+by comparing the two blobs.</p>
+<p>That said, when using tools like <code>git add -p</code>, <code>git diff</code>, and <code>git log -p</code>,
+git presents changes at the line (hunk) level. This makes it useful to
+think about staging in terms of individual line changes, even though the
+underlying storage is snapshot-based. That line-level view is what makes
+it possible to stage some hunks in a file but not others — the resulting
+blob reflects only the hunks you accepted.</p>
 <h2 id="git-commit">git commit</h2>
 <p>As you use <code>git add</code> to prepare your changes, the changes are added to
 a <em>staging area</em>. Think of this staging area as a draft commit. Each change
@@ -402,7 +406,11 @@ Changes not staged for commit:
 </code></pre></div>
 
 <p>Now <code>git commit</code> will commit only the staged portions.</p>
-<p>Do not provide any filenames to <code>git commit</code>, so that git will only commit the staged changes.</p>
+<p>Run <code>git commit</code> with no filenames. If you pass a filename like
+<code>git commit doit.sh</code>, git will commit the current working-tree contents
+of that file directly, bypassing the index entirely — throwing away the
+careful hunk-by-hunk staging you just did and committing the unstaged
+changes too.</p>
 <p>To use this in your workflow, think about how you can group different changes together into
 different commits. If you get a portion of a feature working, you can commit the changes in
 groups so that related changes get committed together.</p>
@@ -486,36 +494,47 @@ Think of it like replaying the changes recorded in each commit onto the new bran
 contents of each commit changes slightly, so the hash (the name) of every commit changes.</p>
 <h3 id="git-rebase_1">git rebase</h3>
 <p>To do a git rebase, an interactive rebase (the <code>-i</code> flag) is recommended.</p>
-<p>The rebase action takes two commits, and will replay the commits.</p>
-<p><strong>IMPORTANT:</strong> The first commit given (the start commit) is <em>not</em> included
-in the rebase. To include it, add <code>~1</code> to the start commit. (For example,
-<code>0a1b2c3d~1</code> refers to the commit before commit <code>0a1b2c3d</code>.</p>
-<h4 id="rebasing-a-range-of-commits">rebasing a range of commits</h4>
-<p>To rebase from the start commit hash to the end commit hash, and include the start commit
-in the rebase, the rebase command is:</p>
-<div class="highlight"><pre><span></span><code>git rebase -i START_COMMIT_HASH~1 END_COMMIT_HASH
+<p>The general form of a rebase is:</p>
+<div class="highlight"><pre><span></span><code>git rebase [-i] &lt;upstream&gt; [&lt;branch&gt;]
 </code></pre></div>
 
-<p>This does not indicate a destination branch. The default behavior is for the branch to move
-and the new pile of commits to retain the same branch name.</p>
+<p>If <code>&lt;branch&gt;</code> is given, git checks it out first. Then it takes every commit
+that is reachable from <code>&lt;branch&gt;</code> but not from <code>&lt;upstream&gt;</code> and replays them
+on top of <code>&lt;upstream&gt;</code>.</p>
+<p><strong>IMPORTANT:</strong> The <code>&lt;upstream&gt;</code> commit itself is <em>not</em> replayed - it is the
+new base. If you want to include a specific commit in the rebase, use its
+parent as <code>&lt;upstream&gt;</code>. For example, <code>0a1b2c3d~1</code> refers to the commit
+before <code>0a1b2c3d</code>, so <code>git rebase -i 0a1b2c3d~1</code> will replay <code>0a1b2c3d</code>
+and everything after it on the current branch.</p>
+<h4 id="rebasing-the-last-n-commits-of-a-branch">rebasing the last N commits of a branch</h4>
+<p>The most common form of interactive rebase is "let me edit the last N commits
+on my branch":</p>
+<div class="highlight"><pre><span></span><code>git rebase -i HEAD~N
+</code></pre></div>
+
+<p>For example, <code>git rebase -i HEAD~5</code> replays the last 5 commits on top of
+their existing base, giving you an editor where you can reorder, squash,
+edit, or drop them.</p>
 <h4 id="rebasing-onto-another-branch">rebasing onto another branch</h4>
-<p>To rebase a range of commits onto a different branch (for example, onto a <code>master</code> branch
-that has the latest changes from the remote), use the <code>--onto</code> flag:</p>
-<div class="highlight"><pre><span></span><code>git rebase -i START_COMMIT_HASH END_COMMIT_HASH --onto TARGET_BRANCH
+<p>To move a range of commits so they start on top of a different branch
+(for example, on top of the latest <code>master</code>), use the <code>--onto</code> flag:</p>
+<div class="highlight"><pre><span></span><code>git rebase --onto &lt;newbase&gt; &lt;upstream&gt; [&lt;branch&gt;]
 </code></pre></div>
 
-<p><strong>IMPORTANT:</strong> The above rebase commands will leave your repo in a headless state - unlike
-the behavior of the prior command, the branch label will not move with you to the new pile
-of commits.</p>
-<p>Run <code>git checkout -b &lt;branchname&gt;</code> to give your new rebased branch a meaningful name.
-This creates a branch wherever HEAD is, which is pointing to the top of the pile of rebased
-commits.</p>
-<p>If you want the old branch label to move to the new pile of commits, it requires a bit of branch
-housekeeping - you have to delete the old branch, then create a new branch from where
-HEAD is (the end of the rebase), then check out that branch.</p>
-<div class="highlight"><pre><span></span><code>git branch -D &lt;branchname&gt; &amp;&amp; git checkout -b &lt;branchname&gt;
+<p><code>&lt;newbase&gt;</code> is where the commits will be replayed. <code>&lt;upstream&gt;</code> is the
+commit whose descendants get replayed (and <code>&lt;upstream&gt;</code> itself is <em>not</em>
+included). If <code>&lt;branch&gt;</code> is provided, git checks it out first before
+starting the rebase.</p>
+<p>For example, suppose you have a <code>feature</code> branch that was branched off an
+old <code>master</code>, and you want to move its commits on top of the current
+<code>master</code>:</p>
+<div class="highlight"><pre><span></span><code>git rebase --onto master feature~3 feature
 </code></pre></div>
 
+<p>This replays the last 3 commits of <code>feature</code> on top of <code>master</code>, and
+because <code>feature</code> was supplied as <code>&lt;branch&gt;</code>, the <code>feature</code> label moves
+with the rebased commits — no headless state, no branch housekeeping
+needed.</p>
 <h2 id="rearranging-commits">Rearranging Commits</h2>
 <p>Where rebasing allows for editing commits en masse, cherry picking allows the changes made in
 individual commits to be applied anywhere - including other branches. This makes the atomic

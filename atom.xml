@@ -5530,7 +5530,7 @@ changes. Why is it bad practice to propose large, complex changes?&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;It is harder to review the proposed changes&lt;/li&gt;
 &lt;li&gt;Bugs increase in likelihood, and increase in likelihood far faster than the amount of code.&lt;/li&gt;
-&lt;li&gt;More complex changes usually combine &lt;/li&gt;
+&lt;li&gt;More complex changes usually combine multiple concerns, making them harder to review, revert, or bisect when something goes wrong.&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h1 id="refactoring-large-branches"&gt;Refactoring Large Branches&lt;/h1&gt;
 &lt;p&gt;Consider the case of a large feature branch that is suffering from feature creep (trying to
@@ -5587,19 +5587,23 @@ changes. Then, particular changes can be selectively added to commits using &lt;
 &lt;h3 id="git-format-patch"&gt;git format-patch&lt;/h3&gt;
 &lt;p&gt;To create a set of patches, one per commit, to edit them or apply them in various orders,
 you can use &lt;code&gt;git format-patch&lt;/code&gt; with a commit range:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git format-patch D1..E3
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git format-patch B..E3
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;This will create a series of patches like &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;patches/0001-the-D1-commit-message.patch
-patches/0001-the-E1-commit-message.patch
-patches/0001-the-D2-commit-message.patch
-patches/0001-the-F1-commit-message.patch
-patches/0001-the-E2-commit-message.patch
-patches/0001-the-F2-commit-message.patch
-patches/0001-the-D3-commit-message.patch
-patches/0001-the-F3-commit-message.patch
-patches/0001-the-E3-commit-message.patch
+&lt;p&gt;Note that the &lt;code&gt;A..B&lt;/code&gt; range syntax is &lt;em&gt;exclusive&lt;/em&gt; of &lt;code&gt;A&lt;/code&gt;, so we use &lt;code&gt;B&lt;/code&gt;
+(the last commit on &lt;code&gt;master&lt;/code&gt; before the feature branch) as the range
+start — that way commit &lt;code&gt;D1&lt;/code&gt; is included. Equivalently, &lt;code&gt;D1~1..E3&lt;/code&gt; would
+also include &lt;code&gt;D1&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;This will create a series of patches like&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;0001-the-D1-commit-message.patch
+0002-the-E1-commit-message.patch
+0003-the-D2-commit-message.patch
+0004-the-F1-commit-message.patch
+0005-the-E2-commit-message.patch
+0006-the-F2-commit-message.patch
+0007-the-D3-commit-message.patch
+0008-the-F3-commit-message.patch
+0009-the-E3-commit-message.patch
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Patches can be further split or modified, and can be applied in the desired order (although
@@ -5779,10 +5783,11 @@ merge commit.&lt;/p&gt;
 &lt;p&gt;Once the &lt;code&gt;integration-e-f&lt;/code&gt; branch is polished and passing tests, we can re-label it as &lt;code&gt;feature-f&lt;/code&gt; and push
 the new commits to the remote. To re-label &lt;code&gt;integration-e-f&lt;/code&gt; as &lt;code&gt;feature-f&lt;/code&gt;, assuming we're at the tip of
 the &lt;code&gt;integration-e-f&lt;/code&gt; branch (where we left off above):&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git branch -D feature-f
-git checkout -b feature-f
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git checkout -B feature-f
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
+&lt;p&gt;The &lt;code&gt;-B&lt;/code&gt; flag creates or resets the named branch at HEAD in one step, so
+you don't have to (and can't) delete the branch you're currently on.&lt;/p&gt;
 &lt;p&gt;and push the new commits to the remote's &lt;code&gt;feature-f&lt;/code&gt; branch, before you merge in the pull request (&lt;code&gt;feature-f&lt;/code&gt;
 into &lt;code&gt;feature-e&lt;/code&gt;):&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git push origin feature-f
@@ -5793,7 +5798,7 @@ into &lt;code&gt;feature-e&lt;/code&gt;):&lt;/p&gt;
 &lt;p&gt;Rinse and repeat for pull requests 2 and 1.&lt;/p&gt;
 &lt;p&gt;For Pull Request 2, we start by creating a new &lt;code&gt;integration-d-e-f&lt;/code&gt; branch from the tip of the
 &lt;code&gt;integration-e-f&lt;/code&gt; branch, like so:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git checkout integration-d-e
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git checkout integration-e-f
 git checkout -b integration-d-e-f
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
@@ -5815,7 +5820,7 @@ and you should now have a git commit history like this:&lt;/p&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Now re-label the &lt;code&gt;integration-d-e-f&lt;/code&gt; branch as &lt;code&gt;feature-e&lt;/code&gt;:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git branch -D feature-e &amp;amp;&amp;amp; git checkout -b feature-e
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git checkout -B feature-e
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Finally, push all new commits to the remote, including the new merge
@@ -5833,7 +5838,7 @@ from merging the &lt;code&gt;feature-e&lt;/code&gt; branch in (pull request 2, E
 and the &lt;code&gt;feature-e&lt;/code&gt; branch also had &lt;code&gt;feature-f&lt;/code&gt; merged into it.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;A - B - C (master)
      \
-      D - D2 - DEF1 - DEF2 (feature-d)
+      D - DA - DB - DEF1 - DEF2 (feature-d)
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Now we will create one more commit on the &lt;code&gt;feature-d&lt;/code&gt; branch that is
@@ -5841,7 +5846,8 @@ merging &lt;code&gt;master&lt;/code&gt; into &lt;code&gt;feature-d&lt;/code&gt;,
 smoothly for pull request 1 (D into master).&lt;/p&gt;
 &lt;p&gt;But first we switch to an integration branch, in case things don't go
 smoothly and we want to throw away the merge commit:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git branch integration-def-master
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git checkout feature-d
+git checkout -b integration-def-master
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Create an explicit merge commit to merge &lt;code&gt;master&lt;/code&gt; into &lt;code&gt;integration-def-master&lt;/code&gt;:&lt;/p&gt;
@@ -5851,17 +5857,16 @@ smoothly and we want to throw away the merge commit:&lt;/p&gt;
 &lt;p&gt;Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
 and you should now have a git commit history like this:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;A - B - C (master)
-     \   \---------------------
-      \                        \
-       D - D2 - DEF1 - DEF2 - DEF3 (integration-def-master)
+     \   \--------------------------
+      \                             \
+       D - DA - DB - DEF1 - DEF2 - DEF3 (integration-def-master)
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;where commit &lt;code&gt;DEF3&lt;/code&gt; is the merge commit created with the &lt;code&gt;--no-ff&lt;/code&gt; command.&lt;/p&gt;
 &lt;p&gt;The merge commit will resolve any conflicts. When you're satisfied with the
 merge commit, you can switch out the &lt;code&gt;integration-def-master&lt;/code&gt; branch with the
 &lt;code&gt;feature-d&lt;/code&gt; branch like so:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git branch -D feature-d
-git checkout -b feature-d
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git checkout -B feature-d
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Now you can push the merge commit to the remote:&lt;/p&gt;
@@ -5891,7 +5896,7 @@ git checkout -b feature-d
 &lt;/li&gt;
 &lt;li&gt;&lt;a href="#modifying-commits"&gt;Modifying Commits&lt;/a&gt;&lt;ul&gt;
 &lt;li&gt;&lt;a href="#git-rebase_1"&gt;git rebase&lt;/a&gt;&lt;ul&gt;
-&lt;li&gt;&lt;a href="#rebasing-a-range-of-commits"&gt;rebasing a range of commits&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#rebasing-the-last-n-commits-of-a-branch"&gt;rebasing the last N commits of a branch&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#rebasing-onto-another-branch"&gt;rebasing onto another branch&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/li&gt;
@@ -5912,10 +5917,7 @@ git checkout -b feature-d
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;Make use of &lt;code&gt;git add -p&lt;/code&gt; and &lt;code&gt;git add -e&lt;/code&gt; to stage
-  changes selectively and atomically.&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;Make …&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;</summary><content type="html">&lt;div class="toc"&gt;&lt;span class="toctitle"&gt;Table of Contents&lt;/span&gt;&lt;ul&gt;
+  changes selectively …&lt;/p&gt;&lt;/li&gt;&lt;/ul&gt;</summary><content type="html">&lt;div class="toc"&gt;&lt;span class="toctitle"&gt;Table of Contents&lt;/span&gt;&lt;ul&gt;
 &lt;li&gt;&lt;a href="#summary"&gt;Summary&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#what-is-a-commit"&gt;What is a commit&lt;/a&gt;&lt;ul&gt;
 &lt;li&gt;&lt;a href="#git-add"&gt;git add&lt;/a&gt;&lt;/li&gt;
@@ -5938,7 +5940,7 @@ git checkout -b feature-d
 &lt;/li&gt;
 &lt;li&gt;&lt;a href="#modifying-commits"&gt;Modifying Commits&lt;/a&gt;&lt;ul&gt;
 &lt;li&gt;&lt;a href="#git-rebase_1"&gt;git rebase&lt;/a&gt;&lt;ul&gt;
-&lt;li&gt;&lt;a href="#rebasing-a-range-of-commits"&gt;rebasing a range of commits&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#rebasing-the-last-n-commits-of-a-branch"&gt;rebasing the last N commits of a branch&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#rebasing-onto-another-branch"&gt;rebasing onto another branch&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/li&gt;
@@ -5983,14 +5985,18 @@ your changes, the second step memorializes those staged changes
 into a commit that can now be shared with others by pushing it
 to git remotes.&lt;/p&gt;
 &lt;h2 id="git-add"&gt;git add&lt;/h2&gt;
-&lt;p&gt;It is important to know that git does not keep track of changes at
-the file level, it keeps track of changes at the character/line level.&lt;/p&gt;
-&lt;p&gt;What that means is, when you modify a line in a file that is in your
-git repository, and run &lt;code&gt;git add&lt;/code&gt; to stage your change, git has created
-an object under the hood called a &lt;em&gt;blob&lt;/em&gt; to represent that one line change.&lt;/p&gt;
-&lt;p&gt;If you change two lines in two different parts of a file, and stage those
-changes using &lt;code&gt;git add&lt;/code&gt;, git will treat this as two separate changes, and
-represent the changes with two different blobs.&lt;/p&gt;
+&lt;p&gt;Under the hood, git stores the full contents of each file at each snapshot
+in an object called a &lt;em&gt;blob&lt;/em&gt;. When you modify a file and run &lt;code&gt;git add&lt;/code&gt;,
+git writes a new blob containing the entire new contents of the file, and
+updates the staging area (the index) to point at that new blob. The diff
+between the old and new versions is not stored — it is computed on demand
+by comparing the two blobs.&lt;/p&gt;
+&lt;p&gt;That said, when using tools like &lt;code&gt;git add -p&lt;/code&gt;, &lt;code&gt;git diff&lt;/code&gt;, and &lt;code&gt;git log -p&lt;/code&gt;,
+git presents changes at the line (hunk) level. This makes it useful to
+think about staging in terms of individual line changes, even though the
+underlying storage is snapshot-based. That line-level view is what makes
+it possible to stage some hunks in a file but not others — the resulting
+blob reflects only the hunks you accepted.&lt;/p&gt;
 &lt;h2 id="git-commit"&gt;git commit&lt;/h2&gt;
 &lt;p&gt;As you use &lt;code&gt;git add&lt;/code&gt; to prepare your changes, the changes are added to
 a &lt;em&gt;staging area&lt;/em&gt;. Think of this staging area as a draft commit. Each change
@@ -6208,7 +6214,11 @@ Changes not staged for commit:
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
 &lt;p&gt;Now &lt;code&gt;git commit&lt;/code&gt; will commit only the staged portions.&lt;/p&gt;
-&lt;p&gt;Do not provide any filenames to &lt;code&gt;git commit&lt;/code&gt;, so that git will only commit the staged changes.&lt;/p&gt;
+&lt;p&gt;Run &lt;code&gt;git commit&lt;/code&gt; with no filenames. If you pass a filename like
+&lt;code&gt;git commit doit.sh&lt;/code&gt;, git will commit the current working-tree contents
+of that file directly, bypassing the index entirely — throwing away the
+careful hunk-by-hunk staging you just did and committing the unstaged
+changes too.&lt;/p&gt;
 &lt;p&gt;To use this in your workflow, think about how you can group different changes together into
 different commits. If you get a portion of a feature working, you can commit the changes in
 groups so that related changes get committed together.&lt;/p&gt;
@@ -6292,36 +6302,47 @@ Think of it like replaying the changes recorded in each commit onto the new bran
 contents of each commit changes slightly, so the hash (the name) of every commit changes.&lt;/p&gt;
 &lt;h3 id="git-rebase_1"&gt;git rebase&lt;/h3&gt;
 &lt;p&gt;To do a git rebase, an interactive rebase (the &lt;code&gt;-i&lt;/code&gt; flag) is recommended.&lt;/p&gt;
-&lt;p&gt;The rebase action takes two commits, and will replay the commits.&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;IMPORTANT:&lt;/strong&gt; The first commit given (the start commit) is &lt;em&gt;not&lt;/em&gt; included
-in the rebase. To include it, add &lt;code&gt;~1&lt;/code&gt; to the start commit. (For example,
-&lt;code&gt;0a1b2c3d~1&lt;/code&gt; refers to the commit before commit &lt;code&gt;0a1b2c3d&lt;/code&gt;.&lt;/p&gt;
-&lt;h4 id="rebasing-a-range-of-commits"&gt;rebasing a range of commits&lt;/h4&gt;
-&lt;p&gt;To rebase from the start commit hash to the end commit hash, and include the start commit
-in the rebase, the rebase command is:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git rebase -i START_COMMIT_HASH~1 END_COMMIT_HASH
+&lt;p&gt;The general form of a rebase is:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git rebase [-i] &amp;lt;upstream&amp;gt; [&amp;lt;branch&amp;gt;]
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;This does not indicate a destination branch. The default behavior is for the branch to move
-and the new pile of commits to retain the same branch name.&lt;/p&gt;
+&lt;p&gt;If &lt;code&gt;&amp;lt;branch&amp;gt;&lt;/code&gt; is given, git checks it out first. Then it takes every commit
+that is reachable from &lt;code&gt;&amp;lt;branch&amp;gt;&lt;/code&gt; but not from &lt;code&gt;&amp;lt;upstream&amp;gt;&lt;/code&gt; and replays them
+on top of &lt;code&gt;&amp;lt;upstream&amp;gt;&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;IMPORTANT:&lt;/strong&gt; The &lt;code&gt;&amp;lt;upstream&amp;gt;&lt;/code&gt; commit itself is &lt;em&gt;not&lt;/em&gt; replayed - it is the
+new base. If you want to include a specific commit in the rebase, use its
+parent as &lt;code&gt;&amp;lt;upstream&amp;gt;&lt;/code&gt;. For example, &lt;code&gt;0a1b2c3d~1&lt;/code&gt; refers to the commit
+before &lt;code&gt;0a1b2c3d&lt;/code&gt;, so &lt;code&gt;git rebase -i 0a1b2c3d~1&lt;/code&gt; will replay &lt;code&gt;0a1b2c3d&lt;/code&gt;
+and everything after it on the current branch.&lt;/p&gt;
+&lt;h4 id="rebasing-the-last-n-commits-of-a-branch"&gt;rebasing the last N commits of a branch&lt;/h4&gt;
+&lt;p&gt;The most common form of interactive rebase is "let me edit the last N commits
+on my branch":&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git rebase -i HEAD~N
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;For example, &lt;code&gt;git rebase -i HEAD~5&lt;/code&gt; replays the last 5 commits on top of
+their existing base, giving you an editor where you can reorder, squash,
+edit, or drop them.&lt;/p&gt;
 &lt;h4 id="rebasing-onto-another-branch"&gt;rebasing onto another branch&lt;/h4&gt;
-&lt;p&gt;To rebase a range of commits onto a different branch (for example, onto a &lt;code&gt;master&lt;/code&gt; branch
-that has the latest changes from the remote), use the &lt;code&gt;--onto&lt;/code&gt; flag:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git rebase -i START_COMMIT_HASH END_COMMIT_HASH --onto TARGET_BRANCH
+&lt;p&gt;To move a range of commits so they start on top of a different branch
+(for example, on top of the latest &lt;code&gt;master&lt;/code&gt;), use the &lt;code&gt;--onto&lt;/code&gt; flag:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git rebase --onto &amp;lt;newbase&amp;gt; &amp;lt;upstream&amp;gt; [&amp;lt;branch&amp;gt;]
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;&lt;strong&gt;IMPORTANT:&lt;/strong&gt; The above rebase commands will leave your repo in a headless state - unlike
-the behavior of the prior command, the branch label will not move with you to the new pile
-of commits.&lt;/p&gt;
-&lt;p&gt;Run &lt;code&gt;git checkout -b &amp;lt;branchname&amp;gt;&lt;/code&gt; to give your new rebased branch a meaningful name.
-This creates a branch wherever HEAD is, which is pointing to the top of the pile of rebased
-commits.&lt;/p&gt;
-&lt;p&gt;If you want the old branch label to move to the new pile of commits, it requires a bit of branch
-housekeeping - you have to delete the old branch, then create a new branch from where
-HEAD is (the end of the rebase), then check out that branch.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git branch -D &amp;lt;branchname&amp;gt; &amp;amp;&amp;amp; git checkout -b &amp;lt;branchname&amp;gt;
+&lt;p&gt;&lt;code&gt;&amp;lt;newbase&amp;gt;&lt;/code&gt; is where the commits will be replayed. &lt;code&gt;&amp;lt;upstream&amp;gt;&lt;/code&gt; is the
+commit whose descendants get replayed (and &lt;code&gt;&amp;lt;upstream&amp;gt;&lt;/code&gt; itself is &lt;em&gt;not&lt;/em&gt;
+included). If &lt;code&gt;&amp;lt;branch&amp;gt;&lt;/code&gt; is provided, git checks it out first before
+starting the rebase.&lt;/p&gt;
+&lt;p&gt;For example, suppose you have a &lt;code&gt;feature&lt;/code&gt; branch that was branched off an
+old &lt;code&gt;master&lt;/code&gt;, and you want to move its commits on top of the current
+&lt;code&gt;master&lt;/code&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;git rebase --onto master feature~3 feature
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
+&lt;p&gt;This replays the last 3 commits of &lt;code&gt;feature&lt;/code&gt; on top of &lt;code&gt;master&lt;/code&gt;, and
+because &lt;code&gt;feature&lt;/code&gt; was supplied as &lt;code&gt;&amp;lt;branch&amp;gt;&lt;/code&gt;, the &lt;code&gt;feature&lt;/code&gt; label moves
+with the rebased commits — no headless state, no branch housekeeping
+needed.&lt;/p&gt;
 &lt;h2 id="rearranging-commits"&gt;Rearranging Commits&lt;/h2&gt;
 &lt;p&gt;Where rebasing allows for editing commits en masse, cherry picking allows the changes made in
 individual commits to be applied anywhere - including other branches. This makes the atomic
@@ -6488,15 +6509,15 @@ Same with the &lt;code&gt;-specific&lt;/code&gt; commands.&lt;/p&gt;
 
 &lt;p&gt;Remember to use this with the &lt;code&gt;g&lt;/code&gt; alias for super short log:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$ g l
-* 4357b28 (HEAD -&amp;gt; source) update mocking aws post
-* 063ad78 (gh/source, gh/HEAD) add mocking post
+* 4357b28 (HEAD -&amp;gt; source, gh/source, gh/HEAD) update mocking aws post
+* 063ad78 add mocking post
 * a5f1adc add init keras cnn post
 * fb911ec add keras cnn draft
 * 3549d35 add rosalind (euler paths) part 7 draft
 
 $ g lg1
-* 4357b28 - (67 minutes ago) update mocking aws post - Charles Reid (HEAD -&amp;gt; source)
-* 063ad78 - (2 weeks ago) add mocking post - Charles Reid (gh/source, gh/HEAD)
+* 4357b28 - (67 minutes ago) update mocking aws post - Charles Reid (HEAD -&amp;gt; source, gh/source, gh/HEAD)
+* 063ad78 - (2 weeks ago) add mocking post - Charles Reid
 * a5f1adc - (4 months ago) add init keras cnn post - C Reid
 * fb911ec - (5 months ago) add keras cnn draft - C Reid
 * 3549d35 - (5 months ago) add rosalind (euler paths) part 7 draft - C Reid
@@ -6545,7 +6566,6 @@ bit in the aliases section of the &lt;code&gt;~/.gitconfig&lt;/code&gt; file:&lt
 so here are several branch aliases:&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;    b = branch -v
     bv = branch -v
-    bb = branch -v
 
     ba = branch -a
     bb = branch -v -a
@@ -6581,7 +6601,12 @@ then switches to that branch:&lt;/p&gt;
     go = &amp;quot;!f() { git checkout -b \&amp;quot;$1\&amp;quot; 2&amp;gt; /dev/null || git checkout \&amp;quot;$1\&amp;quot;; }; f&amp;quot;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;Careful you don't mistype the branch name.&lt;/p&gt;
+&lt;p&gt;Careful you don't mistype the branch name. If you typo a new branch name
+that happens to collide with an existing branch, the &lt;code&gt;checkout -b&lt;/code&gt; will
+fail (branch already exists) and the fallback &lt;code&gt;checkout "$1"&lt;/code&gt; will silently
+switch you to that existing branch. Typo a branch name that doesn't exist
+at all, and both commands fail — you stay on your current branch and may
+not notice. Always sanity check with &lt;code&gt;g b&lt;/code&gt; after running &lt;code&gt;g go&lt;/code&gt;.&lt;/p&gt;
 &lt;h2 id="remote-utils"&gt;Remote Utils&lt;/h2&gt;
 &lt;p&gt;Another useful git command is the remote command, so here are a few
 remote aliases:&lt;/p&gt;
@@ -6752,6 +6777,8 @@ and you'll find yourself using a lot fewer keystrokes!&lt;/p&gt;</content><categ
 &lt;li&gt;&lt;a href="#the-mocked-aws-call"&gt;The Mocked AWS Call&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/li&gt;
+&lt;li&gt;&lt;a href="#where-to-patch-a-common-gotcha"&gt;Where To Patch: A Common Gotcha&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#when-to-reach-for-moto-instead"&gt;When To Reach For moto Instead&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/div&gt;
 &lt;h2 id="overview"&gt;Overview&lt;/h2&gt;
@@ -6760,14 +6787,15 @@ requires API calls and handling responses, by mocking those responses instead of
 &lt;h2 id="a-simple-example-mocking-api-responses"&gt;A Simple Example: Mocking API Responses&lt;/h2&gt;
 &lt;h3 id="the-genuine-aws-call"&gt;The Genuine AWS Call&lt;/h3&gt;
 &lt;p&gt;Let's start with an example of an AWS API call. Here's how our program will be structured:
-start with a driver &lt;code&gt;lister.py&lt;/code&gt; that creates an AWS secrets manager client and defines a 
-function to list …&lt;/p&gt;</summary><content type="html">&lt;div class="toc"&gt;&lt;span class="toctitle"&gt;Table of Contents&lt;/span&gt;&lt;ul&gt;
+start with a driver &lt;code&gt;lister.py&lt;/code&gt; that …&lt;/p&gt;</summary><content type="html">&lt;div class="toc"&gt;&lt;span class="toctitle"&gt;Table of Contents&lt;/span&gt;&lt;ul&gt;
 &lt;li&gt;&lt;a href="#overview"&gt;Overview&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#a-simple-example-mocking-api-responses"&gt;A Simple Example: Mocking API Responses&lt;/a&gt;&lt;ul&gt;
 &lt;li&gt;&lt;a href="#the-genuine-aws-call"&gt;The Genuine AWS Call&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#the-mocked-aws-call"&gt;The Mocked AWS Call&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/li&gt;
+&lt;li&gt;&lt;a href="#where-to-patch-a-common-gotcha"&gt;Where To Patch: A Common Gotcha&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#when-to-reach-for-moto-instead"&gt;When To Reach For moto Instead&lt;/a&gt;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;/div&gt;
 &lt;h2 id="overview"&gt;Overview&lt;/h2&gt;
@@ -6857,15 +6885,15 @@ to mock, or patch).&lt;/p&gt;
 &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;lister&lt;/span&gt;
 &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;datetime&lt;/span&gt;
 
-&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;TestMo&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;unittest&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;TestCase&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;TestLister&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;unittest&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;TestCase&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
     &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;test_main&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="bp"&gt;self&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
-        &lt;span class="k"&gt;with&lt;/span&gt; &lt;span class="n"&gt;mock&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;patch&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;mo.sm_client&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="n"&gt;sm&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="k"&gt;with&lt;/span&gt; &lt;span class="n"&gt;mock&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;patch&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;lister.sm_client&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="n"&gt;sm&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
             &lt;span class="o"&gt;...&lt;/span&gt;
-            &lt;span class="n"&gt;sm_client&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;list_secrets&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;mock&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;MagicMock&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt; &lt;span class="o"&gt;...&lt;/span&gt; &lt;span class="p"&gt;)&lt;/span&gt;
+            &lt;span class="n"&gt;sm&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;list_secrets&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;mock&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;MagicMock&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt; &lt;span class="o"&gt;...&lt;/span&gt; &lt;span class="p"&gt;)&lt;/span&gt;
             &lt;span class="o"&gt;...&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 
-&lt;p&gt;Any calls made to &lt;code&gt;sm_client&lt;/code&gt; in the &lt;code&gt;mo&lt;/code&gt; module will be mocked
+&lt;p&gt;Any calls made to &lt;code&gt;sm_client&lt;/code&gt; in the &lt;code&gt;lister&lt;/code&gt; module will be mocked
 using the &lt;code&gt;mock.MagicMock&lt;/code&gt; object that we define in the context,
 so we craft the response we want before we call the method we 
 want to test (which in turn will call &lt;code&gt;sm_client.list_secrets()&lt;/code&gt;).&lt;/p&gt;
@@ -6907,7 +6935,102 @@ Secret Name: fakesecret2 (last accessed: 2019-09-23 20:31:49.186880)
 Ran 1 test in 0.000s
 
 OK
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;</content><category term="Python"/><category term="python"/><category term="pytest"/><category term="tests"/><category term="aws"/><category term="mock"/><category term="mocking"/></entry><entry><title>Deconvoluting Convolutional Neural Networks</title><link href="https://charlesreid1.github.io/deconvoluting-convolutional-neural-networks.html" rel="alternate"/><published>2019-05-29T14:00:00-07:00</published><updated>2019-05-29T14:00:00-07:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2019-05-29:/deconvoluting-convolutional-neural-networks.html</id><summary type="html">&lt;div class="toc"&gt;&lt;span class="toctitle"&gt;Table of Contents&lt;/span&gt;&lt;ul&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;h2 id="where-to-patch-a-common-gotcha"&gt;Where To Patch: A Common Gotcha&lt;/h2&gt;
+&lt;p&gt;The single most confusing thing about &lt;code&gt;mock.patch&lt;/code&gt; is that you patch a name
+where it is &lt;em&gt;looked up&lt;/em&gt;, not where it is &lt;em&gt;defined&lt;/em&gt;. This trips up almost
+everyone the first time they reach for &lt;code&gt;unittest.mock&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;In our example above, &lt;code&gt;lister.py&lt;/code&gt; does &lt;code&gt;import boto3&lt;/code&gt; at the top and then binds
+a client to a module-level name:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;sm_client&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;boto3&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;secretsmanager&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;That means the name &lt;code&gt;sm_client&lt;/code&gt; now lives in the &lt;code&gt;lister&lt;/code&gt; module's namespace.
+The patch target &lt;code&gt;"lister.sm_client"&lt;/code&gt; works because that is the exact
+namespace where our code looks the name up when it runs.&lt;/p&gt;
+&lt;p&gt;A very natural (but broken) instinct is to try to patch &lt;code&gt;boto3&lt;/code&gt; itself:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;# This looks reasonable, but does nothing useful.&lt;/span&gt;
+&lt;span class="k"&gt;with&lt;/span&gt; &lt;span class="n"&gt;mock&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;patch&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;boto3.client&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="k"&gt;as&lt;/span&gt; &lt;span class="n"&gt;bc&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;bc&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;return_value&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;list_secrets&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;mock&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;MagicMock&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;return_value&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="n"&gt;return_json&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;lister&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;print_secret_names&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;This patch replaces &lt;code&gt;boto3.client&lt;/code&gt; in the &lt;code&gt;boto3&lt;/code&gt; module, but &lt;code&gt;lister.py&lt;/code&gt;
+already called &lt;code&gt;boto3.client('secretsmanager')&lt;/code&gt; at import time and stored the
+result in &lt;code&gt;lister.sm_client&lt;/code&gt;. That reference is unaffected by the patch, so
+the real AWS client is still used and the test either makes a real API call or
+fails with a credentials error.&lt;/p&gt;
+&lt;p&gt;The rule of thumb: find the line in your code that actually uses the name,
+then patch it in &lt;em&gt;that&lt;/em&gt; module's namespace. If &lt;code&gt;lister.py&lt;/code&gt; did the import
+inside the function instead:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;print_secret_names&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+    &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;boto3&lt;/span&gt;
+    &lt;span class="n"&gt;sm_client&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;boto3&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;secretsmanager&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="o"&gt;...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;then &lt;code&gt;"lister.boto3"&lt;/code&gt; would be the correct patch target, because that is where
+&lt;code&gt;boto3&lt;/code&gt; is looked up at call time.&lt;/p&gt;
+&lt;p&gt;Once test files grow past a handful of nested &lt;code&gt;with mock.patch(...)&lt;/code&gt; blocks,
+the &lt;code&gt;mocker&lt;/code&gt; fixture from
+&lt;a href="https://pypi.org/project/pytest-mock/"&gt;&lt;code&gt;pytest-mock&lt;/code&gt;&lt;/a&gt; is a cleaner way to
+express the same patches without the indentation pyramid.&lt;/p&gt;
+&lt;h2 id="when-to-reach-for-moto-instead"&gt;When To Reach For &lt;code&gt;moto&lt;/code&gt; Instead&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;unittest.mock&lt;/code&gt; is a good fit when you need to stub out a single call or two,
+but it has real limits:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;You hand-craft the response payload, so nothing checks that the shape you
+  invented actually matches the real AWS API.&lt;/li&gt;
+&lt;li&gt;Multi-step flows (create a secret, then list it, then rotate it) require
+  hand-wiring the state changes between mock calls.&lt;/li&gt;
+&lt;li&gt;Every new AWS method you touch is another &lt;code&gt;mock.MagicMock(...)&lt;/code&gt; to author
+  and maintain.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;For anything beyond a small handful of calls, &lt;a href="https://github.com/getmoto/moto"&gt;&lt;code&gt;moto&lt;/code&gt;&lt;/a&gt;
+is usually the better tool. &lt;code&gt;moto&lt;/code&gt; runs an in-process fake of the AWS services
+themselves, so your code calls &lt;code&gt;boto3&lt;/code&gt; normally and gets back responses whose
+shapes match the real API. You can create resources, list them, mutate them,
+and delete them the same way you would in production.&lt;/p&gt;
+&lt;p&gt;Here is the same test written against &lt;code&gt;moto&lt;/code&gt;:&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;test_lister_moto.py&lt;/code&gt;&lt;/strong&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;boto3&lt;/span&gt;
+&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;lister&lt;/span&gt;
+&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;moto&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;mock_secretsmanager&lt;/span&gt;
+
+&lt;span class="nd"&gt;@mock_secretsmanager&lt;/span&gt;
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;test_print_secret_names&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;capsys&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="n"&gt;client&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;boto3&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;secretsmanager&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;region_name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;us-east-1&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;create_secret&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;fakesecret1&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;SecretString&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;hunter2&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;create_secret&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;fakesecret2&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;SecretString&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;correct horse&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# Reset lister&amp;#39;s cached client so it picks up the moto-patched boto3.&lt;/span&gt;
+    &lt;span class="n"&gt;lister&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sm_client&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;boto3&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;client&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;secretsmanager&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;region_name&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;us-east-1&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="n"&gt;lister&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;print_secret_names&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+    &lt;span class="n"&gt;captured&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;capsys&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;readouterr&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="k"&gt;assert&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;fakesecret1&amp;quot;&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;captured&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;out&lt;/span&gt;
+    &lt;span class="k"&gt;assert&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;fakesecret2&amp;quot;&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;captured&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;out&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;A few things to notice:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;code&gt;@mock_secretsmanager&lt;/code&gt; decorator patches &lt;code&gt;botocore&lt;/code&gt; at the HTTP layer,
+  so the "where to patch" gotcha from the previous section does not apply -
+  any &lt;code&gt;boto3&lt;/code&gt; client constructed inside the decorated scope talks to the fake.&lt;/li&gt;
+&lt;li&gt;We exercise the real &lt;code&gt;create_secret&lt;/code&gt; and &lt;code&gt;list_secrets&lt;/code&gt; code paths. If AWS
+  changes a field name, or our code assumes a field that the API does not
+  actually return, the test will notice.&lt;/li&gt;
+&lt;li&gt;We assert on the &lt;em&gt;output&lt;/em&gt; of &lt;code&gt;print_secret_names()&lt;/code&gt; via &lt;code&gt;capsys&lt;/code&gt;, not just
+  that it ran without exceptions.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;moto&lt;/code&gt; also supports a standalone &lt;a href="https://docs.getmoto.org/en/latest/docs/server_mode.html"&gt;server mode&lt;/a&gt;
+that speaks the AWS wire protocol on a local port, which is useful for
+integration tests that span multiple services or non-Python clients.&lt;/p&gt;
+&lt;p&gt;The rough guideline: reach for &lt;code&gt;unittest.mock&lt;/code&gt; when you are stubbing a single
+call to isolate one unit of code, and reach for &lt;code&gt;moto&lt;/code&gt; when the test needs the
+service to &lt;em&gt;behave&lt;/em&gt; like AWS across several calls.&lt;/p&gt;</content><category term="Python"/><category term="python"/><category term="pytest"/><category term="tests"/><category term="aws"/><category term="mock"/><category term="mocking"/></entry><entry><title>Deconvoluting Convolutional Neural Networks</title><link href="https://charlesreid1.github.io/deconvoluting-convolutional-neural-networks.html" rel="alternate"/><published>2019-05-29T14:00:00-07:00</published><updated>2019-05-29T14:00:00-07:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2019-05-29:/deconvoluting-convolutional-neural-networks.html</id><summary type="html">&lt;div class="toc"&gt;&lt;span class="toctitle"&gt;Table of Contents&lt;/span&gt;&lt;ul&gt;
 &lt;li&gt;&lt;a href="#introduction-a-simple-cnn-example"&gt;Introduction: A Simple CNN Example&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#exploring-the-data"&gt;Exploring the Data&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#create-cnn"&gt;Create CNN&lt;/a&gt;&lt;/li&gt;
@@ -19076,7 +19199,206 @@ faster.&lt;/p&gt;
     (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
-&lt;/script&gt;</content><category term="Computer Science"/><category term="combinatorics"/><category term="permutations"/><category term="python"/><category term="computer science"/><category term="algorithms"/><category term="art of computer programming"/><category term="knuth"/></entry><entry><title>Five Letter Words: Part 3: Letter Coverage and Dynamic Programming</title><link href="https://charlesreid1.github.io/five-letter-words-part-3-letter-coverage-and-dynamic-programming.html" rel="alternate"/><published>2017-09-19T12:00:00-07:00</published><updated>2017-09-19T12:00:00-07:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2017-09-19:/five-letter-words-part-3-letter-coverage-and-dynamic-programming.html</id><summary type="html">&lt;p&gt;&lt;em&gt;NOTE: The code covered in this post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
+&lt;/script&gt;</content><category term="Computer Science"/><category term="combinatorics"/><category term="permutations"/><category term="python"/><category term="computer science"/><category term="algorithms"/><category term="art of computer programming"/><category term="knuth"/></entry><entry><title>A Hard(y) Math Problem</title><link href="https://charlesreid1.github.io/a-hardy-math-problem.html" rel="alternate"/><published>2017-11-03T19:00:00-07:00</published><updated>2017-11-03T19:00:00-07:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2017-11-03:/a-hardy-math-problem.html</id><summary type="html">&lt;h2 id="an-integral-from-hardy"&gt;An Integral from Hardy&lt;/h2&gt;
+&lt;p&gt;Every once in a while you run across an integral that looks straightforward
+at first glance, but the more you stare at it, the less obvious it becomes
+how to proceed. This is one of those integrals. It's the sort of problem that
+G. H. Hardy - the great English mathematician who taught at Cambridge for
+decades and famously collaborated with Ramanujan - liked to pose to students
+as a way to sharpen their instincts about integration.&lt;/p&gt;
+&lt;p&gt;Here's the integral:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\int \dfrac{dx}{\sqrt{x+a} + \sqrt{x+b}}
+$$&lt;/div&gt;
+&lt;p&gt;At a glance, this doesn't fit any of the …&lt;/p&gt;</summary><content type="html">&lt;h2 id="an-integral-from-hardy"&gt;An Integral from Hardy&lt;/h2&gt;
+&lt;p&gt;Every once in a while you run across an integral that looks straightforward
+at first glance, but the more you stare at it, the less obvious it becomes
+how to proceed. This is one of those integrals. It's the sort of problem that
+G. H. Hardy - the great English mathematician who taught at Cambridge for
+decades and famously collaborated with Ramanujan - liked to pose to students
+as a way to sharpen their instincts about integration.&lt;/p&gt;
+&lt;p&gt;Here's the integral:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\int \dfrac{dx}{\sqrt{x+a} + \sqrt{x+b}}
+$$&lt;/div&gt;
+&lt;p&gt;At a glance, this doesn't fit any of the standard forms you memorize as an
+undergraduate. There's no obvious &lt;span class="math"&gt;\(u\)&lt;/span&gt;-substitution. Integration by parts
+doesn't lead anywhere useful. And trying to attack it head-on with a
+trigonometric substitution leads to a mess. It's the kind of integral that
+makes you wonder whether it even has a closed-form solution at all.&lt;/p&gt;
+&lt;p&gt;It does. And the trick is a delightful one.&lt;/p&gt;
+&lt;h2 id="the-setup-why-this-is-hard"&gt;The Setup: Why This Is Hard&lt;/h2&gt;
+&lt;p&gt;The difficulty here is entirely due to the shape of the denominator. If we
+had just &lt;span class="math"&gt;\(\sqrt{x+a}\)&lt;/span&gt; in the denominator, this would be a trivial
+power-rule integral:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\int \dfrac{dx}{\sqrt{x+a}} = 2\sqrt{x+a} + C
+$$&lt;/div&gt;
+&lt;p&gt;Similarly for &lt;span class="math"&gt;\(\sqrt{x+b}\)&lt;/span&gt;. But the &lt;em&gt;sum&lt;/em&gt; of two square roots in the
+denominator is what gums up the works. You can't distribute the reciprocal
+across a sum. You can't easily substitute for the whole denominator, because
+its derivative involves both roots in a form that doesn't cleanly cancel
+anything in the numerator. The two square roots are entangled in a way that
+resists most of the standard tools.&lt;/p&gt;
+&lt;p&gt;The way out isn't a substitution at all. It's an algebraic manipulation you
+learned in high school, applied in a place you weren't expecting to see it.&lt;/p&gt;
+&lt;h2 id="the-trick-multiply-by-the-conjugate"&gt;The Trick: Multiply by the Conjugate&lt;/h2&gt;
+&lt;p&gt;The move is to multiply the numerator and denominator by the &lt;em&gt;conjugate&lt;/em&gt; of
+the denominator - that is, by &lt;span class="math"&gt;\(\sqrt{x+a} - \sqrt{x+b}\)&lt;/span&gt;:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\dfrac{1}{\sqrt{x+a} + \sqrt{x+b}} \cdot \dfrac{\sqrt{x+a} - \sqrt{x+b}}{\sqrt{x+a} - \sqrt{x+b}}
+$$&lt;/div&gt;
+&lt;p&gt;This is the same trick you use to rationalize a denominator in algebra
+class. The reason it works is the difference-of-squares identity:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+(u + v)(u - v) = u^2 - v^2
+$$&lt;/div&gt;
+&lt;p&gt;When &lt;span class="math"&gt;\(u\)&lt;/span&gt; and &lt;span class="math"&gt;\(v\)&lt;/span&gt; are square roots, squaring them strips them away entirely.
+Applying that identity with &lt;span class="math"&gt;\(u = \sqrt{x+a}\)&lt;/span&gt; and &lt;span class="math"&gt;\(v = \sqrt{x+b}\)&lt;/span&gt;, the
+denominator becomes:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+(\sqrt{x+a})^2 - (\sqrt{x+b})^2 = (x+a) - (x+b) = a - b
+$$&lt;/div&gt;
+&lt;p&gt;The two &lt;span class="math"&gt;\(x\)&lt;/span&gt;'s cancel exactly, and we're left with a &lt;em&gt;constant&lt;/em&gt; in the
+denominator. That's the whole game. The nasty entangled denominator collapses
+into &lt;span class="math"&gt;\(a - b\)&lt;/span&gt;, and the two square roots that were causing all the trouble
+have moved up into the numerator, where they can be integrated independently.&lt;/p&gt;
+&lt;h2 id="putting-it-together"&gt;Putting It Together&lt;/h2&gt;
+&lt;p&gt;After the conjugate multiplication, the integral becomes:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\int \dfrac{dx}{\sqrt{x+a} + \sqrt{x+b}} = \dfrac{1}{a - b} \int \left( \sqrt{x+a} - \sqrt{x+b} \right) dx
+$$&lt;/div&gt;
+&lt;p&gt;Now each piece is a straightforward power-rule integral. Using
+&lt;span class="math"&gt;\(\int (x+c)^{1/2} \, dx = \tfrac{2}{3}(x+c)^{3/2}\)&lt;/span&gt;:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\int \sqrt{x+a} \, dx = \dfrac{2}{3}(x+a)^{3/2}
+$$&lt;/div&gt;
+&lt;div class="math"&gt;$$
+\int \sqrt{x+b} \, dx = \dfrac{2}{3}(x+b)^{3/2}
+$$&lt;/div&gt;
+&lt;p&gt;Putting it all together:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\int \dfrac{dx}{\sqrt{x+a} + \sqrt{x+b}} = \dfrac{2}{3(a-b)} \left[ (x+a)^{3/2} - (x+b)^{3/2} \right] + C
+$$&lt;/div&gt;
+&lt;p&gt;That's the answer. Clean, symmetric, and once you see it, obvious in
+retrospect - which is the hallmark of a good trick.&lt;/p&gt;
+&lt;h2 id="sanity-check-by-differentiation"&gt;Sanity Check by Differentiation&lt;/h2&gt;
+&lt;p&gt;It's always worth verifying an integral by differentiating and checking that
+we recover the original integrand. Let&lt;/p&gt;
+&lt;div class="math"&gt;$$
+F(x) = \dfrac{2}{3(a-b)} \left[ (x+a)^{3/2} - (x+b)^{3/2} \right]
+$$&lt;/div&gt;
+&lt;p&gt;Differentiating term by term with the chain rule (the derivative of &lt;span class="math"&gt;\(x+a\)&lt;/span&gt; is
+just 1, so the chain rule contributes nothing here):&lt;/p&gt;
+&lt;div class="math"&gt;$$
+F'(x) = \dfrac{2}{3(a-b)} \cdot \dfrac{3}{2} \left[ (x+a)^{1/2} - (x+b)^{1/2} \right] = \dfrac{\sqrt{x+a} - \sqrt{x+b}}{a-b}
+$$&lt;/div&gt;
+&lt;p&gt;Now we need to show that this equals &lt;span class="math"&gt;\(\dfrac{1}{\sqrt{x+a} + \sqrt{x+b}}\)&lt;/span&gt;.
+Multiply the top and bottom of our derivative by &lt;span class="math"&gt;\(\sqrt{x+a} + \sqrt{x+b}\)&lt;/span&gt;:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\dfrac{\sqrt{x+a} - \sqrt{x+b}}{a - b} \cdot \dfrac{\sqrt{x+a} + \sqrt{x+b}}{\sqrt{x+a} + \sqrt{x+b}} = \dfrac{(x+a) - (x+b)}{(a-b)(\sqrt{x+a} + \sqrt{x+b})}
+$$&lt;/div&gt;
+&lt;p&gt;The numerator simplifies to &lt;span class="math"&gt;\(a - b\)&lt;/span&gt;, which cancels with the &lt;span class="math"&gt;\(a - b\)&lt;/span&gt; in the
+denominator, leaving:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+F'(x) = \dfrac{1}{\sqrt{x+a} + \sqrt{x+b}}
+$$&lt;/div&gt;
+&lt;p&gt;Confirmed.&lt;/p&gt;
+&lt;h2 id="what-about-a-b"&gt;What About &lt;span class="math"&gt;\(a = b\)&lt;/span&gt;?&lt;/h2&gt;
+&lt;p&gt;You may have noticed the answer contains &lt;span class="math"&gt;\(a - b\)&lt;/span&gt; in the denominator, which
+looks alarming if &lt;span class="math"&gt;\(a = b\)&lt;/span&gt;. But if &lt;span class="math"&gt;\(a = b\)&lt;/span&gt;, the original integral degenerates:
+the denominator becomes &lt;span class="math"&gt;\(2\sqrt{x+a}\)&lt;/span&gt;, and the integral is just&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\int \dfrac{dx}{2\sqrt{x+a}} = \sqrt{x+a} + C
+$$&lt;/div&gt;
+&lt;p&gt;So the interesting case - the one worth Hardy's attention - is when &lt;span class="math"&gt;\(a \neq
+b\)&lt;/span&gt;, and the formula is well-defined there. The apparent singularity at &lt;span class="math"&gt;\(a =
+b\)&lt;/span&gt; is removable: if you take the limit of the closed-form answer as &lt;span class="math"&gt;\(b \to
+a\)&lt;/span&gt; using L'Hôpital's rule or a Taylor expansion of &lt;span class="math"&gt;\((x+b)^{3/2}\)&lt;/span&gt; around &lt;span class="math"&gt;\(b =
+a\)&lt;/span&gt;, you recover exactly &lt;span class="math"&gt;\(\sqrt{x+a} + C\)&lt;/span&gt;. The answer is consistent with the
+degenerate case, it just has to be teased out with a limit.&lt;/p&gt;
+&lt;h2 id="why-this-matters"&gt;Why This Matters&lt;/h2&gt;
+&lt;p&gt;The pattern here - multiply by the conjugate to rationalize away a sum of
+square roots - is worth stashing away in your bag of tricks. It shows up
+more often than you'd expect, and not just in integration. Any time you have
+an expression of the form &lt;span class="math"&gt;\(\sqrt{P} + \sqrt{Q}\)&lt;/span&gt; that's obstructing an
+algebraic manipulation, ask yourself whether the conjugate &lt;span class="math"&gt;\(\sqrt{P} -
+\sqrt{Q}\)&lt;/span&gt; would give you a cleaner form via the difference-of-squares
+identity.&lt;/p&gt;
+&lt;p&gt;That's the beauty of a problem like this one. It's not that the mathematics
+is deep, or that the answer is exotic. It's that the &lt;em&gt;technique&lt;/em&gt; is
+transferable. Hardy's problems tend to have this quality: they force you to
+recognize a pattern that then generalizes far beyond the specific problem in
+front of you. You learn the pattern once, and afterwards you see it
+everywhere.&lt;/p&gt;
+&lt;h2 id="references"&gt;References&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;G. H. Hardy, &lt;em&gt;A Course of Pure Mathematics&lt;/em&gt;, Cambridge University Press.
+  &lt;a href="https://www.gutenberg.org/ebooks/38769"&gt;Available on Project Gutenberg.&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Wikipedia, &lt;a href="https://en.wikipedia.org/wiki/Rationalisation_(mathematics)"&gt;Rationalisation (mathematics)&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;script type="text/javascript"&gt;if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width &lt; 768) ? "left" : align;
+        indent = (screen.width &lt; 768) ? "0em" : indent;
+        linebreak = (screen.width &lt; 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+&lt;/script&gt;</content><category term="Mathematics"/><category term="mathematics"/><category term="calculus"/><category term="integrals"/><category term="hardy"/><category term="cambridge"/><category term="tripos"/></entry><entry><title>Five Letter Words: Part 3: Letter Coverage and Dynamic Programming</title><link href="https://charlesreid1.github.io/five-letter-words-part-3-letter-coverage-and-dynamic-programming.html" rel="alternate"/><published>2017-09-19T12:00:00-07:00</published><updated>2017-09-19T12:00:00-07:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2017-09-19:/five-letter-words-part-3-letter-coverage-and-dynamic-programming.html</id><summary type="html">&lt;p&gt;&lt;em&gt;NOTE: The code covered in this post uses Python 3. The scripts can be converted to Python 2 with minimal effort,
 but the author would encourage any user of Python 2 to "put on your big kid pants" and 
 make the switch to Python 3. Let's all make this painful, drawn-out switch from Python 2 
 to Python 3 a thing of the past, shall we?&lt;/em&gt;&lt;/p&gt;
@@ -30536,344 +30858,4 @@ Final number of (big) Enigma combinations:
     (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
-&lt;/script&gt;</content><category term="Enigma"/><category term="ciphers"/><category term="enigma"/><category term="encryption"/><category term="java"/></entry><entry><title>Enigma Cipher Implementation: Part 3: Enigma in Java Without Objects</title><link href="https://charlesreid1.github.io/enigma-cipher-implementation-part-3-enigma-in-java-without-objects.html" rel="alternate"/><published>2017-03-22T18:00:00-07:00</published><updated>2017-03-22T18:00:00-07:00</updated><author><name>charlesreid1</name></author><id>tag:charlesreid1.github.io,2017-03-22:/enigma-cipher-implementation-part-3-enigma-in-java-without-objects.html</id><summary type="html">&lt;p&gt;As the title suggests, we're continuing with the third in a series of posts 
-exploring a verb-oriented approach to programming - 
-in an attempt to free ourselves from the fetishization of objects,
-we are attempting to learn how to use languages against their will.&lt;/p&gt;
-&lt;p&gt;This is all inspired by &lt;a href="http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html"&gt;Steve Yegge's 2006 blog post&lt;/a&gt;,
-"Execution in the Kingdom of Nouns," an excellent read that inspired me to 
-explore the subject more deeply. &lt;/p&gt;
-&lt;h2 id="java-pseudocode"&gt;Java Pseudocode&lt;/h2&gt;
-&lt;p&gt;In the last post, we ran through the pseudocode for an Enigma machine 
-based entirely upon Strings, iterators, and integer indexes, 
-leading to a vastly simpler abstraction …&lt;/p&gt;</summary><content type="html">&lt;p&gt;As the title suggests, we're continuing with the third in a series of posts 
-exploring a verb-oriented approach to programming - 
-in an attempt to free ourselves from the fetishization of objects,
-we are attempting to learn how to use languages against their will.&lt;/p&gt;
-&lt;p&gt;This is all inspired by &lt;a href="http://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html"&gt;Steve Yegge's 2006 blog post&lt;/a&gt;,
-"Execution in the Kingdom of Nouns," an excellent read that inspired me to 
-explore the subject more deeply. &lt;/p&gt;
-&lt;h2 id="java-pseudocode"&gt;Java Pseudocode&lt;/h2&gt;
-&lt;p&gt;In the last post, we ran through the pseudocode for an Enigma machine 
-based entirely upon Strings, iterators, and integer indexes, 
-leading to a vastly simpler abstraction of the Enigma machine
-than would have resulted if we had implicitly chosen a noun-centric approach,
-divided the entire Enigma encryption process into its component nouns like rotor wheels and reflectors,
-and implemented each as an object.&lt;/p&gt;
-&lt;p&gt;Here was the pseudocode:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply forward rotor transformation
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    concatenate transformed input character to ciphertext message 
-
-    # Increment rotor wheels
-    for each rotor/scrambled alphabet, left to right:
-        get index of left notch in left alphabet
-        get index of right notch in right alphabet
-        if left index equals right index:
-            cycle left alphabet forward 1 character
-    cycle right-most alphabet forward 1 character
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-
-&lt;h2 id="java-code"&gt;Java Code&lt;/h2&gt;
-&lt;p&gt;The Enigma code is defined in the Java program as follows:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;The Enigma class defines a set of constants for historically accurate cipher settings.&lt;/li&gt;
-&lt;li&gt;The main method contains the encryption procedure.&lt;/li&gt;
-&lt;li&gt;There is one static helper method called rotateString.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Everything is in a public class. Starting with the definitions of constants:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="kd"&gt;public&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;class&lt;/span&gt; &lt;span class="nc"&gt;Enigma&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kd"&gt;public&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;static&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;final&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ALPHA&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;ABCDEFGHIJKLMNOPQRSTUVWXYZ&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;// Historically accurate rotor scrambles&lt;/span&gt;
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;// See http://www.codesandciphers.org.uk/enigma/rotorspec.htm&lt;/span&gt;
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kd"&gt;public&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;static&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;final&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;WHEEL&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ALPHA&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-&lt;span class="w"&gt;                        &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;EKMFLGDQVZNTOWYHXUSPAIBRCJ&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Rotor I    - Royal&lt;/span&gt;
-&lt;span class="w"&gt;                        &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;AJDKSIRUXBLHWTMCQGZNPYFVOE&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Rotor II   - Flags&lt;/span&gt;
-&lt;span class="w"&gt;                        &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;BDFHJLCPRTXVZNYEIWGAKMUSQO&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Rotor III  - Wave&lt;/span&gt;
-&lt;span class="w"&gt;                        &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;ESOVPZJAYQUIRHXLNFTGKDCMWB&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Rotor IV   - Kings&lt;/span&gt;
-&lt;span class="w"&gt;                        &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;VZBRGITYUPSDNHLXAWMJQOFECK&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Rotor V    - Above&lt;/span&gt;
-&lt;span class="w"&gt;                        &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;JPGVOUMFYQBENHZRDKASXLICTW&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-&lt;span class="w"&gt;                        &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;NZJHGRCXMYSWBOUFAIVLPEKQDT&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-&lt;span class="w"&gt;                        &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;FKQHTLXOCBJSPDZRAMEWNIUYGV&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;// Knocking (notch and clasp) advances the wheel to the left&lt;/span&gt;
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kd"&gt;public&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;static&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;final&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;NOTCH&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt;  &lt;/span&gt;&lt;span class="c1"&gt;// No notch&lt;/span&gt;
-&lt;span class="w"&gt;                                          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;R&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Royal&lt;/span&gt;
-&lt;span class="w"&gt;                                          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;F&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Flags&lt;/span&gt;
-&lt;span class="w"&gt;                                          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;W&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Wave&lt;/span&gt;
-&lt;span class="w"&gt;                                          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;K&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Kings&lt;/span&gt;
-&lt;span class="w"&gt;                                          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;A&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// Above&lt;/span&gt;
-&lt;span class="w"&gt;                                          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;AN&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-&lt;span class="w"&gt;                                          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;AN&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-&lt;span class="w"&gt;                                          &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;AN&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;// Reflectors&lt;/span&gt;
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kd"&gt;public&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;static&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;final&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;REFLECTOR_ALPHA&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;AY:BR:CU:DH:EQ:FS:GL:IP:JX:KN:MO:TZ:VW&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-
-&lt;h2 id="main-method-user-settings"&gt;Main Method: User Settings&lt;/h2&gt;
-&lt;p&gt;The next part of the code is the main method, where we begin by defining variables 
-that correspond to settings that the Enigma operator would set from the daily Enigma code book.
-These included:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;The numbering and ordering of wheels (e.g., &lt;code&gt;IV II I&lt;/code&gt;)&lt;/li&gt;
-&lt;li&gt;The initial rotor settings for each wheel (position 0-25)&lt;/li&gt;
-&lt;li&gt;The pairs of letters connected on the switch board&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The wheels are specified using the &lt;code&gt;WHEEL&lt;/code&gt; array of Strings, above.
-Each element of the WHEEL array contains a different scrambled alphabet, 
-corresponding to the alphabet scrambles hard-coded into the historical rotor wheels.
-These go into &lt;code&gt;rotorAlpha&lt;/code&gt;, which stores each rotor's alphabet in a String.&lt;/p&gt;
-&lt;p&gt;The locations of the notches that advance neighboring wheels are fixed by the choice of wheels, 
-and are available through the &lt;code&gt;NOTCH&lt;/code&gt; array.
-The notch locations implemented in &lt;code&gt;NOTCH&lt;/code&gt; are historically accurate for each rotor wheel. &lt;/p&gt;
-&lt;p&gt;The initial rotor settings were also contained in the code book as a sequence of 3 numbers,
-each 0-25, indicating how many turns each wheel was rotated before starting.&lt;/p&gt;
-&lt;p&gt;The plugboard pairs specify the wired connections on the front of the machine.
-These plugboard pairs were also daily machine settings specified in the daily Enigma code book.
-The plugboard pairs are input as a single string, with pairs of letters separated by a ":", like this: &lt;code&gt;AB:CD:EF:GH&lt;/code&gt;.
-Pairs must be unique (no letter can connect to itself). 
-Letters cannot be repeated (no letter can connect to more than 1 other letter).&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kd"&gt;public&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;static&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;main&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
-
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;// These two strings should encrypt/decrypt to each other when you run them through the Enigma.&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;//String message = &amp;quot;ABCDE FG HIJKL MNOP QRS TUVWXYZ&amp;quot;; &lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;TVVFT KS UNVYJ FAFV NPC DZJPWEJ&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-
-
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;//////////////////////////////////&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;// Operator Settings&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;// &lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;// Enigma operators have code sheets that specify: &lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;//  - The numbering/ordering of wheels &lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;//  - The initial rotor settings&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;//  - The plugboard pairs&lt;/span&gt;
-
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;// Rotor scrambles are applied right-to-left&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;//              {LAST, MIDDLE, FIRST}&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;WHEEL&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;WHEEL&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;WHEEL&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorNotch&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;NOTCH&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;NOTCH&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;NOTCH&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorInit&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;plugboardPairs&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;IR:HQ:NT:WZ:VC:OY:GP:LF:BX:AK&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;coded&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;enigma&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorNotch&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorInit&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;plugboardPairs&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;System&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;out&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;coded&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-
-&lt;h2 id="cipher-procedure"&gt;Cipher Procedure&lt;/h2&gt;
-&lt;p&gt;The next bit of code is the meat of the Enigma method.
-Notice that this is purely procedural code, and makes no use of objects other than the built-in String type. 
-This is the kind of verb-oriented code we are striving for
-when we write noun-free Java code.&lt;/p&gt;
-&lt;p&gt;We also pass in any information that's required. 
-Normally we would wrap all of these quantities in an object,
-to keep the list of parameters short, but this implementation is entirely object-free.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kd"&gt;public&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;static&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;enigma&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-&lt;span class="w"&gt;                                &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-&lt;span class="w"&gt;                                &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorNotch&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-&lt;span class="w"&gt;                                &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorInit&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-&lt;span class="w"&gt;                                &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;plugboardPairs&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
-
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;StringBuilder&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;message_final&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;new&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;StringBuilder&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;//////////////////////////////////////&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;// Enigma Cipher&lt;/span&gt;
-
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="c1"&gt;// Apply each transformation in sequence&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;length&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;++&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// Starting char&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="kt"&gt;char&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c_orig&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="kt"&gt;char&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c_orig&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// Perform plugboard swap&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;plugboardPairs&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;split&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;:&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// Perform rotor letter substitutions&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// (forward order: right-to-left)&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ix&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;100&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;length&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;--&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="n"&gt;ix&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ALPHA&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;indexOf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;thisAlpha&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ix&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;thisAlpha&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ix&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c_orig&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// Perform reflection&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;REFLECTOR_ALPHA&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;split&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;:&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// Perform rotor letter substitutions&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// (backwards order: left-to-right) &lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="n"&gt;ix&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;100&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;length&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;++&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;thisAlpha&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="n"&gt;ix&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;thisAlpha&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;indexOf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ix&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ALPHA&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ix&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c_orig&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-
-
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// Perform plugboard swap&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;plugboardPairs&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;split&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;:&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;==&lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;pair&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-
-
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// Final text&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;=&lt;/span&gt;&lt;span class="sc"&gt;&amp;#39;A&amp;#39;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;=&lt;/span&gt;&lt;span class="sc"&gt;&amp;#39;Z&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="n"&gt;message_final&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;else&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="c1"&gt;// Could not resolve &lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="n"&gt;message_final&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;c_orig&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// Increment rotors&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;length&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;++&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;alphaL&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ixL&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;alphaL&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;indexOf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;rotorNotch&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;alphaR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;ixR&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;alphaR&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;indexOf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;rotorNotch&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;ixL&lt;/span&gt;&lt;span class="o"&gt;!=&lt;/span&gt;&lt;span class="n"&gt;ixR&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
-&lt;span class="w"&gt;                    &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotateString&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;                &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="c1"&gt;// Always increment the right-most rotor&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;lenny&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;length&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;lenny&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotateString&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;lenny&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;message_final&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;toString&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-
-&lt;h2 id="utility-method-string-rotator"&gt;Utility Method: String Rotator&lt;/h2&gt;
-&lt;p&gt;One last piece that's needed to emulate the rotation of the rotor wheels 
-is a method to rotate strings forward 1 character. Here's that method:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="c1"&gt;/// Rotate a string forward by 1 character, so &amp;quot;ABCDEF&amp;quot; becomes &amp;quot;FABCDE&amp;quot;&lt;/span&gt;
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="kd"&gt;public&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="kd"&gt;static&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="nf"&gt;rotateString&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;original&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;lenny&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;original&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;length&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;StringBuilder&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotated&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;new&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;StringBuilder&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;rotated&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;original&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;lenny&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="n"&gt;lenny&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;++&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
-&lt;span class="w"&gt;            &lt;/span&gt;&lt;span class="n"&gt;rotated&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;append&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;original&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;charAt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="k"&gt;return&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotated&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;toString&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
-&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
-
-&lt;span class="p"&gt;}&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="c1"&gt;// end Enigma class&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-
-&lt;h2 id="complete-enigma-implementation"&gt;Complete Enigma Implementation&lt;/h2&gt;
-&lt;p&gt;Here is a link to the complete Enigma code on git.charlesreid1.com: &lt;a href="https://git.charlesreid1.com/charlesreid1/java-crypto/src/master/enigma/Enigma.java"&gt;Enigma.java&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;Now that the Enigma machine implementation is finished, we can test it out.
-One feature of the Enigma that makes it easy to test is, it is symmetric.
-If we feed a plain text into the Enigma and get the corresponding ciphertext,
-we can feed that ciphertext through the Enigma (with the same initial settings) 
-and recover the original plain text.&lt;/p&gt;
-&lt;p&gt;Running the alphabet through the Enigma yields:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$&lt;span class="w"&gt; &lt;/span&gt;java&lt;span class="w"&gt; &lt;/span&gt;Enigma
-IN:&lt;span class="w"&gt;  &lt;/span&gt;ABCDE&lt;span class="w"&gt; &lt;/span&gt;FG&lt;span class="w"&gt; &lt;/span&gt;HIJKL&lt;span class="w"&gt; &lt;/span&gt;MNOP&lt;span class="w"&gt; &lt;/span&gt;QRS&lt;span class="w"&gt; &lt;/span&gt;TUVWXYZ
-OUT:&lt;span class="w"&gt; &lt;/span&gt;TVVFT&lt;span class="w"&gt; &lt;/span&gt;KS&lt;span class="w"&gt; &lt;/span&gt;UNVYJ&lt;span class="w"&gt; &lt;/span&gt;FAFV&lt;span class="w"&gt; &lt;/span&gt;NPC&lt;span class="w"&gt; &lt;/span&gt;DZJPWEJ
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;Running this back through the Enigma yields:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;$&lt;span class="w"&gt; &lt;/span&gt;java&lt;span class="w"&gt; &lt;/span&gt;Enigma
-IN:&lt;span class="w"&gt;  &lt;/span&gt;TVVFT&lt;span class="w"&gt; &lt;/span&gt;KS&lt;span class="w"&gt; &lt;/span&gt;UNVYJ&lt;span class="w"&gt; &lt;/span&gt;FAFV&lt;span class="w"&gt; &lt;/span&gt;NPC&lt;span class="w"&gt; &lt;/span&gt;DZJPWEJ
-OUT:&lt;span class="w"&gt; &lt;/span&gt;ABCDE&lt;span class="w"&gt; &lt;/span&gt;FG&lt;span class="w"&gt; &lt;/span&gt;HIJKL&lt;span class="w"&gt; &lt;/span&gt;MNOP&lt;span class="w"&gt; &lt;/span&gt;QRS&lt;span class="w"&gt; &lt;/span&gt;TUVWXYZ
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;&lt;strong&gt;NOTE:&lt;/strong&gt; This code modifies the Enigma machine's settings in-place.
-This means multiple sequential calls to the &lt;code&gt;enigma()&lt;/code&gt; method will not reset the rotors.
-The following code will not recover the original plain text &lt;code&gt;message&lt;/code&gt;:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="c1"&gt;// This won&amp;#39;t work:&lt;/span&gt;
-&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;coded&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;enigma&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorNotch&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorInit&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;plugboardPairs&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;original2&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;enigma&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;coded&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorNotch&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorInit&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;plugboardPairs&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;To do this correctly, we would need multiple copies of the input arrays &lt;code&gt;rotorAlpha&lt;/code&gt;, &lt;code&gt;rotorNotch&lt;/code&gt;, and &lt;code&gt;rotorInit&lt;/code&gt;:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;plugboardPairs&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;quot;IR:HQ:NT:WZ:VC:OY:GP:LF:BX:AK&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-
-&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;WHEEL&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;WHEEL&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;WHEEL&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorNotch&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;NOTCH&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;NOTCH&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;NOTCH&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorInit&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;coded&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;enigma&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorNotch&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorInit&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;plugboardPairs&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-
-&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha2&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;WHEEL&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;WHEEL&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;WHEEL&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorNotch2&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;NOTCH&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;NOTCH&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;NOTCH&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-&lt;span class="kt"&gt;int&lt;/span&gt;&lt;span class="o"&gt;[]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorInit2&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;};&lt;/span&gt;
-&lt;span class="n"&gt;String&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;original&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;enigma&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;coded&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorAlpha2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorNotch2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;rotorInit2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;plugboardPairs&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-
-&lt;span class="n"&gt;System&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;out&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;ORIGINAL:  &amp;quot;&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;span class="n"&gt;System&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;out&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="na"&gt;println&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;RECOVERED: &amp;quot;&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="n"&gt;original&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-
-&lt;p&gt;This works fine:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;code&gt;ORIGINAL:  ABCDE FG HIJKL MNOP QRS TUVWXYZ
-RECOVERED: ABCDE FG HIJKL MNOP QRS TUVWXYZ 
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
-
-&lt;h2 id="sources"&gt;Sources&lt;/h2&gt;
-&lt;ol&gt;
-&lt;li&gt;
-&lt;p&gt;"Execution in the Kingdom of Nouns". Steve Yegge. March 2006. Accessed 18 March 2017.
-&amp;lt;&lt;a href="https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html"&gt;https://web.archive.org/web/20170320081755/https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html&lt;/a&gt;&amp;gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-&amp;lt;&lt;a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm"&gt;https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm&lt;/a&gt;&amp;gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ol&gt;</content><category term="Enigma"/><category term="ciphers"/><category term="enigma"/><category term="encryption"/><category term="java"/></entry></feed>
+&lt;/script&gt;</content><category term="Enigma"/><category term="ciphers"/><category term="enigma"/><category term="encryption"/><category term="java"/></entry></feed>

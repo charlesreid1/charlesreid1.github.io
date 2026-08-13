@@ -149,7 +149,7 @@ changes. Why is it bad practice to propose large, complex changes?</p>
 <ul>
 <li>It is harder to review the proposed changes</li>
 <li>Bugs increase in likelihood, and increase in likelihood far faster than the amount of code.</li>
-<li>More complex changes usually combine </li>
+<li>More complex changes usually combine multiple concerns, making them harder to review, revert, or bisect when something goes wrong.</li>
 </ul>
 <h1 id="refactoring-large-branches">Refactoring Large Branches</h1>
 <p>Consider the case of a large feature branch that is suffering from feature creep (trying to
@@ -206,19 +206,23 @@ changes. Then, particular changes can be selectively added to commits using <cod
 <h3 id="git-format-patch">git format-patch</h3>
 <p>To create a set of patches, one per commit, to edit them or apply them in various orders,
 you can use <code>git format-patch</code> with a commit range:</p>
-<div class="highlight"><pre><span></span><code>git format-patch D1..E3
+<div class="highlight"><pre><span></span><code>git format-patch B..E3
 </code></pre></div>
 
-<p>This will create a series of patches like </p>
-<div class="highlight"><pre><span></span><code>patches/0001-the-D1-commit-message.patch
-patches/0001-the-E1-commit-message.patch
-patches/0001-the-D2-commit-message.patch
-patches/0001-the-F1-commit-message.patch
-patches/0001-the-E2-commit-message.patch
-patches/0001-the-F2-commit-message.patch
-patches/0001-the-D3-commit-message.patch
-patches/0001-the-F3-commit-message.patch
-patches/0001-the-E3-commit-message.patch
+<p>Note that the <code>A..B</code> range syntax is <em>exclusive</em> of <code>A</code>, so we use <code>B</code>
+(the last commit on <code>master</code> before the feature branch) as the range
+start — that way commit <code>D1</code> is included. Equivalently, <code>D1~1..E3</code> would
+also include <code>D1</code>.</p>
+<p>This will create a series of patches like</p>
+<div class="highlight"><pre><span></span><code>0001-the-D1-commit-message.patch
+0002-the-E1-commit-message.patch
+0003-the-D2-commit-message.patch
+0004-the-F1-commit-message.patch
+0005-the-E2-commit-message.patch
+0006-the-F2-commit-message.patch
+0007-the-D3-commit-message.patch
+0008-the-F3-commit-message.patch
+0009-the-E3-commit-message.patch
 </code></pre></div>
 
 <p>Patches can be further split or modified, and can be applied in the desired order (although
@@ -398,10 +402,11 @@ merge commit.</p>
 <p>Once the <code>integration-e-f</code> branch is polished and passing tests, we can re-label it as <code>feature-f</code> and push
 the new commits to the remote. To re-label <code>integration-e-f</code> as <code>feature-f</code>, assuming we're at the tip of
 the <code>integration-e-f</code> branch (where we left off above):</p>
-<div class="highlight"><pre><span></span><code>git branch -D feature-f
-git checkout -b feature-f
+<div class="highlight"><pre><span></span><code>git checkout -B feature-f
 </code></pre></div>
 
+<p>The <code>-B</code> flag creates or resets the named branch at HEAD in one step, so
+you don't have to (and can't) delete the branch you're currently on.</p>
 <p>and push the new commits to the remote's <code>feature-f</code> branch, before you merge in the pull request (<code>feature-f</code>
 into <code>feature-e</code>):</p>
 <div class="highlight"><pre><span></span><code>git push origin feature-f
@@ -412,7 +417,7 @@ into <code>feature-e</code>):</p>
 <p>Rinse and repeat for pull requests 2 and 1.</p>
 <p>For Pull Request 2, we start by creating a new <code>integration-d-e-f</code> branch from the tip of the
 <code>integration-e-f</code> branch, like so:</p>
-<div class="highlight"><pre><span></span><code>git checkout integration-d-e
+<div class="highlight"><pre><span></span><code>git checkout integration-e-f
 git checkout -b integration-d-e-f
 </code></pre></div>
 
@@ -434,7 +439,7 @@ and you should now have a git commit history like this:</p>
 </code></pre></div>
 
 <p>Now re-label the <code>integration-d-e-f</code> branch as <code>feature-e</code>:</p>
-<div class="highlight"><pre><span></span><code>git branch -D feature-e &amp;&amp; git checkout -b feature-e
+<div class="highlight"><pre><span></span><code>git checkout -B feature-e
 </code></pre></div>
 
 <p>Finally, push all new commits to the remote, including the new merge
@@ -452,7 +457,7 @@ from merging the <code>feature-e</code> branch in (pull request 2, E into D),
 and the <code>feature-e</code> branch also had <code>feature-f</code> merged into it.</p>
 <div class="highlight"><pre><span></span><code>A - B - C (master)
      \
-      D - D2 - DEF1 - DEF2 (feature-d)
+      D - DA - DB - DEF1 - DEF2 (feature-d)
 </code></pre></div>
 
 <p>Now we will create one more commit on the <code>feature-d</code> branch that is
@@ -460,7 +465,8 @@ merging <code>master</code> into <code>feature-d</code>, which will help the mer
 smoothly for pull request 1 (D into master).</p>
 <p>But first we switch to an integration branch, in case things don't go
 smoothly and we want to throw away the merge commit:</p>
-<div class="highlight"><pre><span></span><code>git branch integration-def-master
+<div class="highlight"><pre><span></span><code>git checkout feature-d
+git checkout -b integration-def-master
 </code></pre></div>
 
 <p>Create an explicit merge commit to merge <code>master</code> into <code>integration-def-master</code>:</p>
@@ -470,17 +476,16 @@ smoothly and we want to throw away the merge commit:</p>
 <p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
 and you should now have a git commit history like this:</p>
 <div class="highlight"><pre><span></span><code>A - B - C (master)
-     \   \---------------------
-      \                        \
-       D - D2 - DEF1 - DEF2 - DEF3 (integration-def-master)
+     \   \--------------------------
+      \                             \
+       D - DA - DB - DEF1 - DEF2 - DEF3 (integration-def-master)
 </code></pre></div>
 
 <p>where commit <code>DEF3</code> is the merge commit created with the <code>--no-ff</code> command.</p>
 <p>The merge commit will resolve any conflicts. When you're satisfied with the
 merge commit, you can switch out the <code>integration-def-master</code> branch with the
 <code>feature-d</code> branch like so:</p>
-<div class="highlight"><pre><span></span><code>git branch -D feature-d
-git checkout -b feature-d
+<div class="highlight"><pre><span></span><code>git checkout -B feature-d
 </code></pre></div>
 
 <p>Now you can push the merge commit to the remote:</p>

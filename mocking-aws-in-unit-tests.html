@@ -116,6 +116,8 @@
 <li><a href="#the-mocked-aws-call">The Mocked AWS Call</a></li>
 </ul>
 </li>
+<li><a href="#where-to-patch-a-common-gotcha">Where To Patch: A Common Gotcha</a></li>
+<li><a href="#when-to-reach-for-moto-instead">When To Reach For moto Instead</a></li>
 </ul>
 </div>
 <h2 id="overview">Overview</h2>
@@ -205,15 +207,15 @@ to mock, or patch).</p>
 <span class="kn">import</span> <span class="nn">lister</span>
 <span class="kn">import</span> <span class="nn">datetime</span>
 
-<span class="k">class</span> <span class="nc">TestMo</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">TestLister</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;mo.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;lister.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
             <span class="o">...</span>
-            <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span> <span class="o">...</span> <span class="p">)</span>
+            <span class="n">sm</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span> <span class="o">...</span> <span class="p">)</span>
             <span class="o">...</span>
 </code></pre></div>
 
-<p>Any calls made to <code>sm_client</code> in the <code>mo</code> module will be mocked
+<p>Any calls made to <code>sm_client</code> in the <code>lister</code> module will be mocked
 using the <code>mock.MagicMock</code> object that we define in the context,
 so we craft the response we want before we call the method we 
 want to test (which in turn will call <code>sm_client.list_secrets()</code>).</p>
@@ -255,7 +257,102 @@ Secret Name: fakesecret2 (last accessed: 2019-09-23 20:31:49.186880)
 Ran 1 test in 0.000s
 
 OK
-</code></pre></div></div>
+</code></pre></div>
+
+<h2 id="where-to-patch-a-common-gotcha">Where To Patch: A Common Gotcha</h2>
+<p>The single most confusing thing about <code>mock.patch</code> is that you patch a name
+where it is <em>looked up</em>, not where it is <em>defined</em>. This trips up almost
+everyone the first time they reach for <code>unittest.mock</code>.</p>
+<p>In our example above, <code>lister.py</code> does <code>import boto3</code> at the top and then binds
+a client to a module-level name:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>That means the name <code>sm_client</code> now lives in the <code>lister</code> module's namespace.
+The patch target <code>"lister.sm_client"</code> works because that is the exact
+namespace where our code looks the name up when it runs.</p>
+<p>A very natural (but broken) instinct is to try to patch <code>boto3</code> itself:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># This looks reasonable, but does nothing useful.</span>
+<span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;boto3.client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">bc</span><span class="p">:</span>
+    <span class="n">bc</span><span class="o">.</span><span class="n">return_value</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span><span class="n">return_value</span><span class="o">=</span><span class="n">return_json</span><span class="p">)</span>
+    <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
+</code></pre></div>
+
+<p>This patch replaces <code>boto3.client</code> in the <code>boto3</code> module, but <code>lister.py</code>
+already called <code>boto3.client('secretsmanager')</code> at import time and stored the
+result in <code>lister.sm_client</code>. That reference is unaffected by the patch, so
+the real AWS client is still used and the test either makes a real API call or
+fails with a credentials error.</p>
+<p>The rule of thumb: find the line in your code that actually uses the name,
+then patch it in <em>that</em> module's namespace. If <code>lister.py</code> did the import
+inside the function instead:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">print_secret_names</span><span class="p">():</span>
+    <span class="kn">import</span> <span class="nn">boto3</span>
+    <span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
+    <span class="o">...</span>
+</code></pre></div>
+
+<p>then <code>"lister.boto3"</code> would be the correct patch target, because that is where
+<code>boto3</code> is looked up at call time.</p>
+<p>Once test files grow past a handful of nested <code>with mock.patch(...)</code> blocks,
+the <code>mocker</code> fixture from
+<a href="https://pypi.org/project/pytest-mock/"><code>pytest-mock</code></a> is a cleaner way to
+express the same patches without the indentation pyramid.</p>
+<h2 id="when-to-reach-for-moto-instead">When To Reach For <code>moto</code> Instead</h2>
+<p><code>unittest.mock</code> is a good fit when you need to stub out a single call or two,
+but it has real limits:</p>
+<ul>
+<li>You hand-craft the response payload, so nothing checks that the shape you
+  invented actually matches the real AWS API.</li>
+<li>Multi-step flows (create a secret, then list it, then rotate it) require
+  hand-wiring the state changes between mock calls.</li>
+<li>Every new AWS method you touch is another <code>mock.MagicMock(...)</code> to author
+  and maintain.</li>
+</ul>
+<p>For anything beyond a small handful of calls, <a href="https://github.com/getmoto/moto"><code>moto</code></a>
+is usually the better tool. <code>moto</code> runs an in-process fake of the AWS services
+themselves, so your code calls <code>boto3</code> normally and gets back responses whose
+shapes match the real API. You can create resources, list them, mutate them,
+and delete them the same way you would in production.</p>
+<p>Here is the same test written against <code>moto</code>:</p>
+<p><strong><code>test_lister_moto.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">from</span> <span class="nn">moto</span> <span class="kn">import</span> <span class="n">mock_secretsmanager</span>
+
+<span class="nd">@mock_secretsmanager</span>
+<span class="k">def</span> <span class="nf">test_print_secret_names</span><span class="p">(</span><span class="n">capsys</span><span class="p">):</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;secretsmanager&quot;</span><span class="p">,</span> <span class="n">region_name</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span><span class="p">)</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">create_secret</span><span class="p">(</span><span class="n">Name</span><span class="o">=</span><span class="s2">&quot;fakesecret1&quot;</span><span class="p">,</span> <span class="n">SecretString</span><span class="o">=</span><span class="s2">&quot;hunter2&quot;</span><span class="p">)</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">create_secret</span><span class="p">(</span><span class="n">Name</span><span class="o">=</span><span class="s2">&quot;fakesecret2&quot;</span><span class="p">,</span> <span class="n">SecretString</span><span class="o">=</span><span class="s2">&quot;correct horse&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Reset lister&#39;s cached client so it picks up the moto-patched boto3.</span>
+    <span class="n">lister</span><span class="o">.</span><span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;secretsmanager&quot;</span><span class="p">,</span> <span class="n">region_name</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span><span class="p">)</span>
+
+    <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
+
+    <span class="n">captured</span> <span class="o">=</span> <span class="n">capsys</span><span class="o">.</span><span class="n">readouterr</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="s2">&quot;fakesecret1&quot;</span> <span class="ow">in</span> <span class="n">captured</span><span class="o">.</span><span class="n">out</span>
+    <span class="k">assert</span> <span class="s2">&quot;fakesecret2&quot;</span> <span class="ow">in</span> <span class="n">captured</span><span class="o">.</span><span class="n">out</span>
+</code></pre></div>
+
+<p>A few things to notice:</p>
+<ul>
+<li>The <code>@mock_secretsmanager</code> decorator patches <code>botocore</code> at the HTTP layer,
+  so the "where to patch" gotcha from the previous section does not apply -
+  any <code>boto3</code> client constructed inside the decorated scope talks to the fake.</li>
+<li>We exercise the real <code>create_secret</code> and <code>list_secrets</code> code paths. If AWS
+  changes a field name, or our code assumes a field that the API does not
+  actually return, the test will notice.</li>
+<li>We assert on the <em>output</em> of <code>print_secret_names()</code> via <code>capsys</code>, not just
+  that it ran without exceptions.</li>
+</ul>
+<p><code>moto</code> also supports a standalone <a href="https://docs.getmoto.org/en/latest/docs/server_mode.html">server mode</a>
+that speaks the AWS wire protocol on a local port, which is useful for
+integration tests that span multiple services or non-Python clients.</p>
+<p>The rough guideline: reach for <code>unittest.mock</code> when you are stubbing a single
+call to isolate one unit of code, and reach for <code>moto</code> when the test needs the
+service to <em>behave</em> like AWS across several calls.</p></div>
 
     </div>
 </div>
