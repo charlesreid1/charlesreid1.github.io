@@ -24,7 +24,7 @@ changes. Why is it bad practice to propose large, complex changes?
 
 * It is harder to review the proposed changes
 * Bugs increase in likelihood, and increase in likelihood far faster than the amount of code.
-* More complex changes usually combine 
+* More complex changes usually combine multiple concerns, making them harder to review, revert, or bisect when something goes wrong.
 
 # Refactoring Large Branches
 
@@ -98,21 +98,26 @@ To create a set of patches, one per commit, to edit them or apply them in variou
 you can use `git format-patch` with a commit range:
 
 ```text
-git format-patch D1..E3
+git format-patch B..E3
 ```
 
-This will create a series of patches like 
+Note that the `A..B` range syntax is _exclusive_ of `A`, so we use `B`
+(the last commit on `master` before the feature branch) as the range
+start — that way commit `D1` is included. Equivalently, `D1~1..E3` would
+also include `D1`.
+
+This will create a series of patches like
 
 ```text
-patches/0001-the-D1-commit-message.patch
-patches/0001-the-E1-commit-message.patch
-patches/0001-the-D2-commit-message.patch
-patches/0001-the-F1-commit-message.patch
-patches/0001-the-E2-commit-message.patch
-patches/0001-the-F2-commit-message.patch
-patches/0001-the-D3-commit-message.patch
-patches/0001-the-F3-commit-message.patch
-patches/0001-the-E3-commit-message.patch
+0001-the-D1-commit-message.patch
+0002-the-E1-commit-message.patch
+0003-the-D2-commit-message.patch
+0004-the-F1-commit-message.patch
+0005-the-E2-commit-message.patch
+0006-the-F2-commit-message.patch
+0007-the-D3-commit-message.patch
+0008-the-F3-commit-message.patch
+0009-the-E3-commit-message.patch
 ```
 
 Patches can be further split or modified, and can be applied in the desired order (although
@@ -362,9 +367,11 @@ the new commits to the remote. To re-label `integration-e-f` as `feature-f`, ass
 the `integration-e-f` branch (where we left off above):
 
 ```text
-git branch -D feature-f
-git checkout -b feature-f
+git checkout -B feature-f
 ```
+
+The `-B` flag creates or resets the named branch at HEAD in one step, so
+you don't have to (and can't) delete the branch you're currently on.
 
 and push the new commits to the remote's `feature-f` branch, before you merge in the pull request (`feature-f`
 into `feature-e`):
@@ -383,7 +390,7 @@ For Pull Request 2, we start by creating a new `integration-d-e-f` branch from t
 `integration-e-f` branch, like so:
 
 ```text
-git checkout integration-d-e
+git checkout integration-e-f
 git checkout -b integration-d-e-f
 ```
 
@@ -412,7 +419,7 @@ A - B - C (master)
 Now re-label the `integration-d-e-f` branch as `feature-e`:
 
 ```text
-git branch -D feature-e && git checkout -b feature-e
+git checkout -B feature-e
 ```
 
 Finally, push all new commits to the remote, including the new merge
@@ -436,7 +443,7 @@ and the `feature-e` branch also had `feature-f` merged into it.
 ```text
 A - B - C (master)
      \
-      D - D2 - DEF1 - DEF2 (feature-d)
+      D - DA - DB - DEF1 - DEF2 (feature-d)
 ```
 
 Now we will create one more commit on the `feature-d` branch that is
@@ -447,7 +454,8 @@ But first we switch to an integration branch, in case things don't go
 smoothly and we want to throw away the merge commit:
 
 ```text
-git branch integration-def-master
+git checkout feature-d
+git checkout -b integration-def-master
 ```
 
 Create an explicit merge commit to merge `master` into `integration-def-master`:
@@ -461,9 +469,9 @@ and you should now have a git commit history like this:
 
 ```text
 A - B - C (master)
-     \   \---------------------
-      \                        \
-       D - D2 - DEF1 - DEF2 - DEF3 (integration-def-master)
+     \   \--------------------------
+      \                             \
+       D - DA - DB - DEF1 - DEF2 - DEF3 (integration-def-master)
 ```
 
 where commit `DEF3` is the merge commit created with the `--no-ff` command.
@@ -473,8 +481,7 @@ merge commit, you can switch out the `integration-def-master` branch with the
 `feature-d` branch like so:
 
 ```text
-git branch -D feature-d
-git checkout -b feature-d
+git checkout -B feature-d
 ```
 
 Now you can push the merge commit to the remote:

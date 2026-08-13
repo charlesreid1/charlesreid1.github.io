@@ -36,16 +36,19 @@ to git remotes.
 
 ## git add
 
-It is important to know that git does not keep track of changes at
-the file level, it keeps track of changes at the character/line level.
+Under the hood, git stores the full contents of each file at each snapshot
+in an object called a _blob_. When you modify a file and run `git add`,
+git writes a new blob containing the entire new contents of the file, and
+updates the staging area (the index) to point at that new blob. The diff
+between the old and new versions is not stored — it is computed on demand
+by comparing the two blobs.
 
-What that means is, when you modify a line in a file that is in your
-git repository, and run `git add` to stage your change, git has created
-an object under the hood called a _blob_ to represent that one line change.
-
-If you change two lines in two different parts of a file, and stage those
-changes using `git add`, git will treat this as two separate changes, and
-represent the changes with two different blobs.
+That said, when using tools like `git add -p`, `git diff`, and `git log -p`,
+git presents changes at the line (hunk) level. This makes it useful to
+think about staging in terms of individual line changes, even though the
+underlying storage is snapshot-based. That line-level view is what makes
+it possible to stage some hunks in a file but not others — the resulting
+blob reflects only the hunks you accepted.
 
 ## git commit
 
@@ -279,7 +282,11 @@ Changes not staged for commit:
 
 Now `git commit` will commit only the staged portions.
 
-Do not provide any filenames to `git commit`, so that git will only commit the staged changes.
+Run `git commit` with no filenames. If you pass a filename like
+`git commit doit.sh`, git will commit the current working-tree contents
+of that file directly, bypassing the index entirely — throwing away the
+careful hunk-by-hunk staging you just did and committing the unstaged
+changes too.
 
 To use this in your workflow, think about how you can group different changes together into
 different commits. If you get a portion of a feature working, you can commit the changes in
@@ -384,48 +391,61 @@ contents of each commit changes slightly, so the hash (the name) of every commit
 
 To do a git rebase, an interactive rebase (the `-i` flag) is recommended.
 
-The rebase action takes two commits, and will replay the commits.
-
-**IMPORTANT:** The first commit given (the start commit) is _not_ included
-in the rebase. To include it, add `~1` to the start commit. (For example,
-`0a1b2c3d~1` refers to the commit before commit `0a1b2c3d`.
-
-#### rebasing a range of commits
-
-To rebase from the start commit hash to the end commit hash, and include the start commit
-in the rebase, the rebase command is:
+The general form of a rebase is:
 
 ```text
-git rebase -i START_COMMIT_HASH~1 END_COMMIT_HASH
+git rebase [-i] <upstream> [<branch>]
 ```
 
-This does not indicate a destination branch. The default behavior is for the branch to move
-and the new pile of commits to retain the same branch name.
+If `<branch>` is given, git checks it out first. Then it takes every commit
+that is reachable from `<branch>` but not from `<upstream>` and replays them
+on top of `<upstream>`.
+
+**IMPORTANT:** The `<upstream>` commit itself is _not_ replayed - it is the
+new base. If you want to include a specific commit in the rebase, use its
+parent as `<upstream>`. For example, `0a1b2c3d~1` refers to the commit
+before `0a1b2c3d`, so `git rebase -i 0a1b2c3d~1` will replay `0a1b2c3d`
+and everything after it on the current branch.
+
+#### rebasing the last N commits of a branch
+
+The most common form of interactive rebase is "let me edit the last N commits
+on my branch":
+
+```text
+git rebase -i HEAD~N
+```
+
+For example, `git rebase -i HEAD~5` replays the last 5 commits on top of
+their existing base, giving you an editor where you can reorder, squash,
+edit, or drop them.
 
 #### rebasing onto another branch
 
-To rebase a range of commits onto a different branch (for example, onto a `master` branch
-that has the latest changes from the remote), use the `--onto` flag:
+To move a range of commits so they start on top of a different branch
+(for example, on top of the latest `master`), use the `--onto` flag:
 
 ```text
-git rebase -i START_COMMIT_HASH END_COMMIT_HASH --onto TARGET_BRANCH
+git rebase --onto <newbase> <upstream> [<branch>]
 ```
 
-**IMPORTANT:** The above rebase commands will leave your repo in a headless state - unlike
-the behavior of the prior command, the branch label will not move with you to the new pile
-of commits.
+`<newbase>` is where the commits will be replayed. `<upstream>` is the
+commit whose descendants get replayed (and `<upstream>` itself is _not_
+included). If `<branch>` is provided, git checks it out first before
+starting the rebase.
 
-Run `git checkout -b <branchname>` to give your new rebased branch a meaningful name.
-This creates a branch wherever HEAD is, which is pointing to the top of the pile of rebased
-commits.
-
-If you want the old branch label to move to the new pile of commits, it requires a bit of branch
-housekeeping - you have to delete the old branch, then create a new branch from where
-HEAD is (the end of the rebase), then check out that branch.
+For example, suppose you have a `feature` branch that was branched off an
+old `master`, and you want to move its commits on top of the current
+`master`:
 
 ```text
-git branch -D <branchname> && git checkout -b <branchname>
+git rebase --onto master feature~3 feature
 ```
+
+This replays the last 3 commits of `feature` on top of `master`, and
+because `feature` was supplied as `<branch>`, the `feature` label moves
+with the rebased commits — no headless state, no branch housekeeping
+needed.
 
 ## Rearranging Commits
 

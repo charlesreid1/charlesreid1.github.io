@@ -107,15 +107,15 @@ Remember to use this with the `g` alias for super short log:
 
 ```text
 $ g l
-* 4357b28 (HEAD -> source) update mocking aws post
-* 063ad78 (gh/source, gh/HEAD) add mocking post
+* 4357b28 (HEAD -> source, gh/source, gh/HEAD) update mocking aws post
+* 063ad78 add mocking post
 * a5f1adc add init keras cnn post
 * fb911ec add keras cnn draft
 * 3549d35 add rosalind (euler paths) part 7 draft
 
 $ g lg1
-* 4357b28 - (67 minutes ago) update mocking aws post - Charles Reid (HEAD -> source)
-* 063ad78 - (2 weeks ago) add mocking post - Charles Reid (gh/source, gh/HEAD)
+* 4357b28 - (67 minutes ago) update mocking aws post - Charles Reid (HEAD -> source, gh/source, gh/HEAD)
+* 063ad78 - (2 weeks ago) add mocking post - Charles Reid
 * a5f1adc - (4 months ago) add init keras cnn post - C Reid
 * fb911ec - (5 months ago) add keras cnn draft - C Reid
 * 3549d35 - (5 months ago) add rosalind (euler paths) part 7 draft - C Reid
@@ -176,7 +176,6 @@ so here are several branch aliases:
 ```text
     b = branch -v
     bv = branch -v
-    bb = branch -v
 
     ba = branch -a
     bb = branch -v -a
@@ -220,7 +219,12 @@ then switches to that branch:
     go = "!f() { git checkout -b \"$1\" 2> /dev/null || git checkout \"$1\"; }; f"
 ```
 
-Careful you don't mistype the branch name.
+Careful you don't mistype the branch name. If you typo a new branch name
+that happens to collide with an existing branch, the `checkout -b` will
+fail (branch already exists) and the fallback `checkout "$1"` will silently
+switch you to that existing branch. Typo a branch name that doesn't exist
+at all, and both commands fail — you stay on your current branch and may
+not notice. Always sanity check with `g b` after running `g go`.
 
 ## Remote Utils
 
