@@ -1,4 +1,4 @@
-Title: Notes on Italo Calvino's *Six Memos for the Next Millennium*
+Title: Notes on Italo Calvino's <i>Six Memos for the Next Millennium</i>
 Date: 2022-12-30 22:00
 Category: Reading
 Tags: reading, calvino, literature, notes, lightness, quickness

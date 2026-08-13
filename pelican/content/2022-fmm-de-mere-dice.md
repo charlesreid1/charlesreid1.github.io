@@ -1,4 +1,4 @@
-Tpelican/content/2022-fmm-de-mere-dice.mditle: A Pair of Dice Games (or, Why Chevalier de Méré Lost Money)
+Title: A Pair of Dice Games (or, Why Chevalier de Méré Lost Money)
 Date: 2022-10-22 22:00
 Category: Mathematics
 Tags: mathematics, probability, dice, pascal, friday morning math
