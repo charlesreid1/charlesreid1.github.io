@@ -99,867 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Graphs for Bioinformatics, Part 2: Finding Eulerian Paths
+                Git Workflows, Part 2: Crafting Commits
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-05-07T16:00:00-07:00" pubdate>Tuesday 05/07/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-2-finding-eulerian-paths.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#the-context-de-bruijn-graphs">The Context: de Bruijn Graphs</a></li>
-<li><a href="#assembling-the-de-bruijn-graph">Assembling the de Bruijn Graph</a><ul>
-<li><a href="#directed-graph-representation-adjacency-list">Directed Graph Representation: Adjacency List</a></li>
-<li><a href="#a-quick-example">A Quick Example</a></li>
-<li><a href="#python-vs-go">Python vs Go</a></li>
-<li><a href="#directed-graph-class-python-implementation">Directed Graph Class: Python Implementation</a></li>
-</ul>
-</li>
-<li><a href="#checking-for-eulerian-paths-and-cycles">Checking for Eulerian Paths and Cycles</a></li>
-<li><a href="#algorithm-building-blocks">Algorithm Building Blocks</a><ul>
-<li><a href="#depth-first-search">Depth First Search</a></li>
-<li><a href="#kosarajus-algorithm-connected-components">Kosaraju's Algorithm: Connected Components</a></li>
-</ul>
-</li>
-<li><a href="#to-be-continued">To Be Continued...</a></li>
-</ul>
-</div>
-<h1 id="the-context-de-bruijn-graphs">The Context: de Bruijn Graphs</h1>
-<p>In <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Part 1 of this post</a>
-we discussed a data structure called a de Bruijn graph and covered its application
-to genome assembly. To summarize, a de Bruijn graph is a type of graph that represents
-a set of k-mers as a set of directed edges on a graph, connecting the k-mer's (k-1)-mer prefix
-(the source vertex) to the k-mer's (k-1)-mer suffix (the destination vertex).</p>
-<p>As an example, if <span class="math">\(k = 5\)</span>, we can represent the k-mer "AAGCT" as an edge connecting the vertex
-<code>AAGC</code> to the vertex <code>AGCT</code>.</p>
-<p>The de Bruijn graph is used to solve a set of problems on <a href="https://rosalind.info">Rosalind.info</a>,
-a website with bioinformatics programming challenges, as part of working through the
-textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
-and its associated website (<a href="https://rosalind.info">Rosalind.info</a>).</p>
-<h1 id="assembling-the-de-bruijn-graph">Assembling the de Bruijn Graph</h1>
-<p>The problems from Rosalind.info that require the use of a de Bruijn graph come from
-Chapter 3. These problems generally give the user either a list of k-mers (to assemble
-into a de Bruijn graph, as in problem <a href="http://rosalind.info/problems/ba3e/">BA3E</a>) 
-or a long sequence of DNA (which can be turned into a list of
-k-mers and assembled into a de Bruijn graph, as in problem <a href="http://rosalind.info/problems/ba3d/">BA3D</a>).</p>
-<p>If we are starting with a long string of DNA, we can run through the entire string
-and extract k-mers using a sliding window. For a string of DNA of length <span class="math">\(d\)</span>, this procedure
-will create <span class="math">\(d - k + 1\)</span> k-mers.</p>
-<h2 id="directed-graph-representation-adjacency-list">Directed Graph Representation: Adjacency List</h2>
-<p>The de Bruijn graph is a directed graph. To represent this
-graph in memory, we utilize an adjacency list data structure.
-An adjacency list is a key-value lookup table (implemented using
-a hash map) wherein each <em>source vertex</em> in the graph is a key 
-in the lookup table, and the corresponding value is a list of
-all <em>destination vertices</em> (all vertices that have a directed
-edge starting from the source vertex and ending at that vertex).</p>
-<p>A Python dictionary can be used to implement the adjacency list
-hash table. The dictionary keys are the source vertices (or rather,
-their string labels), and the dictionary values are a list of 
-destination vertices (a list of their string labels).</p>
-<p>Thus, the graph <code>AA -&gt; BB -&gt; CC -&gt; DD</code> would be represented with
-the hash table:</p>
-<div class="highlight"><pre><span></span><code>adjacency_list[&#39;AA&#39;] = [&#39;BB&#39;]
-adjacency_list[&#39;BB&#39;] = [&#39;CC&#39;]
-adjacency_list[&#39;CC&#39;] = [&#39;DD&#39;]
-</code></pre></div>
-
-<p>(Notice from this example that the keys of the adjacency list
-gives a list of <em>source vertices only</em>, to get all vertices we
-need to look at the values of the adjacency list too.)</p>
-<h2 id="a-quick-example">A Quick Example</h2>
-<p>As a simple example, consider the de Bruijn graph formed from
-the DNA string <code>AAGATTCTCTAC</code> and <span class="math">\(k = 4\)</span>.</p>
-<p>This is first turned into a bag of <span class="math">\(d - k + 1 = 9\)</span> 
-4-mers (our edges):</p>
-<div class="highlight"><pre><span></span><code>Sequence:   AAGATTCTCTAC
-4-mers:     AAGA
-             AGAT
-              GATT
-               ATTC
-                TTCT
-                 TCTC
-                  CTCT
-                   TCTA
-                    CTAC
-</code></pre></div>
-
-<p>Next, we also create a bag of <span class="math">\(d - k + 1 = 10\)</span> 
-3-mers (vertices):</p>
-<div class="highlight"><pre><span></span><code>Sequence:   AAGATTCTCTAC
-3-mers:     AAG
-             AGA
-              GAT
-               ATT
-                TTC
-                 TCT
-                  CTC
-                   TCT
-                    CTA
-                     TAC
-</code></pre></div>
-
-<p>Now we can iterate over every 4-mer edge, find its
-prefix 3-mer and suffix 3-mer, and create a corresponding
-entry in the adjacency list hash table.</p>
-<p>The list of edges looks like this:</p>
-<div class="highlight"><pre><span></span><code>AAG -&gt; AGA
-AGA -&gt; GAT
-ATT -&gt; TTC
-CTA -&gt; TAC
-CTC -&gt; TCT
-GAT -&gt; ATT
-TCT -&gt; CTA,CTC
-TTC -&gt; TCT
-</code></pre></div>
-
-<p>The corresponding dictionary should look like this:</p>
-<div class="highlight"><pre><span></span><code>adjacency_list[&#39;AAG&#39;] = [&#39;AGA&#39;]
-adjacency_list[&#39;AGA&#39;] = [&#39;GAT&#39;]
-adjacency_list[&#39;ATT&#39;] = [&#39;TTC&#39;]
-adjacency_list[&#39;CTA&#39;] = [&#39;TAC&#39;]
-adjacency_list[&#39;CTC&#39;] = [&#39;TCT&#39;]
-adjacency_list[&#39;GAT&#39;] = [&#39;ATT&#39;]
-adjacency_list[&#39;TCT&#39;] = [&#39;CTA&#39;,&#39;CTC&#39;]
-adjacency_list[&#39;TTC&#39;] = [&#39;TCT&#39;]
-</code></pre></div>
-
-<h2 id="python-vs-go">Python vs Go</h2>
-<p>Now that we're ready to implement a directed graph object
-and populate it using the data given in the problem, we 
-have to make the difficult choice of what language we
-want to use to implement the directed graph.</p>
-<p>We have covered our use of the Go programming language 
-for Rosalind.info problems before (we have previously 
-covered recursion for Chapter 2 problems in 
-<a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1</a>,
-<a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">Part 2</a>,
-and <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Part 3</a>
-of another post, and we also wrote <a href="https://charlesreid1.github.io/learning-bioinformatics-with-go-and-rosalind.html">this post</a>
-on our impression of Go and its usefulness in
-bioinformatics.</p>
-<p>We are also implementing all of the solutions to the
-Rosalind.info problems in our Go libarary, <a href="https://github.com/charlesreid1/go-rosalind">go-rosalind</a>
-(see <a href="https://godoc.org/github.com/charlesreid1/go-rosalind/rosalind">corresponding documentation on godoc.org</a>).</p>
-<p><strong>However,</strong> we have learned the hard way that Go requires
-a lot of boilerplate code (boilerplate code that is necessary,
-mind you, because all of that boilerplate will eventually
-morph into something problem-specific).</p>
-<p>This all means that Go is a very cumbersome language to use
-to get an algorithm prototype up and running.</p>
-<p>Python, on the other hand, is a very easy language for
-prototyping and has plenty of handy built-in functions
-and modules that make prototyping an algorithm far 
-easier and faster than doing it in Go.</p>
-<p>Our strategy, therefore, is to prototype our algorithm
-and corresponding graph object in Python, get the
-algorithm working and tested, then convert the code 
-to Go when we are finished.</p>
-<h2 id="directed-graph-class-python-implementation">Directed Graph Class: Python Implementation</h2>
-<p>Note that while we could simply use the dictionary object
-itself as the graph data structure, this is somewhat
-inelegant, and we would like instead to define a class
-to bundle related behavior and data together.</p>
-<p>We implement the directed graph by defining an <code>AdjacencyGraph</code>
-class. This is just a glorified wrapper around the ajacency
-list dictionary, with some extra methods.</p>
-<p>We start by defining the class (it inherits from <code>object</code> so
-it has no parent type):</p>
-<div class="highlight"><pre><span></span><code>class AdjacencyGraph(object):
-    &quot;&quot;&quot;Directed graph stored using an adjacency list&quot;&quot;&quot;
-    def __init__(self):
-        &quot;&quot;&quot;Constructor&quot;&quot;&quot;
-        self.adj = {}
-        self.dfs_started = False
-</code></pre></div>
-
-<p>The constructor just initializes an empty adjacency list dictionary.</p>
-<p>We also define two built-in methods for convenience:
-<code>__str__</code> for the string representation of the graph 
-(so we can pass the graph object to <code>print()</code>), and
-<code>__len__</code> for getting the number of (source) vertices 
-on the graph.</p>
-<div class="highlight"><pre><span></span><code>    def __str__(self):
-        &quot;&quot;&quot;String representation&quot;&quot;&quot;
-        s = []
-        for source in self.adj.keys():
-            sinks = self.adj[source]
-            for sink in sinks:
-                m = &quot;%s -&gt; %s\n&quot;%(source,sink)
-                s.append(m)
-        return &quot;&quot;.join(s)
-
-    def __len__(self):
-        &quot;&quot;&quot;Number of vertices on graph&quot;&quot;&quot;
-        s = set()
-        for source in self.adj.keys():
-            s.add(source)
-            for sink in self.adj[k]:
-                s.add(sink)
-        return len(s)
-</code></pre></div>
-
-<p>Next, we define some basic functionality useful for all graphs:</p>
-<ul>
-<li>Getting the in-degree and out-degree of a vertex</li>
-</ul>
-<div class="highlight"><pre><span></span><code>    def in_degree(self,u):
-        n = 0
-        for v in self.adj.keys():
-            sinks = self.adj[v]
-            if u in sinks:
-                n += 1
-        return n
-
-    def out_degree(self,u):
-        if u in self.adj.keys():
-            return len(self.adj[u])
-        else:
-            return 0
-</code></pre></div>
-
-<p>We also define a generator for creating vertices:</p>
-<div class="highlight"><pre><span></span><code>    def vertices(self):
-        vertices = set()
-        for k in self.adj.keys():
-            vertices.add(k)
-            for m in self.adj[k]:
-                vertices.add(m)
-        for v in vertices:
-            yield v
-
-    def n_vertices(self):
-        return len(self)
-
-    def n_edges(self):
-        n = 0
-        for source in self.adj.keys():
-            try:
-                n += len(self.adj[source])
-            except:
-                # in case value is None
-                pass
-        return n
-
-    def get_neighbors(self,u):
-        &quot;&quot;&quot;Get all neighbors of node u&quot;&quot;&quot;
-        # Note: neighbors are stored in
-        # sorted order
-        if u in self.adj.keys():
-            return self.adj[u]
-        else:
-            return []
-</code></pre></div>
-
-<p>Finally, we add a method <code>add_edge()</code> that allows us
-to create an edge from vertex u to vertex v (and add
-the vertices to the graph if either do not yet exist
-on the graph).</p>
-<p>For convenience, we maintain the adjacency list values
-(the list of destination vertices) in lexicographic
-order.</p>
-<div class="highlight"><pre><span></span><code>    def add_edge(self, u, v):
-        &quot;&quot;&quot;Add an edge from u to v&quot;&quot;&quot;
-        # For each source vertex:
-        if u in self.adj.keys():
-
-            # Get existing sink list
-            t = self.adj[u]
-
-            # Append to it
-            t.append(v)
-
-            # Keep list of sinks sorted
-            # (lexicographic string sorting)
-            t.sort()
-
-            # Create the new edge 
-            # from source to sink
-            self.adj[u] = t
-
-        else:
-            # Initialize the list of sinks (v)
-            # for the given source (u)
-            self.adj[u] = [v]
-</code></pre></div>
-
-<p>Now, to assemble the de Bruijn graph, we can iterate
-over every k-mer edge, form the prefix and suffix vertices,
-and call the <code>add_edge()</code> function on the graph.</p>
-<h1 id="checking-for-eulerian-paths-and-cycles">Checking for Eulerian Paths and Cycles</h1>
-<p>To recap Eulerian paths versus Eulerian cycles (discussed in
-<a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Part 1 of this post</a>:</p>
-<ul>
-<li>An Eulerian path is a path that visits every edge of a given graph exactly once.</li>
-<li>An Eulerian cycle is an Eulerian path that begins and ends at the ''same vertex''.</li>
-</ul>
-<p>According to Steven Skienna's <u>Algorithm Design Handbook</u>,
-there are two conditions that must be met for an Eulerian path or
-cycle to exist. These conditions are different for undirected graphs
-versus directed graphs.</p>
-<p><strong>Undirected graphs:</strong> </p>
-<ul>
-<li>
-<p>An undirected graph contains an Euler <strong>cycle</strong> iff
-  (1) it is connected, and (2) each vertex is of even
-  degree.</p>
-</li>
-<li>
-<p>An undirected graph contains an Euler <strong>path</strong> iff (1)
-  it is connected, and all but two vertices are of even
-  degree. These two vertices will be the start and end
-  vertices for the Eulerian path.</p>
-</li>
-</ul>
-<p><strong>Directed graphs:</strong></p>
-<ul>
-<li>
-<p>A directed graph contains an Euler cycle iff (1) it is
-  strongly-connected, and (2) each vertex has the same
-  in-degree as out-degree</p>
-</li>
-<li>
-<p>A directed graph contains an Euler path iff (1) it is
-  connected, and (2) all vertices except two (x,y) have
-  the same in-degree as out-degree, and (x,y) are
-  vertices with in-degree one less than and one more
-  than out-degree</p>
-</li>
-</ul>
-<h1 id="algorithm-building-blocks">Algorithm Building Blocks</h1>
-<p>Algorithm to find Eulerian paths/cycles consists of several steps using several algorithms.</p>
-<p>Undirected graphs are the simpler case; directed graphs are more complicated.</p>
-<h2 id="depth-first-search">Depth First Search</h2>
-<p>To perform a DFS on a directed graph, implement two functions:</p>
-<ol>
-<li>
-<p>Write a DFS function that takes a graph as an input argument and that visits each node of the
-   graph in a depth-first search.</p>
-</li>
-<li>
-<p>Write a visitation function that takes a node as an input argument and that performs some action
-   on the node. This visitation function is called by the DFS function on each node that it visits.</p>
-</li>
-</ol>
-<h2 id="kosarajus-algorithm-connected-components">Kosaraju's Algorithm: Connected Components</h2>
-<p>On an undirected graph, can use Fleury's Algorithm
-to follow edges (classify edges as bridge or non-bridge,
-then leave bridges for last).</p>
-<p>On a directed graph, we have twice the amount of work:
-we are not just checking that all vertices are reachable
-from a given vertex, we are also checking that all vertices
-can also reach that vertex.</p>
-<h1 id="to-be-continued">To Be Continued...</h1>
-<p>In the next part of this post, we will start with the slightly simpler case of finding an Euler cycle
-(which has no start or end vertices). Then we will show how finding the Euler path is actually a special
-case of finding the Euler cycle.</p>
-<p>First, we will use <a href="https://charlesreid1.com/wiki/Graphs/Euler_Circuit#Directed_Graphs:_Hierholzer.27s_Algorithm">Hierholzer's
-Algorithm</a>
-to find Euler cycles (this is the simpler case). Order does not matter because it is a cycle;
-Hierholzer's algorithm is used to find the Euler cycle.</p>
-<p>Next, we will modify the above algorithm to find Euler paths. This requires keeping track of
-the start and end candidate nodes. We verify only one each; we complete the cycle by adding an edge.
-Once we find the cycle, we remove the edge. Finally, we rearrange the cycle to have the correct
-start and end nodes.</p>
-<p>Stay tuned for Part 3...</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Graphs for Bioinformatics, Part 1: de Bruijn Graphs, Hamiltonian Paths, and Eulerian Paths
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-05-02T19:00:00-07:00" pubdate>Thursday 05/02/2019</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#the-context-rosalindinfo">The Context: Rosalind.info</a></li>
-<li><a href="#graphs-for-bioinformatics">Graphs for Bioinformatics</a><ul>
-<li><a href="#building-a-k-mer-graph-the-wrong-graph">Building a K-mer Graph (The Wrong Graph)</a></li>
-<li><a href="#building-a-de-bruijn-graph-the-right-graph">Building a De Bruijn Graph (The Right Graph)</a></li>
-<li><a href="#transform-the-problem-hamiltonian-paths-to-eulerian-paths">Transform the Problem: Hamiltonian Paths to Eulerian Paths</a></li>
-</ul>
-</li>
-<li><a href="#an-example">An Example</a></li>
-<li><a href="#back-to-dna">Back to DNA</a></li>
-</ul>
-</div>
-<h1 id="the-context-rosalindinfo">The Context: Rosalind.info</h1>
-<p>To provide a bit of context for a discussion of Euler paths and Euler cycles:
-starting around December, a group of us in the <a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology (DIB Lab)</a>
-started working through the textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
-and the associated website, <a href="https://rosalind.info">Rosalind.info</a>.</p>
-<p>Rosalind.info is a site that is similar in style to <a href="https://projecteuler.net/">Project Euler</a>,
-a <a href="https://charlesreid1.github.io/tag/project-euler.html">familiar topic on this blog</a>.
-Project Euler poses computationally challenging problems in the domain of mathematics.</p>
-<p>Like Project Euler, the visitor is given one small example input and the corresponding 
-correct output, and one large example input and corresponding output. Also like Project
-Euler, the problems vary in how much computer science versus domain expertise is needed,
-but they are largely focused on writing algorithms rather than on the science behind the
-computations.</p>
-<p>Unlike Project Euler, however, Rosalind.info does give plenty of hints (via the textbook,
-if you have a copy), and sometimes even gives pseudocode for the algorithm. <strong>The book is
-required to get enough context to answer some of the Rosalind.info problems.</strong></p>
-<h1 id="graphs-for-bioinformatics">Graphs for Bioinformatics</h1>
-<p>The textbook focuses on different problems in each chapter. For example, Chapter 1 uses
-the example of a string of DNA that marks where replication begins to introduce some
-basic bioinformatics concepts and algorithms. Chapter 2 uses the concept of molecular
-clocks to introduce motifs and motif-finding, the focus of most of the problems in
-Chapter 2.</p>
-<p>Chapter 3 focuses on the problem of genome assembly - how we assemble an entire genome
-from short segments alone. In particular, the chapter focuses on de Bruijn graphs, 
-which are graphs that, given a sequence of symbols drawn from an alphabet, are composed 
-of edges (one for each <strong>k-mer</strong>, that is, a chunk of the sequence of length k),
-and vertices (one for each k-mer prefix and k-mer suffix, connected by a directed edge
-of the k-mer). We will cover more of the details of these graphs shortly.</p>
-<h2 id="building-a-k-mer-graph-the-wrong-graph">Building a K-mer Graph (The Wrong Graph)</h2>
-<p>The Bioinformatics Algorithm book starts with a general discussion of how to 
-represent a sequence of DNA nucleotides using a graph. The idea they discuss 
-initially (which is an obvious, but not necessarily good, one) is splitting
-the sequence into k-mer chunks, like so:</p>
-<div class="highlight"><pre><span></span><code>      Sequence:   TAATGCCATGGGATGTT
-      Pieces:     TAA 
-                   AAT
-                    ATG 
-                     TGC
-                      GCC 
-                       CCA
-                        CAT 
-                         ATG
-                          TGG 
-                           GGG
-                            GGA 
-                             GAT
-                              ATG 
-                               TGT
-                                GTT
-</code></pre></div>
-
-<p>and letting one k-mer be represented by one vertex. Then the sequence
-above could be turned into the graph:</p>
-<div class="highlight"><pre><span></span><code>TAA -&gt; AAT -&gt; ATG -&gt; TGC -&gt; GCC -&gt; CCA -&gt; CAT -&gt; ATG -&gt; TGG -&gt; GGG -&gt; GGA -&gt; GAT -&gt; ATG -&gt; TGT -&gt; GTT
-</code></pre></div>
-
-<p>On this graph, every edge has the property that the first (k-1)
-nucleotides of the destination match the last (k-1) nucleotides
-of the source. </p>
-<p>If we did not know this sequence in advance, we could draw <em>every</em>
-edge with that property - every time the last (k-1) characters of
-a k-mer match the first (k-1) characters of another k-mer, an edge
-is drawn between those two vertices. </p>
-<p>That graph would result in <em>many</em> more edges than the graph shown above.</p>
-<p>Furthermore, in theory, if each read sequence came from a single genome
-and we had the entire genome covered by read sequences, a path through
-the graph that visits every vertex (every k-mer) would yield the full
-genome.</p>
-<p>A path through a graph that visits every vertex once is called a 
-<strong>Hamiltonian path</strong>.</p>
-<p>Why is this hard? Because the problem of proving a Hamiltonian
-path exists, let alone finding it, becomes very difficult for
-large graphs.</p>
-<h2 id="building-a-de-bruijn-graph-the-right-graph">Building a De Bruijn Graph (The Right Graph)</h2>
-<p>Nicolaas de Bruijn introduced (in 1946, in a paper entitled simply
-<a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>)
-a new way of representing a sequence with a graph. He split a given
-sequence into k-mers, as before, but instead of representing
-each k-mer as a <em>vertex</em> on the graph, he represented each 
-k-mer as an <em>edge</em> on the graph.</p>
-<p>This type of graph is called a <strong>de Bruijn graph</strong>.</p>
-<p>Specifically, for a DNA sequence, each k-mer from the sequence is
-represented by an edge, where the source vertex
-is that k-mer's (k-1)-nucleotide suffix and the destination vertex
-is that k-mer's (k-1)-nucleotide prefix.</p>
-<div class="highlight"><pre><span></span><code>      Sequence:   TAATGCCATGGGATGTT
-      Pieces:     TA  
-                   AA
-                    AT 
-                     TG
-                      GC 
-                       CC
-                        CA 
-                         AT
-                          TG 
-                           GG
-                            GG 
-                             GA 
-                              AT  
-                               TG 
-                                GT 
-                                 TT
-</code></pre></div>
-
-<p>Now this sequence is written as the graph:</p>
-<div class="highlight"><pre><span></span><code>TA -&gt; AA -&gt; AT -&gt; TG -&gt; GC -&gt; CC -&gt; CA -&gt; AT -&gt; TG -&gt; GG -&gt; GG -&gt; GA -&gt; AT -&gt; TG -&gt; GT -&gt; TT
-</code></pre></div>
-
-<p>so that the original breakup of the sequence into k-mers is still
-represented, but now as edges rather than as vertices. That is, the 
-k-mer <code>TAA</code> is represented by the edge <code>TA -&gt; AA</code>.</p>
-<h2 id="transform-the-problem-hamiltonian-paths-to-eulerian-paths">Transform the Problem: Hamiltonian Paths to Eulerian Paths</h2>
-<p>The change in the problem representation (k-mers as vertices to k-mers
-as edges) changes the problem of finding the <strong>Hamiltonian path</strong> 
-(a path through the graph that visits every <em>vertex</em> exactly once) 
-into the problem of finding the <strong>Eulerian path</strong>
-(a path through the graph that visits every <em>edge</em> exactly once).</p>
-<h1 id="an-example">An Example</h1>
-<p>Let's look at a slightly simpler example - the one de Bruijn was
-originally considering - so we can see de Bruijn graphs in action
-in a slightly simpler case.</p>
-<p>In his 1946 paper <a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>,
-de Bruijn describes the problem thus:</p>
-<blockquote>
-<p>Some years ago Ir. K. Posthumus stated an interesting conjecture
-concerning certain cycles of digits 0 or 1, which we shall call
-<span class="math">\(P_n\)</span> cycles. For <span class="math">\(n = 1, 2, 3, \dots\)</span>, a <span class="math">\(P_n\)</span> cycle be an ordered
-cycle of <span class="math">\(2^n\)</span> digits 0 or 1, such that the <span class="math">\(2^n\)</span> possible ordered
-sets of <span class="math">\(n\)</span> consecutive digits of that cycle are all different.
-As a consequence, any ordered set of <span class="math">\(n\)</span> digits 0 or 1 occurs exactly
-once in that cycle.</p>
-<p>For example, a <span class="math">\(P_3\)</span> cycle is <span class="math">\(00010111\)</span>, respectively showing the
-triples 000, 001, 010, 011, 111, 100, 100, which are all the possible
-triples indeed.</p>
-</blockquote>
-<p>In this case, de Bruijn is discussing <em>complete</em> de Bruijn graphs - he
-constructs a de Bruijn graph of all possible 3-mers (our k-mers, <span class="math">\(k = 3\)</span>),
-and constructs a path through the graph that visits every edge of the
-graph. Here is the sequence broken down as above:</p>
-<div class="highlight"><pre><span></span><code>      Sequence:   00010111
-      Pieces:     00  
-                   00
-                    01
-                     10
-                      01
-                       11
-                        11
-</code></pre></div>
-
-<p>The alphabet here is binary: 0 and 1. </p>
-<p>This (seemingly simple) example is a bit confusing, but here's
-what's going on: we have four vertices on the de Bruijn graph,
-consisting of the 2-mers:</p>
-<div class="highlight"><pre><span></span><code>00
-01
-10
-11
-</code></pre></div>
-
-<p>Now, if we draw an edge for every possible 3-mer, we would 
-start with the 3-mer <code>000</code>, which is actually represented
-by a self-edge from vertex <code>00</code> to vertex <code>00</code>, because the
-prefix matches the suffix.</p>
-<p>Similarly, the 3-mer <code>111</code> is represented by a self-edge
-from vertex <code>11</code> to vertex <code>11</code>.</p>
-<p>The other 3-mers are represented by their corresponding edges:
-<code>001</code> is represented by the edge <code>00 -&gt; 01</code>, <code>010</code> by the edge
-<code>01 -&gt; 10</code>, etc.</p>
-<p>By drawing <strong>every possible edge</strong> (to represent every possible
-3-mer), we assemble the <strong>complete de Bruijn graph</strong> (that is,
-the de Bruijn graph containing vertices for all possible
-2-mers connected by edges representing every possible 3-mer
-in the given alphabet).</p>
-<p>The sequence de Bruijn gives in his paper is an Euler path
-through the <em>complete</em> (de Bruijn) graph (that is, a path 
-through the de Bruijn graph that visits every edge exactly 
-once):</p>
-<div class="highlight"><pre><span></span><code>Sequence: 00010111
-
-00 -&gt; 00 -&gt; 01 -&gt; 10 -&gt; 01 -&gt; 11 -&gt; 11
-</code></pre></div>
-
-<h1 id="back-to-dna">Back to DNA</h1>
-<p>Now the utility of the de Bruijn methodology is more clear:
-if we can come up with fast, efficient algorithms to find
-Euler paths on large graphs, we can transform the assembly 
-problem (given fragments of a long sequence, reconstruct
-the sequence) into the problem of finding an Eulerian path,
-which is tractable even for large graphs.</p>
-<p>Compare this with string matching algorithms utilizing
-dynamic programming, which can cost <span class="math">\(O(N^2)\)</span> and make
-genome assembly computationally infeasible.</p>
-<p>Part 1 (this post) has covered the basic idea behind 
-assembling DNA sequences using de Bruijn graphs. In
-Part 2 of this post, we will move on to a discussion
-of the "real world" problem, warts and all, and how 
-we can relax some of the strict assumptions (like assuming
-perfect coverage of the original sequence and assuming
-that all reads are perfect).</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                The Git-Commit-Ectomy
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2019-04-17T12:00:00-07:00" pubdate>Wednesday 04/17/2019</time>
+                <time datetime="2019-11-14T20:00:00-08:00" pubdate>Thursday 11/14/2019</time>
                 in 
                 <a href="https://charlesreid1.github.io/category/git.html">Git</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-git-commit-ectomy.html">permalink</a>
+                <a href="https://charlesreid1.github.io/git-workflows-part-2-crafting-commits.html">permalink</a>
             </span>
             </p>
         </div>
@@ -976,63 +127,442 @@ that all reads are perfect).</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>TLDR: Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p>
-<p><br /></p>
-<p>Consider the following <em>completely hypothetical</em>
-scenario.</p>
-<p>Suppose you've been working for a while on your latest
-invention, a brand-new whiz-bang command line
-tool that's fast and solves an important problem
-and you're chugging your way to the finish line.</p>
-<p>As part of preparing to release your software tool,
-you add some tests, because that's what you do.</p>
-<p>Those tests require some data, so you add a few test
-data sets, a few hundred kilobytes each, nothing fancy.</p>
-<p>Then one day, <strong>the intern</strong> (who is just trying to be 
-helpful by adding a new test) slips in a 70 MB test
-data set, and slips it in with a string of commits
-that somehow get incorporated into the master branch.</p>
-<p>(Side note: you turned on branch protection to prevent
-this whole mess, didn't you? <em>Didn't you??</em> 
-'Course you did. This is all
-just a hypothetical scenario.)</p>
-<p>Now, the situation is complicated: there are several
-open pull requests and active branches, and a non-trivial
-amount of history that's been added since the time the
-large test data set was accidentally added.</p>
-<p><strong>The intern</strong> apologizes profusely and promises to 
-bring in donuts every day next week. But the damage 
-is done.</p>
-<p><strong>The intern</strong>, a git novice, pulls out a laptop
-and runs a <code>git rm</code> on the files, pushing to the
-remote and happily, ignorantly believing the problem
-has been solved.</p>
-<p>But <strong>the intern</strong> does not understand how git works.
-It has a perfect memory, and remembers every file in
-every commit. Since the problematic first commit that
-added the large files, git has remembered and will always
-remember that large file. It's in git's blood. 
-It's what git was designed to do.</p>
-<p>Once the intern has been, ahem, moved along,
-and branch protection has been turned on,
-it's time to find a git surgeon to perform a 
-git-commit-ectomy to remove the problematic
-large files from the repository entirely.</p>
-<h2 id="dr-reids-patented-git-commit-ectomy">Dr. Reid's Patented Git-Commit-Ectomy</h2>
-<p>If it's a git-commit-ectomy you need,
-try Dr. Reid's Patented Git-Commit-Ectomy
-to ease your git commit pains.</p>
-<p>Whether you want to keep thing simple
-and remove a git commit from a single branch,
-or if you've got multiple branches, Dr. Reid's
-Patented Git-Commit-Ectomy will get you back
-on your feet.</p>
-<p>Dr. Reid's Patented Git-Commit-Ectomy can handle
-even the most messy, confused, and tangled git 
-commit history - with a bit of work and a gifted
-surgeon the git-commit-ectomy can smooth things 
-out and get you feeling right as rain.</p>
-<p>Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p></div>
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#what-is-a-commit">What is a commit</a><ul>
+<li><a href="#git-add">git add</a></li>
+<li><a href="#git-commit">git commit</a></li>
+<li><a href="#git-rebase">git rebase</a></li>
+<li><a href="#git-fetch-and-git-pull">git fetch and git pull</a><ul>
+<li><a href="#rebase-merge-branch-pass">rebase, merge, branch, pass</a></li>
+</ul>
+</li>
+<li><a href="#git-push">git push</a></li>
+<li><a href="#force-pushing">force pushing</a></li>
+</ul>
+</li>
+<li><a href="#commit-workflow">Commit Workflow</a><ul>
+<li><a href="#principles">Principles</a></li>
+<li><a href="#making-small-commits">Making Small Commits</a><ul>
+<li><a href="#git-add-patch-mode">git add patch mode</a></li>
+<li><a href="#git-add-editor-mode">git add editor mode</a></li>
+</ul>
+</li>
+<li><a href="#modifying-commits">Modifying Commits</a><ul>
+<li><a href="#git-rebase_1">git rebase</a><ul>
+<li><a href="#rebasing-the-last-n-commits-of-a-branch">rebasing the last N commits of a branch</a></li>
+<li><a href="#rebasing-onto-another-branch">rebasing onto another branch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#rearranging-commits">Rearranging Commits</a></li>
+<li><a href="#combining-commits">Combining Commits</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h1 id="summary">Summary</h1>
+<ul>
+<li>
+<p>Make your commits small and atomic, and recombine them into
+  larger commits later; it's easier to combine smaller commits
+  than to split large commits.</p>
+</li>
+<li>
+<p>Make use of <code>git add -p</code> and <code>git add -e</code> to stage
+  changes selectively and atomically.</p>
+</li>
+<li>
+<p>Make use of <code>git rebase</code> and <code>git cherry-pick</code> to edit your
+  commits and assemble them in the order you want.</p>
+</li>
+<li>
+<p>Once commits have been combine and the history is satisfactory,
+  push to a remote to share the work.</p>
+</li>
+<li>
+<p>Think about ordering your commits to "tell a story". (What that
+  means will depend on the people you are collaborating with!)</p>
+</li>
+</ul>
+<h1 id="what-is-a-commit">What is a commit</h1>
+<p>Before we get into the good stuff, let's talk about the
+anatomy of a git commit.</p>
+<p>When you add files to your git repository, it's a two-step
+process: <code>git add</code> and <code>git commit</code>. The first step <em>stages</em>
+your changes, the second step memorializes those staged changes
+into a commit that can now be shared with others by pushing it
+to git remotes.</p>
+<h2 id="git-add">git add</h2>
+<p>Under the hood, git stores the full contents of each file at each snapshot
+in an object called a <em>blob</em>. When you modify a file and run <code>git add</code>,
+git writes a new blob containing the entire new contents of the file, and
+updates the staging area (the index) to point at that new blob. The diff
+between the old and new versions is not stored — it is computed on demand
+by comparing the two blobs.</p>
+<p>That said, when using tools like <code>git add -p</code>, <code>git diff</code>, and <code>git log -p</code>,
+git presents changes at the line (hunk) level. This makes it useful to
+think about staging in terms of individual line changes, even though the
+underlying storage is snapshot-based. That line-level view is what makes
+it possible to stage some hunks in a file but not others — the resulting
+blob reflects only the hunks you accepted.</p>
+<h2 id="git-commit">git commit</h2>
+<p>As you use <code>git add</code> to prepare your changes, the changes are added to
+a <em>staging area</em>. Think of this staging area as a draft commit. Each change
+being added to the staging area changes how the commit will look. When the
+changes are complete and the user runs <code>git commit</code>, it turns the staging
+area into a real commit, creates the metadata, and calculates hashes.</p>
+<p>When a commit is created, it receives a name, which is the hash of the
+contents of the commit. The hash is computed from the contents of the
+blobs, plus the metadata about the commit, plus the hash of the prior
+commits. Changing a commit changes its hash, and will change the hashes
+of all subsequent commits.</p>
+<p>Commits in your local repository can be easily rewritten and edited, and
+their hashes changed. A common workflow is to make many small commits,
+and recombine them later.</p>
+<p>Because the commit hash is how the commit is named, modifying commits
+after you've shared them is bad practice and will create extra work for
+your collaborators. For that reason, don't <code>git push</code> until you're ready
+to share your work.</p>
+<h2 id="git-rebase">git rebase</h2>
+<p>The <code>git rebase</code> command allows you to edit your commit history. We will
+cover some usage patterns in the sections below.</p>
+<h2 id="git-fetch-and-git-pull">git fetch and git pull</h2>
+<p>Before pushing changes to the remote, first check if there have been any
+commits since you began your branch.</p>
+<h3 id="rebase-merge-branch-pass">rebase, merge, branch, pass</h3>
+<p>If a feature branch is created off of the master branch, and some time passes,
+the feature branch base commit may grow far out of sync with the master branch.
+(Note that <code>master</code> indicates the primary branch.)</p>
+<p>This leaves the developer of the feature branch (which is out of sync with master) with a few choices:</p>
+<ul>
+<li>
+<p><strong>rebase</strong> - continue to rebase all commits on the feature branch from the
+  (old) original feature branch base commit onto the (new) head commit of the master 
+  branch.</p>
+<ul>
+<li>Pros: clean history, easy for one-branch-one-developer workflow</li>
+<li>Cons: requires continual force-pushes, requires coordination between developers
+  to prevent squashing others' work, not scalable, some people hate this method</li>
+</ul>
+</li>
+<li>
+<p><strong>merge</strong> - occasionally merge work from the master branch into the feature branch.</p>
+<ul>
+<li>Pros: simple to understand, simple to carry out, low cognitive load</li>
+<li>Cons: any changes added to the branch via the merge commit will show up in the PR
+  as new code, cluttering PR reviews by mixing features with merged changes; can also
+  make the commit history messy and harder to understand.</li>
+</ul>
+</li>
+<li>
+<p><strong>branch</strong> - by making heavy use of throwaway branches and integration branches,
+  it is easier to test out how the integration of a feature branch based on an old
+  commit on <code>master</code> will do when merging it in with a newer version of <code>master</code>.
+  Use throwaway integration branches to test out merging the two branches together,
+  testing its functionality, etc. You can also rebase or cherry pick commits onto
+  the throwaway integration branch, and figure out how to arrange the commits on a
+  branch to "rebuild" it into a working, mergeable branch.</p>
+<ul>
+<li>Pros: easy to do, encourages local use of throwaway branches</li>
+<li>Cons: clutters branches, integration process has to be repeated (can be mitigated
+  with <code>git rerere</code>), merge commits must wait until PR is approved</li>
+</ul>
+</li>
+<li>
+<p><strong>pass</strong> - best combined with the branch approach mentioned above, the pass approach
+  is to leave the branch history clean, avoid force-pushes, and rely on throwaway
+  branches to test out merge strategies once the inevitable PR merge needs to happen.
+  It can also be useful to wait for code reviews to finish, then create a merge commit
+  to make the merge happen smoothly.</p>
+<ul>
+<li>Pros: easy to do</li>
+<li>Cons: merge commits must wait until PR is approved</li>
+</ul>
+</li>
+</ul>
+<h2 id="git-push">git push</h2>
+<p>Once you run <code>git push</code>, all of the commits on the branch that you pushed
+will end up on the remote, where others can access them. The purpose
+of a <code>git push</code> is to share commits, so generally you don't push branches
+until they are ready to share. This also allows more flexibility in crafting,
+rewriting, and combining commits.</p>
+<h2 id="force-pushing">force pushing</h2>
+<p>If you pushed a branch (which is a collection of commits) to a remote,
+and then you have edited those commits, you will run into a problem when
+you try and <code>git push</code> the new, edited versions of the commits to the same
+remote. The remote will detect that there are conflicting versions of
+the branch and will reject the changes.</p>
+<p>That's where <code>git push --force</code> comes in. The <code>--force</code> flag tells the
+remote to discard its version of the branch and use the version of the
+branch that you are pushing.</p>
+<p>We will cover more about force pushing - when to do it, when not to, and
+why some people hate it - in a later post. For now, we will only say
+that you should not force push often, since you can risk deleting others' work
+and creating additional confusion and work for all of your collaborators.</p>
+<h1 id="commit-workflow">Commit Workflow</h1>
+<h2 id="principles">Principles</h2>
+<p>Here are some principles for your <code>git commit</code> workflow:</p>
+<ul>
+<li>
+<p>Commit small changes often.</p>
+</li>
+<li>
+<p>Don't sweat the commit messages - they can be fixed up later.</p>
+</li>
+<li>
+<p>Related - nobody will see your commits until you push your branch,
+  so think of your branch as a scratch space. You have the ultimate
+  freedom to use it however you want.</p>
+</li>
+<li>
+<p>Branches are easy to create, so make liberal use of branches!</p>
+</li>
+<li>
+<p>Be wary of force pushing, and of rewriting history.</p>
+</li>
+</ul>
+<h2 id="making-small-commits">Making Small Commits</h2>
+<p>Two essential git commands to help with making small commits are
+git add (patch mode) and git add (interactive mode).</p>
+<h3 id="git-add-patch-mode">git add patch mode</h3>
+<p>How to use:</p>
+<div class="highlight"><pre><span></span><code>git add -p &lt;name-of-file&gt;
+</code></pre></div>
+
+<p>The <code>git add -p</code> command allows the user to interactively stage
+individual changes made (in what is called patch mode). This means
+users can stage certain changes for one commit, then stage other
+changes for a different commit.</p>
+<p>This solves the problem of making a long sequence of changes
+to a single file that should be logically separated into
+different steps. (For example, changing the <code>import</code> statements
+versus changing the name of a variable throughout a file).</p>
+<p>For example, suppose we have the following changes to a file named <code>doit.sh</code>:</p>
+<div class="highlight"><pre><span></span><code>$ git diff doit.sh
+diff --git a/doit.sh b/doit.sh
+index 3b938a1..6c1aec8 100644
+--- a/doit.sh
++++ b/doit.sh
+@@ -1,6 +1,6 @@
+ #!/bin/bash
+ #
+-# This script lists the 40 largest files in the git repo history
++# This script lists the 50 largest files in the git repo history
+
+ $ git rev-list --all --objects | \
+      sed -n $(git rev-list --objects --all | \
+@@ -9,9 +9,9 @@ $ git rev-list --all --objects | \
+      grep blob | \
+      sort -n -k 3 | \
+      \
+-     tail -n40 | \
++     tail -n50 | \
+      \
+      while read hash type size; do
+           echo -n &quot;-e s/$hash/$size/p &quot;;
+      done) | \
+-     sort -n -r -k1
++     sort -nru -k1
+</code></pre></div>
+
+<p>There are two related changes and one unrelated change, respectively:
+the two related changes are the change to the comment and the change
+to the <code>tail</code> command; the unrelated change is adding the <code>-u</code> flag
+to the <code>sort</code> command.</p>
+<p>We can split these changes into two commits using <code>git add -p doit.sh</code>,
+which will walk through each change in the file and ask if we want to
+stage it:</p>
+<div class="highlight"><pre><span></span><code>$ git add -p doit.sh
+diff --git a/doit.sh b/doit.sh
+index 3b938a1..6c1aec8 100644
+--- a/doit.sh
++++ b/doit.sh
+@@ -1,6 +1,6 @@
+ #!/bin/bash
+ #
+-# This script lists the 40 largest files in the git repo history
++# This script lists the 50 largest files in the git repo history
+
+ $ git rev-list --all --objects | \
+      sed -n $(git rev-list --objects --all | \
+Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? y
+
+@@ -9,9 +9,9 @@ $ git rev-list --all --objects | \
+      grep blob | \
+      sort -n -k 3 | \
+      \
+-     tail -n40 | \
++     tail -n50 | \
+      \
+      while read hash type size; do
+Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? y
+
+@@ -14,14 +14,14 @@        echo -n &quot;-e s/$hash/$size/p &quot;;
+      done) | \
+-     sort -n -r -k1
++     sort -nru -k1
+Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? n
+</code></pre></div>
+
+<p>Now the two related changes are staged, and the unrelated change is not staged.
+This is reflected in <code>git status</code>:</p>
+<div class="highlight"><pre><span></span><code>$ git status
+On branch master
+Your branch is ahead of &#39;gh/master&#39; by 2 commits.
+  (use &quot;git push&quot; to publish your local commits)
+
+Changes to be committed:
+  (use &quot;git restore --staged &lt;file&gt;...&quot; to unstage)
+    modified:   doit.sh
+
+Changes not staged for commit:
+  (use &quot;git add &lt;file&gt;...&quot; to update what will be committed)
+  (use &quot;git restore &lt;file&gt;...&quot; to discard changes in working directory)
+    modified:   doit.sh
+</code></pre></div>
+
+<p>Now <code>git commit</code> will commit only the staged portions.</p>
+<p>Run <code>git commit</code> with no filenames. If you pass a filename like
+<code>git commit doit.sh</code>, git will commit the current working-tree contents
+of that file directly, bypassing the index entirely — throwing away the
+careful hunk-by-hunk staging you just did and committing the unstaged
+changes too.</p>
+<p>To use this in your workflow, think about how you can group different changes together into
+different commits. If you get a portion of a feature working, you can commit the changes in
+groups so that related changes get committed together.</p>
+<p>Also remember that if your commit history ends up being excessively long or overly detailed,
+you can always examine what changes different commits made with <code>git diff</code>, and reorder them
+with <code>git cherry-pick</code> or modify/combine them with <code>git rebase</code>.</p>
+<h3 id="git-add-editor-mode">git add editor mode</h3>
+<p>How to use:</p>
+<div class="highlight"><pre><span></span><code>git add -e &lt;name-of-file&gt;
+</code></pre></div>
+
+<p>Like the interactive patch mode, <code>git add -e</code> allows you to selectively
+stage certain changes in a file. But it's much better for keyboard jockeys
+and those that love their text editor, because you can choose which changes
+to stage or not using the text editor.</p>
+<p>A sidebar:</p>
+<p>If you have not yet set the text editor that git uses, you should
+do that now. Modify your git configuration with this command:</p>
+<div class="highlight"><pre><span></span><code>git config --global core.editor vim
+</code></pre></div>
+
+<p>Alternatively, put the following in your <code>~/.gitconfig</code>:</p>
+<div class="highlight"><pre><span></span><code>[core]
+    editor = vim
+</code></pre></div>
+
+<p>(Or, you know, whatever your text editor of choice is.)</p>
+<p>End of sidebar.</p>
+<p>When you pass the <code>-e</code> flag to git add, it will open a new editor window with the full diff:</p>
+<div class="highlight"><pre><span></span><code>diff --git a/doit.sh b/doit.sh
+index 326273c..14e4059 100644
+--- a/doit.sh
++++ b/doit.sh
+@@ -1,17 +1,17 @@
+ #!/bin/bash
+ #
+-# This script lists the 50 largest files in the git repo history
++# This script lists the 10 largest files in the git repo history
+
+ $ git rev-list --all --objects | \
+      sed -n $(git rev-list --objects --all | \
+      cut -f1 -d&#39; &#39; | \
+      git cat-file --batch-check | \
+      grep blob | \
+      sort -n -k 3 | \
+      \
+-     tail -n50 | \
++     tail -n10 | \
+      \
+      while read hash type size; do
+           echo -n &quot;-e s/$hash/$size/p &quot;;
+      done) | \
+-     sort -nru -k1
++     sort -nr -k1
+</code></pre></div>
+
+<p><strong>Editing this file requires some care!</strong></p>
+<p>Fortunately there is a section in the documentation for
+<a href="https://git-scm.com/docs/git-add">git add</a> called
+<a href="https://git-scm.com/docs/git-add#_editing_patches">Editing Patches</a>.</p>
+<p>Two things to remember:</p>
+<ul>
+<li>
+<p>Lines starting with <code>+</code> indicate new, added content. To prevent this
+  content from being added, delete the line.</p>
+</li>
+<li>
+<p>Lines starting with <code>-</code> indicate removed content. To keep this content,
+  replace <code>-</code> with a space (<code></code>).</p>
+</li>
+</ul>
+<p>Once you are finished, make sure you review the changes that are staged,
+particularly if this is the first time seeing patch files or the diff
+syntax.</p>
+<h2 id="modifying-commits">Modifying Commits</h2>
+<p>There is always some reason or another to modify the commit history of a repository -
+perhaps someone's work was lost, or the wrong issue or pull request number was referenced,
+or a username was misspelled.</p>
+<p>You can always modify a commit, but it will also modify every commit that came after it.
+Think of it like replaying the changes recorded in each commit onto the new branch. The
+contents of each commit changes slightly, so the hash (the name) of every commit changes.</p>
+<h3 id="git-rebase_1">git rebase</h3>
+<p>To do a git rebase, an interactive rebase (the <code>-i</code> flag) is recommended.</p>
+<p>The general form of a rebase is:</p>
+<div class="highlight"><pre><span></span><code>git rebase [-i] &lt;upstream&gt; [&lt;branch&gt;]
+</code></pre></div>
+
+<p>If <code>&lt;branch&gt;</code> is given, git checks it out first. Then it takes every commit
+that is reachable from <code>&lt;branch&gt;</code> but not from <code>&lt;upstream&gt;</code> and replays them
+on top of <code>&lt;upstream&gt;</code>.</p>
+<p><strong>IMPORTANT:</strong> The <code>&lt;upstream&gt;</code> commit itself is <em>not</em> replayed - it is the
+new base. If you want to include a specific commit in the rebase, use its
+parent as <code>&lt;upstream&gt;</code>. For example, <code>0a1b2c3d~1</code> refers to the commit
+before <code>0a1b2c3d</code>, so <code>git rebase -i 0a1b2c3d~1</code> will replay <code>0a1b2c3d</code>
+and everything after it on the current branch.</p>
+<h4 id="rebasing-the-last-n-commits-of-a-branch">rebasing the last N commits of a branch</h4>
+<p>The most common form of interactive rebase is "let me edit the last N commits
+on my branch":</p>
+<div class="highlight"><pre><span></span><code>git rebase -i HEAD~N
+</code></pre></div>
+
+<p>For example, <code>git rebase -i HEAD~5</code> replays the last 5 commits on top of
+their existing base, giving you an editor where you can reorder, squash,
+edit, or drop them.</p>
+<h4 id="rebasing-onto-another-branch">rebasing onto another branch</h4>
+<p>To move a range of commits so they start on top of a different branch
+(for example, on top of the latest <code>master</code>), use the <code>--onto</code> flag:</p>
+<div class="highlight"><pre><span></span><code>git rebase --onto &lt;newbase&gt; &lt;upstream&gt; [&lt;branch&gt;]
+</code></pre></div>
+
+<p><code>&lt;newbase&gt;</code> is where the commits will be replayed. <code>&lt;upstream&gt;</code> is the
+commit whose descendants get replayed (and <code>&lt;upstream&gt;</code> itself is <em>not</em>
+included). If <code>&lt;branch&gt;</code> is provided, git checks it out first before
+starting the rebase.</p>
+<p>For example, suppose you have a <code>feature</code> branch that was branched off an
+old <code>master</code>, and you want to move its commits on top of the current
+<code>master</code>:</p>
+<div class="highlight"><pre><span></span><code>git rebase --onto master feature~3 feature
+</code></pre></div>
+
+<p>This replays the last 3 commits of <code>feature</code> on top of <code>master</code>, and
+because <code>feature</code> was supplied as <code>&lt;branch&gt;</code>, the <code>feature</code> label moves
+with the rebased commits — no headless state, no branch housekeeping
+needed.</p>
+<h2 id="rearranging-commits">Rearranging Commits</h2>
+<p>Where rebasing allows for editing commits en masse, cherry picking allows the changes made in
+individual commits to be applied anywhere - including other branches. This makes the atomic
+commit principle from the beginning of this post much easier - groups of related commits that
+happened out of order can be rearranged by cherry picking them onto a new branch, and the new
+branch is a better "story".</p>
+<h2 id="combining-commits">Combining Commits</h2>
+<p>The cherry pick operation can also be combined with a rebase - once multiple small commits are
+arranged together chronologically, a git rebase operation enables squashing those tiny commits
+into a small number of larger commits, all carrying related changes.</p></div>
 
     </div>
 </div>
@@ -1053,6 +583,753 @@ out and get you feeling right as rain.</p>
                     <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
                     &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Git Workflows, Part 1: Supercharging your Git Config
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-10-07T20:00:00-07:00" pubdate>Monday 10/07/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/git-workflows-part-1-supercharging-your-git-config.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#source">Source</a></li>
+<li><a href="#user-section">User Section</a></li>
+<li><a href="#bash-aliases">Bash Aliases</a><ul>
+<li><a href="#the-best-one-letter-alias-ever">The Best One Letter Alias Ever</a></li>
+<li><a href="#ending-bad-habits">Ending Bad Habits</a></li>
+</ul>
+</li>
+<li><a href="#alias-section">Alias section</a><ul>
+<li><a href="#log-utils">Log Utils</a></li>
+<li><a href="#status-utils">Status Utils</a></li>
+<li><a href="#fetching">Fetching</a></li>
+<li><a href="#branch-utils">Branch Utils</a><ul>
+<li><a href="#branch-and-checkout">Branch and Checkout</a></li>
+</ul>
+</li>
+<li><a href="#remote-utils">Remote Utils</a></li>
+<li><a href="#commit-utils">Commit Utils</a><ul>
+<li><a href="#committing-all-changes">Committing All Changes</a></li>
+<li><a href="#fixing-commits">Fixing Commits</a></li>
+</ul>
+</li>
+<li><a href="#miscellaneous-utils">Miscellaneous Utils</a><ul>
+<li><a href="#rebasing-shortcuts">Rebasing shortcuts</a></li>
+<li><a href="#diff-shortcuts">Diff shortcuts</a></li>
+<li><a href="#pull-shortcuts">Pull shortcuts</a></li>
+<li><a href="#clone-shortcuts">Clone shortcuts</a></li>
+<li><a href="#contributor-shortcuts">Contributor shortcuts</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#core-section">Core section</a></li>
+<li><a href="#color-section">Color section</a></li>
+<li><a href="#url-section">Url section</a></li>
+</ul>
+</div>
+<h1 id="source">Source</h1>
+<p>Most of the good stuff is from
+<a href="https://github.com/mathiasbynens/dotfiles">https://github.com/mathiasbynens/dotfiles</a>!</p>
+<h1 id="user-section">User Section</h1>
+<p>Start off easy - here's how you set your email and name for commits:</p>
+<div class="highlight"><pre><span></span><code>[user]
+    email = foo@bar.com
+    name = Foo Bar
+</code></pre></div>
+
+<h1 id="bash-aliases">Bash Aliases</h1>
+<h2 id="the-best-one-letter-alias-ever">The Best One Letter Alias Ever</h2>
+<p>Start supercharging how you use git by creating a one-letter alias.</p>
+<p>Add this to your <code>~/.bashrc</code> file:</p>
+<div class="highlight"><pre><span></span><code>alias g=&quot;git&quot;
+</code></pre></div>
+
+<p>You're already saving yourself a bunch of keystrokes, and we're just getting started!</p>
+<h2 id="ending-bad-habits">Ending Bad Habits</h2>
+<p>This is a nice trick for getting yourself out of bad habits.
+My first time using a "sophisticated" branch worklow in git
+(i.e., not just committing and pushing to master all the time),
+I got in trouble for committing directly to master with a
+<code>git push origin master</code> (instead of making a feature branch
+and opening a pull request).</p>
+<p>To get myself out of the habit of typing <code>git push origin master</code>,
+I wanted to map it to an alias that told me no. I did that by
+defining <code>git</code> to be a bash function (this works because functions
+take precedence over a binary named <code>git</code> on your path).</p>
+<p>The git function checks the arguments that are passed to it.
+If the arguments are <code>push origin master</code>, it means I'm typing
+<code>git push origin master</code>, and I get a slap on the wrist.</p>
+<p>Otherwise, it passes the arguments through to the <code>git</code> binary.</p>
+<p>You can also put this in <code>~/.bashrc</code>.</p>
+<div class="highlight"><pre><span></span><code>git<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="nv">$@</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;push origin master&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;nope&quot;</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">        </span><span class="nb">command</span><span class="w"> </span>git<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$@</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+</code></pre></div>
+
+<h1 id="alias-section">Alias section</h1>
+<p>In the <code>~/.gitconfig</code> file, aliases specific to git can be
+defined in a section beginning with alias.</p>
+<h2 id="log-utils">Log Utils</h2>
+<p>Let's start with some utilities for viewing git logs.</p>
+<p>(You can never have too many ways to look at a git log.)</p>
+<p>Note that we'll assume the alias bit in the following git config excerpts.</p>
+<div class="highlight"><pre><span></span><code>[alias]
+    # courtesy of https://stackoverflow.com/a/34467298
+    lg = !&quot;git lg1&quot;
+    lg1 = !&quot;git lg1-specific --all&quot;
+    lg2 = !&quot;git lg2-specific --all&quot;
+    lg3 = !&quot;git lg3-specific --all&quot;
+
+    lg1-specific = log --graph --abbrev-commit --decorate --format=format:&#39;%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)&#39;
+    lg2-specific = log --graph --abbrev-commit --decorate --format=format:&#39;%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n&#39;&#39;          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)&#39;
+    lg3-specific = log --graph --abbrev-commit --decorate --format=format:&#39;%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset) %C(bold cyan)(committed: %cD)%C(reset) %C(auto)%d%C(reset)%n&#39;&#39;          %C(white)%s%C(reset)%n&#39;&#39;          %C(dim white)- %an &lt;%ae&gt; %C(reset) %C(dim white)(committer: %cn &lt;%ce&gt;)%C(reset)&#39;
+</code></pre></div>
+
+<p>The <code>git lgX</code> shortcuts give similar views of the log, but with increasing vertical spacing.
+<code>git lg1</code> is the most compact, while <code>git lg3</code> is the most comfortable to read, as far as vertical whitespace.
+Same with the <code>-specific</code> commands.</p>
+<p>This is one more nice short log command:</p>
+<div class="highlight"><pre><span></span><code>    # View abbreviated SHA, description, and history graph of the latest 20 commits
+    l = log --pretty=oneline -n 20 --graph --abbrev-commit
+</code></pre></div>
+
+<p>Remember to use this with the <code>g</code> alias for super short log:</p>
+<div class="highlight"><pre><span></span><code>$ g l
+* 4357b28 (HEAD -&gt; source, gh/source, gh/HEAD) update mocking aws post
+* 063ad78 add mocking post
+* a5f1adc add init keras cnn post
+* fb911ec add keras cnn draft
+* 3549d35 add rosalind (euler paths) part 7 draft
+
+$ g lg1
+* 4357b28 - (67 minutes ago) update mocking aws post - Charles Reid (HEAD -&gt; source, gh/source, gh/HEAD)
+* 063ad78 - (2 weeks ago) add mocking post - Charles Reid
+* a5f1adc - (4 months ago) add init keras cnn post - C Reid
+* fb911ec - (5 months ago) add keras cnn draft - C Reid
+* 3549d35 - (5 months ago) add rosalind (euler paths) part 7 draft - C Reid
+...
+</code></pre></div>
+
+<h2 id="status-utils">Status Utils</h2>
+<p>The git status command is one of my most frequently used commands, so I made a few shortcuts:</p>
+<div class="highlight"><pre><span></span><code>    # View the current working tree status using the short format
+    s = status -s
+    ss = status
+</code></pre></div>
+
+<p>This makes checking the short or long status of a git repo easy:</p>
+<div class="highlight"><pre><span></span><code>$ g s
+AM pelican/content/git-workflows-1-config.md
+AM pelican/content/git-workflows-2-teams.md
+
+$ g ss
+On branch source
+Your branch is ahead of &#39;gh/source&#39; by 1 commit.
+  (use &quot;git push&quot; to publish your local commits)
+
+Changes to be committed:
+  (use &quot;git restore --staged &lt;file&gt;...&quot; to unstage)
+    new file:   pelican/content/git-workflows-1-config.md
+    new file:   pelican/content/git-workflows-2-teams.md
+
+Changes not staged for commit:
+  (use &quot;git add &lt;file&gt;...&quot; to update what will be committed)
+  (use &quot;git restore &lt;file&gt;...&quot; to discard changes in working directory)
+    modified:   pelican/content/git-workflows-1-config.md
+    modified:   pelican/content/git-workflows-2-teams.md
+</code></pre></div>
+
+<h2 id="fetching">Fetching</h2>
+<p>Fetching is handy to do, since it just fetches changes from a remote and doesn't actually
+change anything or try to merge anything (unlike a <code>git pull</code> command).</p>
+<p>The most useful fetch command (<code>git fetch --all</code>) is aliased to <code>g f</code> with the following
+bit in the aliases section of the <code>~/.gitconfig</code> file:</p>
+<div class="highlight"><pre><span></span><code>    f = fetch --all
+</code></pre></div>
+
+<h2 id="branch-utils">Branch Utils</h2>
+<p>The only command I might use more than the status command are branch commands,
+so here are several branch aliases:</p>
+<div class="highlight"><pre><span></span><code>    b = branch -v
+    bv = branch -v
+
+    ba = branch -a
+    bb = branch -v -a
+</code></pre></div>
+
+<p>In a similar way, you can get a summary view using <code>g b</code>:</p>
+<div class="highlight"><pre><span></span><code>$ g b
+  master 4c828cd [behind 84] update with awsome day notes
+* source b18adfd add two git workflow posts
+
+$ g b
+  master 940ee98 update mocking post
+* source b18adfd add two git workflow posts
+</code></pre></div>
+
+<p>and a little bit more information with <code>g bb</code>:</p>
+<div class="highlight"><pre><span></span><code>$ g bb
+  master            940ee98 update mocking post
+* source            b18adfd add two git workflow posts
+  remotes/gh/HEAD   -&gt; gh/source
+  remotes/gh/master 940ee98 update mocking post
+  remotes/gh/source b18adfd add two git workflow posts
+</code></pre></div>
+
+<h3 id="branch-and-checkout">Branch and Checkout</h3>
+<p>Sometimes if you are creaing a branch with a long branch name, it can be
+inconvenient to have to first create the branch with <code>git branch &lt;branch-name&gt;</code>
+and then check it out with <code>git checkout &lt;branch-name&gt;</code>.</p>
+<p>To resolve this you can define a <code>git go</code> alias that creates the branch and
+then switches to that branch:</p>
+<div class="highlight"><pre><span></span><code>    # Switch to a branch, creating it
+    # from the current branch if necessary
+    go = &quot;!f() { git checkout -b \&quot;$1\&quot; 2&gt; /dev/null || git checkout \&quot;$1\&quot;; }; f&quot;
+</code></pre></div>
+
+<p>Careful you don't mistype the branch name. If you typo a new branch name
+that happens to collide with an existing branch, the <code>checkout -b</code> will
+fail (branch already exists) and the fallback <code>checkout "$1"</code> will silently
+switch you to that existing branch. Typo a branch name that doesn't exist
+at all, and both commands fail — you stay on your current branch and may
+not notice. Always sanity check with <code>g b</code> after running <code>g go</code>.</p>
+<h2 id="remote-utils">Remote Utils</h2>
+<p>Another useful git command is the remote command, so here are a few
+remote aliases:</p>
+<div class="highlight"><pre><span></span><code>    r = remote -v
+    rv = remote -v
+    ra = remote -v
+</code></pre></div>
+
+<h2 id="commit-utils">Commit Utils</h2>
+<p>Sometimes you have changes that you've staged using <code>git add</code>, but you
+want to see the changes that you've staged, before you commit them.</p>
+<p>Normally you'd have to use the inconvenient <code>git diff --cached &lt;files&gt;</code>,
+but this can be aliased to <code>cdiff</code>, so that you can use <code>git diff</code> to see
+unstaged changes and <code>git cdiff</code> to see staged changes.</p>
+<p>Even better, you can define the alias <code>g cd</code> to run <code>git cdiff</code>...!</p>
+<p>Here's the relevant bit in the aliases section:</p>
+<div class="highlight"><pre><span></span><code>    cdiff = diff --cached
+    cd = diff --cached
+</code></pre></div>
+
+<h3 id="committing-all-changes">Committing All Changes</h3>
+<div class="highlight"><pre><span></span><code>    # Commit all changes
+    ca = !git add -A &amp;&amp; git commit -av
+</code></pre></div>
+
+<h3 id="fixing-commits">Fixing Commits</h3>
+<p>Some common operations for repairing commit history before pushing:</p>
+<div class="highlight"><pre><span></span><code>    # Amend the currently staged files to the latest commit
+    amend = commit --amend --reuse-message=HEAD
+
+    # Oops
+    fix = commit --amend --reuse-message=HEAD --edit
+</code></pre></div>
+
+<h2 id="miscellaneous-utils">Miscellaneous Utils</h2>
+<p>There are a few other actions that are useful to add to the aliases section
+of the <code>~/.gitconfig</code>:</p>
+<h3 id="rebasing-shortcuts">Rebasing shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    # Interactive rebase with the given number of latest commits
+    reb = &quot;!r() { git rebase -i HEAD~$1; }; r&quot;
+</code></pre></div>
+
+<h3 id="diff-shortcuts">Diff shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    # Show the diff between the latest commit and the current state
+    d = !&quot;git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat&quot;
+
+    # `git di $number` shows the diff between the state `$number` revisions ago and the current state
+    di = !&quot;d() { git diff --patch-with-stat HEAD~$1; }; git diff-index --quiet HEAD -- || clear; d&quot;
+</code></pre></div>
+
+<h3 id="pull-shortcuts">Pull shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    p = &quot;!f() { git pull $1 $2; }; f&quot;
+</code></pre></div>
+
+<h3 id="clone-shortcuts">Clone shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    # Clone a repository including all submodules
+    c = clone --recursive
+</code></pre></div>
+
+<h3 id="contributor-shortcuts">Contributor shortcuts</h3>
+<p>This last one is convenient for getting a summary of contributors:</p>
+<div class="highlight"><pre><span></span><code>    # List contributors with number of commits
+    contributors = shortlog --summary --numbered
+</code></pre></div>
+
+<p>An example for <a href="https://github.com/aws/chalice">https://github.com/aws/chalice</a>:</p>
+<div class="highlight"><pre><span></span><code>$ cd chalice/
+$ g contributors
+  1053  James Saryerwinnie
+   120  John Carlyle
+    94  stealthycoin
+    42  kyleknap
+    35  jcarlyl
+    19  Kyle Knapp
+    12  Atharva Chauthaiwale
+</code></pre></div>
+
+<h1 id="core-section">Core section</h1>
+<p>Because it's the best text editor:</p>
+<div class="highlight"><pre><span></span><code>[core]
+    editor = vim
+</code></pre></div>
+
+<p>I have some other stuff I've collected, many of them from
+<a href="https://github.com/mathiasbynens/dotfiles">https://github.com/mathiasbynens/dotfiles</a>:</p>
+<div class="highlight"><pre><span></span><code>    # Use custom `.gitignore` and `.gitattributes`
+    excludesfile = ~/.gitignore
+    attributesfile = ~/.gitattributes
+
+    # Treat spaces before tabs and all kinds of trailing whitespace as an error
+    # [default] trailing-space: looks for spaces at the end of a line
+    # [default] space-before-tab: looks for spaces before tabs at the beginning of a line
+    whitespace = space-before-tab,-indent-with-non-tab,trailing-space
+
+    # Make `git rebase` safer on macOS
+    # More info: &lt;http://www.git-tower.com/blog/make-git-rebase-safe-on-osx/&gt;
+    ###trustctime = false
+
+    # Prevent showing files whose names contain non-ASCII symbols as unversioned.
+    # http://michael-kuehnel.de/git/2014/11/21/git-mac-osx-and-german-umlaute.html
+    precomposeunicode = false
+
+    # Speed up commands involving untracked files such as `git status`.
+    # https://git-scm.com/docs/git-update-index#_untracked_cache
+    untrackedCache = true
+</code></pre></div>
+
+<h1 id="color-section">Color section</h1>
+<p>Make some nice beautiful colors that are easy to understand:</p>
+<div class="highlight"><pre><span></span><code>[color]
+
+    # Use colors in Git commands that are capable of colored output when
+    # outputting to the terminal. (This is the default setting in Git ≥ 1.8.4.)
+    ui = auto
+
+[color &quot;branch&quot;]
+
+    current = yellow reverse
+    local = yellow
+    remote = green
+
+[color &quot;diff&quot;]
+
+    meta = yellow bold
+    frag = magenta bold # line info
+    old = red # deletions
+    new = green # additions
+
+[color &quot;status&quot;]
+
+    added = yellow
+    changed = green
+    untracked = cyan
+</code></pre></div>
+
+<h1 id="url-section">Url section</h1>
+<p>This makes some Github-related URLs easier and shorter to type:</p>
+<div class="highlight"><pre><span></span><code>[url &quot;git@github.com:&quot;]
+
+    insteadOf = &quot;gh:&quot;
+    pushInsteadOf = &quot;github:&quot;
+    pushInsteadOf = &quot;git://github.com/&quot;
+
+[url &quot;git@gist.github.com:&quot;]
+
+    insteadOf = &quot;gst:&quot;
+    pushInsteadOf = &quot;gist:&quot;
+    pushInsteadOf = &quot;git://gist.github.com/&quot;
+
+[url &quot;git://gist.github.com/&quot;]
+
+    insteadOf = &quot;gist:&quot;
+</code></pre></div>
+
+<p>Now, instead of</p>
+<div class="highlight"><pre><span></span><code>$ git clone git@github.com:org-name/repo-name
+</code></pre></div>
+
+<p>you can do the much simpler</p>
+<div class="highlight"><pre><span></span><code>$ g c gh://org-name/repo-name
+</code></pre></div>
+
+<p>Voila! Start integrating these alises into your daily workflow,
+and you'll find yourself using a lot fewer keystrokes!</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Mocking AWS in Unit Tests
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2019-09-23T09:00:00-07:00" pubdate>Monday 09/23/2019</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/mocking-aws-in-unit-tests.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#a-simple-example-mocking-api-responses">A Simple Example: Mocking API Responses</a><ul>
+<li><a href="#the-genuine-aws-call">The Genuine AWS Call</a></li>
+<li><a href="#the-mocked-aws-call">The Mocked AWS Call</a></li>
+</ul>
+</li>
+<li><a href="#where-to-patch-a-common-gotcha">Where To Patch: A Common Gotcha</a></li>
+<li><a href="#when-to-reach-for-moto-instead">When To Reach For moto Instead</a></li>
+</ul>
+</div>
+<h2 id="overview">Overview</h2>
+<p>This post covers a technique for mocking AWS in unit tests so that you can test functionality that normally
+requires API calls and handling responses, by mocking those responses instead of making actual API calls.</p>
+<h2 id="a-simple-example-mocking-api-responses">A Simple Example: Mocking API Responses</h2>
+<h3 id="the-genuine-aws-call">The Genuine AWS Call</h3>
+<p>Let's start with an example of an AWS API call. Here's how our program will be structured:
+start with a driver <code>lister.py</code> that creates an AWS secrets manager client and defines a 
+function to list secrets using the secrets manager client, then a test for it in <code>test_lister.py</code>
+that mocks the AWS call.</p>
+<p>This example is simple and uses just one function, <code>list_secrets()</code>,
+which returns a JSON response that looks something like this:</p>
+<div class="highlight"><pre><span></span><code>{
+  &quot;SecretList&quot;: [
+    {
+      &quot;ARN&quot;: &quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret1-abc123&quot;,
+      &quot;Name&quot;: &quot;prefix/es_source_ip&quot;,
+      &quot;LastChangedDate&quot;: &quot;2019-09-23 17:29:16.267000-07:00&quot;,
+      &quot;LastAccessedDate&quot;: &quot;2019-09-23 17:00:00-07:00&quot;,
+      &quot;SecretVersionsToStages&quot;: {
+        &quot;658c3b41-0806-48b9-b05d-ea7dc2dbf237&quot;: [
+          &quot;AWSCURRENT&quot;
+        ],
+        &quot;f37ccfe2-16e0-4305-a250-ef89d2c47ece&quot;: [
+          &quot;AWSPREVIOUS&quot;
+        ]
+      }
+    },
+    {
+      &quot;ARN&quot;: &quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret2-def789&quot;,
+      &quot;Name&quot;: &quot;prefix/secret2&quot;,
+      &quot;LastChangedDate&quot;: &quot;2019-09-22 17:05:01.431000-07:00&quot;,
+      &quot;LastAccessedDate&quot;: &quot;2019-09-22 17:00:00-07:00&quot;,
+      &quot;SecretVersionsToStages&quot;: {
+        &quot;95AE5F8B-34E7-4EDF-A672-9E3AF1A4732E&quot;: [
+          &quot;AWSCURRENT&quot;
+        ],
+        &quot;F29E224A-BC03-4780-B64E-EA666B99D952&quot;: [
+          &quot;AWSPREVIOUS&quot;
+        ]
+      }
+    }
+  ]
+}
+</code></pre></div>
+
+<p>Using the secrets manager API:</p>
+<p><strong><code>lister.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">boto3</span>
+
+<span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">print_secret_names</span><span class="p">():</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">secret</span> <span class="ow">in</span> <span class="n">s</span><span class="p">[</span><span class="s1">&#39;SecretList&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="s1">&#39;Name&#39;</span> <span class="ow">in</span> <span class="n">secret</span> <span class="ow">and</span> <span class="s1">&#39;LastAccessedDate&#39;</span> <span class="ow">in</span> <span class="n">secret</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Secret Name: </span><span class="si">{</span><span class="n">secret</span><span class="p">[</span><span class="s1">&#39;Name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (last accessed: </span><span class="si">{</span><span class="n">secret</span><span class="p">[</span><span class="s1">&#39;LastAccessedDate&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">print_secret_names</span><span class="p">()</span>
+</code></pre></div>
+
+<p>If we run this file, we'll see a list of secrets in the real secrets manager -
+that is, the secrets manager that is linked to the boto credentials in <code>~/.aws</code>,
+so the secrets we see are the actual secrets in the secret manager:</p>
+<div class="highlight"><pre><span></span><code>$ python lister.py
+Secret Name: prefix/secret1 (last accessed: 2019-09-23 17:00:00-07:00)
+Secret Name: prefix/secret2 (last accessed: 2019-09-23 17:00:00-07:00)
+Secret Name: prefix/secret3 (last accessed: 2019-09-23 17:00:00-07:00)
+</code></pre></div>
+
+<h3 id="the-mocked-aws-call">The Mocked AWS Call</h3>
+<p>It is important to only mock the functionality we need.
+We should mock the returned JSON, but only the <code>Name</code>
+and <code>LastAccessedDate</code> fields.</p>
+<p>To mock the call to <code>list_secrets()</code>, we start by importing
+<code>mock</code> from <code>unittest</code>. Then we import the file that has the
+function we want to test. We also import any other modules
+we need.</p>
+<p>Next, we are mocking a call to a method of an object,
+which we can do by creating a context via <code>with mock.patch()</code>
+(and passing it a string with the name of the object we want
+to mock, or patch).</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="k">class</span> <span class="nc">TestLister</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;lister.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
+            <span class="o">...</span>
+            <span class="n">sm</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span> <span class="o">...</span> <span class="p">)</span>
+            <span class="o">...</span>
+</code></pre></div>
+
+<p>Any calls made to <code>sm_client</code> in the <code>lister</code> module will be mocked
+using the <code>mock.MagicMock</code> object that we define in the context,
+so we craft the response we want before we call the method we 
+want to test (which in turn will call <code>sm_client.list_secrets()</code>).</p>
+<p>The full version of the test looks like this:</p>
+<p><strong><code>test_lister.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="k">class</span> <span class="nc">TestLister</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;lister.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
+            <span class="n">return_json</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;SecretList&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret1&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                    <span class="p">},</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret2&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                    <span class="p">}</span>
+                <span class="p">]</span>
+            <span class="p">}</span>
+            <span class="n">sm</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">return_json</span><span class="p">)</span>
+            <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
+</code></pre></div>
+
+<p>When the test file is run via Python, we see the fake secrets:</p>
+<div class="highlight"><pre><span></span><code>$ python test_lister.py
+Secret Name: fakesecret1 (last accessed: 2019-09-23 20:31:49.186874)
+Secret Name: fakesecret2 (last accessed: 2019-09-23 20:31:49.186880)
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+</code></pre></div>
+
+<h2 id="where-to-patch-a-common-gotcha">Where To Patch: A Common Gotcha</h2>
+<p>The single most confusing thing about <code>mock.patch</code> is that you patch a name
+where it is <em>looked up</em>, not where it is <em>defined</em>. This trips up almost
+everyone the first time they reach for <code>unittest.mock</code>.</p>
+<p>In our example above, <code>lister.py</code> does <code>import boto3</code> at the top and then binds
+a client to a module-level name:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>That means the name <code>sm_client</code> now lives in the <code>lister</code> module's namespace.
+The patch target <code>"lister.sm_client"</code> works because that is the exact
+namespace where our code looks the name up when it runs.</p>
+<p>A very natural (but broken) instinct is to try to patch <code>boto3</code> itself:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># This looks reasonable, but does nothing useful.</span>
+<span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;boto3.client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">bc</span><span class="p">:</span>
+    <span class="n">bc</span><span class="o">.</span><span class="n">return_value</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span><span class="n">return_value</span><span class="o">=</span><span class="n">return_json</span><span class="p">)</span>
+    <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
+</code></pre></div>
+
+<p>This patch replaces <code>boto3.client</code> in the <code>boto3</code> module, but <code>lister.py</code>
+already called <code>boto3.client('secretsmanager')</code> at import time and stored the
+result in <code>lister.sm_client</code>. That reference is unaffected by the patch, so
+the real AWS client is still used and the test either makes a real API call or
+fails with a credentials error.</p>
+<p>The rule of thumb: find the line in your code that actually uses the name,
+then patch it in <em>that</em> module's namespace. If <code>lister.py</code> did the import
+inside the function instead:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">print_secret_names</span><span class="p">():</span>
+    <span class="kn">import</span> <span class="nn">boto3</span>
+    <span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
+    <span class="o">...</span>
+</code></pre></div>
+
+<p>then <code>"lister.boto3"</code> would be the correct patch target, because that is where
+<code>boto3</code> is looked up at call time.</p>
+<p>Once test files grow past a handful of nested <code>with mock.patch(...)</code> blocks,
+the <code>mocker</code> fixture from
+<a href="https://pypi.org/project/pytest-mock/"><code>pytest-mock</code></a> is a cleaner way to
+express the same patches without the indentation pyramid.</p>
+<h2 id="when-to-reach-for-moto-instead">When To Reach For <code>moto</code> Instead</h2>
+<p><code>unittest.mock</code> is a good fit when you need to stub out a single call or two,
+but it has real limits:</p>
+<ul>
+<li>You hand-craft the response payload, so nothing checks that the shape you
+  invented actually matches the real AWS API.</li>
+<li>Multi-step flows (create a secret, then list it, then rotate it) require
+  hand-wiring the state changes between mock calls.</li>
+<li>Every new AWS method you touch is another <code>mock.MagicMock(...)</code> to author
+  and maintain.</li>
+</ul>
+<p>For anything beyond a small handful of calls, <a href="https://github.com/getmoto/moto"><code>moto</code></a>
+is usually the better tool. <code>moto</code> runs an in-process fake of the AWS services
+themselves, so your code calls <code>boto3</code> normally and gets back responses whose
+shapes match the real API. You can create resources, list them, mutate them,
+and delete them the same way you would in production.</p>
+<p>Here is the same test written against <code>moto</code>:</p>
+<p><strong><code>test_lister_moto.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">from</span> <span class="nn">moto</span> <span class="kn">import</span> <span class="n">mock_secretsmanager</span>
+
+<span class="nd">@mock_secretsmanager</span>
+<span class="k">def</span> <span class="nf">test_print_secret_names</span><span class="p">(</span><span class="n">capsys</span><span class="p">):</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;secretsmanager&quot;</span><span class="p">,</span> <span class="n">region_name</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span><span class="p">)</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">create_secret</span><span class="p">(</span><span class="n">Name</span><span class="o">=</span><span class="s2">&quot;fakesecret1&quot;</span><span class="p">,</span> <span class="n">SecretString</span><span class="o">=</span><span class="s2">&quot;hunter2&quot;</span><span class="p">)</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">create_secret</span><span class="p">(</span><span class="n">Name</span><span class="o">=</span><span class="s2">&quot;fakesecret2&quot;</span><span class="p">,</span> <span class="n">SecretString</span><span class="o">=</span><span class="s2">&quot;correct horse&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Reset lister&#39;s cached client so it picks up the moto-patched boto3.</span>
+    <span class="n">lister</span><span class="o">.</span><span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;secretsmanager&quot;</span><span class="p">,</span> <span class="n">region_name</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span><span class="p">)</span>
+
+    <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
+
+    <span class="n">captured</span> <span class="o">=</span> <span class="n">capsys</span><span class="o">.</span><span class="n">readouterr</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="s2">&quot;fakesecret1&quot;</span> <span class="ow">in</span> <span class="n">captured</span><span class="o">.</span><span class="n">out</span>
+    <span class="k">assert</span> <span class="s2">&quot;fakesecret2&quot;</span> <span class="ow">in</span> <span class="n">captured</span><span class="o">.</span><span class="n">out</span>
+</code></pre></div>
+
+<p>A few things to notice:</p>
+<ul>
+<li>The <code>@mock_secretsmanager</code> decorator patches <code>botocore</code> at the HTTP layer,
+  so the "where to patch" gotcha from the previous section does not apply -
+  any <code>boto3</code> client constructed inside the decorated scope talks to the fake.</li>
+<li>We exercise the real <code>create_secret</code> and <code>list_secrets</code> code paths. If AWS
+  changes a field name, or our code assumes a field that the API does not
+  actually return, the test will notice.</li>
+<li>We assert on the <em>output</em> of <code>print_secret_names()</code> via <code>capsys</code>, not just
+  that it ran without exceptions.</li>
+</ul>
+<p><code>moto</code> also supports a standalone <a href="https://docs.getmoto.org/en/latest/docs/server_mode.html">server mode</a>
+that speaks the AWS wire protocol on a local port, which is useful for
+integration tests that span multiple services or non-Python clients.</p>
+<p>The rough guideline: reach for <code>unittest.mock</code> when you are stubbing a single
+call to isolate one unit of code, and reach for <code>moto</code> when the test needs the
+service to <em>behave</em> like AWS across several calls.</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pytest.html">pytest</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/tests.html">tests</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/aws.html">aws</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1091,6 +1368,28 @@ out and get you feeling right as rain.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>April 2025</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/project-euler-312-hamiltonian-cycles-on-sierpinski-graphs.html">Project Euler 312: Hamiltonian Cycles on Sierpiński Graphs</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/project-euler-227-the-chase-when-brute-force-costs-80-days.html">Project Euler 227 (The Chase): When Brute Force Costs 80 Days</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/project-euler-198-and-continued-fractions-when-is-a-rational-ambiguous.html">Project Euler 198 and Continued Fractions: When Is a Rational Ambiguous?</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/project-euler-60-finding-five-primes-that-concatenate-to-primes.html">Project Euler 60: Finding Five Primes That Concatenate to Primes</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

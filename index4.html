@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Generating Functions Part 2: Marbles in a Can
+                Working Through the PortSwigger Web Security Academy
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2022-10-24T12:00:00-07:00" pubdate>Monday 10/24/2022</time>
+                <time datetime="2023-05-20T20:00:00-07:00" pubdate>Saturday 05/20/2023</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/generating-functions-part-2-marbles-in-a-can.html">permalink</a>
+                <a href="https://charlesreid1.github.io/working-through-the-portswigger-web-security-academy.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,173 +127,79 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>This is part 2 of our series on generating functions. In
-<a href="generating-functions-part-1-solving-the-quicksort-recurrence.html">part 1</a>
-we used generating functions to solve the quicksort recurrence, which is a
-serious industrial-strength application. This time we will use them for
-something a lot more whimsical: counting how many different cans of colored
-marbles you can put together under a bunch of arbitrary rules.</p>
-<p>The example is from Trotter's <em>Applied Combinatorics</em>. Our working notes
-for this one, along with a few related exercises, live on the
-<a href="https://charlesreid1.com/wiki/Generating_Functions">Generating Functions</a>
-page of our wiki.</p>
-<h2 id="the-problem">The Problem</h2>
-<p>We are packing cans of marbles. Each can holds 20 marbles, in some
-combination of red, blue, yellow, and green. The rules are:</p>
+        <div class="entry-content"><p>This post is part 1 of a series. We spent a chunk of May and June 2023
+working through the <a href="https://portswigger.net/web-security">PortSwigger Web Security Academy</a>
+labs, mostly the SQL injection track, and taking notes on our wiki as we
+went. This post is the setup - what the Academy is, why we picked it, and
+how it fits together. The posts that follow will cover the specific
+techniques.</p>
+<h2 id="what-the-academy-is">What the Academy Is</h2>
+<p>PortSwigger makes <a href="https://charlesreid1.com/wiki/Burp_Suite">Burp Suite</a>,
+which is the standard tool for web application security testing. They also
+run a free online academy at
+<a href="https://portswigger.net/web-security">portswigger.net/web-security</a>, which
+consists of written lessons plus hands-on labs. The labs are hosted for
+you - you get a URL, you attack the app running at that URL, and the
+Academy tracks whether you succeeded.</p>
+<p>The labs are organized roughly by the
+<a href="https://charlesreid1.com/wiki/OWASP">OWASP Top 10</a>, which is the standard
+catalog of web application vulnerability categories. SQL injection, XSS,
+XXE, access control issues, authentication bugs, and so on.</p>
+<p>The reason to pick this Academy over the other options is that the labs
+are <em>real vulnerable web apps</em>, not multiple-choice questions. You are
+using actual Burp Suite against actual HTTP requests. When you finish a
+lab, you have practiced the thing, not read about the thing.</p>
+<h2 id="our-setup">Our Setup</h2>
+<p>The setup is not complicated:</p>
 <ul>
-<li>Each can must have <strong>at least one</strong> red marble.</li>
-<li>Each can can have <strong>no more than three</strong> blue marbles.</li>
-<li>Yellow marbles can appear in any quantity.</li>
-<li>Green marbles can only appear in <strong>multiples of 4</strong>.</li>
+<li><a href="https://portswigger.net/burp/communitydownload">Burp Suite Community Edition</a>
+  (free, sufficient for most labs, painful for a few of the automation-heavy
+  ones)</li>
+<li>A <a href="https://portswigger.net">PortSwigger account</a> (also free)</li>
+<li>A browser configured to proxy through Burp on port 8080</li>
+<li>A wiki page to take notes on, so you remember what you learned a week
+  later</li>
 </ul>
-<p>How many different cans of 20 marbles are there?</p>
-<h2 id="the-generating-function-approach">The Generating Function Approach</h2>
-<p>The trick with problems like this is to write down one generating function
-per color, where the coefficient of <span class="math">\(z^k\)</span> represents "the number of ways to
-put <span class="math">\(k\)</span> marbles of this color in the can." Then multiply them all together.
-The coefficient of <span class="math">\(z^{20}\)</span> in the product is the answer.</p>
-<p>Each rule turns into a constraint on the shape of that color's series.</p>
-<p><strong>Red</strong> must have at least one, so the <span class="math">\(z^0\)</span> term is missing:</p>
-<div class="math">$$
-G_r(z) = z + z^2 + z^3 + \dots = \dfrac{z}{1-z}
-$$</div>
-<p><strong>Blue</strong> can have zero to three, and no more, so it is a polynomial:</p>
-<div class="math">$$
-G_b(z) = 1 + z + z^2 + z^3
-$$</div>
-<p><strong>Yellow</strong> is unconstrained:</p>
-<div class="math">$$
-G_y(z) = 1 + z + z^2 + z^3 + \dots = \dfrac{1}{1-z}
-$$</div>
-<p><strong>Green</strong> appears only in multiples of 4. So the only nonzero coefficients
-are on <span class="math">\(z^0, z^4, z^8, \dots\)</span>:</p>
-<div class="math">$$
-G_g(z) = 1 + z^4 + z^8 + z^{12} + \dots = \dfrac{1}{1 - z^4}
-$$</div>
-<p>(The substitution <span class="math">\(u = z^4\)</span> turns this into the familiar <span class="math">\(\tfrac{1}{1-u}\)</span>,
-which is where the closed form comes from.)</p>
-<h2 id="multiplying-it-all-together">Multiplying It All Together</h2>
-<p>The total generating function is</p>
-<div class="math">$$
-G(z) = G_r(z) \cdot G_b(z) \cdot G_y(z) \cdot G_g(z)
-     = \dfrac{z}{1-z} \cdot (1 + z + z^2 + z^3) \cdot \dfrac{1}{1-z} \cdot \dfrac{1}{1-z^4}
-$$</div>
-<p>There is a nice simplification hiding in there. Notice that
-<span class="math">\(1 + z + z^2 + z^3 = \tfrac{1 - z^4}{1 - z}\)</span>, so the <span class="math">\(1 - z^4\)</span> cancels with
-the denominator of <span class="math">\(G_g\)</span>, and the <span class="math">\(1 - z\)</span> in the numerator eats one power
-of the <span class="math">\(\tfrac{1}{1-z}\)</span> factors. What is left is</p>
-<div class="math">$$
-G(z) = \dfrac{z}{(1-z)^3}
-$$</div>
-<p>Which is much easier to work with.</p>
-<h2 id="reading-off-the-answer">Reading Off the Answer</h2>
-<p>We want the coefficient of <span class="math">\(z^{20}\)</span> in <span class="math">\(\dfrac{z}{(1-z)^3}\)</span>.</p>
-<p>The expansion of <span class="math">\(\dfrac{1}{(1-z)^3}\)</span> is</p>
-<div class="math">$$
-\dfrac{1}{(1-z)^3} = \sum_{n \geq 0} \binom{n+2}{2} z^n
-$$</div>
-<p>which is the triangle-number sequence <span class="math">\(1, 3, 6, 10, 15, 21, \dots\)</span>.</p>
-<p>Multiplying by <span class="math">\(z\)</span> shifts the coefficients up by one power, so the
-coefficient of <span class="math">\(z^n\)</span> in <span class="math">\(G(z)\)</span> is <span class="math">\(\binom{n+1}{2}\)</span>.</p>
-<p>For a can of 20 marbles:</p>
-<div class="math">$$
-\binom{21}{2} = 210
-$$</div>
-<p>So there are exactly 210 different cans of 20 marbles that satisfy all
-the rules.</p>
-<h2 id="sanity-check-on-small-cases">Sanity Check on Small Cases</h2>
-<p>We can verify the closed form by walking through small <span class="math">\(n\)</span>.</p>
-<p><strong><span class="math">\(n = 1\)</span> (one marble):</strong> Only one configuration works - the single red
-marble. Coefficient is <span class="math">\(\binom{2}{2} = 1\)</span>. ✓</p>
-<p><strong><span class="math">\(n = 2\)</span> (two marbles):</strong> One slot is red. The other slot can be red, blue,
-or yellow (green is out because it only appears in multiples of 4). That is
-3 configurations: RR, RB, RY. Coefficient is <span class="math">\(\binom{3}{2} = 3\)</span>. ✓</p>
-<p><strong><span class="math">\(n = 3\)</span> (three marbles):</strong> Same idea, one is red, the other two are drawn
-from {R, B, Y}. Enumerating: RRR, RRB, RRY, RBB, RBY, RYY. That is 6.
-Coefficient is <span class="math">\(\binom{4}{2} = 6\)</span>. ✓</p>
-<p>The pattern of <span class="math">\(3, 6, 10, 15, \dots\)</span> is a run of triangle numbers, which
-is exactly what <span class="math">\(\binom{n+1}{2}\)</span> produces.</p>
-<h2 id="the-point">The Point</h2>
-<p>You could solve this problem by writing a script that enumerates every
-combination of <span class="math">\((r, b, y, g)\)</span> with <span class="math">\(r+b+y+g = 20\)</span> and the constraints
-respected, and it would work fine. The generating function approach does
-something different: it gives you a <em>closed form</em> for the answer as a
-function of <span class="math">\(n\)</span>. Change the can size to 50, and you get <span class="math">\(\binom{51}{2} = 1275\)</span>
-without running anything.</p>
-<p>Also, and this matters more than it sounds: turning "no more than three"
-into a polynomial and "multiples of four" into a series in <span class="math">\(z^4\)</span> takes
-the constraints out of your enumeration logic and puts them into algebra.
-Algebra is easier to check than nested loops.</p>
-<p>Next in the series: what happens when order matters, and we need to switch
-from ordinary generating functions to exponential generating functions.</p>
+<p>That last one is the whole point. The Academy is good, but if you finish
+a lab and move on without writing anything down, you will forget the
+technique inside a month. Writing up each lab in your own words - the
+setup, the attack, the trick that made it work - is what turns lab
+practice into retained knowledge.</p>
+<h2 id="the-owasp-top-10-as-a-scaffold">The OWASP Top 10 as a Scaffold</h2>
+<p>We use <a href="https://charlesreid1.com/wiki/OWASP">OWASP Top 10</a> as the
+organizing scaffold for our security notes on the wiki. It is not the only
+way to slice web security, but it is the way that most people talk about
+web security, and it is what you'll see referenced in bug bounty programs
+and pentest reports. Learning to recognize each category is a solid
+foundation.</p>
+<p>The list has changed over the years - the 2021 version reorganized things
+significantly - but the SQL injection, XSS, and XXE categories that we
+focus on in this series have been fixtures since the beginning.</p>
+<h2 id="what-this-series-will-cover">What This Series Will Cover</h2>
+<p>Rough plan for the next few posts:</p>
+<ul>
+<li>SQL injection fundamentals - the four attack shapes that cover most
+  cases</li>
+<li>UNION attacks specifically, and how to use them to dump data from
+  tables you don't have direct access to</li>
+<li>Blind SQL injection with conditional responses - inferring data from
+  page behavior</li>
+<li>Blind SQL injection with conditional errors - the more advanced
+  Oracle-flavored variant</li>
+<li>A short post on two Burp Suite extensions that are worth installing
+  before you start</li>
+</ul>
+<p>Everything is grounded in a specific PortSwigger lab. Everything has a
+corresponding page on our
+<a href="https://charlesreid1.com/wiki/Category:Security">wiki</a>. If the summary
+here is not enough detail, the wiki page is the deep version.</p>
 <h2 id="references">References</h2>
 <ul>
-<li>Our wiki notes:
-  <a href="https://charlesreid1.com/wiki/Generating_Functions">Generating Functions</a></li>
-<li>Trotter, <em>Applied Combinatorics</em>, Chapter 8</li>
-</ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+<li><a href="https://portswigger.net/web-security">Web Security Academy</a></li>
+<li>Our wiki notes: <a href="https://charlesreid1.com/wiki/Burp_Suite">Burp Suite</a>,
+  <a href="https://charlesreid1.com/wiki/SQL_Injection">SQL Injection</a>,
+  <a href="https://charlesreid1.com/wiki/OWASP">OWASP</a></li>
+</ul></div>
 
     </div>
 </div>
@@ -305,15 +211,17 @@ from ordinary generating functions to exponential generating functions.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/generating-functions.html">generating functions</a>
+                    <a href="https://charlesreid1.github.io/tag/web-security.html">web security</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/combinatorics.html">combinatorics</a>
+                    <a href="https://charlesreid1.github.io/tag/portswigger.html">portswigger</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ogf.html">ogf</a>
+                    <a href="https://charlesreid1.github.io/tag/burp-suite.html">burp suite</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/trotter.html">trotter</a>
+                    <a href="https://charlesreid1.github.io/tag/owasp.html">owasp</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pentesting.html">pentesting</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -331,18 +239,18 @@ from ordinary generating functions to exponential generating functions.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Generating Functions Part 1: Solving the Quicksort Recurrence
+                Notes on Italo Calvino's Six Memos for the Next Millennium
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2022-10-23T12:00:00-07:00" pubdate>Sunday 10/23/2022</time>
+                <time datetime="2022-12-30T22:00:00-08:00" pubdate>Friday 12/30/2022</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/generating-functions-part-1-solving-the-quicksort-recurrence.html">permalink</a>
+                <a href="https://charlesreid1.github.io/notes-on-italo-calvinos-six-memos-for-the-next-millennium.html">permalink</a>
             </span>
             </p>
         </div>
@@ -359,173 +267,121 @@ from ordinary generating functions to exponential generating functions.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>This post is part 1 of a series on generating functions, based on notes
-we have been working through from Sedgewick and Flajolet's <em>Analysis of
-Algorithms</em> and Trotter's <em>Applied Combinatorics</em>. The full set of notes
-lives on our wiki:
-<a href="https://charlesreid1.com/wiki/Generating_Functions">Generating Functions</a>.</p>
-<p>Generating functions are one of those techniques that look completely
-mysterious the first time you see them, and then look like the obvious
-thing to do the tenth time you see them. They turn recurrences into
-functions, functions into series, and series back into closed forms for
-the coefficients you actually wanted. This post walks through one of the
-nicest applications: solving the recurrence relation for quicksort.</p>
-<h2 id="the-recurrence">The Recurrence</h2>
-<p>The average number of comparisons quicksort makes on an array of size <span class="math">\(n\)</span>
-satisfies the recurrence</p>
-<div class="math">$$
-C_n = n + 1 + \dfrac{2}{n} \sum_{1 \leq k \leq n} C_{k-1}
-$$</div>
-<p>The <span class="math">\(n+1\)</span> term is the cost of the partition step. The sum averages the cost
-of recursing on the two subarrays over all possible choices of pivot.</p>
-<p>Staring at that sum inside the recurrence is not a great starting point.
-Everything on the right depends on every <span class="math">\(C_k\)</span> that came before. Generating
-functions are how we get out.</p>
-<h2 id="setting-up-the-generating-function">Setting Up the Generating Function</h2>
-<p>The plan is to introduce a generating function</p>
-<div class="math">$$
-C(z) = \sum_{n \geq 0} C_n z^n
-$$</div>
-<p>and then translate each piece of the recurrence into an operation on <span class="math">\(C(z)\)</span>.</p>
-<p>Multiplying the recurrence by <span class="math">\(n\)</span> to clear the <span class="math">\(\tfrac{2}{n}\)</span>, and then by
-<span class="math">\(z^n\)</span>, and summing over <span class="math">\(n\)</span>, we end up with</p>
-<div class="math">$$
-\sum_{n \geq 1} n C_n z^n = \sum_{n \geq 1} n(n+1) z^n + 2 \sum_{n \geq 1} \sum_{1 \leq k \leq n} C_{k-1} z^n
-$$</div>
-<p>Each of these three terms turns into something in <span class="math">\(C(z)\)</span>:</p>
-<ul>
-<li>The left side is <span class="math">\(z C'(z)\)</span>, since taking a derivative and multiplying by <span class="math">\(z\)</span>
-  pulls out an <span class="math">\(n\)</span> from each term of the series</li>
-<li>The first term on the right involves the second derivative of
-  <span class="math">\(\tfrac{1}{1-z}\)</span>, and simplifies to <span class="math">\(\tfrac{2}{(1-z)^3}\)</span></li>
-<li>The double sum is a partial-sum operation, which corresponds to multiplying
-  by <span class="math">\(\tfrac{1}{1-z}\)</span></li>
-</ul>
-<p>Putting it all together, we get</p>
-<div class="math">$$
-C'(z) = \dfrac{2}{(1-z)^3} + \dfrac{2 C(z)}{1 - z}
-$$</div>
-<p>The recurrence has become a first-order linear differential equation.</p>
-<h2 id="solving-the-ode">Solving the ODE</h2>
-<p>To solve</p>
-<div class="math">$$
-C'(z) - \dfrac{2 C(z)}{1 - z} = \dfrac{2}{(1-z)^3}
-$$</div>
-<p>we look for an integrating factor <span class="math">\(\rho(z)\)</span> such that
-<span class="math">\(\rho'(z) = -\dfrac{2 \rho(z)}{1-z}\)</span>. That works out to <span class="math">\(\rho(z) = (1-z)^2\)</span>.</p>
-<p>Multiplying through:</p>
-<div class="math">$$
-\left( (1-z)^2 C(z) \right)' = \dfrac{2}{1-z}
-$$</div>
-<p>Integrating both sides:</p>
-<div class="math">$$
-(1-z)^2 C(z) = 2 \ln \left( \dfrac{1}{1-z} \right)
-$$</div>
-<p>And so</p>
-<div class="math">$$
-C(z) = \dfrac{2}{(1-z)^2} \ln \left( \dfrac{1}{1-z} \right)
-$$</div>
-<p>That is the generating function for the average number of comparisons in
-quicksort. Not obvious.</p>
-<h2 id="reading-off-the-coefficient">Reading Off the Coefficient</h2>
-<p>Now we extract <span class="math">\(C_n = [z^n] C(z)\)</span>. The expression <span class="math">\(\tfrac{1}{(1-z)^2}\)</span> has
-the well-known expansion <span class="math">\(\sum (n+1) z^n\)</span>, and <span class="math">\(\ln \left( \tfrac{1}{1-z} \right)\)</span>
-has the expansion <span class="math">\(\sum \tfrac{z^k}{k}\)</span>, which is the generating function
-for the sequence <span class="math">\(H_k = 1 + \tfrac{1}{2} + \dots + \tfrac{1}{k}\)</span> (the
-harmonic numbers, once you divide by <span class="math">\(\tfrac{1}{1-z}\)</span> to accumulate).</p>
-<p>Working through the convolution, we land at</p>
-<div class="math">$$
-C_n = 2(n+1)(H_{n+1} - 1)
-$$</div>
-<p>That is the closed form. Since <span class="math">\(H_n \approx \ln n + \gamma\)</span> for large <span class="math">\(n\)</span>,
-this gives <span class="math">\(C_n \sim 2 n \ln n\)</span>, which recovers the familiar
-<span class="math">\(O(n \log n)\)</span> average case for quicksort - with an actual constant in front
-of it.</p>
-<h2 id="why-this-is-worth-learning">Why This Is Worth Learning</h2>
-<p>The reason this technique is so satisfying is that we started with a
-recurrence that looked completely intractable - <span class="math">\(C_n\)</span> depends on the entire
-prefix <span class="math">\(C_0, C_1, \dots, C_{n-1}\)</span> - and ended with a clean closed form.</p>
-<p>The mechanical steps are:</p>
-<ol>
-<li>Turn the recurrence into a functional equation in <span class="math">\(C(z)\)</span> by multiplying
-   by <span class="math">\(z^n\)</span> and summing.</li>
-<li>Solve the functional equation. Sometimes it is algebraic, sometimes it
-   is a differential equation (as here).</li>
-<li>Extract the <span class="math">\(n\)</span>-th coefficient of the solution.</li>
-</ol>
-<p>In upcoming posts in this series, we will look at simpler examples that
-show how the coefficient extraction step works, including a nice puzzle
-about distributing colored marbles into cans with weird constraints.</p>
+        <div class="entry-content"><p>We spent the tail end of 2022 reading Italo Calvino's <em>Six Memos for the
+Next Millennium</em>, which is a set of Norton Lectures Calvino was preparing
+to give at Harvard in 1985-1986. He died before he could deliver them, and
+only five of the six memos were finished. The published book contains those
+five: Lightness, Quickness, Exactitude, Visibility, and Multiplicity.</p>
+<p>The book is short. It is also incredibly dense. These are lectures about
+what Calvino thought literature needed to carry into the next thousand
+years, and they read less like a set of essays and more like an attempt
+to name and preserve a handful of properties before they slip out of the
+culture.</p>
+<p>This post is a small selection of notes on the first two memos - Lightness
+and Quickness - which are the two that hit hardest for us on this reading.</p>
+<h2 id="lightness">Lightness</h2>
+<p>Lightness, as Calvino uses the word, is not the same as frivolity. He is
+very careful about this. It is closer to what Valéry meant when he wrote
+about being "light like a bird, and not like a feather" - a chosen agility
+of thought, as opposed to weightlessness by default.</p>
+<p>The image Calvino returns to over and over is Perseus and the Gorgon.
+Perseus cannot look directly at Medusa without being turned to stone. He
+has to look at her reflection in his polished shield. Then, once he has
+beheaded her, her blood gives birth to Pegasus - the winged horse. The
+heaviness of stone transforms into flight. Even the winged sandals that
+let Perseus fly came from the world of monsters, from Medusa's sisters the
+Graiae, who shared one tooth and one eye between the three of them.</p>
+<p>The point Calvino is making is that lightness is not the absence of
+weight. It is a response to weight. Perseus does not pretend the monster
+is not there. He looks at it sideways, in a mirror, and finds a way to
+carry it that does not destroy him.</p>
+<p>There is a passage in the Lightness lecture that we have thought about
+often since reading it:</p>
+<blockquote>
+<p>Whenever humanity seems condemned to heaviness, I think I should fly
+like Perseus into a different space. I don't mean escaping into dreams
+or into the irrational. I mean that I have to change my approach, look
+at the world from a different perspective, with a different logic and
+with fresh methods of cognition and verification.</p>
+</blockquote>
+<p>Calvino also has a very unexpected riff on software. Remember, this is
+1985. He writes about the second industrial revolution not producing the
+"crushing images" of rolling mills and molten steel, but bits traveling
+along circuits as electronic impulses:</p>
+<blockquote>
+<p>The iron machines still exist, but they obey the orders of weightless
+bits.</p>
+</blockquote>
+<p>For a set of lectures written in 1985 by an Italian novelist, that reads
+as unsettlingly current. Substitute "large language model" for "bits" and
+it barely changes.</p>
+<p>The lecture ends with a memorable image, which we will just quote:</p>
+<blockquote>
+<p>Were I to choose an auspicious image for the new millennium, I would
+choose that one: the sudden agile leap of the poet-philosopher who
+raises himself above the weight of the world, showing that with all
+his gravity he has the secret of lightness, and that what many
+consider to be the vitality of the times - noisy, aggressive, revving
+and roaring - belongs to the realm of death, like a cemetery for rusty
+old cars.</p>
+</blockquote>
+<h2 id="quickness">Quickness</h2>
+<p>The Quickness lecture is the one that made us laugh out loud a few times.</p>
+<p>Calvino's central paradox in this memo is that quickness in literature is
+often produced by <em>slowing down</em>. He talks about Laurence Sterne's
+<em>Tristram Shandy</em> - a novel that is essentially all digression, and which
+Diderot then took as a model - and argues that digression is one of the
+main techniques literature has developed for slowing time down:</p>
+<blockquote>
+<p>In practical life, time is a form of wealth with which we are stingy.
+In literature, time is a form of wealth to be spent at leisure and with
+detachment. We don't have to be first past a predetermined finish line.
+On the contrary, saving time is a good thing because the more time we
+save, the more we can afford to lose.</p>
+</blockquote>
+<p>He follows this with a wonderful line about digressions as a hiding place:</p>
+<blockquote>
+<p>If a straight line is the shortest distance between two fated and
+inevitable points, digressions will lengthen it; and if these digressions
+become so complex, so tangled and tortuous, so rapid as to hide their
+own tracks, who knows - perhaps death may not find us, perhaps time will
+lose its way, and perhaps we ourselves can remain concealed in our
+shifting hiding places.</p>
+</blockquote>
+<p>And then his personal motto, which is now our personal motto too:</p>
+<blockquote>
+<p>From my youth on, my personal motto has been the old Latin tag,
+<em>festina lente</em>, hurry slowly.</p>
+</blockquote>
+<p>The best story in the Quickness lecture, though, is the one about
+Chuang-tzu and the crab. Here is Calvino's telling in full:</p>
+<blockquote>
+<p>Among Chuang-tzu's many skills, he was an expert draftsman. The king
+asked him to draw a crab. Chuang-tzu replied that he needed five years,
+a country house, and twelve servants. Five years later, the drawing was
+still not begun. "I need another five years," said Chuang-tzu. The king
+granted them. At the end of these ten years, Chuang-tzu took up his
+brush and, in an instant, with a single stroke, he drew a crab, the
+most perfect crab ever seen.</p>
+</blockquote>
+<p>This is the whole book in a paragraph. Quickness is the payoff of an
+enormous investment of slowness. The single stroke exists because of the
+ten years of preparation. Speed is a property that expensive preparation
+lets you buy, and cheap speed is not the same thing at all.</p>
+<h2 id="why-we-wrote-this-down">Why We Wrote This Down</h2>
+<p>Our reason for keeping notes on this book is that Calvino is doing
+something we recognize from our own attempts to build a
+<a href="using-mediawiki-as-a-zettelkasten-or-external-brain.html">zettelkasten</a> -
+he is trying to name properties of thought that are useful, so they can be
+carried forward and returned to.</p>
+<p>Lightness. Quickness. Exactitude. Visibility. Multiplicity. Those are five
+words to keep on the wall.</p>
 <h2 id="references">References</h2>
 <ul>
-<li>Our full notes:
-  <a href="https://charlesreid1.com/wiki/Generating_Functions">Generating Functions</a>
-  on the wiki (Sedgewick/Flajolet and Trotter, side by side)</li>
-<li>Knuth-flavored coverage:
-  <a href="https://charlesreid1.com/wiki/AOCP/Generating_Functions">AOCP/Generating Functions</a></li>
-</ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+<li>Calvino, Italo. <em>Six Memos for the Next Millennium.</em> Translated by
+  Patrick Creagh. Harvard University Press, 1988.</li>
+<li>Our wiki notes: <a href="https://charlesreid1.com/wiki/Six_Memos_for_the_Next_Millennium">https://charlesreid1.com/wiki/Six_Memos_for_the_Next_Millennium</a></li>
+</ul></div>
 
     </div>
 </div>
@@ -537,17 +393,17 @@ about distributing colored marbles into cans with weird constraints.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/generating-functions.html">generating functions</a>
+                    <a href="https://charlesreid1.github.io/tag/calvino.html">calvino</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    <a href="https://charlesreid1.github.io/tag/literature.html">literature</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/quicksort.html">quicksort</a>
+                    <a href="https://charlesreid1.github.io/tag/notes.html">notes</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recurrence.html">recurrence</a>
+                    <a href="https://charlesreid1.github.io/tag/lightness.html">lightness</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sedgewick.html">sedgewick</a>
+                    <a href="https://charlesreid1.github.io/tag/quickness.html">quickness</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -565,18 +421,18 @@ about distributing colored marbles into cans with weird constraints.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                A Pair of Dice Games (or, Why Chevalier de Méré Lost Money)
+                Reading Bums: Peter Golenbock's Oral History of the Brooklyn Dodgers
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2022-10-22T22:00:00-07:00" pubdate>Saturday 10/22/2022</time>
+                <time datetime="2022-11-21T21:00:00-08:00" pubdate>Monday 11/21/2022</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/a-pair-of-dice-games-or-why-chevalier-de-mere-lost-money.html">permalink</a>
+                <a href="https://charlesreid1.github.io/reading-bums-peter-golenbocks-oral-history-of-the-brooklyn-dodgers.html">permalink</a>
             </span>
             </p>
         </div>
@@ -593,150 +449,90 @@ about distributing colored marbles into cans with weird constraints.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>Here is a nice little problem from Paul Nahin's <em>Will You Be Alive 10 Years
-From Now?</em>. It is a problem from the 1654 correspondence between Antoine
-Gombaud (the Chevalier de Méré) and Blaise Pascal - one of the founding
-episodes of probability theory, dressed up as a gambling puzzle.</p>
-<p>(This one lives on our wiki as
-<a href="https://charlesreid1.com/wiki/FMM21">FMM21</a>, part of our Friday Morning
-Math Problem series.)</p>
-<h2 id="the-two-games">The Two Games</h2>
-<p><strong>Game 1.</strong> You toss a single die <span class="math">\(N_1\)</span> times. What should <span class="math">\(N_1\)</span> be to make
-the probability of seeing at least one 6 greater than <span class="math">\(\tfrac{1}{2}\)</span>?</p>
-<p><strong>Game 2.</strong> You toss a <em>pair</em> of dice <span class="math">\(N_2\)</span> times. What should <span class="math">\(N_2\)</span> be to
-make the probability of seeing at least one double 6 greater than
-<span class="math">\(\tfrac{1}{2}\)</span>?</p>
-<p>In gambling terms, the question is: what is the smallest <span class="math">\(N\)</span> that turns an
-even-money bet on "at least one 6" (or "at least one double 6") into a bet
-that favors the gambler rather than the house?</p>
-<h2 id="game-1">Game 1</h2>
-<p>Pascal's trick is to count the complement. There are <span class="math">\(6^{N_1}\)</span> ways for the
-die to land over <span class="math">\(N_1\)</span> tosses, and <span class="math">\(5^{N_1}\)</span> of them have no 6 at all. So</p>
-<div class="math">$$
-P_1 = 1 - \left(\dfrac{5}{6}\right)^{N_1}
-$$</div>
-<p>We want <span class="math">\(P_1 &gt; \tfrac{1}{2}\)</span>, which is easiest to just tabulate:</p>
+        <div class="entry-content"><p><em>Bums: An Oral History of the Brooklyn Dodgers</em> by Peter Golenbock is
+exactly what it says on the tin. It is an oral history, which means the
+book is stitched together mostly out of firsthand accounts - players,
+managers, executives, sportswriters, and fans - with Golenbock providing
+just enough connective tissue to keep the timeline moving.</p>
+<p>We read it in the fall of 2022 and it turned out to be one of the better
+baseball books we have picked up. Below are our notes, chapter by chapter.</p>
+<h2 id="the-setup">The Setup</h2>
+<p>The Brooklyn Dodgers were, until 1957, one of the two National League
+teams in New York (the other being the Giants), and the Dodgers are one
+of the great tragic love stories in American sports. They lost, and lost,
+and lost, and then finally won a championship in 1955, and then two years
+later Walter O'Malley moved the team to Los Angeles and the borough of
+Brooklyn never really recovered.</p>
+<p>The nickname "Bums" was affectionate. Sort of.</p>
+<h2 id="chapter-by-chapter">Chapter-by-Chapter</h2>
+<p><strong>Prologue.</strong> Sets the stage. Establishes why Brooklyn and its baseball
+team had a relationship that was different in kind from other city-team
+relationships. Introduces the oral history format and the "Bums" nickname.</p>
+<p><strong>Chapter 1 - The Daffiness Boys.</strong> Covers the pre-WWII years. This is the
+era of Babe Herman getting hit on the head with fly balls, Casey Stengel
+managing the team into and out of trouble, and the general reputation of
+the Dodgers as lovably incompetent. Ebbets Field is the third character.</p>
+<p><strong>Chapter 2 - MacPhail.</strong> Larry MacPhail arrives as general manager in the
+late 1930s. He is the person who brings night baseball to Ebbets Field,
+brings radio broadcasts (with Red Barber calling games), and generally
+drags the Dodgers into professional respectability. Team gets competitive.
+Wins the 1941 pennant. Loses the World Series to the Yankees, which is
+the beginning of a pattern.</p>
+<p><strong>Chapter 3 - Rickey.</strong> Branch Rickey arrives after MacPhail leaves for
+war service (and then, later, jumps to the Yankees). Rickey builds out a
+minor-league farm system, which was a serious strategic innovation at the
+time. The chapter sets up the next one.</p>
+<p><strong>Chapter 4 - The Noble Experiment.</strong> The Jackie Robinson chapter. It is
+the emotional center of the book. Golenbock gets voices from Robinson
+himself (via earlier interviews), teammates like Pee Wee Reese, opponents,
+Rickey, and observers. The abuse Robinson faced is described directly, not
+softened. His talent and his composure both come through. This chapter is
+worth the price of the book on its own.</p>
+<p><strong>Chapter 5 - The Boys of Summer.</strong> The core roster that would define the
+1940s and 1950s Dodgers: Duke Snider, Gil Hodges, Roy Campanella, Carl
+Furillo, Carl Erskine, Preacher Roe, Pee Wee Reese, Billy Cox. The
+chapter is mostly personalities and clubhouse chemistry, and it is a lot
+of fun.</p>
+<p><strong>Chapter 6 - Wait 'Til Next Year.</strong> The heartbreak chapter. Repeated
+losses to the Yankees in the World Series. The 1951 playoff loss to the
+Giants on Bobby Thomson's "Shot Heard 'Round the World." The rivalry with
+the Giants, which was intense in a way that modern baseball rivalries
+mostly are not. And the perennial fan slogan that names the chapter.</p>
+<p><strong>Chapter 7 - Nineteen Fifty-Five.</strong> The one year they won it all. After
+all the near-misses, the Dodgers beat the Yankees in the 1955 World Series.
+Johnny Podres's Game 7 shutout gets the spotlight. The chapter captures a
+level of borough-wide joy that is very hard to imagine now.</p>
+<p><strong>Chapter 8 - The End.</strong> The move. Walter O'Malley consolidates power
+after Rickey leaves, decides he wants a new stadium, runs into Robert
+Moses in the process, and eventually decides Los Angeles is a better bet
+than Brooklyn. Players, sportswriters, and fans express shock, betrayal,
+and grief in that order. The 1957 season is the last one in Brooklyn.</p>
+<p><strong>Epilogue.</strong> Reflections on what the team meant, what the borough lost,
+and what the departure symbolized about postwar American cities in
+general.</p>
+<h2 id="what-makes-the-book-good">What Makes the Book Good</h2>
+<p>The oral history format works because so many of the primary sources were
+still alive when Golenbock did the interviews. You get Pee Wee Reese
+talking about Jackie Robinson in his own voice. You get Ebbets Field vendors
+and ticket-takers remembering what it smelled like. You get sportswriters
+talking about deadlines and games they covered from the press box.</p>
+<p>If you want a synthesized, analytical baseball history, this is not that
+book. Golenbock's editorial hand is light. He is stitching, not arguing.</p>
+<p>If you want to hear what it was like to be there, this is that book.</p>
+<h2 id="recommended-if">Recommended If</h2>
 <ul>
-<li><span class="math">\(N_1 = 1\)</span>: <span class="math">\(P_1 = 0.167\)</span></li>
-<li><span class="math">\(N_1 = 2\)</span>: <span class="math">\(P_1 = 0.306\)</span></li>
-<li><span class="math">\(N_1 = 3\)</span>: <span class="math">\(P_1 = 0.421\)</span></li>
-<li><span class="math">\(N_1 = 4\)</span>: <span class="math">\(P_1 = 0.518\)</span></li>
+<li>You like baseball history.</li>
+<li>You like New York history.</li>
+<li>You have ever wondered why Brooklyn is the way Brooklyn is.</li>
+<li>You want a Jackie Robinson chapter that treats him as a person and an
+  athlete instead of an icon.</li>
 </ul>
-<p>So <span class="math">\(N_1 = 4\)</span>.</p>
-<h2 id="game-2">Game 2</h2>
-<p>Same trick with a pair of dice. The probability of a double 6 on a single
-toss is <span class="math">\(\tfrac{1}{36}\)</span>, so the probability of <em>not</em> rolling a double 6 is
-<span class="math">\(\tfrac{35}{36}\)</span>, and</p>
-<div class="math">$$
-P_2 = 1 - \left(\dfrac{35}{36}\right)^{N_2}
-$$</div>
-<p>Tabulating:</p>
+<h2 id="references">References</h2>
 <ul>
-<li><span class="math">\(N_2 = 24\)</span>: <span class="math">\(P_2 = 0.491\)</span></li>
-<li><span class="math">\(N_2 = 25\)</span>: <span class="math">\(P_2 = 0.506\)</span></li>
-</ul>
-<p>So <span class="math">\(N_2 = 25\)</span>.</p>
-<h2 id="gombauds-mistake">Gombaud's Mistake</h2>
-<p>Here is the fun part.</p>
-<p>Gombaud believed in <em>strict proportionality</em>. He reasoned that since Game 1
-had 6 outcomes per toss and Game 2 had 36 outcomes per toss, the answers
-should be related by</p>
-<div class="math">$$
-\dfrac{N_1}{6} = \dfrac{N_2}{36}
-$$</div>
-<p>With <span class="math">\(N_1 = 4\)</span>, that gives <span class="math">\(N_2 = 24\)</span>. And Gombaud, who was a very careful
-gambler, actually played this game for money on the belief that <span class="math">\(N_2 = 24\)</span>
-was the tipping point.</p>
-<p>But it turns out that <span class="math">\(N_2 = 24\)</span> gives a probability of <span class="math">\(0.491\)</span>, which is
-just barely on the wrong side of <span class="math">\(\tfrac{1}{2}\)</span>. Gombaud noticed, over a
-large number of games, that he was consistently losing money at <span class="math">\(N_2 = 24\)</span>.
-Being unable to figure out why, he wrote to Pascal.</p>
-<p>The intuition that ratios of counts should scale linearly is one of those
-things that feels obviously true and is very quietly false. The correct
-answer is off by one - <span class="math">\(N_2 = 25\)</span>, not <span class="math">\(24\)</span> - and that one integer of
-difference was enough to drain the Chevalier's purse.</p>
-<h2 id="the-moral">The Moral</h2>
-<p>There are two morals, depending on your temperament:</p>
-<ul>
-<li>
-<p>If you are a probability theorist, the moral is: complementary events are
-  your friend, and multiplying <span class="math">\(\tfrac{5}{6}\)</span> by itself is a lot easier than
-  enumerating all the ways to see at least one 6.</p>
-</li>
-<li>
-<p>If you are a gambler, the moral is: do not let intuition about ratios
-  substitute for actual arithmetic, and if a French nobleman offers you an
-  even-money bet on rolling a double 6 in 24 throws, take it.</p>
-</li>
-</ul>
-<h2 id="more">More</h2>
-<ul>
-<li><a href="https://charlesreid1.com/wiki/FMM21">FMM21 on our wiki</a> - the full
-  problem and solution</li>
-<li><a href="https://charlesreid1.com/wiki/Category:FMM">All Friday Morning Math Problems</a></li>
-</ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+<li>Golenbock, Peter. <em>Bums: An Oral History of the Brooklyn Dodgers.</em>
+  Contemporary Books, 1984.</li>
+<li>Our wiki notes: <a href="https://charlesreid1.com/wiki/Bums">https://charlesreid1.com/wiki/Bums</a></li>
+</ul></div>
 
     </div>
 </div>
@@ -748,15 +544,17 @@ difference was enough to drain the Chevalier's purse.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/probability.html">probability</a>
+                    <a href="https://charlesreid1.github.io/tag/baseball.html">baseball</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/dice.html">dice</a>
+                    <a href="https://charlesreid1.github.io/tag/brooklyn-dodgers.html">brooklyn dodgers</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/pascal.html">pascal</a>
+                    <a href="https://charlesreid1.github.io/tag/history.html">history</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/friday-morning-math.html">friday morning math</a>
+                    <a href="https://charlesreid1.github.io/tag/oral-history.html">oral history</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/golenbock.html">golenbock</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -795,6 +593,28 @@ difference was enough to drain the Chevalier's purse.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>April 2025</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/project-euler-312-hamiltonian-cycles-on-sierpinski-graphs.html">Project Euler 312: Hamiltonian Cycles on Sierpiński Graphs</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/project-euler-227-the-chase-when-brute-force-costs-80-days.html">Project Euler 227 (The Chase): When Brute Force Costs 80 Days</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/project-euler-198-and-continued-fractions-when-is-a-rational-ambiguous.html">Project Euler 198 and Continued Fractions: When Is a Rational Ambiguous?</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/project-euler-60-finding-five-primes-that-concatenate-to-primes.html">Project Euler 60: Finding Five Primes That Concatenate to Primes</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

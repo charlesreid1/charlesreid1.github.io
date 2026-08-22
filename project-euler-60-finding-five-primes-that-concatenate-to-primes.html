@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <title>charlesreid1</title>
+        <meta charset="utf-8" />
+
+        <!--
+        CSS styles
+        -->
+        <link href="https://charlesreid1.github.io/theme/css/bootstrap.css"       rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/slate.css"              rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/font-awesome.css"       rel="stylesheet" type="text/css"/>
+        <link href="https://charlesreid1.github.io/theme/css/pygment-solarized.css"  rel="stylesheet" type="text/css"/>
+
+        <!--
+        my CSS styles
+        -->
+        <link href="https://charlesreid1.github.io/theme/css/main.css"            rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/dox.css"             rel="stylesheet" type="text/css">
+
+
+        <!--
+        include Angular first
+        -->
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/angular-1.3.15.js"></script>
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/skrollr-0.6.29.js"></script>
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/d3-3.5.5.js"></script>
+
+        <!--
+        this seems like a bad idea.
+        but if I don't put jquery first, I get errors about unrecognized $s.
+        -->
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+
+</head>
+<body id="index">
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span> 
+            </button>
+            <a href="https://charlesreid1.github.io" class="navbar-brand">charlesreid1.github.io</a>
+        </div>
+        <div>
+            <div class="collapse navbar-collapse" id="myNavbar">
+                <ul class="nav navbar-nav">
+
+                    <li>
+                        <a href="https://charlesreid1.com/wiki">Wiki</a>
+                    </li>
+                    <li>
+                        <a href="https://git.charlesreid1.com/explore">Git</a>
+                    </li>
+                    <li>
+                        <a href="http://spotify.charlesreid1.com">Music</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.com/life">Life</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.github.io">Blog</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+
+<div class="container">
+
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Project Euler 60: Finding Five Primes That Concatenate to Primes
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2025-04-14T20:00:00-07:00" pubdate>Monday 04/14/2025</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/project-euler-60-finding-five-primes-that-concatenate-to-primes.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><a href="https://projecteuler.net/problem=60">Project Euler problem 60</a> is a
+nice mid-difficulty combinatorial search problem. It has enough
+structure that pure brute force falls over, and enough structure that a
+handful of small observations gives you a very tractable search.</p>
+<p>Our working notes:
+<a href="https://charlesreid1.com/wiki/Project_Euler/60">Project Euler/60</a>.</p>
+<h2 id="the-problem">The Problem</h2>
+<p>The primes 3, 7, 109, and 673 are "quite remarkable" - concatenating any
+two of them in either order gives another prime. So <code>7109</code>, <code>1097</code>,
+<code>3673</code>, <code>6733</code>, <code>109673</code>, <code>673109</code>, and so on, are all prime. That is 12
+concatenations, all prime.</p>
+<p>The sum of these four primes is 792, and the problem states this is the
+smallest such sum for a set of four primes with this property.</p>
+<p>Find the smallest sum for a set of <strong>five</strong> primes with the same
+property.</p>
+<h2 id="the-search-space">The Search Space</h2>
+<p>The naive approach: enumerate all 5-subsets of primes up to some bound
+and check the property. The number of concatenations to check per
+5-subset is</p>
+<div class="math">$$
+\binom{5}{2} \times 2 = 20
+$$</div>
+<p>which is fine. The problem is the number of 5-subsets. If your prime
+bound is 10,000, you have roughly 1,229 primes, and
+<code>C(1229, 5) ≈ 2.3 × 10^13</code> subsets. Not fine.</p>
+<p>So the whole game is: use structural facts about the problem to cut the
+search space down.</p>
+<h2 id="pruning-by-digit-constraints">Pruning by Digit Constraints</h2>
+<p>The first observation is that concatenation preserves the last digit.
+If <code>A</code> and <code>B</code> are primes, and you form <code>AB</code> (concatenation), then the
+last digit of <code>AB</code> is the last digit of <code>B</code>. For <code>AB</code> to be prime, its
+last digit must be 1, 3, 7, or 9 (or 2 or 5, but those only work if the
+resulting number is exactly 2 or 5). So every prime in our set except
+possibly one small one has to end in 1, 3, 7, or 9.</p>
+<p>Similarly, since every prime except 2 has an odd last digit, and
+prepending a number changes the first digit but not the last, both
+primes in a pair have to end in 1, 3, 7, or 9.</p>
+<p>Also: 2 and 5 can be immediately ruled out from consideration - any
+concatenation involving 2 or 5 will produce a number ending in a digit
+other than 1/3/7/9, and therefore composite.</p>
+<p>This is a small pruning at the level of "which primes to include," but
+it eliminates a lot of pointless primality tests later.</p>
+<h2 id="two-pronged-search-strategy">Two-Pronged Search Strategy</h2>
+<p>Here is where things get interesting. The problem hands us the known
+4-prime solution <code>{3, 7, 109, 673}</code>. So we have two very different
+searches available to us:</p>
+<p><strong>Extend-known search.</strong> Take the known 4-prime set and look for a
+single 5th prime <code>p</code> such that <code>p</code> concatenates to a prime with each of
+<code>{3, 7, 109, 673}</code> in both orders. This is 8 primality checks per
+candidate <code>p</code>, and we only need to iterate over primes.</p>
+<p><strong>Fresh-set search.</strong> Look for a completely new set of 5 primes,
+possibly with a smaller total sum than the extension of the known
+4-prime set.</p>
+<p>The extend-known search is much cheaper (linear in the number of
+candidate 5th primes, versus quintic in the fresh-set search). It also
+gives you a solution quickly, which lets you set an upper bound on the
+answer, which lets you prune the fresh-set search dramatically.</p>
+<p>The correct order is:</p>
+<ol>
+<li>Run extend-known first. Get some 5-prime solution and its sum, <code>S*</code>.</li>
+<li>Run fresh-set search but throw out any partial set whose sum already
+   exceeds <code>S*</code>.</li>
+</ol>
+<p>By the time you get to step 2, you have a hard bound on how big any of
+the primes can be, which shrinks the search space by orders of
+magnitude.</p>
+<h2 id="the-structure-of-a-fresh-set-search">The Structure of a Fresh-Set Search</h2>
+<p>Even with the sum bound from step 1, a fresh search benefits from being
+built up incrementally rather than as a nested 5-deep loop:</p>
+<ul>
+<li>Precompute a list of candidate primes up to some bound</li>
+<li>Build a <strong>compatibility graph</strong>: nodes are primes, an edge exists
+  between <code>p</code> and <code>q</code> if both <code>p||q</code> and <code>q||p</code> are prime</li>
+<li>Find 5-cliques in this graph</li>
+</ul>
+<p>Because a valid 5-set has to be a 5-clique in the compatibility graph
+(every pair has to concatenate-to-prime with every other pair), you can
+extend candidate sets incrementally:</p>
+<ul>
+<li>Start with a 2-clique (pair of primes that concatenate-to-prime)</li>
+<li>Extend to a 3-clique by finding a prime that concatenates-to-prime
+  with both</li>
+<li>Extend to 4, then 5</li>
+</ul>
+<p>At each stage, the set of viable extensions shrinks fast. Most 2-cliques
+have no valid extension to a 3-clique. Most 3-cliques don't extend to a
+4-clique. By the time you're looking for a 5-clique, the search is
+narrow.</p>
+<h2 id="primality-testing">Primality Testing</h2>
+<p>For a problem like this, the primality test gets called a lot. Two
+things worth doing:</p>
+<ul>
+<li>Precompute a <strong>prime sieve</strong> for small numbers. The Sieve of
+  Eratosthenes up to some reasonable bound gives you <code>O(1)</code> primality
+  tests for anything in range.</li>
+<li>For the concatenated numbers (which can get large), use a
+  probabilistic test like <strong>Miller-Rabin</strong>. Deterministic for numbers
+  under <code>3.3 × 10^14</code> with the right witness set, so no false positives
+  in the range this problem cares about.</li>
+</ul>
+<h2 id="what-we-learned">What We Learned</h2>
+<p>Two takeaways from this problem, generalizable to other combinatorial
+search puzzles:</p>
+<p><strong>Use the known solution as a bound.</strong> If the problem hands you a
+partial solution, get an answer from extending it first, then use that
+answer's sum/cost as a pruning bound for the fuller search. This is
+almost always faster than starting the fuller search cold.</p>
+<p><strong>Build the compatibility graph explicitly.</strong> For problems where "sets
+of <code>k</code> things all pairwise satisfy some property" is the search shape,
+converting it to "find a <code>k</code>-clique" in a precomputed compatibility
+graph is usually the right structure. Clique-finding is NP-hard in
+general, but for the small <code>k</code> values Project Euler cares about (5 in
+this case), it is fast in practice.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our wiki notes:
+  <a href="https://charlesreid1.com/wiki/Project_Euler/60">Project Euler/60</a></li>
+<li><a href="https://projecteuler.net/problem=60">PE 60 on projecteuler.net</a></li>
+<li>Our Java solution:
+  <a href="https://git.charlesreid1.com/cs/euler/src/branch/master/java/Problem060.java">https://git.charlesreid1.com/cs/euler/src/branch/master/java/Problem060.java</a></li>
+</ul>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/primes.html">primes</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/combinatorial-search.html">combinatorial search</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/brute-force.html">brute force</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+
+</div>
+
+
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/bootstrap-3.3.4.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/d3-3.5.5.js"></script><script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/bootstrap-3.3.4.js"></script>
+
+<footer id="contentinfo" class="body">
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<center>
+	<hr />
+</center>
+<p>&nbsp;</p>
+<p style="text-align: center">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-terminal fa-stack-1x fa-inverse"></i>
+    </span>
+    Made from the command line with vim by 
+    <a href="http://charlesreid1.com">charlesreid1</a><br />
+    with help from <a href="https://getbootstrap.com/">Bootstrap</a> and <a href="http://getpelican.com">Pelican</a>.
+</p>
+
+<br />
+
+<p style="text-align: center">
+    <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-creative-commons fa-stack-1x fa-inverse"></i>
+    </span>
+    </a>
+    <br />
+    Licensed under the <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 License</a>.
+</p>
+
+<!-- Start of StatCounter Code for Default Guide -->
+<script type="text/javascript">
+var sc_project=11611748;
+var sc_invisible=1;
+var sc_security="9fcba820";
+</script>
+<script type="text/javascript"
+src="https://www.statcounter.com/counter/counter.js"
+async></script>
+
+<noscript><div class="statcounter"><a title="Web Analytics"
+href="http://statcounter.com/" target="_blank"><img
+class="statcounter"
+src="//c.statcounter.com/11611748/0/9fcba820/1/" alt="Web
+Analytics"></a></div></noscript>
+<!-- End of StatCounter Code for Default Guide -->
+</footer><!-- /#contentinfo -->
+</body>
+</html>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <title>charlesreid1</title>
+        <meta charset="utf-8" />
+
+        <!--
+        CSS styles
+        -->
+        <link href="https://charlesreid1.github.io/theme/css/bootstrap.css"       rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/slate.css"              rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/font-awesome.css"       rel="stylesheet" type="text/css"/>
+        <link href="https://charlesreid1.github.io/theme/css/pygment-solarized.css"  rel="stylesheet" type="text/css"/>
+
+        <!--
+        my CSS styles
+        -->
+        <link href="https://charlesreid1.github.io/theme/css/main.css"            rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/dox.css"             rel="stylesheet" type="text/css">
+
+
+        <!--
+        include Angular first
+        -->
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/angular-1.3.15.js"></script>
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/skrollr-0.6.29.js"></script>
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/d3-3.5.5.js"></script>
+
+        <!--
+        this seems like a bad idea.
+        but if I don't put jquery first, I get errors about unrecognized $s.
+        -->
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+
+</head>
+<body id="index">
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span> 
+            </button>
+            <a href="https://charlesreid1.github.io" class="navbar-brand">charlesreid1.github.io</a>
+        </div>
+        <div>
+            <div class="collapse navbar-collapse" id="myNavbar">
+                <ul class="nav navbar-nav">
+
+                    <li>
+                        <a href="https://charlesreid1.com/wiki">Wiki</a>
+                    </li>
+                    <li>
+                        <a href="https://git.charlesreid1.com/explore">Git</a>
+                    </li>
+                    <li>
+                        <a href="http://spotify.charlesreid1.com">Music</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.com/life">Life</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.github.io">Blog</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+
+<div class="container">
+
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Project Euler 312: Hamiltonian Cycles on Sierpiński Graphs
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2025-04-20T20:00:00-07:00" pubdate>Sunday 04/20/2025</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/drafts/project-euler-312-hamiltonian-cycles-on-sierpinski-graphs.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><a href="https://projecteuler.net/problem=312">Project Euler problem 312</a> is one
+of the harder problems we have worked through. It combines graph theory,
+fractal geometry, combinatorial counting, and modular arithmetic, and
+the final answer requires computing <code>C(C(C(10000))) mod 13^8</code> where
+<code>C(n)</code> is the number of Hamiltonian cycles on a Sierpiński graph of
+order <code>n</code>.</p>
+<p>We ended up leaning on OEIS to get the recurrence in closed form, which
+we will confess to below. Full notes:
+<a href="https://charlesreid1.com/wiki/Project_Euler/312">Project Euler/312</a>.</p>
+<h2 id="the-problem">The Problem</h2>
+<p>A <strong>Sierpiński graph</strong> of order 1, denoted <code>S_1</code>, is an equilateral
+triangle - three vertices, three edges.</p>
+<p><code>S_{n+1}</code> is built from three copies of <code>S_n</code> positioned so each pair
+of copies shares one corner vertex.</p>
+<p>Let <code>C(n)</code> be the number of cycles that pass through every vertex of
+<code>S_n</code> exactly once - the number of <strong>Hamiltonian cycles</strong>. The problem
+tells us <code>C(1) = C(2) = 1</code>, and <code>C(5) = 71,328,803,586,048</code>.</p>
+<p>The goal: find <code>C(C(C(10000))) mod 13^8</code>.</p>
+<p>Two things to notice about the goal. First, <code>C(10000)</code> is astronomically
+large - you cannot actually compute it and then feed it to <code>C</code> again.
+Second, <code>mod 13^8</code> is a big hint: the whole calculation is going to
+happen in modular arithmetic, and there is going to be some periodicity
+trick.</p>
+<h2 id="vertices-and-edges">Vertices and Edges</h2>
+<p>Some easy facts to nail down before doing anything clever.</p>
+<p>Number of edges of <code>S_n</code>:</p>
+<div class="math">$$
+e(S_n) = 3^{n+1}
+$$</div>
+<p>Number of vertices of <code>S_n</code>:</p>
+<div class="math">$$
+v(S_n) = \frac{3}{2}\left(3^n + 1\right)
+$$</div>
+<p>So <code>S_10000</code> has on the order of <code>3^10000</code> vertices, which is a number
+with about 4,700 decimal digits. A Hamiltonian cycle visits every
+vertex, so the number of Hamiltonian cycles is going to have on the
+order of <code>3^10000</code> factorial-ish in its combinatorics. There is no
+approach that involves listing anything.</p>
+<h2 id="the-recursive-structure">The Recursive Structure</h2>
+<p>The critical observation is that <code>S_{n+1}</code> is built from three copies of
+<code>S_n</code>. A Hamiltonian cycle on <code>S_{n+1}</code> has to traverse all three
+copies, and the only places it can move between copies are at the
+shared corner vertices. So any Hamiltonian cycle on <code>S_{n+1}</code> consists
+of:</p>
+<ul>
+<li>A Hamiltonian <strong>path</strong> through the first copy of <code>S_n</code>, entering and
+  exiting at two of its three outer corners</li>
+<li>A Hamiltonian path through the second copy, similarly</li>
+<li>A Hamiltonian path through the third copy, similarly</li>
+<li>Plus the three edges that connect the copies together at the shared
+  corners</li>
+</ul>
+<p>So counting Hamiltonian cycles reduces to counting certain kinds of
+Hamiltonian paths on smaller graphs.</p>
+<p>Let</p>
+<ul>
+<li><code>C(n)</code> = number of Hamiltonian cycles on <code>S_n</code></li>
+<li><code>P(n)</code> = number of Hamiltonian paths on <code>S_n</code> where <strong>both</strong>
+  endpoints are outer corners</li>
+<li><code>P̄(n)</code> = number of Hamiltonian paths on <code>S_n</code> where <strong>exactly one</strong>
+  endpoint is an outer corner</li>
+</ul>
+<p>Then</p>
+<div class="math">$$
+C(n) = [P(n-1)]^3
+$$</div>
+<p>(three copies, each contributing a Hamiltonian path with both endpoints
+at outer corners, one path per copy, chosen independently).</p>
+<p>Similarly, by tracking which paths piece together into which combined
+paths, we get</p>
+<div class="math">$$
+P(n) = 2 [P(n-1)]^2 P̄(n-1)
+$$</div>
+<div class="math">$$
+P̄(n) = 2 [P̄(n-1)]^2 P(n-1)
+$$</div>
+<p>These recurrences let us compute <code>P(n)</code>, <code>P̄(n)</code>, and <code>C(n)</code> in
+principle. The values grow explosively - by the time <code>n = 5</code>, <code>C(n)</code> is
+already <code>7.1 × 10^13</code>.</p>
+<h2 id="closed-form-confession-time">Closed Form (Confession Time)</h2>
+<p>At this point we did the thing everyone does: computed <code>C(1)</code> through
+<code>C(5)</code> from the recurrence, dropped the sequence into OEIS, and
+immediately hit
+<a href="https://oeis.org/A246959">A246959</a> - the "number of Hamiltonian cycles
+in the Sierpiński graph."</p>
+<p>The closed form given by OEIS is</p>
+<div class="math">$$
+C(n) = 8 \cdot 12^{(3^{n-2} - 3)/2} \qquad n \geq 3
+$$</div>
+<p>which is very compact. Equivalently, the recurrence</p>
+<div class="math">$$
+C(n) = (3 \cdot C(n-1))^3 \qquad n \geq 4
+$$</div>
+<p>Sanity check against the given value <code>C(5) = 71,328,803,586,048</code>.
+Wolfram Alpha confirms.</p>
+<p>First few values:</p>
+<table>
+<thead>
+<tr>
+<th><code>n</code></th>
+<th><code>C(n)</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>8</td>
+</tr>
+<tr>
+<td>4</td>
+<td>13,824</td>
+</tr>
+<tr>
+<td>5</td>
+<td>71,328,803,586,048</td>
+</tr>
+</tbody>
+</table>
+<p>Note that <code>C(2) = 2</code> above, but the problem states <code>C(1) = C(2) = 1</code>.
+The mismatch is a convention issue about what counts as a Hamiltonian
+cycle on the tiniest graphs (traversal direction, effectively). We
+used the OEIS convention for anything <code>n ≥ 3</code>, which is where the
+counting matters.</p>
+<h2 id="nested-evaluation-under-a-modulus">Nested Evaluation Under a Modulus</h2>
+<p>Now for the actual goal: <code>C(C(C(10000))) mod 13^8</code>.</p>
+<p>The magnitude of <code>C(10000)</code> is not something you can hold in memory.
+By <code>n = 20</code> the exponent in <code>12^((3^(n-2) - 3)/2)</code> is already millions
+of digits long, and we are being asked about <code>n = 10000</code>. So the whole
+calculation has to happen without ever materializing an intermediate
+value in full.</p>
+<p>The trick is that we don't <em>need</em> the intermediate values in full. We
+need <code>C(C(C(10000))) mod 13^8</code>. That means for the outermost <code>C</code>, we
+only need its argument modulo something that makes the outermost <code>C</code>
+computable. And that "something" is much smaller than the argument
+itself.</p>
+<p>Three techniques do the work.</p>
+<h3 id="technique-1-periodicity-of-cn-mod-m">Technique 1: Periodicity of <code>C(n) mod M</code></h3>
+<p>The sequence <code>C(1), C(2), C(3), ...</code> taken modulo any fixed <code>M</code> is
+eventually periodic. It has to be - the state at step <code>n</code> in the
+recurrence <code>C(n) = (3 · C(n-1))^3 mod M</code> is a single residue in
+<code>Z/MZ</code>, and there are only <code>M</code> possible residues, so the sequence must
+eventually enter a cycle.</p>
+<p>Let <code>P</code> be the period. Then</p>
+<div class="math">$$
+C(X) \bmod M = C(((X - X_0) \bmod P) + X_0) \bmod M
+$$</div>
+<p>for <code>X</code> at least as large as the pre-period offset <code>X_0</code>. In practice
+you compute successive <code>C(n) mod M</code> values until you see a repeat, and
+that tells you <code>X_0</code> and <code>P</code>.</p>
+<p>This is the workhorse. It lets you reduce "compute <code>C</code> at an
+astronomically large index" to "compute <code>C</code> at an index in the range
+<code>[X_0, X_0 + P)</code>."</p>
+<h3 id="technique-2-choosing-the-right-modulus-at-each-layer">Technique 2: Choosing the Right Modulus at Each Layer</h3>
+<p>The three <code>C</code> calls need different moduli.</p>
+<p>The <strong>outermost</strong> <code>C</code> operates modulo <code>13^8</code>. That is what the problem
+asks for.</p>
+<p>The <strong>middle</strong> <code>C</code> needs to produce a residue that determines the
+outermost <code>C(x) mod 13^8</code>. By technique 1, the outermost <code>C</code> is
+periodic mod <code>13^8</code> with some period <code>P_out</code>. So the middle <code>C</code> only
+needs to compute its result <strong>modulo <code>P_out</code></strong> (well, modulo the
+pre-period plus period - be careful with the offset).</p>
+<p>The <strong>innermost</strong> <code>C(10000)</code> needs to produce a residue that determines
+the middle <code>C(y) mod P_out</code>. So find the period <code>P_mid</code> of <code>C</code> mod
+<code>P_out</code>, and compute <code>C(10000) mod P_mid</code>.</p>
+<p>So the algorithm is:</p>
+<ol>
+<li>Find the period of <code>C(n) mod 13^8</code>. Call it <code>P_out</code>.</li>
+<li>Find the period of <code>C(n) mod P_out</code>. Call it <code>P_mid</code>.</li>
+<li>Compute <code>C(10000) mod P_mid</code>. Call the result <code>a</code>.</li>
+<li>Compute <code>C(a) mod P_out</code>. Call the result <code>b</code>.</li>
+<li>Compute <code>C(b) mod 13^8</code>.</li>
+</ol>
+<p>Each step uses either the recurrence directly (<code>b = (3·b_prev)^3 mod M</code>)
+or, for the innermost step at <code>n = 10000</code>, the recurrence run 10000
+times mod the appropriate modulus. Ten thousand modular multiplications
+is nothing.</p>
+<h3 id="technique-3-handling-the-cube-under-a-prime-power">Technique 3: Handling the Cube Under a Prime Power</h3>
+<p>The recurrence <code>C(n) = (3 · C(n-1))^3</code> involves a cube, so under a
+prime power modulus you have to be careful about invertibility. Cubing
+is well-defined mod <code>13^8</code> (or mod anything else), so the forward
+recurrence is not a problem - you just cube and multiply. What can go
+wrong is if you try to <em>invert</em> the cubing at some point, which you
+would need if you tried to do matrix exponentiation on the logarithm of
+the recurrence.</p>
+<p>We did not need to invert. The three-layer periodicity approach above
+uses only forward evaluation of the recurrence, so cubing mod <code>13^8</code> is
+fine.</p>
+<h3 id="chinese-remainder-theorem">Chinese Remainder Theorem</h3>
+<p>CRT is worth mentioning for completeness. If the modulus had been
+composite with multiple distinct prime factors, we would compute the
+answer separately modulo each prime power and glue the results
+together with CRT.</p>
+<p>Here the modulus is <code>13^8</code>, a single prime power, so CRT is not
+needed - but if the problem had asked for <code>mod (7^5 · 11^3 · 13^8)</code>,
+the approach would be to solve three separate problems and CRT the
+answers.</p>
+<h2 id="what-this-problem-teaches">What This Problem Teaches</h2>
+<h2 id="what-this-problem-teaches_1">What This Problem Teaches</h2>
+<p>Three things worth carrying forward.</p>
+<p><strong>Recursive structure beats brute force by a lot.</strong> The naive approach
+of enumerating cycles on <code>S_n</code> is impossible for anything <code>n &gt; 4</code> or so.
+The recursive approach reduces the problem to counting paths on
+<code>S_{n-1}</code> with three specific endpoint types, and that recursion
+collapses to a single-variable formula. Every time you can find a
+recursive structure, use it.</p>
+<p><strong>OEIS is not cheating.</strong> Recognizing a sequence and looking up its
+closed form is a legitimate research tool, not shortcut. The people who
+computed and cataloged OEIS A246959 did the work of proving the closed
+form. Standing on their shoulders is what mathematics has always looked
+like. The alternative - re-deriving every known result from scratch - is
+how you never finish anything.</p>
+<p><strong>Nested modular evaluation is a real technique.</strong> When a problem asks
+for <code>f(f(f(n))) mod M</code> with a huge <code>n</code>, you rarely need to compute the
+intermediate values. You work outward-in through periods: the outermost
+period tells you what modulus the middle layer actually needs to
+produce, which tells you what modulus the innermost layer needs to
+produce. Astronomical intermediate values reduce to residues in
+tractable rings. This shape of problem shows up a lot in number theory
+and cryptography, and it is worth having the pattern in your head.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our wiki notes:
+  <a href="https://charlesreid1.com/wiki/Project_Euler/312">Project Euler/312</a></li>
+<li><a href="https://projecteuler.net/problem=312">PE 312 on projecteuler.net</a></li>
+<li><a href="https://oeis.org/A246959">OEIS A246959</a> - Hamiltonian cycles in
+  Sierpiński graphs</li>
+<li>Useful paper: <a href="https://arxiv.org/pdf/0909.5541">https://arxiv.org/pdf/0909.5541</a> (Hamiltonian
+  properties of Sierpiński graphs)</li>
+</ul>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graph-theory.html">graph theory</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hamiltonian-cycles.html">hamiltonian cycles</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sierpinski.html">sierpinski</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/oeis.html">oeis</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+
+</div>
+
+
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/bootstrap-3.3.4.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/d3-3.5.5.js"></script><script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/bootstrap-3.3.4.js"></script>
+
+<footer id="contentinfo" class="body">
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<center>
+	<hr />
+</center>
+<p>&nbsp;</p>
+<p style="text-align: center">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-terminal fa-stack-1x fa-inverse"></i>
+    </span>
+    Made from the command line with vim by 
+    <a href="http://charlesreid1.com">charlesreid1</a><br />
+    with help from <a href="https://getbootstrap.com/">Bootstrap</a> and <a href="http://getpelican.com">Pelican</a>.
+</p>
+
+<br />
+
+<p style="text-align: center">
+    <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-creative-commons fa-stack-1x fa-inverse"></i>
+    </span>
+    </a>
+    <br />
+    Licensed under the <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 License</a>.
+</p>
+
+<!-- Start of StatCounter Code for Default Guide -->
+<script type="text/javascript">
+var sc_project=11611748;
+var sc_invisible=1;
+var sc_security="9fcba820";
+</script>
+<script type="text/javascript"
+src="https://www.statcounter.com/counter/counter.js"
+async></script>
+
+<noscript><div class="statcounter"><a title="Web Analytics"
+href="http://statcounter.com/" target="_blank"><img
+class="statcounter"
+src="//c.statcounter.com/11611748/0/9fcba820/1/" alt="Web
+Analytics"></a></div></noscript>
+<!-- End of StatCounter Code for Default Guide -->
+</footer><!-- /#contentinfo -->
+</body>
+</html>
