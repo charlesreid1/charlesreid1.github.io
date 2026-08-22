@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                The Git-Commit-Ectomy
+                Git Workflows, Part 2: Crafting Commits
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-04-17T12:00:00-07:00" pubdate>Wednesday 04/17/2019</time>
+                <time datetime="2019-11-14T20:00:00-08:00" pubdate>Thursday 11/14/2019</time>
                 in 
                 <a href="https://charlesreid1.github.io/category/git.html">Git</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-git-commit-ectomy.html">permalink</a>
+                <a href="https://charlesreid1.github.io/git-workflows-part-2-crafting-commits.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,63 +127,442 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>TLDR: Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p>
-<p><br /></p>
-<p>Consider the following <em>completely hypothetical</em>
-scenario.</p>
-<p>Suppose you've been working for a while on your latest
-invention, a brand-new whiz-bang command line
-tool that's fast and solves an important problem
-and you're chugging your way to the finish line.</p>
-<p>As part of preparing to release your software tool,
-you add some tests, because that's what you do.</p>
-<p>Those tests require some data, so you add a few test
-data sets, a few hundred kilobytes each, nothing fancy.</p>
-<p>Then one day, <strong>the intern</strong> (who is just trying to be 
-helpful by adding a new test) slips in a 70 MB test
-data set, and slips it in with a string of commits
-that somehow get incorporated into the master branch.</p>
-<p>(Side note: you turned on branch protection to prevent
-this whole mess, didn't you? <em>Didn't you??</em> 
-'Course you did. This is all
-just a hypothetical scenario.)</p>
-<p>Now, the situation is complicated: there are several
-open pull requests and active branches, and a non-trivial
-amount of history that's been added since the time the
-large test data set was accidentally added.</p>
-<p><strong>The intern</strong> apologizes profusely and promises to 
-bring in donuts every day next week. But the damage 
-is done.</p>
-<p><strong>The intern</strong>, a git novice, pulls out a laptop
-and runs a <code>git rm</code> on the files, pushing to the
-remote and happily, ignorantly believing the problem
-has been solved.</p>
-<p>But <strong>the intern</strong> does not understand how git works.
-It has a perfect memory, and remembers every file in
-every commit. Since the problematic first commit that
-added the large files, git has remembered and will always
-remember that large file. It's in git's blood. 
-It's what git was designed to do.</p>
-<p>Once the intern has been, ahem, moved along,
-and branch protection has been turned on,
-it's time to find a git surgeon to perform a 
-git-commit-ectomy to remove the problematic
-large files from the repository entirely.</p>
-<h2 id="dr-reids-patented-git-commit-ectomy">Dr. Reid's Patented Git-Commit-Ectomy</h2>
-<p>If it's a git-commit-ectomy you need,
-try Dr. Reid's Patented Git-Commit-Ectomy
-to ease your git commit pains.</p>
-<p>Whether you want to keep thing simple
-and remove a git commit from a single branch,
-or if you've got multiple branches, Dr. Reid's
-Patented Git-Commit-Ectomy will get you back
-on your feet.</p>
-<p>Dr. Reid's Patented Git-Commit-Ectomy can handle
-even the most messy, confused, and tangled git 
-commit history - with a bit of work and a gifted
-surgeon the git-commit-ectomy can smooth things 
-out and get you feeling right as rain.</p>
-<p>Visit the git-commit-ectomy guide: <a href="http://pages.charlesreid1.com/git-commit-ectomy">http://pages.charlesreid1.com/git-commit-ectomy</a></p></div>
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#what-is-a-commit">What is a commit</a><ul>
+<li><a href="#git-add">git add</a></li>
+<li><a href="#git-commit">git commit</a></li>
+<li><a href="#git-rebase">git rebase</a></li>
+<li><a href="#git-fetch-and-git-pull">git fetch and git pull</a><ul>
+<li><a href="#rebase-merge-branch-pass">rebase, merge, branch, pass</a></li>
+</ul>
+</li>
+<li><a href="#git-push">git push</a></li>
+<li><a href="#force-pushing">force pushing</a></li>
+</ul>
+</li>
+<li><a href="#commit-workflow">Commit Workflow</a><ul>
+<li><a href="#principles">Principles</a></li>
+<li><a href="#making-small-commits">Making Small Commits</a><ul>
+<li><a href="#git-add-patch-mode">git add patch mode</a></li>
+<li><a href="#git-add-editor-mode">git add editor mode</a></li>
+</ul>
+</li>
+<li><a href="#modifying-commits">Modifying Commits</a><ul>
+<li><a href="#git-rebase_1">git rebase</a><ul>
+<li><a href="#rebasing-the-last-n-commits-of-a-branch">rebasing the last N commits of a branch</a></li>
+<li><a href="#rebasing-onto-another-branch">rebasing onto another branch</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#rearranging-commits">Rearranging Commits</a></li>
+<li><a href="#combining-commits">Combining Commits</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h1 id="summary">Summary</h1>
+<ul>
+<li>
+<p>Make your commits small and atomic, and recombine them into
+  larger commits later; it's easier to combine smaller commits
+  than to split large commits.</p>
+</li>
+<li>
+<p>Make use of <code>git add -p</code> and <code>git add -e</code> to stage
+  changes selectively and atomically.</p>
+</li>
+<li>
+<p>Make use of <code>git rebase</code> and <code>git cherry-pick</code> to edit your
+  commits and assemble them in the order you want.</p>
+</li>
+<li>
+<p>Once commits have been combine and the history is satisfactory,
+  push to a remote to share the work.</p>
+</li>
+<li>
+<p>Think about ordering your commits to "tell a story". (What that
+  means will depend on the people you are collaborating with!)</p>
+</li>
+</ul>
+<h1 id="what-is-a-commit">What is a commit</h1>
+<p>Before we get into the good stuff, let's talk about the
+anatomy of a git commit.</p>
+<p>When you add files to your git repository, it's a two-step
+process: <code>git add</code> and <code>git commit</code>. The first step <em>stages</em>
+your changes, the second step memorializes those staged changes
+into a commit that can now be shared with others by pushing it
+to git remotes.</p>
+<h2 id="git-add">git add</h2>
+<p>Under the hood, git stores the full contents of each file at each snapshot
+in an object called a <em>blob</em>. When you modify a file and run <code>git add</code>,
+git writes a new blob containing the entire new contents of the file, and
+updates the staging area (the index) to point at that new blob. The diff
+between the old and new versions is not stored — it is computed on demand
+by comparing the two blobs.</p>
+<p>That said, when using tools like <code>git add -p</code>, <code>git diff</code>, and <code>git log -p</code>,
+git presents changes at the line (hunk) level. This makes it useful to
+think about staging in terms of individual line changes, even though the
+underlying storage is snapshot-based. That line-level view is what makes
+it possible to stage some hunks in a file but not others — the resulting
+blob reflects only the hunks you accepted.</p>
+<h2 id="git-commit">git commit</h2>
+<p>As you use <code>git add</code> to prepare your changes, the changes are added to
+a <em>staging area</em>. Think of this staging area as a draft commit. Each change
+being added to the staging area changes how the commit will look. When the
+changes are complete and the user runs <code>git commit</code>, it turns the staging
+area into a real commit, creates the metadata, and calculates hashes.</p>
+<p>When a commit is created, it receives a name, which is the hash of the
+contents of the commit. The hash is computed from the contents of the
+blobs, plus the metadata about the commit, plus the hash of the prior
+commits. Changing a commit changes its hash, and will change the hashes
+of all subsequent commits.</p>
+<p>Commits in your local repository can be easily rewritten and edited, and
+their hashes changed. A common workflow is to make many small commits,
+and recombine them later.</p>
+<p>Because the commit hash is how the commit is named, modifying commits
+after you've shared them is bad practice and will create extra work for
+your collaborators. For that reason, don't <code>git push</code> until you're ready
+to share your work.</p>
+<h2 id="git-rebase">git rebase</h2>
+<p>The <code>git rebase</code> command allows you to edit your commit history. We will
+cover some usage patterns in the sections below.</p>
+<h2 id="git-fetch-and-git-pull">git fetch and git pull</h2>
+<p>Before pushing changes to the remote, first check if there have been any
+commits since you began your branch.</p>
+<h3 id="rebase-merge-branch-pass">rebase, merge, branch, pass</h3>
+<p>If a feature branch is created off of the master branch, and some time passes,
+the feature branch base commit may grow far out of sync with the master branch.
+(Note that <code>master</code> indicates the primary branch.)</p>
+<p>This leaves the developer of the feature branch (which is out of sync with master) with a few choices:</p>
+<ul>
+<li>
+<p><strong>rebase</strong> - continue to rebase all commits on the feature branch from the
+  (old) original feature branch base commit onto the (new) head commit of the master 
+  branch.</p>
+<ul>
+<li>Pros: clean history, easy for one-branch-one-developer workflow</li>
+<li>Cons: requires continual force-pushes, requires coordination between developers
+  to prevent squashing others' work, not scalable, some people hate this method</li>
+</ul>
+</li>
+<li>
+<p><strong>merge</strong> - occasionally merge work from the master branch into the feature branch.</p>
+<ul>
+<li>Pros: simple to understand, simple to carry out, low cognitive load</li>
+<li>Cons: any changes added to the branch via the merge commit will show up in the PR
+  as new code, cluttering PR reviews by mixing features with merged changes; can also
+  make the commit history messy and harder to understand.</li>
+</ul>
+</li>
+<li>
+<p><strong>branch</strong> - by making heavy use of throwaway branches and integration branches,
+  it is easier to test out how the integration of a feature branch based on an old
+  commit on <code>master</code> will do when merging it in with a newer version of <code>master</code>.
+  Use throwaway integration branches to test out merging the two branches together,
+  testing its functionality, etc. You can also rebase or cherry pick commits onto
+  the throwaway integration branch, and figure out how to arrange the commits on a
+  branch to "rebuild" it into a working, mergeable branch.</p>
+<ul>
+<li>Pros: easy to do, encourages local use of throwaway branches</li>
+<li>Cons: clutters branches, integration process has to be repeated (can be mitigated
+  with <code>git rerere</code>), merge commits must wait until PR is approved</li>
+</ul>
+</li>
+<li>
+<p><strong>pass</strong> - best combined with the branch approach mentioned above, the pass approach
+  is to leave the branch history clean, avoid force-pushes, and rely on throwaway
+  branches to test out merge strategies once the inevitable PR merge needs to happen.
+  It can also be useful to wait for code reviews to finish, then create a merge commit
+  to make the merge happen smoothly.</p>
+<ul>
+<li>Pros: easy to do</li>
+<li>Cons: merge commits must wait until PR is approved</li>
+</ul>
+</li>
+</ul>
+<h2 id="git-push">git push</h2>
+<p>Once you run <code>git push</code>, all of the commits on the branch that you pushed
+will end up on the remote, where others can access them. The purpose
+of a <code>git push</code> is to share commits, so generally you don't push branches
+until they are ready to share. This also allows more flexibility in crafting,
+rewriting, and combining commits.</p>
+<h2 id="force-pushing">force pushing</h2>
+<p>If you pushed a branch (which is a collection of commits) to a remote,
+and then you have edited those commits, you will run into a problem when
+you try and <code>git push</code> the new, edited versions of the commits to the same
+remote. The remote will detect that there are conflicting versions of
+the branch and will reject the changes.</p>
+<p>That's where <code>git push --force</code> comes in. The <code>--force</code> flag tells the
+remote to discard its version of the branch and use the version of the
+branch that you are pushing.</p>
+<p>We will cover more about force pushing - when to do it, when not to, and
+why some people hate it - in a later post. For now, we will only say
+that you should not force push often, since you can risk deleting others' work
+and creating additional confusion and work for all of your collaborators.</p>
+<h1 id="commit-workflow">Commit Workflow</h1>
+<h2 id="principles">Principles</h2>
+<p>Here are some principles for your <code>git commit</code> workflow:</p>
+<ul>
+<li>
+<p>Commit small changes often.</p>
+</li>
+<li>
+<p>Don't sweat the commit messages - they can be fixed up later.</p>
+</li>
+<li>
+<p>Related - nobody will see your commits until you push your branch,
+  so think of your branch as a scratch space. You have the ultimate
+  freedom to use it however you want.</p>
+</li>
+<li>
+<p>Branches are easy to create, so make liberal use of branches!</p>
+</li>
+<li>
+<p>Be wary of force pushing, and of rewriting history.</p>
+</li>
+</ul>
+<h2 id="making-small-commits">Making Small Commits</h2>
+<p>Two essential git commands to help with making small commits are
+git add (patch mode) and git add (interactive mode).</p>
+<h3 id="git-add-patch-mode">git add patch mode</h3>
+<p>How to use:</p>
+<div class="highlight"><pre><span></span><code>git add -p &lt;name-of-file&gt;
+</code></pre></div>
+
+<p>The <code>git add -p</code> command allows the user to interactively stage
+individual changes made (in what is called patch mode). This means
+users can stage certain changes for one commit, then stage other
+changes for a different commit.</p>
+<p>This solves the problem of making a long sequence of changes
+to a single file that should be logically separated into
+different steps. (For example, changing the <code>import</code> statements
+versus changing the name of a variable throughout a file).</p>
+<p>For example, suppose we have the following changes to a file named <code>doit.sh</code>:</p>
+<div class="highlight"><pre><span></span><code>$ git diff doit.sh
+diff --git a/doit.sh b/doit.sh
+index 3b938a1..6c1aec8 100644
+--- a/doit.sh
++++ b/doit.sh
+@@ -1,6 +1,6 @@
+ #!/bin/bash
+ #
+-# This script lists the 40 largest files in the git repo history
++# This script lists the 50 largest files in the git repo history
+
+ $ git rev-list --all --objects | \
+      sed -n $(git rev-list --objects --all | \
+@@ -9,9 +9,9 @@ $ git rev-list --all --objects | \
+      grep blob | \
+      sort -n -k 3 | \
+      \
+-     tail -n40 | \
++     tail -n50 | \
+      \
+      while read hash type size; do
+           echo -n &quot;-e s/$hash/$size/p &quot;;
+      done) | \
+-     sort -n -r -k1
++     sort -nru -k1
+</code></pre></div>
+
+<p>There are two related changes and one unrelated change, respectively:
+the two related changes are the change to the comment and the change
+to the <code>tail</code> command; the unrelated change is adding the <code>-u</code> flag
+to the <code>sort</code> command.</p>
+<p>We can split these changes into two commits using <code>git add -p doit.sh</code>,
+which will walk through each change in the file and ask if we want to
+stage it:</p>
+<div class="highlight"><pre><span></span><code>$ git add -p doit.sh
+diff --git a/doit.sh b/doit.sh
+index 3b938a1..6c1aec8 100644
+--- a/doit.sh
++++ b/doit.sh
+@@ -1,6 +1,6 @@
+ #!/bin/bash
+ #
+-# This script lists the 40 largest files in the git repo history
++# This script lists the 50 largest files in the git repo history
+
+ $ git rev-list --all --objects | \
+      sed -n $(git rev-list --objects --all | \
+Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? y
+
+@@ -9,9 +9,9 @@ $ git rev-list --all --objects | \
+      grep blob | \
+      sort -n -k 3 | \
+      \
+-     tail -n40 | \
++     tail -n50 | \
+      \
+      while read hash type size; do
+Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? y
+
+@@ -14,14 +14,14 @@        echo -n &quot;-e s/$hash/$size/p &quot;;
+      done) | \
+-     sort -n -r -k1
++     sort -nru -k1
+Stage this hunk [y,n,q,a,d,j,J,g,/,e,?]? n
+</code></pre></div>
+
+<p>Now the two related changes are staged, and the unrelated change is not staged.
+This is reflected in <code>git status</code>:</p>
+<div class="highlight"><pre><span></span><code>$ git status
+On branch master
+Your branch is ahead of &#39;gh/master&#39; by 2 commits.
+  (use &quot;git push&quot; to publish your local commits)
+
+Changes to be committed:
+  (use &quot;git restore --staged &lt;file&gt;...&quot; to unstage)
+    modified:   doit.sh
+
+Changes not staged for commit:
+  (use &quot;git add &lt;file&gt;...&quot; to update what will be committed)
+  (use &quot;git restore &lt;file&gt;...&quot; to discard changes in working directory)
+    modified:   doit.sh
+</code></pre></div>
+
+<p>Now <code>git commit</code> will commit only the staged portions.</p>
+<p>Run <code>git commit</code> with no filenames. If you pass a filename like
+<code>git commit doit.sh</code>, git will commit the current working-tree contents
+of that file directly, bypassing the index entirely — throwing away the
+careful hunk-by-hunk staging you just did and committing the unstaged
+changes too.</p>
+<p>To use this in your workflow, think about how you can group different changes together into
+different commits. If you get a portion of a feature working, you can commit the changes in
+groups so that related changes get committed together.</p>
+<p>Also remember that if your commit history ends up being excessively long or overly detailed,
+you can always examine what changes different commits made with <code>git diff</code>, and reorder them
+with <code>git cherry-pick</code> or modify/combine them with <code>git rebase</code>.</p>
+<h3 id="git-add-editor-mode">git add editor mode</h3>
+<p>How to use:</p>
+<div class="highlight"><pre><span></span><code>git add -e &lt;name-of-file&gt;
+</code></pre></div>
+
+<p>Like the interactive patch mode, <code>git add -e</code> allows you to selectively
+stage certain changes in a file. But it's much better for keyboard jockeys
+and those that love their text editor, because you can choose which changes
+to stage or not using the text editor.</p>
+<p>A sidebar:</p>
+<p>If you have not yet set the text editor that git uses, you should
+do that now. Modify your git configuration with this command:</p>
+<div class="highlight"><pre><span></span><code>git config --global core.editor vim
+</code></pre></div>
+
+<p>Alternatively, put the following in your <code>~/.gitconfig</code>:</p>
+<div class="highlight"><pre><span></span><code>[core]
+    editor = vim
+</code></pre></div>
+
+<p>(Or, you know, whatever your text editor of choice is.)</p>
+<p>End of sidebar.</p>
+<p>When you pass the <code>-e</code> flag to git add, it will open a new editor window with the full diff:</p>
+<div class="highlight"><pre><span></span><code>diff --git a/doit.sh b/doit.sh
+index 326273c..14e4059 100644
+--- a/doit.sh
++++ b/doit.sh
+@@ -1,17 +1,17 @@
+ #!/bin/bash
+ #
+-# This script lists the 50 largest files in the git repo history
++# This script lists the 10 largest files in the git repo history
+
+ $ git rev-list --all --objects | \
+      sed -n $(git rev-list --objects --all | \
+      cut -f1 -d&#39; &#39; | \
+      git cat-file --batch-check | \
+      grep blob | \
+      sort -n -k 3 | \
+      \
+-     tail -n50 | \
++     tail -n10 | \
+      \
+      while read hash type size; do
+           echo -n &quot;-e s/$hash/$size/p &quot;;
+      done) | \
+-     sort -nru -k1
++     sort -nr -k1
+</code></pre></div>
+
+<p><strong>Editing this file requires some care!</strong></p>
+<p>Fortunately there is a section in the documentation for
+<a href="https://git-scm.com/docs/git-add">git add</a> called
+<a href="https://git-scm.com/docs/git-add#_editing_patches">Editing Patches</a>.</p>
+<p>Two things to remember:</p>
+<ul>
+<li>
+<p>Lines starting with <code>+</code> indicate new, added content. To prevent this
+  content from being added, delete the line.</p>
+</li>
+<li>
+<p>Lines starting with <code>-</code> indicate removed content. To keep this content,
+  replace <code>-</code> with a space (<code></code>).</p>
+</li>
+</ul>
+<p>Once you are finished, make sure you review the changes that are staged,
+particularly if this is the first time seeing patch files or the diff
+syntax.</p>
+<h2 id="modifying-commits">Modifying Commits</h2>
+<p>There is always some reason or another to modify the commit history of a repository -
+perhaps someone's work was lost, or the wrong issue or pull request number was referenced,
+or a username was misspelled.</p>
+<p>You can always modify a commit, but it will also modify every commit that came after it.
+Think of it like replaying the changes recorded in each commit onto the new branch. The
+contents of each commit changes slightly, so the hash (the name) of every commit changes.</p>
+<h3 id="git-rebase_1">git rebase</h3>
+<p>To do a git rebase, an interactive rebase (the <code>-i</code> flag) is recommended.</p>
+<p>The general form of a rebase is:</p>
+<div class="highlight"><pre><span></span><code>git rebase [-i] &lt;upstream&gt; [&lt;branch&gt;]
+</code></pre></div>
+
+<p>If <code>&lt;branch&gt;</code> is given, git checks it out first. Then it takes every commit
+that is reachable from <code>&lt;branch&gt;</code> but not from <code>&lt;upstream&gt;</code> and replays them
+on top of <code>&lt;upstream&gt;</code>.</p>
+<p><strong>IMPORTANT:</strong> The <code>&lt;upstream&gt;</code> commit itself is <em>not</em> replayed - it is the
+new base. If you want to include a specific commit in the rebase, use its
+parent as <code>&lt;upstream&gt;</code>. For example, <code>0a1b2c3d~1</code> refers to the commit
+before <code>0a1b2c3d</code>, so <code>git rebase -i 0a1b2c3d~1</code> will replay <code>0a1b2c3d</code>
+and everything after it on the current branch.</p>
+<h4 id="rebasing-the-last-n-commits-of-a-branch">rebasing the last N commits of a branch</h4>
+<p>The most common form of interactive rebase is "let me edit the last N commits
+on my branch":</p>
+<div class="highlight"><pre><span></span><code>git rebase -i HEAD~N
+</code></pre></div>
+
+<p>For example, <code>git rebase -i HEAD~5</code> replays the last 5 commits on top of
+their existing base, giving you an editor where you can reorder, squash,
+edit, or drop them.</p>
+<h4 id="rebasing-onto-another-branch">rebasing onto another branch</h4>
+<p>To move a range of commits so they start on top of a different branch
+(for example, on top of the latest <code>master</code>), use the <code>--onto</code> flag:</p>
+<div class="highlight"><pre><span></span><code>git rebase --onto &lt;newbase&gt; &lt;upstream&gt; [&lt;branch&gt;]
+</code></pre></div>
+
+<p><code>&lt;newbase&gt;</code> is where the commits will be replayed. <code>&lt;upstream&gt;</code> is the
+commit whose descendants get replayed (and <code>&lt;upstream&gt;</code> itself is <em>not</em>
+included). If <code>&lt;branch&gt;</code> is provided, git checks it out first before
+starting the rebase.</p>
+<p>For example, suppose you have a <code>feature</code> branch that was branched off an
+old <code>master</code>, and you want to move its commits on top of the current
+<code>master</code>:</p>
+<div class="highlight"><pre><span></span><code>git rebase --onto master feature~3 feature
+</code></pre></div>
+
+<p>This replays the last 3 commits of <code>feature</code> on top of <code>master</code>, and
+because <code>feature</code> was supplied as <code>&lt;branch&gt;</code>, the <code>feature</code> label moves
+with the rebased commits — no headless state, no branch housekeeping
+needed.</p>
+<h2 id="rearranging-commits">Rearranging Commits</h2>
+<p>Where rebasing allows for editing commits en masse, cherry picking allows the changes made in
+individual commits to be applied anywhere - including other branches. This makes the atomic
+commit principle from the beginning of this post much easier - groups of related commits that
+happened out of order can be rearranged by cherry picking them onto a new branch, and the new
+branch is a better "story".</p>
+<h2 id="combining-commits">Combining Commits</h2>
+<p>The cherry pick operation can also be combined with a rebase - once multiple small commits are
+arranged together chronologically, a git rebase operation enables squashing those tiny commits
+into a small number of larger commits, all carrying related changes.</p></div>
 
     </div>
 </div>
@@ -221,18 +600,18 @@ out and get you feeling right as rain.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                The Josephus Problem: Part 3: Solving the Double Step Case
+                Git Workflows, Part 1: Supercharging your Git Config
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-03-22T14:00:00-07:00" pubdate>Friday 03/22/2019</time>
+                <time datetime="2019-10-07T20:00:00-07:00" pubdate>Monday 10/07/2019</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">permalink</a>
+                <a href="https://charlesreid1.github.io/git-workflows-part-1-supercharging-your-git-config.html">permalink</a>
             </span>
             </p>
         </div>
@@ -249,569 +628,377 @@ out and get you feeling right as rain.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>This is Part 3 of an N-part series.</p>
-<ul>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html">The Josephus Problem: Part 1: The Problem</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">The Josephus Problem: Part 2: Two Examples</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">The Josephus Problem: Part 3: Solving the Double Step Case</a></li>
-</ul>
-<div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#solving-the-double-step-case">Solving the Double Step Case</a></li>
-<li><a href="#algorithm-d-using-doubling-permutation">Algorithm D: Using Doubling Permutation</a><ul>
-<li><a href="#the-algorithm">The Algorithm</a></li>
-<li><a href="#write-the-doubling-permutation">Write the Doubling Permutation</a></li>
-<li><a href="#table-method">Table Method</a></li>
-<li><a href="#reverse-the-doubling-permutation">Reverse the Doubling Permutation</a></li>
-<li><a href="#trim-the-reversed-doubling-permutation">Trim the Reversed Doubling Permutation</a></li>
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#source">Source</a></li>
+<li><a href="#user-section">User Section</a></li>
+<li><a href="#bash-aliases">Bash Aliases</a><ul>
+<li><a href="#the-best-one-letter-alias-ever">The Best One Letter Alias Ever</a></li>
+<li><a href="#ending-bad-habits">Ending Bad Habits</a></li>
 </ul>
 </li>
-<li><a href="#why-does-algorithm-d-work">Why Does Algorithm D Work?</a><ul>
-<li><a href="#an-important-observation">An Important Observation</a></li>
-<li><a href="#three-facts">Three Facts</a></li>
-<li><a href="#power-of-two-example">Power of Two Example</a></li>
-<li><a href="#not-a-power-of-two-example">Not a Power of Two Example</a></li>
-<li><a href="#the-power-of-two-shortcut">The Power of Two Shortcut</a></li>
+<li><a href="#alias-section">Alias section</a><ul>
+<li><a href="#log-utils">Log Utils</a></li>
+<li><a href="#status-utils">Status Utils</a></li>
+<li><a href="#fetching">Fetching</a></li>
+<li><a href="#branch-utils">Branch Utils</a><ul>
+<li><a href="#branch-and-checkout">Branch and Checkout</a></li>
 </ul>
 </li>
-<li><a href="#algorithm-d-summary">Algorithm D Summary</a></li>
+<li><a href="#remote-utils">Remote Utils</a></li>
+<li><a href="#commit-utils">Commit Utils</a><ul>
+<li><a href="#committing-all-changes">Committing All Changes</a></li>
+<li><a href="#fixing-commits">Fixing Commits</a></li>
+</ul>
+</li>
+<li><a href="#miscellaneous-utils">Miscellaneous Utils</a><ul>
+<li><a href="#rebasing-shortcuts">Rebasing shortcuts</a></li>
+<li><a href="#diff-shortcuts">Diff shortcuts</a></li>
+<li><a href="#pull-shortcuts">Pull shortcuts</a></li>
+<li><a href="#clone-shortcuts">Clone shortcuts</a></li>
+<li><a href="#contributor-shortcuts">Contributor shortcuts</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#core-section">Core section</a></li>
+<li><a href="#color-section">Color section</a></li>
+<li><a href="#url-section">Url section</a></li>
 </ul>
 </div>
-<h2 id="solving-the-double-step-case">Solving the Double Step Case</h2>
-<p>The Josephus Problem for a step size of <span class="math">\(m = 2\)</span>
-can be solved two ways:</p>
-<ul>
-<li>Algorithm D: Doubling Permutation Algorithm</li>
-<li>Algorithm S: Label Skipped Nodes Algorithm</li>
-</ul>
-<p>In this blog post we cover Algorithm D, which makes 
-use of a doubling permutation. </p>
-<p>In the first section (<a href="#algorithm-d-using-doubling-permutation">Algorithm D: Using Doubling Permutation</a>)
-we start by showing the recipe as applied 
-to the case of <span class="math">\(n = 11, m = 2\)</span>. </p>
-<p>The recipe is straightforward to apply, but it is not
-at all clear how it works. We start by introducing the
-algorithm, then carrying it out for the case of <span class="math">\(n = 11, m = 2\)</span>
-(this is a familiar case that we have covered in 
-prior posts).</p>
-<p>We make observations about the procedure by comparing
-the case of <span class="math">\(n = 8, m = 2\)</span> (a special
-case where the circle size is a power of two) before
-returning to the example of <span class="math">\(n = 11, m = 2\)</span> to make
-generalizations and give a shortcut method for
-the general double-step case.</p>
-<h2 id="algorithm-d-using-doubling-permutation">Algorithm D: Using Doubling Permutation</h2>
-<p>In Exercise 29, Knuth asks a question that lays out
-a solution procedure for the special case of <span class="math">\(m = 2\)</span>,
-and asks the reader to prove it:</p>
-<blockquote>
-<p>Prove: the cycle form of the Josephus permutation
-when <span class="math">\(m = 2\)</span> can be obtained by expressing 
-the "doubling permutation" of <span class="math">\(\{1, 2, \dots, 2n\}\)</span>,
-which takes <span class="math">\(j\)</span> into <span class="math">\((2j) \mod (2n+1)\)</span> into
-cycle form, then <strong>reversing</strong> L and R, 
-and erasing all numbers larger than <span class="math">\(n\)</span>.</p>
-</blockquote>
-<p>Fortunately, we don't have to work out the solution
-procedure for ourselves; unfortunately, it is not 
-at all obvious why the solution procedure works, so
-once we have seen how to apply it, we have to do a
-bit more work before we can understand it.</p>
-<h3 id="the-algorithm">The Algorithm</h3>
-<p>Given an input size <span class="math">\(n\)</span>, the algorithm steps are:</p>
-<ol>
-<li>
-<p>Write the doubling permutation (in table form)</p>
-</li>
-<li>
-<p>Factor the doubling permutation into cycles</p>
-</li>
-<li>
-<p>Reverse each cycle and remove values larger than n</p>
-</li>
-</ol>
-<p>The result will be the Josephus permutation cycles.</p>
-<h3 id="write-the-doubling-permutation">Write the Doubling Permutation</h3>
-<p>As mentioned above, we will start with the concrete example of
-<span class="math">\(n = 11, m = 2\)</span>.</p>
-<p>We start by writing the doubling permutation for
-the integers <span class="math">\(1 \dots 2n\)</span>:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 32 \, \dots \right)
-$$</div>
-<p>When a number is greater than <span class="math">\(2n+1\)</span>, it is
-reduced <span class="math">\(\mod (2n+1)\)</span>, so the next few terms of the
-doubling permutation written out and reduced modulo
-<span class="math">\(2n+1\)</span> are:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 32 \, 64 \, 128 \, 256 \, 512 \, 1024 \right)
-$$</div>
-<p>which reduces modulo <span class="math">\(2n+1\)</span> to:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
-$$</div>
-<p>After 12, we reach 1 again, the starting value, so further 
-doublings will result in repetition of the elements we have
-so far. </p>
-<p>Next, continue the process with the remaining elements.
-Start with the smallest element not included in the 
-cycle found above, which is 5, and continue the operation
-of doubling and reducing modulo <span class="math">\(2n+1\)</span>. Doing this results in
-the terms:</p>
-<div class="math">$$
-\left( 5 \, 10 \, 20 \, 40 \, 80 \, \dots \right)
-$$</div>
-<p>which reduces modulo <span class="math">\(2n+1\)</span> to:</p>
-<div class="math">$$
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, \dots \right)
-$$</div>
-<p>Repeating this until the first element repeats
-yields all of the remaining elements:</p>
-<div class="math">$$
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
-<p>Now the final doubling permutation can be written as the 
-product of the two cycles:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
-<p>We now have the cycles of the doubling permutation! Step 2 finished.</p>
-<h3 id="table-method">Table Method</h3>
-<p>Slightly more convenient than writing out the cycles the way we did above
-is to create a table, with a column for <span class="math">\(j = 1 \dots 2n\)</span>, a column for
-<span class="math">\(2j\)</span>, and a column for <span class="math">\((2j) \mod (2n+1)\)</span>.</p>
-<div class="highlight"><pre><span></span><code> j   |  2j  |  2j mod 2n+1
------|------|---------------
-  1  |   2  |        2
-  2  |   4  |        4
-  3  |   6  |        6
-  4  |   8  |        8
-  5  |  10  |       10
-  6  |  12  |       12
-  7  |  14  |       14
-  8  |  16  |       16
-  9  |  18  |       18
- 10  |  20  |       20
- 11  |  22  |       22
- 12  |  24  |        1
- 13  |  26  |        3
- 14  |  28  |        5
- 15  |  30  |        7
- 16  |  32  |        9
- 17  |  34  |       11
- 18  |  36  |       13
- 19  |  38  |       15
- 20  |  40  |       17
- 21  |  42  |       19
- 22  |  44  |       21
+<h1 id="source">Source</h1>
+<p>Most of the good stuff is from
+<a href="https://github.com/mathiasbynens/dotfiles">https://github.com/mathiasbynens/dotfiles</a>!</p>
+<h1 id="user-section">User Section</h1>
+<p>Start off easy - here's how you set your email and name for commits:</p>
+<div class="highlight"><pre><span></span><code>[user]
+    email = foo@bar.com
+    name = Foo Bar
 </code></pre></div>
 
-<p>Now the cycles can be constructed by starting with the <span class="math">\(j\)</span> column of the 
-first row in the table (1), reading off the corresponding entry (2) in the 
-<span class="math">\((2j) \mod (2n+1)\)</span> column, adding the pair <span class="math">\(1 \rightarrow 2\)</span> to the cycle,
-and moving to the row of the table with that corresponding <span class="math">\(j\)</span> value.</p>
-<p>The next step takes us to row 2 of the table, where we read off the value 4
-from the right column, add the pair <span class="math">\(2 \rightarrow 4\)</span> to the cycle, and keep
-moving.</p>
-<p>Eventually, the procedure will complete the first cycle and take us back to 1.
-Since there are still rows in the table left, repeat the procedure, starting
-with the first available row of the table (5), and keep going until all entries
-of the table are gone. This will yield the same cycles as the process described 
-above, but the bookkeeping is slightly easier:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
-<h3 id="reverse-the-doubling-permutation">Reverse the Doubling Permutation</h3>
-<p>The next step is to reverse the permutation from left to right,
-which means we step through all cycles from left to right,
-and step through each cycle from left to right.</p>
-<p>Starting with the doubling permutation:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9  \, 18 \,  13 \,   3 \, 6\, 12 \right)
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
-<p>We obtain the reverse:</p>
-<div class="math">$$
-\left( 14 \, 7 \, 15 \, 19 \, 21 \, 22 \, 11 \, 17 \, 20 \, 10 \, 5 \right)
-\left( 12 \, 6 \, 3 \, 13 \, 18 \, 9 \, 16 \, 8 \, 4 \, 2 \, 1 \right)
-$$</div>
-<h3 id="trim-the-reversed-doubling-permutation">Trim the Reversed Doubling Permutation</h3>
-<p>Now we eliminate any numbers from the reversed doubling permutation
-that are larger than <span class="math">\(n = 11\)</span>, to get the trimmed permutation:</p>
-<div class="math">$$
-\left( 7 \, 11 \, 10 \, 5 \right)
-\left( 6 \, 3 \, 9 \, 8 \, 4 \, 2 \, 1 \right)
-$$</div>
-<p>This is the final Josephus permutation. The one remaining step is to
-rewrite the cycles in standard "sorted" order:</p>
-<div class="math">$$
-\left( 1 \, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
-\left( 5 \, 7 \, 11 \, 10 \right)
-$$</div>
-<p>Congratulations! You just solved the problem.</p>
-<p><br />
-<br /></p>
-<hr>
-<p><br />
-<br /></p>
-<h2 id="why-does-algorithm-d-work">Why Does Algorithm D Work?</h2>
-<p>If at this point you are scratching your head in wonder
-at the seeming black magic involved in this algorithm,
-then welcome to <u>The Art of Computer Programming</u>!
-(Seriously, the exercises are chock full of questions
-like this one.)</p>
-<p>To understand why Algorithm D works, it is instructive
-to consider a case where <span class="math">\(n\)</span> is a power of two, and make
-some observations and generalizations to uncover the pattern
-at work in Algorithm D. </p>
-<h3 id="an-important-observation">An Important Observation</h3>
-<p>Start with an important observation: each time we complete one 
-circuit of the circle, we have reduced the number of items 
-in the circle by </p>
-<div class="math">$$
-\left\lfloor{ \frac{n}{2} }\right\rfloor
-$$</div>
-<p>If our circle size is even, that means we cut our circle
-size in half each time through the circle.</p>
-<p>The halving operation means the Josephus problem is
-intimately linked with powers of 2 (or, base 2 logs),
-so that's where the powers of 2 will come from.</p>
-<h3 id="three-facts">Three Facts</h3>
-<p>Now we use this observation about halving to
-state 3 facts about the case:</p>
-<p><br /></p>
-<p><strong>Fact 1: If we are considering an item at an odd-numbered
-location in the circle, we have already been
-through the circle at least once.</strong></p>
-<p>(Explanation: The first time through the circle, 
-all of the items in the circle at even-numbered 
-locations will be removed, so only items at 
-odd-numbered locations around the circle are left
-after the first pass.)</p>
-<p><br /></p>
-<p><strong>Fact 2: When the circle size is a power of 2,
-the first item in the circle is the last item removed.</strong></p>
-<p>(Explanation: If we have a circle the size of a power of 2,
-we will always remove the last item in the circle when we
-complete a circuit (because we will always reach it using 
-two-steps), which means we always skip item 1 if the circle
-size is a power of 2.)</p>
-<p>(Addendum: If a circle size starts as a power of 2,
-going through the circle once and removing elements will
-exactly halve the circle size, and preserve the property
-that the circle size is a power of 2.)</p>
-<p><br /></p>
-<p><strong>Fact 3: When the circle size is not a power of 2, the
-size will eventually be reduced to a power of 2. Then
-the item at the starting position in that round will be
-the last item removed.</strong></p>
-<p>(Explanation: Combining Fact 1 and Fact 2, we can see
-that eventually we will always reach the special case
-of the circle size being a power of 2, since with each
-step, we reduce the circle size by 1. For example,
-for a circle size of 22, we must carry out 6 removal
-operations to reach a circle size of 16, at which point
-the item at the starting position will be the last item
-to be removed from the circle.)</p>
-<p><br /></p>
-<p>Now we will use these 3 facts to understand Algorithm D.</p>
-<h3 id="power-of-two-example">Power of Two Example</h3>
-<p>Let's run through a Josephus solution for an example
-where <span class="math">\(n\)</span> is a power of two, specifically, <span class="math">\(n = 8, m = 2\)</span>.</p>
-<p>We start by creating the doubling permutation table,
-with columns for <span class="math">\(j\)</span>, <span class="math">\(2j\)</span>, and <span class="math">\((2j) \mod (2n+1)\)</span>:</p>
-<div class="highlight"><pre><span></span><code> j   |  2j  |  2j mod 2n+1
------|------|---------------
-  1  |   2  |        2
-  2  |   4  |        4
-  3  |   6  |        6
-  4  |   8  |        8
-  5  |  10  |       10
-  6  |  12  |       12
-  7  |  14  |       14
-  8  |  16  |       16
-  9  |  18  |        1
- 10  |  20  |        3
- 11  |  22  |        5
- 12  |  24  |        7
- 13  |  26  |        9
- 14  |  28  |       11
- 15  |  30  |       13
- 16  |  32  |       15
+<h1 id="bash-aliases">Bash Aliases</h1>
+<h2 id="the-best-one-letter-alias-ever">The Best One Letter Alias Ever</h2>
+<p>Start supercharging how you use git by creating a one-letter alias.</p>
+<p>Add this to your <code>~/.bashrc</code> file:</p>
+<div class="highlight"><pre><span></span><code>alias g=&quot;git&quot;
 </code></pre></div>
 
-<p>The variable <span class="math">\(j\)</span> takes on <span class="math">\(2n\)</span> values, 
-<span class="math">\(j = 1 \dots 2n\)</span>, each of which
-are doubled and reduced modulo <span class="math">\(2n+1\)</span>.</p>
-<p>From column 3 we can see why the doubling permutation
-requires us to consider <span class="math">\(2n\)</span> items instead of <span class="math">\(n\)</span>
-items: because the first <span class="math">\(n\)</span> items are always even
-(cuz, uh, we're doubling),
-and what we want is coverage of odds <em>and</em> evens in
-the range <span class="math">\(1 \dots n\)</span>. This is also why we reduce
-<span class="math">\(\mod (2n + 1)\)</span>, which is guaranteed to be odd - 
-if we reduced <span class="math">\(\mod 2n\)</span> we would run into the same
-problem of wrapping back garound to the even integers.</p>
-<p>If we step through the doubling permutation to factor it
-into its cycles, we start at 1 and connect it to 2. 
-This states that item 2 is removed 1st, so we write
-<code>1 -&gt; 2</code> for the doubling permutation cycle, and keep
-in mind that it will be reversed to <code>2 -&gt; 1</code> when we
-write the final Josephus permutation cycle.</p>
-<p>The next step is to move to 2, and connect it to 4,
-so <code>2 -&gt; 4</code> (also recognizing that this means the
-opposite connection <code>4 -&gt; 2</code>, that item 4 is removed
-second, in the final Josephus permutation.)</p>
-<p>Now we would expect to see <code>3 -&gt; 6</code>, since we know that
-item 6 is removed 3rd with the same certainty that we know
-item 4 is removed 2nd. But the problem is that it doesn't
-fit into the existing cycle, so it may belong later in the
-cycle or in another cycle altogether. We can't be certain.</p>
-<p>This is why we multiply our step size by 2 each time (2, 4, 8, 16),
-instead of incrementing it by 2 each time (2, 4, 6, 8, 10).</p>
-<p><strong>Fact 1</strong> stated that any items at even-numbered 
-positions are eliminated on the first pass - we can
-see that manifest as we write the doubling cycle.
-Once we reach 16 (double the size of the circle), 
-the integers begin to loop back around through the 
-odd numbers (also thanks to the choice of the odd
-modulus <span class="math">\(2n+1\)</span>):</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \ 16 \, 15 \, 13 \, 9 \right)
-$$</div>
-<p>Consider the <span class="math">\(16 \rightarrow 15\)</span> connection. Stepping through
-the (doubled) circle the first time through, we end
-on 16. The next doubling takes us 16 more steps forward,
-but that's 1 less than the size of the circle (again due 
-to the choice of an odd modulus <span class="math">\(2n+1\)</span>), so we end up
-at <span class="math">\(2n - 1\)</span>. 15 is larger than the size of the circle, 
-so it will be excluded in the final Josephus cycle.</p>
-<p>Continuing to follow this through, we reach 9, which will
-also be excluded from the Josephus cycle, and 9 returns 
-back to 1 and completes the cycle.</p>
-<p>Now we continue the process with the remaining items in
-the table, starting with the smallest, which is 3.
-Doubling 3, we see the <code>3 -&gt; 6</code> connection we mentioned
-earlier, which we expected to see since it indicates the
-known fact that item 6 will be removed 3rd. </p>
-<div class="math">$$
-\left( 3 \, 6 \, 12 \, 17 \, 14 \, 11 \, 5 \, 10 \right)
-$$</div>
-<p>Finally, reversing and trimming the values larger than 8:</p>
-<div class="math">$$
-\left( 5 \, 7 \, 6 \, 3 \right)
-\left( 8 \, 4 \, 2 \, 1 \right)
-$$</div>
-<p>and writing in sorted order:</p>
-<div class="math">$$
-\left( 1 \, 8 \, 4 \, 2 \right)
-\left( 3 \, 5 \, 7 \, 6 \right)
-$$</div>
-<p><strong>Fact 2</strong> tells us that the item in position 1 is the
-last to be removed, since the size of the circle <span class="math">\(n = 8 = 2^3\)</span>.<br>
-We confirm the cycle does contain <span class="math">\(1 \rightarrow 8\)</span> 
-(meaning, the item in position 1 will be removed 
-eighth).</p>
-<h3 id="not-a-power-of-two-example">Not a Power of Two Example</h3>
-<p>Now that we've looked at an example where the size of
-the circle is a power of 2, let's return to the original
-example that we presented in <a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">Part 2</a>
-and the beginning of this blog post,
-namely, <span class="math">\(n = 11, m = 2\)</span>.</p>
-<p>Here is the doubling permutation table again: </p>
-<div class="highlight"><pre><span></span><code> j   |  2j  |  2j mod 2n+1
------|------|---------------
-  1  |   2  |        2
-  2  |   4  |        4
-  3  |   6  |        6
-  4  |   8  |        8
-  5  |  10  |       10
-  6  |  12  |       12
-  7  |  14  |       14
-  8  |  16  |       16
-  9  |  18  |       18
- 10  |  20  |       20
- 11  |  22  |       22
- 12  |  24  |        1
- 13  |  26  |        3
- 14  |  28  |        5
- 15  |  30  |        7
- 16  |  32  |        9
- 17  |  34  |       11
- 18  |  36  |       13
- 19  |  38  |       15
- 20  |  40  |       17
- 21  |  42  |       19
- 22  |  44  |       21
+<p>You're already saving yourself a bunch of keystrokes, and we're just getting started!</p>
+<h2 id="ending-bad-habits">Ending Bad Habits</h2>
+<p>This is a nice trick for getting yourself out of bad habits.
+My first time using a "sophisticated" branch worklow in git
+(i.e., not just committing and pushing to master all the time),
+I got in trouble for committing directly to master with a
+<code>git push origin master</code> (instead of making a feature branch
+and opening a pull request).</p>
+<p>To get myself out of the habit of typing <code>git push origin master</code>,
+I wanted to map it to an alias that told me no. I did that by
+defining <code>git</code> to be a bash function (this works because functions
+take precedence over a binary named <code>git</code> on your path).</p>
+<p>The git function checks the arguments that are passed to it.
+If the arguments are <code>push origin master</code>, it means I'm typing
+<code>git push origin master</code>, and I get a slap on the wrist.</p>
+<p>Otherwise, it passes the arguments through to the <code>git</code> binary.</p>
+<p>You can also put this in <code>~/.bashrc</code>.</p>
+<div class="highlight"><pre><span></span><code>git<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="nv">$@</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;push origin master&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;nope&quot;</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">        </span><span class="nb">command</span><span class="w"> </span>git<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$@</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
 </code></pre></div>
 
-<p>As before, the last column splits into odd and even,
-with all the evens coming first, so we consider
-<span class="math">\(2n\)</span> elements to cover all <span class="math">\(n\)</span> odd and even items,
-and use an odd modulus to ensure we don't wrap back
-around to the even numbers the second time through.</p>
-<p>We follow the entries of the table to factor this 
-permutation into cycles, as above, yielding the two
-cycles:</p>
-<div class="math">$$
-\left( 1 \, 2 \, 4 \, 8 \, 16 \, 9 \, 18 \, 13 \, 3 \, 6 \, 12 \right)
-$$</div>
-<p>and </p>
-<div class="math">$$
-\left( 5 \, 10 \, 20 \, 17 \, 11 \, 22 \, 21 \, 19 \, 15 \, 7 \, 14 \right)
-$$</div>
-<p>Finally, we reverse these and eliminate the numbers larger
-than <span class="math">\(n\)</span>, giving the Josephus permutation cycle:</p>
-<div class="math">$$
-\left( 6 \, 3 \, 9 \, 8 \, 4 \, 2 \, 1 \right)
-\left( 7 \, 11 \, 10 \, 5 \right)
-$$</div>
-<p>or, rearranging into sorted order:</p>
-<div class="math">$$
-\left( 1\, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
-\left( 5 \, 7 \, 11 \, 10 \right)
-$$</div>
-<p>However, there is a faster way to figure out the last
-item in the circle that will be removed that only
-requires us to carry out 3 steps.</p>
-<h3 id="the-power-of-two-shortcut">The Power of Two Shortcut</h3>
-<p>Unlike the circle whose size was a power of two,
-we don't know ahead of time who goes last. 
-However, <strong>Fact 3</strong> tells us that eventually
-our circle will reach the size of a power of two.
-For this case it only takes 3 steps (11 - 8).
-At that point, the circle item at the starting point
-for the next step will be the last item removed.</p>
-<p>Here is the diagram for the third removal operation
-(left labels show removal indices, right labels show
-circle position indices):</p>
-<table>
-<tr>
-<td>
-<img alt="step 3 of josephus circle n = 11 m = 2 labeled by removal order" 
-src="images/josephus_11_2_step3R.png" height="350px" width="350px" />
-</td>
+<h1 id="alias-section">Alias section</h1>
+<p>In the <code>~/.gitconfig</code> file, aliases specific to git can be
+defined in a section beginning with alias.</p>
+<h2 id="log-utils">Log Utils</h2>
+<p>Let's start with some utilities for viewing git logs.</p>
+<p>(You can never have too many ways to look at a git log.)</p>
+<p>Note that we'll assume the alias bit in the following git config excerpts.</p>
+<div class="highlight"><pre><span></span><code>[alias]
+    # courtesy of https://stackoverflow.com/a/34467298
+    lg = !&quot;git lg1&quot;
+    lg1 = !&quot;git lg1-specific --all&quot;
+    lg2 = !&quot;git lg2-specific --all&quot;
+    lg3 = !&quot;git lg3-specific --all&quot;
 
-<td>
-<img alt="josephus circle n = 11 m = 2 labeled by circle location" 
-src="images/josephus_11_2_labonly.png" height="350px" width="350px" />
-</td>
-</tr>
-</table>
+    lg1-specific = log --graph --abbrev-commit --decorate --format=format:&#39;%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)&#39;
+    lg2-specific = log --graph --abbrev-commit --decorate --format=format:&#39;%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n&#39;&#39;          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)&#39;
+    lg3-specific = log --graph --abbrev-commit --decorate --format=format:&#39;%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset) %C(bold cyan)(committed: %cD)%C(reset) %C(auto)%d%C(reset)%n&#39;&#39;          %C(white)%s%C(reset)%n&#39;&#39;          %C(dim white)- %an &lt;%ae&gt; %C(reset) %C(dim white)(committer: %cn &lt;%ce&gt;)%C(reset)&#39;
+</code></pre></div>
 
-<p><strong>Fact 3</strong> is in effect here, because after the third item 
-is removed, our starting "cursor" is on item 7 in the circle,
-and the circle is of size <span class="math">\(2^3\)</span>, so from <strong>Fact 2</strong> we know
-that 7 will be the last item removed from the circle. </p>
-<p>We can see from the final permutation that <span class="math">\(7 \rightarrow 11\)</span>,
-so indeed, this holds true.</p>
-<p>To translate this into mathematical terms, we are 
-carrying out <span class="math">\(r\)</span> operations, where</p>
-<div class="math">$$
-r = n - 2^{ \left\lfloor{ \lg{n} }\right\rfloor }
-$$</div>
-<p>and at the conclusion of those <span class="math">\(r\)</span> operations, we mark the
-starting item for the next round. That item will be the 
-last item to be removed.</p>
-<h2 id="algorithm-d-summary">Algorithm D Summary</h2>
-<p>To summarize what we covered in this blog post:</p>
-<p>This post covers a method for solving the Josephus
-problem for the special case of a step size of two,
-<span class="math">\(m = 2\)</span>.</p>
-<p>We started by covering the recipe for Algorithm D,
-which uses a doubling permutation to obtain the
-Josephus permutation in cycle form. We illustrated
-the three steps of the recipe (populate the table,
-write the doubling permutation cycles, then 
-filter and reverse) using an example case.</p>
-<p>Then we got into the question of <em>why</em> Algorithm D 
-works, by making an observation and building upon
-it. We deduced several facts that allowed us to 
-come up with a shortcut for the <span class="math">\(m = 2\)</span> case.</p>
-<p>Our final solution technique (making use of the 
-above-mentioned shortcut) is as follows:</p>
-<ol>
-<li>
-<p>Carry out as many removal operations as needed
-   to make the circle the size of a power of 2
-   (see formula for <span class="math">\(r\)</span> above)</p>
-</li>
-<li>
-<p>The starting item for the next round (where our
-   "removal cursor" will start counting) will be
-   the last item removed from the circle.</p>
-</li>
-</ol>
-<p>So if you find yourself being rounded up in some
-sort of weird mass execution scheme that happens
-to be a Josephus problem with a step size of 2,
-the key to surviving is to remember your powers
-of 2, to carry out <span class="math">\(r = n - 2^{ \left\lfloor{ \lg{n} }\right\rfloor }\)</span>
-removal operations, and to
-grab the next open spot in the circle.</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
+<p>The <code>git lgX</code> shortcuts give similar views of the log, but with increasing vertical spacing.
+<code>git lg1</code> is the most compact, while <code>git lg3</code> is the most comfortable to read, as far as vertical whitespace.
+Same with the <code>-specific</code> commands.</p>
+<p>This is one more nice short log command:</p>
+<div class="highlight"><pre><span></span><code>    # View abbreviated SHA, description, and history graph of the latest 20 commits
+    l = log --pretty=oneline -n 20 --graph --abbrev-commit
+</code></pre></div>
 
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
+<p>Remember to use this with the <code>g</code> alias for super short log:</p>
+<div class="highlight"><pre><span></span><code>$ g l
+* 4357b28 (HEAD -&gt; source, gh/source, gh/HEAD) update mocking aws post
+* 063ad78 add mocking post
+* a5f1adc add init keras cnn post
+* fb911ec add keras cnn draft
+* 3549d35 add rosalind (euler paths) part 7 draft
 
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+$ g lg1
+* 4357b28 - (67 minutes ago) update mocking aws post - Charles Reid (HEAD -&gt; source, gh/source, gh/HEAD)
+* 063ad78 - (2 weeks ago) add mocking post - Charles Reid
+* a5f1adc - (4 months ago) add init keras cnn post - C Reid
+* fb911ec - (5 months ago) add keras cnn draft - C Reid
+* 3549d35 - (5 months ago) add rosalind (euler paths) part 7 draft - C Reid
+...
+</code></pre></div>
 
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
+<h2 id="status-utils">Status Utils</h2>
+<p>The git status command is one of my most frequently used commands, so I made a few shortcuts:</p>
+<div class="highlight"><pre><span></span><code>    # View the current working tree status using the short format
+    s = status -s
+    ss = status
+</code></pre></div>
 
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+<p>This makes checking the short or long status of a git repo easy:</p>
+<div class="highlight"><pre><span></span><code>$ g s
+AM pelican/content/git-workflows-1-config.md
+AM pelican/content/git-workflows-2-teams.md
+
+$ g ss
+On branch source
+Your branch is ahead of &#39;gh/source&#39; by 1 commit.
+  (use &quot;git push&quot; to publish your local commits)
+
+Changes to be committed:
+  (use &quot;git restore --staged &lt;file&gt;...&quot; to unstage)
+    new file:   pelican/content/git-workflows-1-config.md
+    new file:   pelican/content/git-workflows-2-teams.md
+
+Changes not staged for commit:
+  (use &quot;git add &lt;file&gt;...&quot; to update what will be committed)
+  (use &quot;git restore &lt;file&gt;...&quot; to discard changes in working directory)
+    modified:   pelican/content/git-workflows-1-config.md
+    modified:   pelican/content/git-workflows-2-teams.md
+</code></pre></div>
+
+<h2 id="fetching">Fetching</h2>
+<p>Fetching is handy to do, since it just fetches changes from a remote and doesn't actually
+change anything or try to merge anything (unlike a <code>git pull</code> command).</p>
+<p>The most useful fetch command (<code>git fetch --all</code>) is aliased to <code>g f</code> with the following
+bit in the aliases section of the <code>~/.gitconfig</code> file:</p>
+<div class="highlight"><pre><span></span><code>    f = fetch --all
+</code></pre></div>
+
+<h2 id="branch-utils">Branch Utils</h2>
+<p>The only command I might use more than the status command are branch commands,
+so here are several branch aliases:</p>
+<div class="highlight"><pre><span></span><code>    b = branch -v
+    bv = branch -v
+
+    ba = branch -a
+    bb = branch -v -a
+</code></pre></div>
+
+<p>In a similar way, you can get a summary view using <code>g b</code>:</p>
+<div class="highlight"><pre><span></span><code>$ g b
+  master 4c828cd [behind 84] update with awsome day notes
+* source b18adfd add two git workflow posts
+
+$ g b
+  master 940ee98 update mocking post
+* source b18adfd add two git workflow posts
+</code></pre></div>
+
+<p>and a little bit more information with <code>g bb</code>:</p>
+<div class="highlight"><pre><span></span><code>$ g bb
+  master            940ee98 update mocking post
+* source            b18adfd add two git workflow posts
+  remotes/gh/HEAD   -&gt; gh/source
+  remotes/gh/master 940ee98 update mocking post
+  remotes/gh/source b18adfd add two git workflow posts
+</code></pre></div>
+
+<h3 id="branch-and-checkout">Branch and Checkout</h3>
+<p>Sometimes if you are creaing a branch with a long branch name, it can be
+inconvenient to have to first create the branch with <code>git branch &lt;branch-name&gt;</code>
+and then check it out with <code>git checkout &lt;branch-name&gt;</code>.</p>
+<p>To resolve this you can define a <code>git go</code> alias that creates the branch and
+then switches to that branch:</p>
+<div class="highlight"><pre><span></span><code>    # Switch to a branch, creating it
+    # from the current branch if necessary
+    go = &quot;!f() { git checkout -b \&quot;$1\&quot; 2&gt; /dev/null || git checkout \&quot;$1\&quot;; }; f&quot;
+</code></pre></div>
+
+<p>Careful you don't mistype the branch name. If you typo a new branch name
+that happens to collide with an existing branch, the <code>checkout -b</code> will
+fail (branch already exists) and the fallback <code>checkout "$1"</code> will silently
+switch you to that existing branch. Typo a branch name that doesn't exist
+at all, and both commands fail — you stay on your current branch and may
+not notice. Always sanity check with <code>g b</code> after running <code>g go</code>.</p>
+<h2 id="remote-utils">Remote Utils</h2>
+<p>Another useful git command is the remote command, so here are a few
+remote aliases:</p>
+<div class="highlight"><pre><span></span><code>    r = remote -v
+    rv = remote -v
+    ra = remote -v
+</code></pre></div>
+
+<h2 id="commit-utils">Commit Utils</h2>
+<p>Sometimes you have changes that you've staged using <code>git add</code>, but you
+want to see the changes that you've staged, before you commit them.</p>
+<p>Normally you'd have to use the inconvenient <code>git diff --cached &lt;files&gt;</code>,
+but this can be aliased to <code>cdiff</code>, so that you can use <code>git diff</code> to see
+unstaged changes and <code>git cdiff</code> to see staged changes.</p>
+<p>Even better, you can define the alias <code>g cd</code> to run <code>git cdiff</code>...!</p>
+<p>Here's the relevant bit in the aliases section:</p>
+<div class="highlight"><pre><span></span><code>    cdiff = diff --cached
+    cd = diff --cached
+</code></pre></div>
+
+<h3 id="committing-all-changes">Committing All Changes</h3>
+<div class="highlight"><pre><span></span><code>    # Commit all changes
+    ca = !git add -A &amp;&amp; git commit -av
+</code></pre></div>
+
+<h3 id="fixing-commits">Fixing Commits</h3>
+<p>Some common operations for repairing commit history before pushing:</p>
+<div class="highlight"><pre><span></span><code>    # Amend the currently staged files to the latest commit
+    amend = commit --amend --reuse-message=HEAD
+
+    # Oops
+    fix = commit --amend --reuse-message=HEAD --edit
+</code></pre></div>
+
+<h2 id="miscellaneous-utils">Miscellaneous Utils</h2>
+<p>There are a few other actions that are useful to add to the aliases section
+of the <code>~/.gitconfig</code>:</p>
+<h3 id="rebasing-shortcuts">Rebasing shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    # Interactive rebase with the given number of latest commits
+    reb = &quot;!r() { git rebase -i HEAD~$1; }; r&quot;
+</code></pre></div>
+
+<h3 id="diff-shortcuts">Diff shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    # Show the diff between the latest commit and the current state
+    d = !&quot;git diff-index --quiet HEAD -- || clear; git --no-pager diff --patch-with-stat&quot;
+
+    # `git di $number` shows the diff between the state `$number` revisions ago and the current state
+    di = !&quot;d() { git diff --patch-with-stat HEAD~$1; }; git diff-index --quiet HEAD -- || clear; d&quot;
+</code></pre></div>
+
+<h3 id="pull-shortcuts">Pull shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    p = &quot;!f() { git pull $1 $2; }; f&quot;
+</code></pre></div>
+
+<h3 id="clone-shortcuts">Clone shortcuts</h3>
+<div class="highlight"><pre><span></span><code>    # Clone a repository including all submodules
+    c = clone --recursive
+</code></pre></div>
+
+<h3 id="contributor-shortcuts">Contributor shortcuts</h3>
+<p>This last one is convenient for getting a summary of contributors:</p>
+<div class="highlight"><pre><span></span><code>    # List contributors with number of commits
+    contributors = shortlog --summary --numbered
+</code></pre></div>
+
+<p>An example for <a href="https://github.com/aws/chalice">https://github.com/aws/chalice</a>:</p>
+<div class="highlight"><pre><span></span><code>$ cd chalice/
+$ g contributors
+  1053  James Saryerwinnie
+   120  John Carlyle
+    94  stealthycoin
+    42  kyleknap
+    35  jcarlyl
+    19  Kyle Knapp
+    12  Atharva Chauthaiwale
+</code></pre></div>
+
+<h1 id="core-section">Core section</h1>
+<p>Because it's the best text editor:</p>
+<div class="highlight"><pre><span></span><code>[core]
+    editor = vim
+</code></pre></div>
+
+<p>I have some other stuff I've collected, many of them from
+<a href="https://github.com/mathiasbynens/dotfiles">https://github.com/mathiasbynens/dotfiles</a>:</p>
+<div class="highlight"><pre><span></span><code>    # Use custom `.gitignore` and `.gitattributes`
+    excludesfile = ~/.gitignore
+    attributesfile = ~/.gitattributes
+
+    # Treat spaces before tabs and all kinds of trailing whitespace as an error
+    # [default] trailing-space: looks for spaces at the end of a line
+    # [default] space-before-tab: looks for spaces before tabs at the beginning of a line
+    whitespace = space-before-tab,-indent-with-non-tab,trailing-space
+
+    # Make `git rebase` safer on macOS
+    # More info: &lt;http://www.git-tower.com/blog/make-git-rebase-safe-on-osx/&gt;
+    ###trustctime = false
+
+    # Prevent showing files whose names contain non-ASCII symbols as unversioned.
+    # http://michael-kuehnel.de/git/2014/11/21/git-mac-osx-and-german-umlaute.html
+    precomposeunicode = false
+
+    # Speed up commands involving untracked files such as `git status`.
+    # https://git-scm.com/docs/git-update-index#_untracked_cache
+    untrackedCache = true
+</code></pre></div>
+
+<h1 id="color-section">Color section</h1>
+<p>Make some nice beautiful colors that are easy to understand:</p>
+<div class="highlight"><pre><span></span><code>[color]
+
+    # Use colors in Git commands that are capable of colored output when
+    # outputting to the terminal. (This is the default setting in Git ≥ 1.8.4.)
+    ui = auto
+
+[color &quot;branch&quot;]
+
+    current = yellow reverse
+    local = yellow
+    remote = green
+
+[color &quot;diff&quot;]
+
+    meta = yellow bold
+    frag = magenta bold # line info
+    old = red # deletions
+    new = green # additions
+
+[color &quot;status&quot;]
+
+    added = yellow
+    changed = green
+    untracked = cyan
+</code></pre></div>
+
+<h1 id="url-section">Url section</h1>
+<p>This makes some Github-related URLs easier and shorter to type:</p>
+<div class="highlight"><pre><span></span><code>[url &quot;git@github.com:&quot;]
+
+    insteadOf = &quot;gh:&quot;
+    pushInsteadOf = &quot;github:&quot;
+    pushInsteadOf = &quot;git://github.com/&quot;
+
+[url &quot;git@gist.github.com:&quot;]
+
+    insteadOf = &quot;gst:&quot;
+    pushInsteadOf = &quot;gist:&quot;
+    pushInsteadOf = &quot;git://gist.github.com/&quot;
+
+[url &quot;git://gist.github.com/&quot;]
+
+    insteadOf = &quot;gist:&quot;
+</code></pre></div>
+
+<p>Now, instead of</p>
+<div class="highlight"><pre><span></span><code>$ git clone git@github.com:org-name/repo-name
+</code></pre></div>
+
+<p>you can do the much simpler</p>
+<div class="highlight"><pre><span></span><code>$ g c gh://org-name/repo-name
+</code></pre></div>
+
+<p>Voila! Start integrating these alises into your daily workflow,
+and you'll find yourself using a lot fewer keystrokes!</p></div>
 
     </div>
 </div>
@@ -823,15 +1010,15 @@ grab the next open spot in the circle.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/puzzles.html">puzzles</a>
+                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/josephus.html">josephus</a>
+                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/latex.html">latex</a>
+                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -849,18 +1036,18 @@ grab the next open spot in the circle.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                The Josephus Problem: Part 2: Two Examples
+                Mocking AWS in Unit Tests
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-03-20T14:00:00-07:00" pubdate>Wednesday 03/20/2019</time>
+                <time datetime="2019-09-23T09:00:00-07:00" pubdate>Monday 09/23/2019</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">permalink</a>
+                <a href="https://charlesreid1.github.io/mocking-aws-in-unit-tests.html">permalink</a>
             </span>
             </p>
         </div>
@@ -877,445 +1064,250 @@ grab the next open spot in the circle.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>This is Part 2 of an N-part series.</p>
-<ul>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-1-the-problem.html">The Josephus Problem: Part 1: The Problem</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-2-two-examples.html">The Josephus Problem: Part 2: Two Examples</a></li>
-<li><a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">The Josephus Problem: Part 3: Solving the Double Step Case</a></li>
-</ul>
-<div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#two-examples">Two Examples</a></li>
-<li><a href="#n-8-m-4">n = 8, m = 4</a><ul>
-<li><a href="#step-by-step-removal-for-n-8">Step by Step Removal for n = 8</a></li>
-<li><a href="#writing-the-solution-permutation-two-row-notation">Writing the Solution Permutation: Two Row Notation</a></li>
-<li><a href="#writing-the-solution-permutation-cycle-notation">Writing the Solution Permutation: Cycle Notation</a></li>
-<li><a href="#visual-representation-of-solution-permutation">Visual Representation of Solution Permutation</a></li>
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#a-simple-example-mocking-api-responses">A Simple Example: Mocking API Responses</a><ul>
+<li><a href="#the-genuine-aws-call">The Genuine AWS Call</a></li>
+<li><a href="#the-mocked-aws-call">The Mocked AWS Call</a></li>
 </ul>
 </li>
-<li><a href="#n-11-m-2">n = 11, m = 2</a><ul>
-<li><a href="#step-by-step-removal-for-n-11">Step by Step Removal for n = 11</a></li>
-<li><a href="#two-row-notation">Two Row Notation</a></li>
-<li><a href="#cycle-notation">Cycle Notation</a></li>
-<li><a href="#circle-permutation-diagram">Circle Permutation Diagram</a></li>
-</ul>
-</li>
-<li><a href="#next-steps-solve">Next Steps: Solve!</a></li>
+<li><a href="#where-to-patch-a-common-gotcha">Where To Patch: A Common Gotcha</a></li>
+<li><a href="#when-to-reach-for-moto-instead">When To Reach For moto Instead</a></li>
 </ul>
 </div>
-<h2 id="two-examples">Two Examples</h2>
-<p>In this blog post we'll walk through two examples
-of a Josephus problem:</p>
-<div class="math">$$
-n = 8, m = 4
-$$</div>
-<p>and</p>
-<div class="math">$$
-n = 11, m = 2
-$$</div>
-<p>We will simulate the Josephus process and
-show how the solution is expressed using both 
-permutation notation and cycle notation.</p>
-<h2 id="n-8-m-4">n = 8, m = 4</h2>
-<p>We begin with the example that Knuth gives in his
-problem statement, <span class="math">\(n = 8, m = 4\)</span>, along with its
-solution, <span class="math">\(54613872\)</span>.</p>
-<p>Here is the Josephus circle for this case, and the
-corresponding removal index on the right (the red dot
-indicates the starting point for the process):</p>
-<table>
-<tr>
-<td>
-<b>Circle index:</b><br />
-<img alt="indexed by circle location order" 
-src="images/josephus_8_4_circleix.png" width="350px" />
-</td>
-<td>
-<b>Removal index:</b><br />
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_removalix.png" width="350px" />
-</td>
-</tr>
-</table>
-
-<h3 id="step-by-step-removal-for-n-8">Step by Step Removal for n = 8</h3>
-<p>Starting at the red dot, we proceed <span class="math">\(m-1\)</span> points forward
-through the circle (<span class="math">\(m\)</span> if we include the starting
-point), skipping items that have already been removed,
-and remove an item from the circle.</p>
-<p>We indicate the starting point with a red dot in Step 0,
-then indicate the removal index with a red dot and the
-corresponding removal index.</p>
-<table>
-
-<tr>
-<td><b>Step 0: Starting Point
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step0R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 1:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step1R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 2:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step2R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 3:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step3R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 4:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step4R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 5:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step5R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 6:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step6R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 7:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step7R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 8:
-</b></td>
-</tr><tr>
-<td>
-<img alt="indexed by removal order" 
-src="images/josephus_8_4_step8R.png" width="350px" />
-</td>
-</tr>
-
-</table>
-
-<h3 id="writing-the-solution-permutation-two-row-notation">Writing the Solution Permutation: Two Row Notation</h3>
-<p>As mentioned in Part 1, we can think about the final removal order
-of sushi plates (or mice, or soldiers) as a special permutation, 
-the Josephus permutation. If we want to write the Josephus permutation
-using the standard two-row notation for permutations, we would write
-the circle order (the index of items around the circle) on the top row,
-and the removal order (the index of items as they are removed) on the 
-bottom row. This gives:</p>
-<div class="math">$$
-\bigl(\begin{smallmatrix}
-    1 &amp; 2 &amp; 3 &amp; 4 &amp; 5 &amp; 6 &amp; 7 &amp; 8 \\
-    5 &amp; 4 &amp; 6 &amp; 1 &amp; 3 &amp; 8 &amp; 7 &amp; 2
-\end{smallmatrix}\bigr)
-$$</div>
-<p>While this notation is more intuitive (makes it easier to answer
-a variety of questions), it is also inconvenient notation, since
-there are many equivalent ways of writing a single permutation.</p>
-<h3 id="writing-the-solution-permutation-cycle-notation">Writing the Solution Permutation: Cycle Notation</h3>
-<p>In Part 1 we also introduced cycles and cycle notation. Writing a
-permutation as a cycle is a unique representation of that permutation.
-By tracing which elements are permuted with other elements, we can
-turn the two-row representation into a cycle representation.</p>
-<p>Here is the Josephus permutation for <span class="math">\(n = 8, m = 4\)</span> 
-in cycle notation:</p>
-<div class="math">$$
-\left( 1 \, 5 \, 3 \, 6 \, 8 \, 2 \, 4 \right) \left( 7 \right)
-$$</div>
-<h3 id="visual-representation-of-solution-permutation">Visual Representation of Solution Permutation</h3>
-<p>To represent the Josephus permutation graphically, we draw lines 
-connecting the edges that permute and form cycles:</p>
-<p><img alt="circle with undirected permutation paths" 
-src="images/josephus_8_4_circ.png" width="350px" /></p>
-<p>This is a visual representation of the Josephus permutation
-for <span class="math">\(n = 8, m = 4\)</span>.</p>
-<p><a name="n--11-m--2"></a></p>
-<h2 id="n-11-m-2">n = 11, m = 2</h2>
-<p>Next is an example with a step size of two, which
-is a special case of the Josephus problem with a 
-slightly easier solution procedure.</p>
-<p>Here is the final Josephus permutation on a circle,
-which is what our procedure below will yield:</p>
-<table>
-<tr>
-<td>
-<b>Circle index:</b><br />
-<img alt="indexed by circle location order" 
-src="images/josephus_11_2_circleix.png" width="350px" />
-</td>
-<td>
-<b>Removal index:</b><br />
-<img alt="indexed by removal order" 
-src="images/josephus_11_2_removalix.png" width="350px" />
-</td>
-</tr>
-</table>
-
-<h3 id="step-by-step-removal-for-n-11">Step by Step Removal for n = 11</h3>
-<p>As before, we proceed from the red dot, moving
-forward <span class="math">\(m-1\)</span> items and removing the <span class="math">\(m^{th}\)</span>
-item.</p>
-<p>We indicate the starting point with a red dot in Step 0,
-then indicate the removal index with a red dot and the
-corresponding removal index.</p>
-<table>
-
-<tr>
-<td><b>Step 0: Starting Point
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 0"
-src="images/josephus_11_2_step0R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 1:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 1"
-src="images/josephus_11_2_step1R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 2:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 2"
-src="images/josephus_11_2_step2R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 3:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 3"
-src="images/josephus_11_2_step3R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 4:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 4"
-src="images/josephus_11_2_step4R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 5:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 5"
-src="images/josephus_11_2_step5R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 6:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 6"
-src="images/josephus_11_2_step6R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 7:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 7"
-src="images/josephus_11_2_step7R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 8:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 8"
-src="images/josephus_11_2_step8R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 9:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 9"
-src="images/josephus_11_2_step9R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 10:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 10"
-src="images/josephus_11_2_step10R.png" width="350px" />
-</td>
-</tr>
-
-<tr>
-<td><b>Step 11:
-</b></td>
-</tr><tr>
-<td>
-<img alt="josephus n = 11 m = 2 step 11"
-src="images/josephus_11_2_step11R.png" width="350px" />
-</td>
-</tr>
-
-</table>
-
-<h3 id="two-row-notation">Two Row Notation</h3>
-<p>Here is the two-row representation:</p>
-<div class="math">$$
-\bigl(\begin{smallmatrix}
-     1 &amp;  2 &amp;  3 &amp;  4 &amp;  5 &amp;  6 &amp;  7 &amp;  8 &amp;  9 &amp; 10 &amp; 11 \\
-     6 &amp;  1 &amp;  9 &amp;  2 &amp;  7 &amp;  3 &amp; 11 &amp;  4 &amp;  8 &amp;  5 &amp; 10
-\end{smallmatrix}\bigr)
-$$</div>
-<h3 id="cycle-notation">Cycle Notation</h3>
-<p>When factored into a cycle, this gives:</p>
-<div class="math">$$
-\left( 1 \, 6 \, 3 \, 9 \, 8 \, 4 \, 2 \right)
-\left( 5 \, 7 \, 11 \, 10 \right)
-$$</div>
-<h3 id="circle-permutation-diagram">Circle Permutation Diagram</h3>
-<p>To represent the Josephus permutation graphically, we draw lines 
-connecting the edges that permute and form cycles:</p>
-<p><img alt="circle with undirected permutation paths" 
-src="images/josephus_11_2_circ.png" width="350px" /></p>
-<p>This is a visual representation of the Josephus permutation
-for <span class="math">\(n = 11, m = 2\)</span>.</p>
-<h2 id="next-steps-solve">Next Steps: Solve!</h2>
-<p>Our next steps are simple: solve it! </p>
-<p>In <strong><a href="https://charlesreid1.github.io/the-josephus-problem-part-3-solving-the-double-step-case.html">Part 3</a></strong> we will show the solution of the
-special case of <span class="math">\(m = 2\)</span> (the double-step case).</p>
-<p>In <strong><a href="#">Part 4</a></strong> we will show several ways to solve
-the general case, and walk through some examples
-where we apply the solution procedure.</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
+<h2 id="overview">Overview</h2>
+<p>This post covers a technique for mocking AWS in unit tests so that you can test functionality that normally
+requires API calls and handling responses, by mocking those responses instead of making actual API calls.</p>
+<h2 id="a-simple-example-mocking-api-responses">A Simple Example: Mocking API Responses</h2>
+<h3 id="the-genuine-aws-call">The Genuine AWS Call</h3>
+<p>Let's start with an example of an AWS API call. Here's how our program will be structured:
+start with a driver <code>lister.py</code> that creates an AWS secrets manager client and defines a 
+function to list secrets using the secrets manager client, then a test for it in <code>test_lister.py</code>
+that mocks the AWS call.</p>
+<p>This example is simple and uses just one function, <code>list_secrets()</code>,
+which returns a JSON response that looks something like this:</p>
+<div class="highlight"><pre><span></span><code>{
+  &quot;SecretList&quot;: [
+    {
+      &quot;ARN&quot;: &quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret1-abc123&quot;,
+      &quot;Name&quot;: &quot;prefix/es_source_ip&quot;,
+      &quot;LastChangedDate&quot;: &quot;2019-09-23 17:29:16.267000-07:00&quot;,
+      &quot;LastAccessedDate&quot;: &quot;2019-09-23 17:00:00-07:00&quot;,
+      &quot;SecretVersionsToStages&quot;: {
+        &quot;658c3b41-0806-48b9-b05d-ea7dc2dbf237&quot;: [
+          &quot;AWSCURRENT&quot;
+        ],
+        &quot;f37ccfe2-16e0-4305-a250-ef89d2c47ece&quot;: [
+          &quot;AWSPREVIOUS&quot;
+        ]
+      }
+    },
+    {
+      &quot;ARN&quot;: &quot;arn:aws:secretsmanager:us-east-1:000000000000:secret:prefix/secret2-def789&quot;,
+      &quot;Name&quot;: &quot;prefix/secret2&quot;,
+      &quot;LastChangedDate&quot;: &quot;2019-09-22 17:05:01.431000-07:00&quot;,
+      &quot;LastAccessedDate&quot;: &quot;2019-09-22 17:00:00-07:00&quot;,
+      &quot;SecretVersionsToStages&quot;: {
+        &quot;95AE5F8B-34E7-4EDF-A672-9E3AF1A4732E&quot;: [
+          &quot;AWSCURRENT&quot;
+        ],
+        &quot;F29E224A-BC03-4780-B64E-EA666B99D952&quot;: [
+          &quot;AWSPREVIOUS&quot;
+        ]
+      }
     }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+  ]
 }
-</script></div>
+</code></pre></div>
+
+<p>Using the secrets manager API:</p>
+<p><strong><code>lister.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">boto3</span>
+
+<span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">print_secret_names</span><span class="p">():</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">sm_client</span><span class="o">.</span><span class="n">list_secrets</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">secret</span> <span class="ow">in</span> <span class="n">s</span><span class="p">[</span><span class="s1">&#39;SecretList&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="s1">&#39;Name&#39;</span> <span class="ow">in</span> <span class="n">secret</span> <span class="ow">and</span> <span class="s1">&#39;LastAccessedDate&#39;</span> <span class="ow">in</span> <span class="n">secret</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Secret Name: </span><span class="si">{</span><span class="n">secret</span><span class="p">[</span><span class="s1">&#39;Name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (last accessed: </span><span class="si">{</span><span class="n">secret</span><span class="p">[</span><span class="s1">&#39;LastAccessedDate&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">print_secret_names</span><span class="p">()</span>
+</code></pre></div>
+
+<p>If we run this file, we'll see a list of secrets in the real secrets manager -
+that is, the secrets manager that is linked to the boto credentials in <code>~/.aws</code>,
+so the secrets we see are the actual secrets in the secret manager:</p>
+<div class="highlight"><pre><span></span><code>$ python lister.py
+Secret Name: prefix/secret1 (last accessed: 2019-09-23 17:00:00-07:00)
+Secret Name: prefix/secret2 (last accessed: 2019-09-23 17:00:00-07:00)
+Secret Name: prefix/secret3 (last accessed: 2019-09-23 17:00:00-07:00)
+</code></pre></div>
+
+<h3 id="the-mocked-aws-call">The Mocked AWS Call</h3>
+<p>It is important to only mock the functionality we need.
+We should mock the returned JSON, but only the <code>Name</code>
+and <code>LastAccessedDate</code> fields.</p>
+<p>To mock the call to <code>list_secrets()</code>, we start by importing
+<code>mock</code> from <code>unittest</code>. Then we import the file that has the
+function we want to test. We also import any other modules
+we need.</p>
+<p>Next, we are mocking a call to a method of an object,
+which we can do by creating a context via <code>with mock.patch()</code>
+(and passing it a string with the name of the object we want
+to mock, or patch).</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="k">class</span> <span class="nc">TestLister</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;lister.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
+            <span class="o">...</span>
+            <span class="n">sm</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span> <span class="o">...</span> <span class="p">)</span>
+            <span class="o">...</span>
+</code></pre></div>
+
+<p>Any calls made to <code>sm_client</code> in the <code>lister</code> module will be mocked
+using the <code>mock.MagicMock</code> object that we define in the context,
+so we craft the response we want before we call the method we 
+want to test (which in turn will call <code>sm_client.list_secrets()</code>).</p>
+<p>The full version of the test looks like this:</p>
+<p><strong><code>test_lister.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">mock</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="k">class</span> <span class="nc">TestLister</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">test_main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;lister.sm_client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">sm</span><span class="p">:</span>
+            <span class="n">return_json</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;SecretList&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret1&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                    <span class="p">},</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="s2">&quot;fakesecret2&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;LastAccessedDate&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                    <span class="p">}</span>
+                <span class="p">]</span>
+            <span class="p">}</span>
+            <span class="n">sm</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">return_json</span><span class="p">)</span>
+            <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
+</code></pre></div>
+
+<p>When the test file is run via Python, we see the fake secrets:</p>
+<div class="highlight"><pre><span></span><code>$ python test_lister.py
+Secret Name: fakesecret1 (last accessed: 2019-09-23 20:31:49.186874)
+Secret Name: fakesecret2 (last accessed: 2019-09-23 20:31:49.186880)
+.
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+OK
+</code></pre></div>
+
+<h2 id="where-to-patch-a-common-gotcha">Where To Patch: A Common Gotcha</h2>
+<p>The single most confusing thing about <code>mock.patch</code> is that you patch a name
+where it is <em>looked up</em>, not where it is <em>defined</em>. This trips up almost
+everyone the first time they reach for <code>unittest.mock</code>.</p>
+<p>In our example above, <code>lister.py</code> does <code>import boto3</code> at the top and then binds
+a client to a module-level name:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>That means the name <code>sm_client</code> now lives in the <code>lister</code> module's namespace.
+The patch target <code>"lister.sm_client"</code> works because that is the exact
+namespace where our code looks the name up when it runs.</p>
+<p>A very natural (but broken) instinct is to try to patch <code>boto3</code> itself:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># This looks reasonable, but does nothing useful.</span>
+<span class="k">with</span> <span class="n">mock</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s2">&quot;boto3.client&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">bc</span><span class="p">:</span>
+    <span class="n">bc</span><span class="o">.</span><span class="n">return_value</span><span class="o">.</span><span class="n">list_secrets</span> <span class="o">=</span> <span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(</span><span class="n">return_value</span><span class="o">=</span><span class="n">return_json</span><span class="p">)</span>
+    <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
+</code></pre></div>
+
+<p>This patch replaces <code>boto3.client</code> in the <code>boto3</code> module, but <code>lister.py</code>
+already called <code>boto3.client('secretsmanager')</code> at import time and stored the
+result in <code>lister.sm_client</code>. That reference is unaffected by the patch, so
+the real AWS client is still used and the test either makes a real API call or
+fails with a credentials error.</p>
+<p>The rule of thumb: find the line in your code that actually uses the name,
+then patch it in <em>that</em> module's namespace. If <code>lister.py</code> did the import
+inside the function instead:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">print_secret_names</span><span class="p">():</span>
+    <span class="kn">import</span> <span class="nn">boto3</span>
+    <span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s1">&#39;secretsmanager&#39;</span><span class="p">)</span>
+    <span class="o">...</span>
+</code></pre></div>
+
+<p>then <code>"lister.boto3"</code> would be the correct patch target, because that is where
+<code>boto3</code> is looked up at call time.</p>
+<p>Once test files grow past a handful of nested <code>with mock.patch(...)</code> blocks,
+the <code>mocker</code> fixture from
+<a href="https://pypi.org/project/pytest-mock/"><code>pytest-mock</code></a> is a cleaner way to
+express the same patches without the indentation pyramid.</p>
+<h2 id="when-to-reach-for-moto-instead">When To Reach For <code>moto</code> Instead</h2>
+<p><code>unittest.mock</code> is a good fit when you need to stub out a single call or two,
+but it has real limits:</p>
+<ul>
+<li>You hand-craft the response payload, so nothing checks that the shape you
+  invented actually matches the real AWS API.</li>
+<li>Multi-step flows (create a secret, then list it, then rotate it) require
+  hand-wiring the state changes between mock calls.</li>
+<li>Every new AWS method you touch is another <code>mock.MagicMock(...)</code> to author
+  and maintain.</li>
+</ul>
+<p>For anything beyond a small handful of calls, <a href="https://github.com/getmoto/moto"><code>moto</code></a>
+is usually the better tool. <code>moto</code> runs an in-process fake of the AWS services
+themselves, so your code calls <code>boto3</code> normally and gets back responses whose
+shapes match the real API. You can create resources, list them, mutate them,
+and delete them the same way you would in production.</p>
+<p>Here is the same test written against <code>moto</code>:</p>
+<p><strong><code>test_lister_moto.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">import</span> <span class="nn">lister</span>
+<span class="kn">from</span> <span class="nn">moto</span> <span class="kn">import</span> <span class="n">mock_secretsmanager</span>
+
+<span class="nd">@mock_secretsmanager</span>
+<span class="k">def</span> <span class="nf">test_print_secret_names</span><span class="p">(</span><span class="n">capsys</span><span class="p">):</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;secretsmanager&quot;</span><span class="p">,</span> <span class="n">region_name</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span><span class="p">)</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">create_secret</span><span class="p">(</span><span class="n">Name</span><span class="o">=</span><span class="s2">&quot;fakesecret1&quot;</span><span class="p">,</span> <span class="n">SecretString</span><span class="o">=</span><span class="s2">&quot;hunter2&quot;</span><span class="p">)</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">create_secret</span><span class="p">(</span><span class="n">Name</span><span class="o">=</span><span class="s2">&quot;fakesecret2&quot;</span><span class="p">,</span> <span class="n">SecretString</span><span class="o">=</span><span class="s2">&quot;correct horse&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Reset lister&#39;s cached client so it picks up the moto-patched boto3.</span>
+    <span class="n">lister</span><span class="o">.</span><span class="n">sm_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;secretsmanager&quot;</span><span class="p">,</span> <span class="n">region_name</span><span class="o">=</span><span class="s2">&quot;us-east-1&quot;</span><span class="p">)</span>
+
+    <span class="n">lister</span><span class="o">.</span><span class="n">print_secret_names</span><span class="p">()</span>
+
+    <span class="n">captured</span> <span class="o">=</span> <span class="n">capsys</span><span class="o">.</span><span class="n">readouterr</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="s2">&quot;fakesecret1&quot;</span> <span class="ow">in</span> <span class="n">captured</span><span class="o">.</span><span class="n">out</span>
+    <span class="k">assert</span> <span class="s2">&quot;fakesecret2&quot;</span> <span class="ow">in</span> <span class="n">captured</span><span class="o">.</span><span class="n">out</span>
+</code></pre></div>
+
+<p>A few things to notice:</p>
+<ul>
+<li>The <code>@mock_secretsmanager</code> decorator patches <code>botocore</code> at the HTTP layer,
+  so the "where to patch" gotcha from the previous section does not apply -
+  any <code>boto3</code> client constructed inside the decorated scope talks to the fake.</li>
+<li>We exercise the real <code>create_secret</code> and <code>list_secrets</code> code paths. If AWS
+  changes a field name, or our code assumes a field that the API does not
+  actually return, the test will notice.</li>
+<li>We assert on the <em>output</em> of <code>print_secret_names()</code> via <code>capsys</code>, not just
+  that it ran without exceptions.</li>
+</ul>
+<p><code>moto</code> also supports a standalone <a href="https://docs.getmoto.org/en/latest/docs/server_mode.html">server mode</a>
+that speaks the AWS wire protocol on a local port, which is useful for
+integration tests that span multiple services or non-Python clients.</p>
+<p>The rough guideline: reach for <code>unittest.mock</code> when you are stubbing a single
+call to isolate one unit of code, and reach for <code>moto</code> when the test needs the
+service to <em>behave</em> like AWS across several calls.</p></div>
 
     </div>
 </div>
@@ -1327,15 +1319,17 @@ where we apply the solution procedure.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/puzzles.html">puzzles</a>
+                    <a href="https://charlesreid1.github.io/tag/pytest.html">pytest</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    <a href="https://charlesreid1.github.io/tag/tests.html">tests</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/josephus.html">josephus</a>
+                    <a href="https://charlesreid1.github.io/tag/aws.html">aws</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/latex.html">latex</a>
+                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1374,6 +1368,34 @@ where we apply the solution procedure.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>May 2025</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-rick-perlsteins-nixonland.html">Reading Rick Perlstein's <i>Nixonland</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/ken-binmores-game-theory-and-nash-equilibrium-in-shadowrun.html">Ken Binmore's <i>Game Theory</i> and Nash Equilibrium in Shadowrun</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-hobbess-leviathan.html">Reading Hobbes's <i>Leviathan</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/forever-blue-the-other-side-of-the-bums-story.html"><i>Forever Blue</i>: The Other Side of the Bums Story</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

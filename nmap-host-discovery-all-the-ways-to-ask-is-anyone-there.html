@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <title>charlesreid1</title>
+        <meta charset="utf-8" />
+
+        <!--
+        CSS styles
+        -->
+        <link href="https://charlesreid1.github.io/theme/css/bootstrap.css"       rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/slate.css"              rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/font-awesome.css"       rel="stylesheet" type="text/css"/>
+        <link href="https://charlesreid1.github.io/theme/css/pygment-solarized.css"  rel="stylesheet" type="text/css"/>
+
+        <!--
+        my CSS styles
+        -->
+        <link href="https://charlesreid1.github.io/theme/css/main.css"            rel="stylesheet" type="text/css">
+        <link href="https://charlesreid1.github.io/theme/css/dox.css"             rel="stylesheet" type="text/css">
+
+
+        <!--
+        include Angular first
+        -->
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/angular-1.3.15.js"></script>
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/skrollr-0.6.29.js"></script>
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/d3-3.5.5.js"></script>
+
+        <!--
+        this seems like a bad idea.
+        but if I don't put jquery first, I get errors about unrecognized $s.
+        -->
+        <script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+
+</head>
+<body id="index">
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span> 
+            </button>
+            <a href="https://charlesreid1.github.io" class="navbar-brand">charlesreid1.github.io</a>
+        </div>
+        <div>
+            <div class="collapse navbar-collapse" id="myNavbar">
+                <ul class="nav navbar-nav">
+
+                    <li>
+                        <a href="https://charlesreid1.com/wiki">Wiki</a>
+                    </li>
+                    <li>
+                        <a href="https://git.charlesreid1.com/explore">Git</a>
+                    </li>
+                    <li>
+                        <a href="http://spotify.charlesreid1.com">Music</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.com/life">Life</a>
+                    </li>
+                    <li>
+                        <a href="https://charlesreid1.github.io">Blog</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+
+<div class="container">
+
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2025-05-30T14:00:00-07:00" pubdate>Friday 05/30/2025</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>This is a companion post to
+<a href="building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>.
+Where that post was about the meta - course design, lab
+infrastructure - this one drills into the actual first-lecture
+material: how Nmap decides whether a host is up.</p>
+<p>Full lecture notes:
+<a href="https://charlesreid1.com/wiki/Nmap/Short_Course/Lecture_1">Nmap/Short Course/Lecture 1</a>.</p>
+<h2 id="why-host-discovery-matters">Why Host Discovery Matters</h2>
+<p>Before you can scan ports, identify services, or check for
+vulnerabilities, you have to figure out which IP addresses on the
+target network actually have a machine behind them. Scanning IPs that
+aren't responding is a waste of time, generates a lot of unnecessary
+network noise, and can tip off defenders.</p>
+<p>Think of it as making a map of active settlements before deciding
+which ones to explore in detail.</p>
+<h2 id="ethics-first">Ethics First</h2>
+<p>The obvious but necessary caveat: Nmap must only be used on networks
+where you have explicit, written authorization to scan. Unauthorized
+scanning can be interpreted as an attack, and in many jurisdictions is
+illegal.</p>
+<p>Everything in this post assumes an isolated lab environment - which is
+exactly what we set up in
+<a href="building-an-nmap-short-course-from-scratch.html">the previous post</a>.</p>
+<h2 id="the-default-nmaps-multi-probe-approach">The Default: Nmap's Multi-Probe Approach</h2>
+<p>If you run Nmap as a privileged user (root or <code>sudo</code>) without
+specifying any discovery options, it will fire <em>four</em> probes at each
+target:</p>
+<ol>
+<li>ICMP echo request (a classic ping)</li>
+<li>TCP SYN packet to port 443</li>
+<li>TCP ACK packet to port 80</li>
+<li>ICMP timestamp request</li>
+</ol>
+<p>If any of the four gets a response, Nmap considers the host up.</p>
+<p>The multi-probe approach exists because different firewalls block
+different things. ICMP is commonly blocked at the network edge. Port
+443 might be allowed inbound because there is a web server behind it.
+Port 80 might respond with a TCP RST because there is nothing
+listening. Any one of these signals is enough.</p>
+<p>Unprivileged users can't send raw packets, so Nmap falls back to
+attempting TCP connect() calls to ports 80 and 443. Less accurate,
+but works without root.</p>
+<h2 id="-sn-just-tell-me-whats-alive"><code>-sn</code>: Just Tell Me What's Alive</h2>
+<p>Nmap's default behavior is to do host discovery <em>and then</em> port scan
+whatever comes back alive. If you only want the host discovery step,
+use <code>-sn</code>:</p>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.0/24
+</code></pre></div>
+
+<p><code>-sn</code> means "scan, no port scan." (In older versions it was <code>-sP</code>,
+"scan ping.") It runs the multi-probe discovery and prints just the
+list of live hosts. Very fast, very quiet compared to a full port
+scan, and often the first thing you run.</p>
+<p>Everything else in this post uses <code>-sn</code> unless otherwise noted.</p>
+<h2 id="the-p-family-picking-a-specific-probe">The <code>-P</code> Family: Picking a Specific Probe</h2>
+<p>If you want to control exactly which probe Nmap sends, use one of the
+<code>-P</code> flags.</p>
+<h3 id="-pe-icmp-echo-the-plain-ping"><code>-PE</code>: ICMP Echo (the plain ping)</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PE 192.168.1.100
+</code></pre></div>
+
+<p>The most familiar probe. Sends an ICMP echo request, expects an ICMP
+echo reply. Works when firewalls allow ICMP. Frequently blocked at
+network perimeters.</p>
+<h3 id="-pp-icmp-timestamp"><code>-PP</code>: ICMP Timestamp</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PP 192.168.1.101
+</code></pre></div>
+
+<p>Sends an ICMP timestamp request (type 13), expects a timestamp reply
+(type 14). Useful when echo requests are blocked but timestamp
+requests aren't - some firewall rules block ICMP type 8 (echo) but
+forget about type 13.</p>
+<h3 id="-pm-icmp-address-mask"><code>-PM</code>: ICMP Address Mask</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PM 192.168.1.102
+</code></pre></div>
+
+<p>Sends an ICMP address mask request. Very rarely used legitimately
+these days, which is exactly why it sometimes gets through firewalls
+that block the more common ICMP types.</p>
+<p>The pattern: try the obvious probe, fall back to the less-obvious
+ones if the obvious one fails.</p>
+<h3 id="-psports-tcp-syn-ping"><code>-PS[ports]</code>: TCP SYN Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PS 192.168.1.0/24
+sudo nmap -sn -PS22,80,443 192.168.1.50
+</code></pre></div>
+
+<p>Sends a TCP SYN packet to the given ports (default 80 if you don't
+specify). A response - either SYN/ACK meaning "port open" or RST
+meaning "port closed" - tells Nmap the host is alive.</p>
+<p>This one is the workhorse against firewalled targets. Firewalls
+typically allow inbound traffic to common service ports (80, 443, 22)
+because there are legitimate reasons for outsiders to reach those
+ports. TCP SYN pings ride on that permitted traffic.</p>
+<h3 id="-paports-tcp-ack-ping"><code>-PA[ports]</code>: TCP ACK Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PA 192.168.1.0/24
+sudo nmap -sn -PA21 192.168.1.55
+</code></pre></div>
+
+<p>Sends a TCP packet with the ACK flag set. This is a weird packet -
+an ACK with no prior SYN - so most operating systems respond with a
+TCP RST regardless of whether the port is open. If you see the RST,
+the host is alive.</p>
+<p>Useful against stateful firewalls that block unsolicited SYN packets
+(because they aren't part of any tracked connection) but let ACKs
+through (because ACKs look like the middle of an established
+connection the firewall might have lost track of).</p>
+<h3 id="-puports-udp-ping"><code>-PU[ports]</code>: UDP Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PU 192.168.1.0/24
+sudo nmap -sn -PU53,161 192.168.1.60
+</code></pre></div>
+
+<p>Sends a UDP packet to the given ports (default 40125, chosen because
+it's usually closed). If the port is closed, the host should respond
+with ICMP port unreachable, telling you it's alive. If the port is
+open, you might not get a response at all.</p>
+<p>UDP ping is less reliable for host discovery on its own, but very
+useful when the target runs UDP services (DNS on 53, SNMP on 161) and
+when other probes are all blocked.</p>
+<h3 id="-pr-arp-ping"><code>-PR</code>: ARP Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PR 192.168.1.0/24
+</code></pre></div>
+
+<p>The gold standard when you are on the same Ethernet segment as your
+targets. ARP is the layer-2 protocol that resolves IP addresses to
+MAC addresses, and hosts <em>cannot</em> refuse to answer ARP - if they did,
+they would be unable to talk to anything on the local network.</p>
+<p>Nmap automatically uses <code>-PR</code> for local-segment targets when run by
+a privileged user, unless you tell it not to (<code>--send-ip</code>). It's
+fast (no round trip past the switch) and 100% reliable for hosts
+that are up.</p>
+<h2 id="target-specification">Target Specification</h2>
+<p>Independent of the probe type, you need to tell Nmap <em>which</em> IPs to
+scan.</p>
+<h3 id="single-addresses">Single addresses</h3>
+<div class="highlight"><pre><span></span><code>nmap 192.168.1.1
+nmap scanme.nmap.org
+</code></pre></div>
+
+<p>Hostnames get resolved via DNS. <code>scanme.nmap.org</code> is a target the
+Nmap project maintains specifically for people to practice against.</p>
+<h3 id="cidr-ranges">CIDR ranges</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.0/24
+nmap -sn 10.0.0.0/8
+</code></pre></div>
+
+<p>Standard CIDR notation. <code>/24</code> is 256 IPs, <code>/8</code> is 16.7 million (be
+careful).</p>
+<h3 id="numeric-ranges-and-lists">Numeric ranges and lists</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.1-100        # .1 through .100
+nmap -sn 192.168.1.1,2,10,50    # specific IPs
+nmap -sn 192.168.1,2,3.1-254    # cross product
+</code></pre></div>
+
+<p>That last one scans <code>.1-.254</code> for each of <code>192.168.1.x</code>,
+<code>192.168.2.x</code>, and <code>192.168.3.x</code>. Useful for scanning a handful of
+adjacent subnets.</p>
+<h3 id="from-a-file">From a file</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn -iL targets.txt
+</code></pre></div>
+
+<p>One target per line in the file. Best option when you have a large
+or irregular list of targets, or when the target list comes from
+another tool.</p>
+<h3 id="excluding-targets">Excluding targets</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.0/24 --exclude 192.168.1.1,192.168.1.100
+nmap -sn 192.168.1.0/24 --exclude-file dontscan.txt
+</code></pre></div>
+
+<p>Critical for avoiding accidental scans on the CEO's laptop or the
+production database when you're supposed to be scanning a specific
+subnet.</p>
+<h2 id="timing-t0-through-t5">Timing: <code>-T0</code> through <code>-T5</code></h2>
+<p>Nmap has six timing templates that control how aggressively it
+sends packets:</p>
+<ul>
+<li><code>-T0</code> (paranoid): Extremely slow. One probe every few minutes.
+  Used for IDS evasion in serious red-team engagements.</li>
+<li><code>-T1</code> (sneaky): Slow. IDS evasion, but not as extreme.</li>
+<li><code>-T2</code> (polite): Slower than default. Reduces bandwidth and target
+  load. Good for scanning production infrastructure.</li>
+<li><code>-T3</code> (normal): The default. Reasonable timing for most networks.</li>
+<li><code>-T4</code> (aggressive): Faster. Assumes a reliable network. Good
+  balance for lab work.</li>
+<li><code>-T5</code> (insane): Very fast. Sacrifices accuracy for speed. Can
+  overwhelm slow networks or fragile targets.</li>
+</ul>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -T4 192.168.1.0/24
+</code></pre></div>
+
+<p>For host discovery specifically, <code>-T4</code> is usually the right choice
+in a lab environment. On production, use <code>-T3</code> or <code>-T2</code> and be
+patient.</p>
+<h2 id="reading-the-output">Reading the Output</h2>
+<p>A successful scan looks like this:</p>
+<div class="highlight"><pre><span></span><code>Starting Nmap 7.94 ( https://nmap.org ) at 2025-05-27 14:00 PDT
+Host 192.168.1.1 is up (0.00050s latency).
+MAC Address: AA:BB:CC:DD:EE:FF (Realtek Semiconductor)
+Host 192.168.1.10 is up (0.00080s latency).
+MAC Address: 11:22:33:44:55:66 (VMware)
+Nmap done: 256 IP addresses (2 hosts up) scanned in 2.10 seconds
+</code></pre></div>
+
+<p>The MAC address only shows up when you're on the same Ethernet
+segment. The vendor in parentheses comes from Nmap's built-in OUI
+database - useful for spotting VMs, or figuring out which switch
+port a device is behind.</p>
+<h2 id="when-hosts-dont-appear">When Hosts Don't Appear</h2>
+<p>"Host is down" in Nmap's output really means "Nmap didn't get a
+response from any of the probes it sent." That's not the same as
+"the host is offline." Common reasons a live host doesn't appear:</p>
+<ul>
+<li><strong>Restrictive firewall.</strong> The most common culprit. Dropping all
+  probe types silently is a valid (if aggressive) defensive posture.</li>
+<li><strong>Host-based firewall.</strong> Windows Firewall, iptables, and similar
+  can block probes even when the network firewall is permissive.</li>
+<li><strong>Wrong scan for the environment.</strong> ICMP-only discovery against a
+  target that only accepts TCP-80 - the host won't appear even
+  though a <code>-PS80</code> scan would find it in an instant.</li>
+<li><strong>Unprivileged Nmap.</strong> Non-root Nmap has very limited discovery
+  options. Always run as root (or via <code>sudo</code>) for real scanning.</li>
+<li><strong>Network layer issues.</strong> Routing problems, wrong subnet mask on
+  the scanner, VLAN mismatches - anything that prevents packets
+  from reaching the target.</li>
+</ul>
+<p>The right response to a "no hosts up" result on a network you know
+is alive: try a different discovery method. If ICMP fails, try
+<code>-PS22,80,443</code>. If TCP fails, try <code>-PA</code>. If nothing works, you're
+probably up against a very well-configured firewall.</p>
+<h2 id="from-discovery-to-deeper-scans">From Discovery to Deeper Scans</h2>
+<p>Once you have a list of live hosts, the natural next step is port
+scanning them to see what services are running. The clean way to
+chain this is with grepable output:</p>
+<div class="highlight"><pre><span></span><code>nmap -sn -oG - 192.168.1.0/24 | awk &#39;/Up$/{print $2}&#39; &gt; live_hosts.txt
+nmap -sV -iL live_hosts.txt
+</code></pre></div>
+
+<p>The first command produces a machine-parseable list of live IPs.
+The second feeds that list into a service-detection scan. This
+two-phase approach is efficient (you don't waste time port-scanning
+dead IPs) and organized (you have a saved list of live hosts to
+work from later).</p>
+<p>Service detection, port scanning, NSE scripting - all of that comes
+in later lectures of the course. But it all starts with knowing
+who's home.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Full lecture:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course/Lecture_1">Nmap/Short Course/Lecture 1</a></li>
+<li>The rest of the course:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course">Nmap/Short Course</a></li>
+<li>Nmap documentation: <a href="https://nmap.org/book/man.html">https://nmap.org/book/man.html</a></li>
+</ul></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/nmap.html">nmap</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/host-discovery.html">host discovery</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/ping.html">ping</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/arp.html">arp</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/networking.html">networking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pentesting.html">pentesting</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+
+</div>
+
+
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/bootstrap-3.3.4.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/d3-3.5.5.js"></script><script type="text/javascript" src="https://charlesreid1.github.io/theme/js/jquery-1.11.2.js"></script>
+<script type="text/javascript" src="https://charlesreid1.github.io/theme/js/bootstrap-3.3.4.js"></script>
+
+<footer id="contentinfo" class="body">
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<center>
+	<hr />
+</center>
+<p>&nbsp;</p>
+<p style="text-align: center">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-terminal fa-stack-1x fa-inverse"></i>
+    </span>
+    Made from the command line with vim by 
+    <a href="http://charlesreid1.com">charlesreid1</a><br />
+    with help from <a href="https://getbootstrap.com/">Bootstrap</a> and <a href="http://getpelican.com">Pelican</a>.
+</p>
+
+<br />
+
+<p style="text-align: center">
+    <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">
+    <span class="fa-stack fa-lg">
+        <i class="fa fa-square fa-stack-2x" style="color:#000;"></i>
+        <i class="fa fa-creative-commons fa-stack-1x fa-inverse"></i>
+    </span>
+    </a>
+    <br />
+    Licensed under the <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 License</a>.
+</p>
+
+<!-- Start of StatCounter Code for Default Guide -->
+<script type="text/javascript">
+var sc_project=11611748;
+var sc_invisible=1;
+var sc_security="9fcba820";
+</script>
+<script type="text/javascript"
+src="https://www.statcounter.com/counter/counter.js"
+async></script>
+
+<noscript><div class="statcounter"><a title="Web Analytics"
+href="http://statcounter.com/" target="_blank"><img
+class="statcounter"
+src="//c.statcounter.com/11611748/0/9fcba820/1/" alt="Web
+Analytics"></a></div></noscript>
+<!-- End of StatCounter Code for Default Guide -->
+</footer><!-- /#contentinfo -->
+</body>
+</html>

@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Project Euler 312: Hamiltonian Cycles on Sierpiński Graphs
+                Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2025-04-20T20:00:00-07:00" pubdate>Sunday 04/20/2025</time>
+                <time datetime="2025-05-30T14:00:00-07:00" pubdate>Friday 05/30/2025</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/project-euler-312-hamiltonian-cycles-on-sierpinski-graphs.html">permalink</a>
+                <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,304 +127,258 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p><a href="https://projecteuler.net/problem=312">Project Euler problem 312</a> is one
-of the harder problems we have worked through. It combines graph theory,
-fractal geometry, combinatorial counting, and modular arithmetic, and
-the final answer requires computing <code>C(C(C(10000))) mod 13^8</code> where
-<code>C(n)</code> is the number of Hamiltonian cycles on a Sierpiński graph of
-order <code>n</code>.</p>
-<p>We ended up leaning on OEIS to get the recurrence in closed form, which
-we will confess to below. Full notes:
-<a href="https://charlesreid1.com/wiki/Project_Euler/312">Project Euler/312</a>.</p>
-<h2 id="the-problem">The Problem</h2>
-<p>A <strong>Sierpiński graph</strong> of order 1, denoted <code>S_1</code>, is an equilateral
-triangle - three vertices, three edges.</p>
-<p><code>S_{n+1}</code> is built from three copies of <code>S_n</code> positioned so each pair
-of copies shares one corner vertex.</p>
-<p>Let <code>C(n)</code> be the number of cycles that pass through every vertex of
-<code>S_n</code> exactly once - the number of <strong>Hamiltonian cycles</strong>. The problem
-tells us <code>C(1) = C(2) = 1</code>, and <code>C(5) = 71,328,803,586,048</code>.</p>
-<p>The goal: find <code>C(C(C(10000))) mod 13^8</code>.</p>
-<p>Two things to notice about the goal. First, <code>C(10000)</code> is astronomically
-large - you cannot actually compute it and then feed it to <code>C</code> again.
-Second, <code>mod 13^8</code> is a big hint: the whole calculation is going to
-happen in modular arithmetic, and there is going to be some periodicity
-trick.</p>
-<h2 id="vertices-and-edges">Vertices and Edges</h2>
-<p>Some easy facts to nail down before doing anything clever.</p>
-<p>Number of edges of <code>S_n</code>:</p>
-<div class="math">$$
-e(S_n) = 3^{n+1}
-$$</div>
-<p>Number of vertices of <code>S_n</code>:</p>
-<div class="math">$$
-v(S_n) = \frac{3}{2}\left(3^n + 1\right)
-$$</div>
-<p>So <code>S_10000</code> has on the order of <code>3^10000</code> vertices, which is a number
-with about 4,700 decimal digits. A Hamiltonian cycle visits every
-vertex, so the number of Hamiltonian cycles is going to have on the
-order of <code>3^10000</code> factorial-ish in its combinatorics. There is no
-approach that involves listing anything.</p>
-<h2 id="the-recursive-structure">The Recursive Structure</h2>
-<p>The critical observation is that <code>S_{n+1}</code> is built from three copies of
-<code>S_n</code>. A Hamiltonian cycle on <code>S_{n+1}</code> has to traverse all three
-copies, and the only places it can move between copies are at the
-shared corner vertices. So any Hamiltonian cycle on <code>S_{n+1}</code> consists
-of:</p>
-<ul>
-<li>A Hamiltonian <strong>path</strong> through the first copy of <code>S_n</code>, entering and
-  exiting at two of its three outer corners</li>
-<li>A Hamiltonian path through the second copy, similarly</li>
-<li>A Hamiltonian path through the third copy, similarly</li>
-<li>Plus the three edges that connect the copies together at the shared
-  corners</li>
-</ul>
-<p>So counting Hamiltonian cycles reduces to counting certain kinds of
-Hamiltonian paths on smaller graphs.</p>
-<p>Let</p>
-<ul>
-<li><code>C(n)</code> = number of Hamiltonian cycles on <code>S_n</code></li>
-<li><code>P(n)</code> = number of Hamiltonian paths on <code>S_n</code> where <strong>both</strong>
-  endpoints are outer corners</li>
-<li><code>P̄(n)</code> = number of Hamiltonian paths on <code>S_n</code> where <strong>exactly one</strong>
-  endpoint is an outer corner</li>
-</ul>
-<p>Then</p>
-<div class="math">$$
-C(n) = [P(n-1)]^3
-$$</div>
-<p>(three copies, each contributing a Hamiltonian path with both endpoints
-at outer corners, one path per copy, chosen independently).</p>
-<p>Similarly, by tracking which paths piece together into which combined
-paths, we get</p>
-<div class="math">$$
-P(n) = 2 [P(n-1)]^2 P̄(n-1)
-$$</div>
-<div class="math">$$
-P̄(n) = 2 [P̄(n-1)]^2 P(n-1)
-$$</div>
-<p>These recurrences let us compute <code>P(n)</code>, <code>P̄(n)</code>, and <code>C(n)</code> in
-principle. The values grow explosively - by the time <code>n = 5</code>, <code>C(n)</code> is
-already <code>7.1 × 10^13</code>.</p>
-<h2 id="closed-form-confession-time">Closed Form (Confession Time)</h2>
-<p>At this point we did the thing everyone does: computed <code>C(1)</code> through
-<code>C(5)</code> from the recurrence, dropped the sequence into OEIS, and
-immediately hit
-<a href="https://oeis.org/A246959">A246959</a> - the "number of Hamiltonian cycles
-in the Sierpiński graph."</p>
-<p>The closed form given by OEIS is</p>
-<div class="math">$$
-C(n) = 8 \cdot 12^{(3^{n-2} - 3)/2} \qquad n \geq 3
-$$</div>
-<p>which is very compact. Equivalently, the recurrence</p>
-<div class="math">$$
-C(n) = (3 \cdot C(n-1))^3 \qquad n \geq 4
-$$</div>
-<p>Sanity check against the given value <code>C(5) = 71,328,803,586,048</code>.
-Wolfram Alpha confirms.</p>
-<p>First few values:</p>
-<table>
-<thead>
-<tr>
-<th><code>n</code></th>
-<th><code>C(n)</code></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>1</td>
-</tr>
-<tr>
-<td>2</td>
-<td>2</td>
-</tr>
-<tr>
-<td>3</td>
-<td>8</td>
-</tr>
-<tr>
-<td>4</td>
-<td>13,824</td>
-</tr>
-<tr>
-<td>5</td>
-<td>71,328,803,586,048</td>
-</tr>
-</tbody>
-</table>
-<p>Note that <code>C(2) = 2</code> above, but the problem states <code>C(1) = C(2) = 1</code>.
-The mismatch is a convention issue about what counts as a Hamiltonian
-cycle on the tiniest graphs (traversal direction, effectively). We
-used the OEIS convention for anything <code>n ≥ 3</code>, which is where the
-counting matters.</p>
-<h2 id="nested-evaluation-under-a-modulus">Nested Evaluation Under a Modulus</h2>
-<p>Now for the actual goal: <code>C(C(C(10000))) mod 13^8</code>.</p>
-<p>The magnitude of <code>C(10000)</code> is not something you can hold in memory.
-By <code>n = 20</code> the exponent in <code>12^((3^(n-2) - 3)/2)</code> is already millions
-of digits long, and we are being asked about <code>n = 10000</code>. So the whole
-calculation has to happen without ever materializing an intermediate
-value in full.</p>
-<p>The trick is that we don't <em>need</em> the intermediate values in full. We
-need <code>C(C(C(10000))) mod 13^8</code>. That means for the outermost <code>C</code>, we
-only need its argument modulo something that makes the outermost <code>C</code>
-computable. And that "something" is much smaller than the argument
-itself.</p>
-<p>Three techniques do the work.</p>
-<h3 id="technique-1-periodicity-of-cn-mod-m">Technique 1: Periodicity of <code>C(n) mod M</code></h3>
-<p>The sequence <code>C(1), C(2), C(3), ...</code> taken modulo any fixed <code>M</code> is
-eventually periodic. It has to be - the state at step <code>n</code> in the
-recurrence <code>C(n) = (3 · C(n-1))^3 mod M</code> is a single residue in
-<code>Z/MZ</code>, and there are only <code>M</code> possible residues, so the sequence must
-eventually enter a cycle.</p>
-<p>Let <code>P</code> be the period. Then</p>
-<div class="math">$$
-C(X) \bmod M = C(((X - X_0) \bmod P) + X_0) \bmod M
-$$</div>
-<p>for <code>X</code> at least as large as the pre-period offset <code>X_0</code>. In practice
-you compute successive <code>C(n) mod M</code> values until you see a repeat, and
-that tells you <code>X_0</code> and <code>P</code>.</p>
-<p>This is the workhorse. It lets you reduce "compute <code>C</code> at an
-astronomically large index" to "compute <code>C</code> at an index in the range
-<code>[X_0, X_0 + P)</code>."</p>
-<h3 id="technique-2-choosing-the-right-modulus-at-each-layer">Technique 2: Choosing the Right Modulus at Each Layer</h3>
-<p>The three <code>C</code> calls need different moduli.</p>
-<p>The <strong>outermost</strong> <code>C</code> operates modulo <code>13^8</code>. That is what the problem
-asks for.</p>
-<p>The <strong>middle</strong> <code>C</code> needs to produce a residue that determines the
-outermost <code>C(x) mod 13^8</code>. By technique 1, the outermost <code>C</code> is
-periodic mod <code>13^8</code> with some period <code>P_out</code>. So the middle <code>C</code> only
-needs to compute its result <strong>modulo <code>P_out</code></strong> (well, modulo the
-pre-period plus period - be careful with the offset).</p>
-<p>The <strong>innermost</strong> <code>C(10000)</code> needs to produce a residue that determines
-the middle <code>C(y) mod P_out</code>. So find the period <code>P_mid</code> of <code>C</code> mod
-<code>P_out</code>, and compute <code>C(10000) mod P_mid</code>.</p>
-<p>So the algorithm is:</p>
+        <div class="entry-content"><p>This is a companion post to
+<a href="building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>.
+Where that post was about the meta - course design, lab
+infrastructure - this one drills into the actual first-lecture
+material: how Nmap decides whether a host is up.</p>
+<p>Full lecture notes:
+<a href="https://charlesreid1.com/wiki/Nmap/Short_Course/Lecture_1">Nmap/Short Course/Lecture 1</a>.</p>
+<h2 id="why-host-discovery-matters">Why Host Discovery Matters</h2>
+<p>Before you can scan ports, identify services, or check for
+vulnerabilities, you have to figure out which IP addresses on the
+target network actually have a machine behind them. Scanning IPs that
+aren't responding is a waste of time, generates a lot of unnecessary
+network noise, and can tip off defenders.</p>
+<p>Think of it as making a map of active settlements before deciding
+which ones to explore in detail.</p>
+<h2 id="ethics-first">Ethics First</h2>
+<p>The obvious but necessary caveat: Nmap must only be used on networks
+where you have explicit, written authorization to scan. Unauthorized
+scanning can be interpreted as an attack, and in many jurisdictions is
+illegal.</p>
+<p>Everything in this post assumes an isolated lab environment - which is
+exactly what we set up in
+<a href="building-an-nmap-short-course-from-scratch.html">the previous post</a>.</p>
+<h2 id="the-default-nmaps-multi-probe-approach">The Default: Nmap's Multi-Probe Approach</h2>
+<p>If you run Nmap as a privileged user (root or <code>sudo</code>) without
+specifying any discovery options, it will fire <em>four</em> probes at each
+target:</p>
 <ol>
-<li>Find the period of <code>C(n) mod 13^8</code>. Call it <code>P_out</code>.</li>
-<li>Find the period of <code>C(n) mod P_out</code>. Call it <code>P_mid</code>.</li>
-<li>Compute <code>C(10000) mod P_mid</code>. Call the result <code>a</code>.</li>
-<li>Compute <code>C(a) mod P_out</code>. Call the result <code>b</code>.</li>
-<li>Compute <code>C(b) mod 13^8</code>.</li>
+<li>ICMP echo request (a classic ping)</li>
+<li>TCP SYN packet to port 443</li>
+<li>TCP ACK packet to port 80</li>
+<li>ICMP timestamp request</li>
 </ol>
-<p>Each step uses either the recurrence directly (<code>b = (3·b_prev)^3 mod M</code>)
-or, for the innermost step at <code>n = 10000</code>, the recurrence run 10000
-times mod the appropriate modulus. Ten thousand modular multiplications
-is nothing.</p>
-<h3 id="technique-3-handling-the-cube-under-a-prime-power">Technique 3: Handling the Cube Under a Prime Power</h3>
-<p>The recurrence <code>C(n) = (3 · C(n-1))^3</code> involves a cube, so under a
-prime power modulus you have to be careful about invertibility. Cubing
-is well-defined mod <code>13^8</code> (or mod anything else), so the forward
-recurrence is not a problem - you just cube and multiply. What can go
-wrong is if you try to <em>invert</em> the cubing at some point, which you
-would need if you tried to do matrix exponentiation on the logarithm of
-the recurrence.</p>
-<p>We did not need to invert. The three-layer periodicity approach above
-uses only forward evaluation of the recurrence, so cubing mod <code>13^8</code> is
-fine.</p>
-<h3 id="chinese-remainder-theorem">Chinese Remainder Theorem</h3>
-<p>CRT is worth mentioning for completeness. If the modulus had been
-composite with multiple distinct prime factors, we would compute the
-answer separately modulo each prime power and glue the results
-together with CRT.</p>
-<p>Here the modulus is <code>13^8</code>, a single prime power, so CRT is not
-needed - but if the problem had asked for <code>mod (7^5 · 11^3 · 13^8)</code>,
-the approach would be to solve three separate problems and CRT the
-answers.</p>
-<h2 id="what-we-learned">What We Learned</h2>
-<p>Three things worth carrying forward.</p>
-<p><strong>Recursive structure beats brute force by a lot.</strong> The naive approach
-of enumerating cycles on <code>S_n</code> is impossible for anything <code>n &gt; 4</code> or so.
-The recursive approach reduces the problem to counting paths on
-<code>S_{n-1}</code> with three specific endpoint types, and that recursion
-collapses to a single-variable formula. Every time you can find a
-recursive structure, use it.</p>
-<p><strong>OEIS is not cheating.</strong> Recognizing a sequence and looking up its
-closed form is a legitimate research tool, not shortcut. The people who
-computed and cataloged OEIS A246959 did the work of proving the closed
-form. Standing on their shoulders is what mathematics has always looked
-like. The alternative - re-deriving every known result from scratch - is
-how you never finish anything.</p>
-<p><strong>Nested modular evaluation is a real technique.</strong> When a problem asks
-for <code>f(f(f(n))) mod M</code> with a huge <code>n</code>, you rarely need to compute the
-intermediate values. You work outward-in through periods: the outermost
-period tells you what modulus the middle layer actually needs to
-produce, which tells you what modulus the innermost layer needs to
-produce. Astronomical intermediate values reduce to residues in
-tractable rings. This shape of problem shows up a lot in number theory
-and cryptography, and it is worth having the pattern in your head.</p>
+<p>If any of the four gets a response, Nmap considers the host up.</p>
+<p>The multi-probe approach exists because different firewalls block
+different things. ICMP is commonly blocked at the network edge. Port
+443 might be allowed inbound because there is a web server behind it.
+Port 80 might respond with a TCP RST because there is nothing
+listening. Any one of these signals is enough.</p>
+<p>Unprivileged users can't send raw packets, so Nmap falls back to
+attempting TCP connect() calls to ports 80 and 443. Less accurate,
+but works without root.</p>
+<h2 id="-sn-just-tell-me-whats-alive"><code>-sn</code>: Just Tell Me What's Alive</h2>
+<p>Nmap's default behavior is to do host discovery <em>and then</em> port scan
+whatever comes back alive. If you only want the host discovery step,
+use <code>-sn</code>:</p>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.0/24
+</code></pre></div>
+
+<p><code>-sn</code> means "scan, no port scan." (In older versions it was <code>-sP</code>,
+"scan ping.") It runs the multi-probe discovery and prints just the
+list of live hosts. Very fast, very quiet compared to a full port
+scan, and often the first thing you run.</p>
+<p>Everything else in this post uses <code>-sn</code> unless otherwise noted.</p>
+<h2 id="the-p-family-picking-a-specific-probe">The <code>-P</code> Family: Picking a Specific Probe</h2>
+<p>If you want to control exactly which probe Nmap sends, use one of the
+<code>-P</code> flags.</p>
+<h3 id="-pe-icmp-echo-the-plain-ping"><code>-PE</code>: ICMP Echo (the plain ping)</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PE 192.168.1.100
+</code></pre></div>
+
+<p>The most familiar probe. Sends an ICMP echo request, expects an ICMP
+echo reply. Works when firewalls allow ICMP. Frequently blocked at
+network perimeters.</p>
+<h3 id="-pp-icmp-timestamp"><code>-PP</code>: ICMP Timestamp</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PP 192.168.1.101
+</code></pre></div>
+
+<p>Sends an ICMP timestamp request (type 13), expects a timestamp reply
+(type 14). Useful when echo requests are blocked but timestamp
+requests aren't - some firewall rules block ICMP type 8 (echo) but
+forget about type 13.</p>
+<h3 id="-pm-icmp-address-mask"><code>-PM</code>: ICMP Address Mask</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PM 192.168.1.102
+</code></pre></div>
+
+<p>Sends an ICMP address mask request. Very rarely used legitimately
+these days, which is exactly why it sometimes gets through firewalls
+that block the more common ICMP types.</p>
+<p>The pattern: try the obvious probe, fall back to the less-obvious
+ones if the obvious one fails.</p>
+<h3 id="-psports-tcp-syn-ping"><code>-PS[ports]</code>: TCP SYN Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PS 192.168.1.0/24
+sudo nmap -sn -PS22,80,443 192.168.1.50
+</code></pre></div>
+
+<p>Sends a TCP SYN packet to the given ports (default 80 if you don't
+specify). A response - either SYN/ACK meaning "port open" or RST
+meaning "port closed" - tells Nmap the host is alive.</p>
+<p>This one is the workhorse against firewalled targets. Firewalls
+typically allow inbound traffic to common service ports (80, 443, 22)
+because there are legitimate reasons for outsiders to reach those
+ports. TCP SYN pings ride on that permitted traffic.</p>
+<h3 id="-paports-tcp-ack-ping"><code>-PA[ports]</code>: TCP ACK Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PA 192.168.1.0/24
+sudo nmap -sn -PA21 192.168.1.55
+</code></pre></div>
+
+<p>Sends a TCP packet with the ACK flag set. This is a weird packet -
+an ACK with no prior SYN - so most operating systems respond with a
+TCP RST regardless of whether the port is open. If you see the RST,
+the host is alive.</p>
+<p>Useful against stateful firewalls that block unsolicited SYN packets
+(because they aren't part of any tracked connection) but let ACKs
+through (because ACKs look like the middle of an established
+connection the firewall might have lost track of).</p>
+<h3 id="-puports-udp-ping"><code>-PU[ports]</code>: UDP Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PU 192.168.1.0/24
+sudo nmap -sn -PU53,161 192.168.1.60
+</code></pre></div>
+
+<p>Sends a UDP packet to the given ports (default 40125, chosen because
+it's usually closed). If the port is closed, the host should respond
+with ICMP port unreachable, telling you it's alive. If the port is
+open, you might not get a response at all.</p>
+<p>UDP ping is less reliable for host discovery on its own, but very
+useful when the target runs UDP services (DNS on 53, SNMP on 161) and
+when other probes are all blocked.</p>
+<h3 id="-pr-arp-ping"><code>-PR</code>: ARP Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PR 192.168.1.0/24
+</code></pre></div>
+
+<p>The gold standard when you are on the same Ethernet segment as your
+targets. ARP is the layer-2 protocol that resolves IP addresses to
+MAC addresses, and hosts <em>cannot</em> refuse to answer ARP - if they did,
+they would be unable to talk to anything on the local network.</p>
+<p>Nmap automatically uses <code>-PR</code> for local-segment targets when run by
+a privileged user, unless you tell it not to (<code>--send-ip</code>). It's
+fast (no round trip past the switch) and 100% reliable for hosts
+that are up.</p>
+<h2 id="target-specification">Target Specification</h2>
+<p>Independent of the probe type, you need to tell Nmap <em>which</em> IPs to
+scan.</p>
+<h3 id="single-addresses">Single addresses</h3>
+<div class="highlight"><pre><span></span><code>nmap 192.168.1.1
+nmap scanme.nmap.org
+</code></pre></div>
+
+<p>Hostnames get resolved via DNS. <code>scanme.nmap.org</code> is a target the
+Nmap project maintains specifically for people to practice against.</p>
+<h3 id="cidr-ranges">CIDR ranges</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.0/24
+nmap -sn 10.0.0.0/8
+</code></pre></div>
+
+<p>Standard CIDR notation. <code>/24</code> is 256 IPs, <code>/8</code> is 16.7 million (be
+careful).</p>
+<h3 id="numeric-ranges-and-lists">Numeric ranges and lists</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.1-100        # .1 through .100
+nmap -sn 192.168.1.1,2,10,50    # specific IPs
+nmap -sn 192.168.1,2,3.1-254    # cross product
+</code></pre></div>
+
+<p>That last one scans <code>.1-.254</code> for each of <code>192.168.1.x</code>,
+<code>192.168.2.x</code>, and <code>192.168.3.x</code>. Useful for scanning a handful of
+adjacent subnets.</p>
+<h3 id="from-a-file">From a file</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn -iL targets.txt
+</code></pre></div>
+
+<p>One target per line in the file. Best option when you have a large
+or irregular list of targets, or when the target list comes from
+another tool.</p>
+<h3 id="excluding-targets">Excluding targets</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.0/24 --exclude 192.168.1.1,192.168.1.100
+nmap -sn 192.168.1.0/24 --exclude-file dontscan.txt
+</code></pre></div>
+
+<p>Critical for avoiding accidental scans on the CEO's laptop or the
+production database when you're supposed to be scanning a specific
+subnet.</p>
+<h2 id="timing-t0-through-t5">Timing: <code>-T0</code> through <code>-T5</code></h2>
+<p>Nmap has six timing templates that control how aggressively it
+sends packets:</p>
+<ul>
+<li><code>-T0</code> (paranoid): Extremely slow. One probe every few minutes.
+  Used for IDS evasion in serious red-team engagements.</li>
+<li><code>-T1</code> (sneaky): Slow. IDS evasion, but not as extreme.</li>
+<li><code>-T2</code> (polite): Slower than default. Reduces bandwidth and target
+  load. Good for scanning production infrastructure.</li>
+<li><code>-T3</code> (normal): The default. Reasonable timing for most networks.</li>
+<li><code>-T4</code> (aggressive): Faster. Assumes a reliable network. Good
+  balance for lab work.</li>
+<li><code>-T5</code> (insane): Very fast. Sacrifices accuracy for speed. Can
+  overwhelm slow networks or fragile targets.</li>
+</ul>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -T4 192.168.1.0/24
+</code></pre></div>
+
+<p>For host discovery specifically, <code>-T4</code> is usually the right choice
+in a lab environment. On production, use <code>-T3</code> or <code>-T2</code> and be
+patient.</p>
+<h2 id="reading-the-output">Reading the Output</h2>
+<p>A successful scan looks like this:</p>
+<div class="highlight"><pre><span></span><code>Starting Nmap 7.94 ( https://nmap.org ) at 2025-05-27 14:00 PDT
+Host 192.168.1.1 is up (0.00050s latency).
+MAC Address: AA:BB:CC:DD:EE:FF (Realtek Semiconductor)
+Host 192.168.1.10 is up (0.00080s latency).
+MAC Address: 11:22:33:44:55:66 (VMware)
+Nmap done: 256 IP addresses (2 hosts up) scanned in 2.10 seconds
+</code></pre></div>
+
+<p>The MAC address only shows up when you're on the same Ethernet
+segment. The vendor in parentheses comes from Nmap's built-in OUI
+database - useful for spotting VMs, or figuring out which switch
+port a device is behind.</p>
+<h2 id="when-hosts-dont-appear">When Hosts Don't Appear</h2>
+<p>"Host is down" in Nmap's output really means "Nmap didn't get a
+response from any of the probes it sent." That's not the same as
+"the host is offline." Common reasons a live host doesn't appear:</p>
+<ul>
+<li><strong>Restrictive firewall.</strong> The most common culprit. Dropping all
+  probe types silently is a valid (if aggressive) defensive posture.</li>
+<li><strong>Host-based firewall.</strong> Windows Firewall, iptables, and similar
+  can block probes even when the network firewall is permissive.</li>
+<li><strong>Wrong scan for the environment.</strong> ICMP-only discovery against a
+  target that only accepts TCP-80 - the host won't appear even
+  though a <code>-PS80</code> scan would find it in an instant.</li>
+<li><strong>Unprivileged Nmap.</strong> Non-root Nmap has very limited discovery
+  options. Always run as root (or via <code>sudo</code>) for real scanning.</li>
+<li><strong>Network layer issues.</strong> Routing problems, wrong subnet mask on
+  the scanner, VLAN mismatches - anything that prevents packets
+  from reaching the target.</li>
+</ul>
+<p>The right response to a "no hosts up" result on a network you know
+is alive: try a different discovery method. If ICMP fails, try
+<code>-PS22,80,443</code>. If TCP fails, try <code>-PA</code>. If nothing works, you're
+probably up against a very well-configured firewall.</p>
+<h2 id="from-discovery-to-deeper-scans">From Discovery to Deeper Scans</h2>
+<p>Once you have a list of live hosts, the natural next step is port
+scanning them to see what services are running. The clean way to
+chain this is with grepable output:</p>
+<div class="highlight"><pre><span></span><code>nmap -sn -oG - 192.168.1.0/24 | awk &#39;/Up$/{print $2}&#39; &gt; live_hosts.txt
+nmap -sV -iL live_hosts.txt
+</code></pre></div>
+
+<p>The first command produces a machine-parseable list of live IPs.
+The second feeds that list into a service-detection scan. This
+two-phase approach is efficient (you don't waste time port-scanning
+dead IPs) and organized (you have a saved list of live hosts to
+work from later).</p>
+<p>Service detection, port scanning, NSE scripting - all of that comes
+in later lectures of the course. But it all starts with knowing
+who's home.</p>
 <h2 id="references">References</h2>
 <ul>
-<li>Our wiki notes:
-  <a href="https://charlesreid1.com/wiki/Project_Euler/312">Project Euler/312</a></li>
-<li><a href="https://projecteuler.net/problem=312">PE 312 on projecteuler.net</a></li>
-<li><a href="https://oeis.org/A246959">OEIS A246959</a> - Hamiltonian cycles in
-  Sierpiński graphs</li>
-<li>Useful paper: <a href="https://arxiv.org/pdf/0909.5541">https://arxiv.org/pdf/0909.5541</a> (Hamiltonian
-  properties of Sierpiński graphs)</li>
-</ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+<li>Full lecture:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course/Lecture_1">Nmap/Short Course/Lecture 1</a></li>
+<li>The rest of the course:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course">Nmap/Short Course</a></li>
+<li>Nmap documentation: <a href="https://nmap.org/book/man.html">https://nmap.org/book/man.html</a></li>
+</ul></div>
 
     </div>
 </div>
@@ -436,17 +390,19 @@ and cryptography, and it is worth having the pattern in your head.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graph-theory.html">graph theory</a>
+                    <a href="https://charlesreid1.github.io/tag/nmap.html">nmap</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hamiltonian-cycles.html">hamiltonian cycles</a>
+                    <a href="https://charlesreid1.github.io/tag/host-discovery.html">host discovery</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sierpinski.html">sierpinski</a>
+                    <a href="https://charlesreid1.github.io/tag/ping.html">ping</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    <a href="https://charlesreid1.github.io/tag/arp.html">arp</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/oeis.html">oeis</a>
+                    <a href="https://charlesreid1.github.io/tag/networking.html">networking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pentesting.html">pentesting</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -464,18 +420,18 @@ and cryptography, and it is worth having the pattern in your head.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Project Euler 227 (The Chase): When Brute Force Costs 80 Days
+                Building an Nmap Short Course from Scratch
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2025-04-19T20:00:00-07:00" pubdate>Saturday 04/19/2025</time>
+                <time datetime="2025-05-27T12:00:00-07:00" pubdate>Tuesday 05/27/2025</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/project-euler-227-the-chase-when-brute-force-costs-80-days.html">permalink</a>
+                <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">permalink</a>
             </span>
             </p>
         </div>
@@ -492,219 +448,155 @@ and cryptography, and it is worth having the pattern in your head.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p><a href="https://projecteuler.net/problem=227">Project Euler problem 227</a> - "The
-Chase" - is a nice example of a problem where the brute force approach
-is completely reasonable to reach for first, completely infeasible to
-actually finish, and directly points you at the right mathematical
-reformulation.</p>
-<p>This is what we ended up with. Our full working notes are on the wiki at
-<a href="https://charlesreid1.com/wiki/Project_Euler/227">Project Euler/227</a>.</p>
-<h2 id="the-problem">The Problem</h2>
-<p>An even number of players sit around a table. Two players sitting
-directly opposite each other each start with a die. Each round, both
-players roll:</p>
+        <div class="entry-content"><p>We spent a good chunk of late May 2025 building a short course on Nmap
+from scratch - 12 lectures, 12 companion labs, plus the entire virtual
+lab infrastructure the students would use to run the labs. The whole
+thing lives on our wiki under
+<a href="https://charlesreid1.com/wiki/Nmap/Short_Course">Nmap/Short Course</a>.</p>
+<p>This post is not about the Nmap material itself (that comes in the next
+post). It is about the design decisions behind the course - why 12
+lectures, why a fully isolated cloud lab, why Vagrant + Docker +
+Ansible instead of picking one, and what we would do differently if
+we started over.</p>
+<h2 id="course-shape">Course Shape</h2>
+<p>The course is organized into three modules:</p>
 <ul>
-<li>Roll a 1 → pass the die to your left neighbor</li>
-<li>Roll a 6 → pass the die to your right neighbor</li>
-<li>Anything else → keep the die</li>
+<li><strong>Module 1: Nmap Mastery - Beyond the Basics.</strong> The core Nmap
+  material: host discovery, port scanning, service and OS detection,
+  the scripting engine (NSE), and output formats.</li>
+<li><strong>Module 2: Red Team Nmap - Offensive Recon &amp; Vuln Identification.</strong>
+  Using Nmap for reconnaissance in an authorized engagement:
+  fingerprinting, vulnerability enumeration via NSE, and integrating
+  results into a broader recon workflow.</li>
+<li><strong>Module 3: Blue Team Nmap - Auditing, Defense &amp; Network Monitoring.</strong>
+  The other side: using Nmap for asset inventory, compliance checks,
+  detecting unauthorized services, and pairing Nmap output with IDS
+  rules.</li>
 </ul>
-<p>The game ends when one player is holding both dice at the end of a
-round. That player loses.</p>
-<p>The question: with 100 players, what is the expected number of rounds
-before someone loses?</p>
-<h2 id="reaching-for-the-brute-force">Reaching For the Brute Force</h2>
-<p>The first thing we did was write a very small Python simulator. Two
-integer pointers, one per die. Each round, roll two dice, update each
-pointer with <code>+1</code>, <code>-1</code>, or nothing, modulo the number of players. Stop
-when the pointers collide. Average over many trials.</p>
-<p>This works. It gives you an estimate that gets more accurate as you run
-more trials. And then you start measuring how expensive that gets.</p>
-<p>The cost has two knobs:</p>
+<p>Twelve lectures split across those three modules. Every lecture has a
+companion lab. The labs share a single virtual environment that gets
+richer over the course - by the time students are in Module 3 they are
+scanning the same infrastructure they attacked in Module 2.</p>
+<h2 id="why-twelve-lectures">Why Twelve Lectures</h2>
+<p>We picked 12 because it maps cleanly to a compressed summer session (a
+lecture + lab per week for a 12-week course, or two per week for a
+6-week intensive). It also gave us enough room to introduce Nmap
+options in the order they build on each other, without cramming.</p>
+<p>Twelve is a round number, each lecture is a coherent unit, and the
+whole thing still fits in a summer course.</p>
+<h2 id="the-lab-environment-the-big-boy">The Lab Environment: The Big Boy</h2>
+<p>The lab infrastructure is the part we spent the most time on. Our
+requirements:</p>
 <ul>
-<li><strong>Trials.</strong> Linear. Four decimal places of accuracy needs about 1,000
-  trials. Ten decimal places needs billions.</li>
-<li><strong>Players.</strong> Not linear. Playing with 5, 10, 15, 20, and 25 players
-  and measuring, the runtime looked quadratic in the number of players.</li>
+<li>Students should be able to scan without touching any network they
+  don't have explicit permission to scan</li>
+<li>The lab should have a variety of realistic services and
+  vulnerabilities, not just one target</li>
+<li>Adding a new lab scenario should be a few lines of code, not a
+  reinstall</li>
+<li>The instructor should be able to reset the whole environment to a
+  known-good state before every class</li>
 </ul>
-<p>So the total execution time is roughly</p>
-<div class="math">$$
-T(N, S) \approx c \cdot S \cdot N^2
-$$</div>
-<p>Extrapolating our measured constant <code>c</code> from small experiments up to
-<code>N = 100</code> players and <code>S = 9</code> billion trials (to get sufficient accuracy
-on the answer), we got about <strong>7,000,000 seconds</strong>. Call it 80 days.</p>
-<p>Project Euler problems are supposed to have solutions that run in about
-a minute. 80 days is not a minute. Even switching to a compiled language
-and multithreading, we would need a <strong>10,000×</strong> speedup to get into the
-right ballpark. And the loop body is already about as tight as a loop
-body gets - two random integers, two pointer updates, a comparison.
-There is not much to optimize.</p>
-<p>So the brute force is out. What is it about the problem that makes brute
-force so bad, and what does the answer look like if we ask a different
-question?</p>
-<h2 id="reformulating-as-a-markov-chain">Reformulating as a Markov Chain</h2>
-<p>The key observation is that the game has no memory. The next state only
-depends on the current state. That is the definition of a Markov chain.</p>
-<p>The <strong>state</strong> is the pair of positions of the two dice, <code>(i, j)</code>, where
-<code>i</code> and <code>j</code> are player indices in <code>{0, 1, ..., N-1}</code>. For 100 players,
-that's a state space with 10,000 pairs, minus the 100 pairs where <code>i = j</code>
-(dice have collided - game over). So we have 9,900 transient states and
-100 absorbing states.</p>
-<p>Note: <code>(i, j)</code> and <code>(j, i)</code> represent the same physical situation. There
-is a symmetry we could exploit to cut the state count roughly in half,
-but for the initial derivation we ignored it and paid the extra factor.</p>
-<p>Transitions: each die independently keeps, moves left, or moves right,
-with probabilities <code>4/6</code>, <code>1/6</code>, <code>1/6</code>. So the joint transition from
-<code>(i, j)</code> to <code>(i', j')</code> has probability equal to the product of the two
-individual probabilities. Each transient state has at most 9 possible
-next states (3 outcomes per die × 3 outcomes per die).</p>
-<h2 id="the-fundamental-matrix">The Fundamental Matrix</h2>
-<p>The clean way to compute expected time to absorption in a finite Markov
-chain is via the <strong>fundamental matrix</strong>. It works like this.</p>
-<p>Arrange the states so transient states come first and absorbing states
-come second. Then the transition probability matrix has the block form</p>
-<div class="math">$$
-P = \begin{bmatrix} Q &amp; R \\ 0 &amp; I \end{bmatrix}
-$$</div>
-<p>where</p>
+<p>The design we landed on:</p>
+<p><strong>A single large EC2 instance as the lab host.</strong> We call it "the big
+boy" in our notes. Something like an <code>m5.xlarge</code> if the budget allows.
+Ubuntu Server LTS on the host, because Vagrant/libvirt/KVM has the
+smoothest experience there. Storage is EBS <code>gp3</code>, 80-100 GB.</p>
+<p><strong>Nested virtualization on that host.</strong> The EC2 instance runs KVM
+(via libvirt), which runs full VMs for the more heavyweight targets
+(and one attacker VM per student), plus Docker for lightweight
+containerized services. Vagrant orchestrates the VMs, Docker Compose
+orchestrates the containers, and both live on the same private virtual
+network (<code>192.168.50.0/24</code> in our example).</p>
+<p><strong>Ansible for configuration management.</strong> Every target service, every
+firewall rule, every open port is defined in an Ansible playbook.
+Changing the lab is editing YAML, not clicking around in Docker or
+SSHing into VMs and running commands.</p>
+<p><strong>Students SSH into an attacker VM.</strong> They do not SSH into the EC2
+host directly, and they do not connect via VPN. Each student (or
+shared pair of students) gets a preconfigured attacker VM with Nmap
+and the other course tools installed. That VM sits inside the lab
+network and can reach all the targets.</p>
+<p>The recommendation we did not take: a VPN-based approach where students
+connect to the EC2 host and run Nmap from their own laptops. We ruled
+it out because it puts environment consistency on the student's
+shoulders - their local Nmap version, their local firewall, their
+local OS. The attacker-VM approach guarantees everyone is running the
+same tool from the same place.</p>
+<h2 id="why-this-stack">Why This Stack</h2>
+<p>The "why Vagrant + Docker + Ansible instead of picking one" question
+comes up a lot. Short version:</p>
 <ul>
-<li><code>Q</code> is <code>t × t</code>, the transition probabilities among transient states</li>
-<li><code>R</code> is <code>t × r</code>, the transitions from transient to absorbing states</li>
-<li><code>0</code> and <code>I</code> in the bottom row represent the fact that absorbing states
-  don't leave themselves</li>
+<li><strong>Vagrant</strong> is the right tool for full VMs that need to look and
+  behave like real hosts (a Windows target, an outdated Linux with a
+  vulnerable SSH). Vagrant plays well with libvirt/KVM on Linux.</li>
+<li><strong>Docker Compose</strong> is the right tool for lightweight service
+  targets: a vulnerable web app, an FTP server, a Samba share. One
+  container, one service, one IP.</li>
+<li><strong>Ansible</strong> is the right tool for configuration - install this
+  software, open this port, run this service - and it works
+  identically on Vagrant VMs and Docker containers.</li>
 </ul>
-<p>The <strong>fundamental matrix</strong> is</p>
-<div class="math">$$
-N = (I - Q)^{-1}
-$$</div>
-<p>Entry <code>N[i, j]</code> gives the expected number of visits to transient state
-<code>j</code> before absorption, starting from transient state <code>i</code>. That means the
-expected number of steps until absorption, starting from state <code>i</code>, is
-the sum of row <code>i</code> of <code>N</code>.</p>
-<p>Or equivalently: solve the linear system <code>(I - Q) x = 1</code>, where <code>1</code> is a
-column of ones. Entry <code>x[i]</code> is the expected number of steps starting
-from state <code>i</code>.</p>
-<h2 id="building-q-for-100-players">Building Q for 100 Players</h2>
-<p>For 100 players there are <code>100 × 99 = 9900</code> transient states. <code>Q</code> is
-<code>9900 × 9900</code>. We only need to fill in the roughly nine nonzero entries
-per row, so <code>Q</code> is very sparse.</p>
-<p>Two things to get right when you build it:</p>
-<ol>
-<li><strong>State-to-index mapping.</strong> Some canonical ordering of the <code>(i, j)</code>
-   pairs with <code>i ≠ j</code>. Any consistent bijection between pairs and row
-   indices works.</li>
-<li><strong>Iterating over next states.</strong> For each <code>(i, j)</code>, enumerate the nine
-   <code>(i', j')</code> transitions. For each, check whether <code>i' = j'</code> (in which
-   case that probability mass flows to an absorbing state and doesn't
-   go into <code>Q</code>).</li>
-</ol>
-<p>Then invert <code>I - Q</code>, sum the row of <code>N</code> that corresponds to the starting
-state <code>(0, 50)</code> (opposite sides of the table), and you have your answer.</p>
-<h2 id="the-uncomfortable-confession">The Uncomfortable Confession</h2>
-<p>Ours took <strong>1,687 seconds</strong> to run. Twenty-eight minutes. Better than 80
-days, but not great.</p>
-<p>The slow part is inverting the 9,900 × 9,900 matrix. We tried
-reformulating as a linear solve <code>(I - Q) x = 1</code> and using LU
-decomposition instead of computing the full inverse, on the theory that
-LU should be faster. It was almost twice as slow. That was a surprise
-but probably a story about the specific dense linear algebra library we
-were using rather than a fundamental issue.</p>
-<p>The obvious next moves we did <em>not</em> take:</p>
+<p>Each tool does waht it is best at. Trying to make
+Docker do full-VM work is possible but painful. Trying to make Vagrant
+manage 30 tiny services is possible but slow. Ansible glues them
+together with the same configuration language.</p>
+<h2 id="cost-model">Cost Model</h2>
+<p>The EC2 instance is the main cost driver. Some things we do to keep
+it reasonable:</p>
 <ul>
-<li><strong>Sparse matrix representation.</strong> <code>Q</code> has at most 9 nonzeros per row
-  out of 9,900. Using a proper sparse solver would probably drop us into
-  the seconds.</li>
-<li><strong>Exploit the symmetry.</strong> Treating <code>(i, j)</code> and <code>(j, i)</code> as the same
-  state cuts the matrix size in half. Combined with sparsity, this
-  should be very fast.</li>
-<li><strong>Iterative methods.</strong> The system <code>(I - Q) x = 1</code> is a great candidate
-  for something like BiCGSTAB or GMRES, which don't build the inverse at
-  all.</li>
+<li><strong>Stop the instance when not in use.</strong> Evenings, weekends, and
+  between class sessions. We only pay for the EBS storage during
+  those times, not the compute.</li>
+<li><strong>Start small on the instance size.</strong> If it is not enough, we
+  upgrade.</li>
+<li><strong>Use Elastic IP or a cheap domain.</strong> Use an easy to remember
+  domain like <code>nmap-lab.our-course.net</code>.</li>
 </ul>
-<h2 id="the-real-solution-times">The Real Solution Times</h2>
-<p>For fun, we looked at the Project Euler forum posts after we submitted.
-The first person to solve it did it in <strong>0.1 seconds in C++ in 2009</strong>.
-That is 16,000× faster than ours.</p>
-<p>They used a completely different approach, involving grouping the six
-die outcomes into three groups (<code>+1</code>, <code>-1</code>, keep) and using symmetries
-to reduce the state space dramatically. There is a shape of insight that
-turns "big linear algebra problem" into "small closed-form recurrence"
-that we did not find.</p>
-<p>Some of the fun of Project Euler is exactly this: finishing the problem,
-submitting the answer, and then finding out that half the people who
-solved it did it 10,000× faster with a technique you did not think of.
-The correct response is not embarrassment. It is to open the forum, read
-their write-ups, and steal their trick for next time.</p>
+<p>Spot Instances would save a lot more, but we ruled them out because
+they can be terminated with little notice, and getting evicted 15
+minutes into a lab session is not the experience we want to give
+students.</p>
+<h2 id="notes-for-the-instructor">Notes for the Instructor</h2>
+<p>A few things we would tell anyone building a course like this from
+scratch:</p>
+<p><strong>Version everything.</strong> The whole lab is a Git repo:
+Vagrantfile, <code>docker-compose.yml</code>, Ansible playbooks, and the Ansible
+inventory. Every branch is a different lab scenario. Rolling back is
+<code>git checkout</code>.</p>
+<p><strong>Test the lab reset every time.</strong> Before every session, tear the
+whole environment down (<code>docker-compose down -v &amp;&amp; vagrant destroy
+-f</code>) and bring it back up from scratch. This catches "works on my machine"
+bugs.</p>
+<p><strong>Write the lab handout after you build the lab.</strong> The lab handout is
+the source of truth for what students see and do. If you write the
+handout first and then build the lab to match it, you will end up
+writing two things that don't quite line up.</p>
+<p><strong>Instrument the attacker VM.</strong> We put a shell history file that
+survives resets, plus a script that logs every Nmap command run
+during the session, so students can review what they did. Also
+useful when a student says "I typed the command exactly and it
+didn't work."</p>
+<h2 id="what-this-cost-us">What This Cost Us</h2>
+<p>The course took roughly two solid weeks to build end-to-end - one week
+on the lab infrastructure, one week on the lecture content and lab
+exercises. </p>
+<p>expected to run more than once. If we were doing it as a one-off, we
+would have skipped the Ansible layer and hard-coded the target
+configurations, saving maybe two or three days at the cost of a much
+worse experience if we ever wanted to change anything.</p>
+<p>If you are considering doing this: yes, do it. The single biggest
+teaching lever is being able to show students a live network with
+real services responding to their scans, and this setup does that
+without ever putting them or you in legal jeopardy.</p>
 <h2 id="references">References</h2>
 <ul>
-<li>Our full notes:
-  <a href="https://charlesreid1.com/wiki/Project_Euler/227">Project Euler/227</a></li>
-<li><a href="https://projecteuler.net/problem=227">PE 227 on projecteuler.net</a></li>
-<li>Fundamental matrix: standard reference is Kemeny &amp; Snell, <em>Finite
-  Markov Chains</em> (1960)</li>
-</ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+<li>Our full course notes:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course">Nmap/Short Course</a></li>
+<li>Lab infrastructure design:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course/Running_the_Labs">Nmap/Short Course/Running the Labs</a></li>
+<li>Nmap itself: <a href="https://nmap.org/">https://nmap.org/</a></li>
+</ul></div>
 
     </div>
 </div>
@@ -716,15 +608,23 @@ their write-ups, and steal their trick for next time.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/markov-chains.html">markov chains</a>
+                    <a href="https://charlesreid1.github.io/tag/nmap.html">nmap</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/probability.html">probability</a>
+                    <a href="https://charlesreid1.github.io/tag/teaching.html">teaching</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/brute-force.html">brute force</a>
+                    <a href="https://charlesreid1.github.io/tag/curriculum.html">curriculum</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/fundamental-matrix.html">fundamental matrix</a>
+                    <a href="https://charlesreid1.github.io/tag/aws.html">aws</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/vagrant.html">vagrant</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/docker.html">docker</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/ansible.html">ansible</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pentesting.html">pentesting</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -742,18 +642,18 @@ their write-ups, and steal their trick for next time.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Project Euler 198 and Continued Fractions: When Is a Rational Ambiguous?
+                Reading Rick Perlstein's Nixonland
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2025-04-15T22:00:00-07:00" pubdate>Tuesday 04/15/2025</time>
+                <time datetime="2025-05-22T22:00:00-07:00" pubdate>Thursday 05/22/2025</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/project-euler-198-and-continued-fractions-when-is-a-rational-ambiguous.html">permalink</a>
+                <a href="https://charlesreid1.github.io/reading-rick-perlsteins-nixonland.html">permalink</a>
             </span>
             </p>
         </div>
@@ -770,200 +670,174 @@ their write-ups, and steal their trick for next time.</p>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p><a href="https://projecteuler.net/problem=198">Project Euler problem 198</a> is a
-number theory problem that turns out to be almost entirely about
-continued fractions. The problem hides this - the statement talks about
-"ambiguous" real numbers - but the ambiguity has a clean characterization
-in terms of continued fraction expansions, and once you see it, the
-problem gets a lot smaller.</p>
-<p>Wiki notes:
-<a href="https://charlesreid1.com/wiki/Project_Euler/198">Project Euler/198</a>.</p>
-<h2 id="the-problem">The Problem</h2>
-<p>Define a <strong>best approximation</strong> to a real number <code>x</code> with denominator
-bound <code>d</code> as a rational <code>r/s</code> in reduced form with <code>s ≤ d</code>, such that
-any other rational <code>p/q</code> closer to <code>x</code> than <code>r/s</code> has <code>q &gt; d</code>. In other
-words: it is the rational number with the smallest denominator that
-gets as close to <code>x</code> as anything with a small enough denominator can.</p>
-<p>Usually the best approximation is unique for each denominator bound.
-But sometimes there are two equally-good best approximations. The
-problem gives the example of <code>x = 9/40</code>, which has both <code>1/4</code> and <code>1/5</code>
-as best approximations for the denominator bound <code>d = 6</code>. Both are
-tied for closest to <code>9/40</code> among rationals with denominator at most 6.</p>
-<p>Call a real number <code>x</code> <strong>ambiguous</strong> if there is at least one denominator
-bound for which it has two best approximations. Ambiguous numbers are
-necessarily rational.</p>
-<p>The question: how many ambiguous <code>x = p/q</code> with <code>0 &lt; x &lt; 1/100</code> and
-<code>q ≤ 10^8</code> are there?</p>
-<h2 id="why-continued-fractions">Why Continued Fractions</h2>
-<p>Any real number <code>x</code> has a <strong>continued fraction expansion</strong></p>
-<div class="math">$$
-x = a_0 + \cfrac{1}{a_1 + \cfrac{1}{a_2 + \cfrac{1}{a_3 + \ddots}}}
-$$</div>
-<p>which we write compactly as <code>[a_0; a_1, a_2, a_3, ...]</code>. For rational
-numbers, the expansion terminates. For irrationals, it does not.</p>
-<p>The <strong>convergents</strong> of a continued fraction are the rationals you get
-by truncating the expansion at each step. The convergents of
-<code>[a_0; a_1, a_2, ..., a_n]</code> are</p>
-<div class="math">$$
-[a_0], [a_0; a_1], [a_0; a_1, a_2], \ldots
-$$</div>
-<p>There is a beautiful classical theorem that says: <strong>the convergents of
-the continued fraction expansion of <code>x</code> are exactly the best
-approximations to <code>x</code></strong>. Every convergent is a best approximation for
-some denominator bound, and every best approximation is a convergent
-or a certain kind of intermediate fraction.</p>
-<p>For <code>x = 9/40</code>:</p>
+        <div class="entry-content"><p>We spent April and May 2025 slowly working our way through Rick
+Perlstein's <em>Nixonland: The Rise of a President and the Fracturing
+of America</em> (2008). It is 750 pages of dense political history
+covering roughly 1965 to 1972 - from the Watts riots through Nixon's
+re-election - and it is the second book in Perlstein's four-volume
+history of American conservatism.</p>
+<p>Full notes on the wiki:
+<a href="https://charlesreid1.com/wiki/Nixonland">Nixonland</a>.</p>
+<h2 id="what-the-book-actually-is">What The Book Actually Is</h2>
+<p>The title is misleading. <em>Nixonland</em> is not really a biography of
+Richard Nixon. Nixon is the frame - his loss in 1960, his loss in
+1962, his political resurrection, his 1968 victory, his first term,
+his 1972 landslide - but the book is about the country around him.
+It is about how a nation that voted for Lyndon Johnson in a landslide
+in 1964 voted for Nixon in a landslide in 1972.</p>
+<p>Perlstein's argument, compressed brutally: the disintegration of the
+New Deal Democratic coalition was driven less by policy failure than
+by cultural conflict, and Nixon's genius was recognizing early that
+the resentments of white middle-class voters at what they saw as
+the excesses of the counterculture, the civil rights movement, and
+liberal elites could be organized into a durable political majority.
+Everything Nixon did in office - the Southern Strategy, the silent
+majority speeches, the culture war framing, the paranoid style, the
+enemies list - was in service of that recognition.</p>
+<p>Perlstein clearly sees the Nixon coalition as a tragedy for 
+American politics. But his account of <em>how</em> Nixon built
+it is scrupulously detailed and painfully accurate.</p>
+<h2 id="structure">Structure</h2>
+<p>The book has four Books (parts), each covering roughly two years:</p>
 <ul>
-<li>CF expansion: <code>[0; 4, 2, 4]</code></li>
-<li>First convergent: <code>[0; 4] = 1/4</code></li>
-<li>Second convergent: <code>[0; 4, 2] = 1 / (4 + 1/2) = 2/9</code></li>
-<li>Third (final) convergent: <code>[0; 4, 2, 4] = 9/40</code></li>
+<li><strong>Book I</strong> (1965-1967): The Watts riots, the rise of Reagan in
+  California, the long hot summers, and the collapse of the LBJ
+  consensus</li>
+<li><strong>Book II</strong> (1967-1968): The 1968 campaign - Tet, LBJ's
+  withdrawal, RFK's assassination, MLK's assassination, the Chicago
+  convention, and Nixon's narrow victory</li>
+<li><strong>Book III</strong> (1969-1970): Nixon's first two years - Vietnam,
+  Cambodia, Kent State, the polarization, the culture war getting
+  organized</li>
+<li><strong>Book IV</strong> (1971-1972): The lead-up to the 1972 landslide -
+  George Wallace, the Democratic primary chaos, McGovern's
+  nomination, the sabotage operations that would become Watergate</li>
 </ul>
-<p>So <code>1/4</code> is one best approximation for <code>9/40</code> at some bound. Where does
-the <em>other</em> one, <code>1/5</code>, come from?</p>
-<h2 id="where-ambiguity-comes-from">Where Ambiguity Comes From</h2>
-<p>The answer is that not all best approximations are convergents. There
-are also <strong>intermediate fractions</strong>, which sit between successive
-convergents. Specifically, when a partial quotient <code>a_k</code> is larger than
-1, you can form intermediate fractions</p>
-<div class="math">$$
-\frac{p_{k-1} + j \cdot p_k}{q_{k-1} + j \cdot q_k}
-$$</div>
-<p>for <code>j = 1, 2, ..., a_{k+1} - 1</code>, where <code>p_k / q_k</code> is the <code>k</code>-th
-convergent. These intermediate fractions are best approximations for
-certain denominator bounds.</p>
-<p>The situation where a real number has <strong>two</strong> best approximations for
-some denominator bound is exactly when a convergent and an intermediate
-fraction happen to sit equidistant from <code>x</code>. This can only happen when
-the continued fraction expansion has some partial quotient bigger than 1
-sitting in the right place.</p>
-<p>The clean characterization we ended up with is this:</p>
-<p><strong>A rational <code>p/q</code> is <em>non-ambiguous</em> if and only if its continued
-fraction expansion has the form</strong></p>
-<div class="math">$$
-[0; a_1] \quad \text{or} \quad [0; a_1, 1, 1, \ldots, 1]
-$$</div>
-<p>Everything else is ambiguous.</p>
-<p>This is the crux of the problem. Instead of counting ambiguous fractions
-directly, count the total number of relevant fractions and subtract the
-non-ambiguous ones - or, better, characterize the ambiguous ones
-directly by generating their continued fraction expansions.</p>
-<h2 id="constraints-from-the-problem">Constraints From the Problem</h2>
-<p>The problem restricts to <code>0 &lt; p/q &lt; 1/100</code> and <code>q ≤ 10^8</code>.</p>
-<p>Since <code>p ≥ 1</code> and <code>p/q &lt; 1/100</code>, we have <code>q &gt; 100 p ≥ 100</code>. So <code>q</code>
-ranges from 101 up to <code>10^8</code>.</p>
-<p>For a given <code>q</code>, valid <code>p</code> values satisfy:</p>
+<p>Every chapter is worth reading. The pacing gets faster as the book
+goes on - Book I is a long buildup, Book IV is a chaotic sprint.</p>
+<h2 id="favorite-chapters">Favorite Chapters</h2>
+<p><strong>Chapter 5: Long, Hot Summer.</strong> The 1965 Watts riots, and Perlstein's
+argument that this was the moment the Democratic Party's Northern
+white base started to fracture. The riots were shocking - to
+Californians who thought the racial politics of the South did not
+apply to them, to Northern liberals who thought the Civil Rights Act
+had solved the problem, and to Black Americans who watched their
+neighborhood burn while the National Guard occupied it. Nothing was
+the same after Watts.</p>
+<p><strong>Chapter 15: Wednesday, August 28, 1968.</strong> The night of the Chicago
+police riot at the Democratic National Convention. Perlstein's
+account of that day is journalism at its best - hour-by-hour, with
+enough context that you understand not just what happened but what
+each side thought was happening. The image that the country took
+away - hippies in Grant Park, police clubbing them on live TV, the
+convention nominating Humphrey in the middle of the chaos - was the
+Democratic Party losing its future.</p>
+<p><strong>Chapter 30: The Party of Jefferson, Jackson, and George Wallace.</strong>
+The title juxtaposes the two founding icons of the Democratic Party
+with George Wallace, who was making a serious run at the 1972
+Democratic nomination on a platform that was recognizably a
+throwback to the segregationist South. The chapter is about the
+identity crisis this produced. Wallace had a real constituency -
+white working-class voters, especially in the South and the outer
+suburbs of Northern cities, who felt abandoned by the national
+Democratic Party. The Democratic establishment eventually settled
+on the strategy of clearing the field for McGovern, on the theory
+that McGovern would be the easiest opponent for Nixon to beat.
+They were right about McGovern being easy to beat, and it did not
+help them.</p>
+<p><strong>Chapter 32: Celebrities.</strong> The chapter on the strange
+celebrity-politician overlap of the 1972 campaign - Warren Beatty
+raising money for McGovern, John Wayne stumping for Nixon, the
+music-industry mobilization for both sides. Perlstein uses it to
+make the point that mass media had transformed political campaigns
+into a hybrid of policy fight and cultural performance, and Nixon's
+team understood this better than McGovern's did.</p>
+<h2 id="the-wallace-chapter-is-the-key">The Wallace Chapter Is the Key</h2>
+<p>Chpater 30 gets our vote for the most illuminating chapter of the book.
+The reason is that Wallace exposes the whole logic of the political 
+realignment Perlstein is describing.</p>
+<p>Wallace was not a Republican. He was a lifelong Democrat, running
+in the 1972 Democratic primary. His base was traditional
+Democratic voters - white Southerners, white working-class voters
+in the industrial North, union members. His platform was populist:
+protectionist on trade, hawkish on Vietnam, savagely opposed to
+busing and to the cultural changes of the 1960s.</p>
+<p>When Wallace won primaries in Michigan and Maryland in 1972, it
+was clear that a significant portion of the Democratic base
+wanted what he was selling. But the national Democratic Party had
+committed to a different vision - the McGovern coalition of
+professionals, young voters, minorities, and cultural liberals.
+Those two visions were incompatible. Wallace was shot in Maryland
+in May 1972 and dropped out. The Wallace voters did not just go
+home. Many of them voted for Nixon that November.</p>
+<p>The core Nixon strategy, Perlstein argues, was to keep the
+Wallace voters in the Republican coalition permanently. He
+succeeded. The realignment took another decade or two to fully
+resolve, but the shape of it - the Republican Party becoming the
+party of culturally conservative white working-class voters, the
+Democratic Party becoming the party of cosmopolitan educated
+professionals - was visible by 1972.</p>
+<p>Everything about American politics for the last 50 years has been
+downstream of this realignment. If you want to understand why
+American politics looks the way it does now, <em>Nixonland</em> is where
+that story starts.</p>
+<h2 id="what-this-book-is-not">What This Book Is Not</h2>
+<p><em>Nixonland</em> is not:</p>
 <ul>
-<li><code>p ≥ 1</code></li>
-<li><code>p ≤ q/100</code></li>
-<li><code>gcd(p, q) = 1</code> (reduced form)</li>
+<li>A biography of Nixon (there are better ones - John Farrell's
+  <em>Richard Nixon: The Life</em> is the current standard)</li>
+<li>A history of Watergate (Perlstein covers it briefly at the end,
+  but the whole scandal properly belongs to Perlstein's next
+  volume, <em>The Invisible Bridge</em>)</li>
+<li>A neutral academic history (Perlstein has a clear point of view)</li>
+<li>Short (it is 750 pages, and it takes as long as it needs)</li>
 </ul>
-<p>That gives us roughly <code>q/100</code> candidate numerators per denominator, but
-we also have to intersect with "coprime to <code>q</code>" and "continued fraction
-has the right shape to be ambiguous."</p>
-<h2 id="the-search">The Search</h2>
-<p>The high-level approach:</p>
+<p>What it is: the definitive book on the political and cultural
+disintegration of the 1960s, and the definitive book on how the
+Nixon coalition was built. Both of those things are worth
+understanding.</p>
+<h2 id="reading-order">Reading Order</h2>
+<p>Perlstein's four-volume history:</p>
 <ol>
-<li>Iterate over denominators <code>q</code> from 101 to <code>10^8</code></li>
-<li>For each <code>q</code>, enumerate valid <code>p</code> values (coprime to <code>q</code>, in range)</li>
-<li>Compute the continued fraction expansion of <code>p/q</code></li>
-<li>Check whether the expansion has the "ambiguous" shape</li>
-<li>Count</li>
+<li><em>Before the Storm: Barry Goldwater and the Unmaking of the
+   American Consensus</em> (2001) - covers 1960-1964</li>
+<li><em>Nixonland</em> (2008) - covers 1965-1972</li>
+<li><em>The Invisible Bridge: The Fall of Nixon and the Rise of
+   Reagan</em> (2014) - covers 1973-1976</li>
+<li><em>Reaganland: America's Right Turn 1976-1980</em> (2020) - covers
+   1976-1980</li>
 </ol>
-<p>The bottleneck is that step 1 is <code>10^8</code> iterations, and even a very
-fast inner loop times out. So the real approach is to invert the
-problem: instead of iterating over fractions and checking whether
-their CF is ambiguous, iterate over the <em>shapes</em> of ambiguous CF
-expansions and count the fractions those shapes produce that fall in
-the range.</p>
-<p>This is a nice example of a general technique: when you have a
-characterization of the objects you want to count in terms of some
-structural property, generating objects by structure is usually faster
-than filtering.</p>
-<h2 id="the-bigger-point">The Bigger Point</h2>
-<p>Problems that look purely computational often turn out to have a clean
-structural characterization hiding underneath. The PE 198 statement
-never mentions continued fractions - it's about "best approximations"
-and "ambiguous real numbers." But the moment you dig into what best
-approximation actually means for rationals, continued fractions appear
-naturally, and the entire problem reduces to counting fractions whose
-CF has a certain shape.</p>
-<p>This kind of translation - from a definition in one language to a
-characterization in another - is where number theory earns its
-reputation for being satisfying. You start with "count the ambiguous
-fractions" and you end with "count the fractions whose CF is not of
-the form <code>[0; a₁, 1, 1, ..., 1]</code>," and the second version is much
-easier to work with.</p>
-<h2 id="references">References</h2>
+<p>Total page count for all four: over 3,000 pages. This is a
+commitment. But it is one of the best accounts of American
+politics (with a 10,000 foot view) from 1960 to 1980 that
+we have found. Perlstein's voice is sharp and opinionated
+but also highly enjoyable and hard to match.</p>
+<h2 id="companion-reading">Companion Reading</h2>
+<p>Other reading in a similar vein:</p>
 <ul>
-<li>Our wiki notes:
-  <a href="https://charlesreid1.com/wiki/Project_Euler/198">Project Euler/198</a></li>
-<li><a href="https://projecteuler.net/problem=198">PE 198 on projecteuler.net</a></li>
-<li>Classical reference: Hardy &amp; Wright, <em>An Introduction to the Theory
-  of Numbers</em>, chapters on continued fractions</li>
+<li><strong>Robert Caro, <em>The Years of Lyndon Johnson</em> (5 vols.).</strong> Covers
+  the same period from a very different angle - LBJ's biography.
+  Volume 4, <em>The Passage of Power</em>, and the not-yet-published
+  Volume 5 cover the years Perlstein covers.</li>
 </ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+<h2 id="references">References</h2>
+<p>Wiki:</p>
+<ul>
+<li>Our wiki notes on <em>Nixonland</em>:
+  <a href="https://charlesreid1.com/wiki/Nixonland">Nixonland</a></li>
+<li>Our wiki notes on the sequel, <em>The Invisible Bridge</em>:
+  <a href="https://charlesreid1.com/wiki/The_Invisible_Bridge">Nixonland</a></li>
+</ul>
+<p>Blog posts:</p>
+<ul>
+<li>Companion post on political theory:
+  <a href="reading-hobbess-leviathan.html">Reading Hobbes's <em>Leviathan</em></a></li>
+</ul>
+<p>Books:</p>
+<ul>
+<li>Perlstein, Rick. <em>Nixonland: The Rise of a President and the
+  Fracturing of America.</em> Scribner, 2008.</li>
+</ul></div>
 
     </div>
 </div>
@@ -975,13 +849,19 @@ easier to work with.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/continued-fractions.html">continued fractions</a>
+                    <a href="https://charlesreid1.github.io/tag/history.html">history</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/number-theory.html">number theory</a>
+                    <a href="https://charlesreid1.github.io/tag/nixon.html">nixon</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rational-approximation.html">rational approximation</a>
+                    <a href="https://charlesreid1.github.io/tag/perlstein.html">perlstein</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/american-politics.html">american politics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/1960s.html">1960s</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/1970s.html">1970s</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1014,6 +894,34 @@ easier to work with.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>May 2025</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-rick-perlsteins-nixonland.html">Reading Rick Perlstein's <i>Nixonland</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/ken-binmores-game-theory-and-nash-equilibrium-in-shadowrun.html">Ken Binmore's <i>Game Theory</i> and Nash Equilibrium in Shadowrun</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-hobbess-leviathan.html">Reading Hobbes's <i>Leviathan</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/forever-blue-the-other-side-of-the-bums-story.html"><i>Forever Blue</i>: The Other Side of the Bums Story</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

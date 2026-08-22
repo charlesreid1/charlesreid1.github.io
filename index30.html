@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                CSE 143 Final Project: Classy
+                Shortest Lattice Paths and Multiset Permutations
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2017-06-23T09:00:00-07:00" pubdate>Friday 06/23/2017</time>
+                <time datetime="2017-07-18T08:00:00-07:00" pubdate>Tuesday 07/18/2017</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/cse-143-final-project-classy.html">permalink</a>
+                <a href="https://charlesreid1.github.io/shortest-lattice-paths-and-multiset-permutations.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,641 +127,835 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
-<ul>
-<li><a href="#classy-problem">Problem Description</a></li>
-<li><a href="#classy-approach">Solution Approach</a></li>
-<li><a href="#classy-algo">Algorithm</a></li>
-<li><a href="#classy-pseudo">Pseudocode</a></li>
-<li><a href="#classy-oop">Using an Object-Oriented Approach</a></li>
-<li><a href="#classy-code">Code</a></li>
-<li><a href="#classy-refs">References</a></li>
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#the-lattice-paths-problem">The Lattice Paths Problem</a></li>
+<li><a href="#problem-formulation-permutations">Problem Formulation: Permutations</a><ul>
+<li><a href="#permutations-of-unique-items-factorial">Permutations of Unique Items (Factorial)</a></li>
+<li><a href="#permutations-of-items-with-duplicates-multichoose">Permutations of Items with Duplicates (Multichoose)</a></li>
+<li><a href="#example">Example</a></li>
 </ul>
-<p><a name="classy-problem"></a></p>
-<h1 id="problem-description">Problem Description</h1>
-<p>Comedian John Cleese, in his memoir <strong>So Anyway...</strong>, described the social classes of his
-mother and father as "upper-uper-lower-middle class" and "middle-middle-middle-lower-middle class",
-respectively. Write a program that will sort individuals based on a labeling of their 
-social standing by class.</p>
-<p>The three main classes are upper, middle, and lower. Classes progress hierarchically
-from right to left. For example, lower-upper would come before lower-lower.
-There is also ordering within a class, so upper-upper is a higher class than middle-upper.</p>
-<p>Once you have reached the lowest level of detail of one of the classes, assume that
-all further classes are equivalent to middle. This means upper and middle-upper are
-equivalent, and middle-middle-lower-middle and lower-middle are equivalent.</p>
-<p>Input files have a line with the number of names, then one name per line,
-with the name, a colon, then the title. For example:</p>
-<div class="highlight"><pre><span></span><code>5
-mom: upper upper lowre middle class
-dad: middle middle lower middle class
-queen_elizabeth: upper upper class
-chair: lower lower class
-unclebob: middle lower middle class
+</li>
+<li><a href="#solving-2d-rectangular-lattice">Solving 2D Rectangular Lattice</a><ul>
+<li><a href="#more-examples">More Examples</a></li>
+</ul>
+</li>
+<li><a href="#solving-2d-square-lattice-special-case">Solving 2D Square Lattice (Special Case)</a></li>
+<li><a href="#solving-3d-cuboid-lattice">Solving 3D Cuboid Lattice</a></li>
+<li><a href="#solving-3d-cubic-lattice-special-case">Solving 3D Cubic Lattice (Special Case)</a></li>
+<li><a href="#solving-n-dimensional-square-lattice-n-dimensional-multisets">Solving N-Dimensional Square Lattice (N-Dimensional Multisets)</a></li>
+</ul>
+</div>
+<h2 id="the-lattice-paths-problem">The Lattice Paths Problem</h2>
+<p>I first came across the lattice paths problem in <a href="https://projecteuler.net/problem=15">Project Euler problem 15</a>. 
+The question described a 2x2 square lattice,
+and illustrated the 6 ways of navigating from the top left corner to the bottom right corner by taking the minimum number
+of steps - 2 right steps and 2 down steps. </p>
+<p>The question then asks for the number of minimum paths on a 20 x 20 grid. Needless to say, even without seeing the number, 
+it should be obvious that enumerating all of these paths would get extremely expensive with grid dimensions growing beyond 10.
+That means this should be approached as an <strong>analytical</strong> combinatorics problem, not a computational combinatorics problem.
+As it turns out, there is a closed-form solution, and this is one of the few Project Euler questions that can be answered 
+with the straightforward use of Wolfram Alpha (I solved it while boarding a bus).</p>
+<p>But this is an interesting problem that goes beyond the Project Euler question - it has to do with 
+a combinatorics problem that is maddeningly simple, yet surprisingly difficult to formulate - the problem 
+of <strong>multisets</strong>.</p>
+<h2 id="problem-formulation-permutations">Problem Formulation: Permutations</h2>
+<p>Thinking through the 2x2 grid, we already stated that the shortest path must consist of 2 right moves and 2 down moves - 
+the number of paths is simply a question of the order in which these moves are made. Let us represent the path 
+that moves right twice, then down twice, using the string</p>
+<div class="highlight"><pre><span></span><code>RRDD
 </code></pre></div>
 
-<p>The proper output should be the name of each person,
-sorted in order according to their social status, e.g.,</p>
-<div class="highlight"><pre><span></span><code>queenelizabeth
-mom
-dad
-unclebob
-chair
+<p>Now we have a way of representing paths through the lattice - and we've turned our very specific lattice problem 
+into a much more general combinatorics problem. How many unique permutations of the above path/string can we find?</p>
+<h3 id="permutations-of-unique-items-factorial">Permutations of Unique Items (Factorial)</h3>
+<p>Let's suppose we have a string consisting of unique characters:</p>
+<div class="highlight"><pre><span></span><code>ABCDEFG
 </code></pre></div>
 
-<p><a name="classy-approach"></a></p>
-<h1 id="solution-approach">Solution Approach</h1>
-<p>(This discusses an approach specific to Java, 
-but a similar approach could be adopted for other languages
-in which comparison operators can be overloaded for objects.)</p>
-<p>The problem lays out all of the essential components that a solution requires.
-This can most easily be implemented using an object and a comparator: 
-the object represents a person, and has a field to store their name and a field
-to store their titles (array-like container for Strings). These objects
-would then implement comparators so that individuals could be compared. 
-This functionality then allows the array to be sorted, using the built-in 
-Collections sort function or a custom sort function.</p>
-<p><a name="classy-algo"></a></p>
-<h1 id="algorithm">Algorithm</h1>
-<p>The classy algorithm can be briefly described in this way: we are iterating over two lists of strings,
-of possibly unequal length, and comparing them right to left. We have a few very simple rules that 
-determine whether one title comes before the other. We have a few simple rules for breaking ties.</p>
-<p>The core of the algorithm is the comparison operation, in which we are assuming that these two things 
-are equal, until we encounter evidence to the contrary. Briefly, the pseudocode can be expressed as follows
-(where we adopt the Java convention that a negative result means the first item comes before the second item):</p>
-<div class="highlight"><pre><span></span><code>if item1 &lt; item2:
-    return -1
-else if item1 &gt; item2: 
-    return 1
-else:
-    # keep going
+<p>Now how many permutations of this string are there? The first letter can be any of the 7 characters, so we have 7 possibilities. 
+The second letter can be any of the remaining 6 characters, so we have 7 * 6 possibilities. And so on down the line, until we get a 
+total number of possible permutations of the string equal to</p>
+<div class="math">$$
+7! = 7 \times 6 \times 5 \times 4 \times 3 \times 2 \times 1 = 5040
+$$</div>
+<p>There are 5040 unique permutations of the string. </p>
+<p>Our situation is complicated by the fact that some of our permutations are repeated. For example, if we label the two down moves 
+as D1 and D2, we can choose the first move as D1 and the second move as D2, or the first move as D2 and the second move as D1 - the two are equivalent. 
+This will eliminate some of the permutations.</p>
+<h3 id="permutations-of-items-with-duplicates-multichoose">Permutations of Items with Duplicates (Multichoose)</h3>
+<p>Our case is slightly different: we have items with duplicates. This fits into a general combinatorics framework called 
+<a href="https://en.wikipedia.org/wiki/Stars_and_bars_(combinatorics)">stars-and-bars</a> (link to Wikipedia article). 
+In this framework, we are trying to determine the number of ways that we can partition a set of n objects 
+into a set of <span class="math">\(k\)</span> bins. The <span class="math">\(n\)</span> objects are often denoted as star characters, and the k bins are formed by 
+k-1 bar characters. </p>
+<p>For example, if we are adding 5 components to a circuit board, and they can be any one of 9 possible components, we can represent this as
+the partitioning of 5 stars among 9 bins, or 8 bars. Here are some possibilities:</p>
+<div class="highlight"><pre><span></span><code>||||||||        &lt;-- No choices made yet (9 bins, 8 partitions)
+*|*||*||*|*||   &lt;-- Mix of different components
+||*|*||*|*||*   &lt;-- Mix of different components
+****|||*|||||   &lt;-- Heavy on component 1
+*|**|||**||||   &lt;-- Two pairs
 </code></pre></div>
 
-<p>If we find a difference, we stop and return right away, 
-but otherwise we continue, and assume the two are equal.</p>
-<p>The problem statement tells us that if a title is missing, and the title lengths are mismatched, we should 
-fill in with "middle". This translates into a second comparison block, in which one of the items is 
-hard-coded as "middle", due to an empty list of titles:</p>
-<div class="highlight"><pre><span></span><code>if item &lt; &quot;middle&quot;:
-    return -1
-else if item &gt; &quot;middle&quot;
-    return 1
-else:
-    # keep going
+<p>In the case of our lattice path problem, we have only two unique characters, D and R. 
+We can think of the problem of generating permutations as inserting the down moves into a sequence of right moves. 
+We have a certain number of locations where we can insert the down moves, and down moves can be inserted in order.</p>
+<p>This is what's often called a stars-and-bars problem in combinatorics: trying to determine the number of permutations 
+of items from multisets can be described as partitioning star characters with bar characters.</p>
+<p>To formulate our problem in these terms, we can think of "distributing" our down moves as we move right through the lattice. 
+On the 20x20 grid, we are going to make 20 right moves, and we can distribute our 20 down moves at any of 21 possible locations 
+(columns of points on the lattice). </p>
+<p>Thus, our n items, the 20 down moves, are being placed between the 20 right moves, which are the 20 bars that create 
+21 bins (21 locations to place the down moves).</p>
+<h3 id="example">Example</h3>
+<p>Considering the smaller 2x2 example, and replacing bars with R, we have, for a 2x2 lattice, six possibilities:</p>
+<div class="highlight"><pre><span></span><code>RR    &lt;-- No choices made yet
+**RR  &lt;-- all on left
+*R*R  &lt;-- distributed... etc...
+*RR*
+R**R
+R*R*
+RR**
 </code></pre></div>
 
-<p>Here is how these fit together:
-* Start by splitting the input titles, most likely strings, into lists
-* Iterate over each title, from right to left, and compare the titles.
-* When we reach the end of the shorter list, continue comparing titles right to left, filling in "middle".
-* If the titles are tied, break ties with name.
-* The algorithm should be implemented in a way that has access to both the titles and the names of the two people being compared.
-* In Java, we can define people objects, then we can either have People objects implement Comparable, or we can define our own Comparator for two People objects.</p>
-<p><a name="classy-pseudo"></a></p>
-<h1 id="pseudocode">Pseudocode</h1>
-<p>When we translate the above procedure into Python-like pseudocode, here is the result:</p>
-<div class="highlight"><pre><span></span><code>define compare_lengths(title1, title2):
-    list1 = title1.split()
-    list2 = title2.split()
-    for i in min(list1.size, list2.size):
-        sal1 = list1.reverse[i]
-        sal2 = list2.reverse[i]
-        if sal1 &lt; sal2:
-            return -1
-        else if sal1 &gt; sal2:
-            return 1
-
-    larger_list = &lt;point to larger list&gt;
-    for i in ( min(list1.size,list2.size)+1 ... max(list1.size, list2.size) ):
-        salX = larger_list.reverse[i]
-        if SalX &lt; &quot;middle&quot;:
-            return -1
-        if salX &gt; &quot;middle&quot;
-            return 1
-
-    # If you get here, it&#39;s a tie. Use names for tie-breaker.
+<p>To enumerate the number of possibilities, we use the multichoose function, denoted "n multichoose k". This counts the number of ways
+to place n objects (D) into <span class="math">\(k\)</span> bins (created by <span class="math">\(k-1\)</span> other objects, R). The multichoose function is defined as
+(see <a href="https://en.wikipedia.org/wiki/Multiset#Counting_multisets">https://en.wikipedia.org/wiki/Multiset#Counting_multisets</a> Wikipedia page for proper Latex notation - 
+it looks like the binomial coefficient but with 2 parentheses):</p>
+<div class="math">$$
+n \mbox{  multichoose  } k = \binom{n+k-1}{n} 
+$$</div>
+<p>where, again, n is number of objects, being split into <span class="math">\(k\)</span> partitions by <span class="math">\(k-1\)</span> other objects.</p>
+<p>Now, let's plug in the numbers for the 2 by 2 lattice. We get:</p>
+<div class="math">$$
+n = 2, k = 3
+$$</div>
+<p>We are partitioning 2 down moves among 3 possible columns in the lattice. This gives:</p>
+<div class="math">$$
+2 \mbox{  multichoose  } 3 = \binom{2+3-1}{2} = \binom{4}{2} = 10
+$$</div>
+<p>which is indeed the number of paths through the lattice.</p>
+<h2 id="solving-2d-rectangular-lattice">Solving 2D Rectangular Lattice</h2>
+<p>To generalize, on a lattice of width <span class="math">\(W\)</span> and height <span class="math">\(H\)</span>, we have <span class="math">\(W\)</span> right moves that form <span class="math">\(W+1\)</span> partitions,
+in which we are placing H items. The number of possible paths through the lattice is therefore 
+equivalent to permutations of the string:</p>
+<div class="highlight"><pre><span></span><code>RRRR...(W times)...RRRDDDD...(H times)...DDDD
 </code></pre></div>
 
-<p><a name="classy-oop"></a></p>
-<h1 id="using-an-object-oriented-approach">Using an Object-Oriented Approach</h1>
-<p>To apply object-oriented principles in this situation, 
-we want to bundle together related data, and abstract 
-away details. That means we want to create an object
-to associate the name and titles of a given person,
-and implement functionality to allow each person
-to be compared with other people. </p>
-<p>This will allow us to create two people 
-and compare them with greater than, less than, or 
-equal to operators. More importantly, this will also allow us 
-to perform sorting.</p>
-<p>Our Java program Classy is a simple driver that loads the names and titles
-of people from standard input.</p>
-<p>The Person class stores associated name and title data for each person.
-This class implements the Comparable interface, which requires it 
-to implement a <code>compareTo()</code> method.</p>
-<div class="highlight"><pre><span></span><code>class Person implements Comparable&lt;Person&gt; {
-
-    ...
-
-    public int compareTo(Person p2) { 
+<p>Now n and k are given by:</p>
+<div class="math">$$
+n = H, k = W+1
+$$</div>
+<p>so the total number of possible paths through the W x H square lattice is:</p>
+<div class="math">$$
+(H) \mbox{  multichoose  } (W+1) = \binom{W+1+H-1}{H} = \binom{W+H}{H}
+$$</div>
+<h3 id="more-examples">More Examples</h3>
+<p>The number of minimal paths through a 4 x 2 lattice (identical to the number of paths 
+through a 2 x 4 lattice) is:</p>
+<div class="math">$$
+P = \binom{4+2}{2} = \binom{4+2}{4} = 15
+$$</div>
+<p>The number of minimal paths through an 8x8 lattice is given by:</p>
+<div class="math">$$
+P = \binom{8+8}{8} = 12,870
+$$</div>
+<p>and finally, the number of minimal paths through a 20 x 20 lattice is given by:</p>
+<div class="math">$$
+P = \binom{20+20}{20} = 137,846,528,\mbox{XXX}
+$$</div>
+<p>(This is the Project Euler problem 15 answer so last few digits are omitted.)</p>
+<h2 id="solving-2d-square-lattice-special-case">Solving 2D Square Lattice (Special Case)</h2>
+<p>If we use the above formulas for the special case where the dimensions of the grid
+are equal, such as the 20 x 20 case, we get the simpler and more symmetric formula:</p>
+<div class="math">$$
+P = \binom{2D}{D}
+$$</div>
+<p>where <span class="math">\(D\)</span> is the dimension of the square grid. </p>
+<h2 id="solving-3d-cuboid-lattice">Solving 3D Cuboid Lattice</h2>
+<p>(Note: <a href="https://en.wikipedia.org/wiki/Cuboid">cuboids</a> are the 3D analogue of 2D rectangles.)</p>
+<p>If we take this idea a step further, and use a slightly different combinatoric formula,
+we can generalize the problem to paths through higher dimensional lattices. 
+This is an approach I came up with through trial and error, 
+and some experimentation with Mathematica.</p>
+<p>Suppose we have a 3D lattice, composed of 8 cubes, 2 on each side.
+Now we wish to know: how many shortest Manhattan distance paths are there
+through the lattice, from one corner to the other?</p>
+<p>This can be re-cast, as we did above, as the problem of counting
+unique permutations of a string of the form:</p>
+<div class="highlight"><pre><span></span><code>UURRBB
 </code></pre></div>
 
-<p>The Person class constructor just tokenizes one line of input,
-populating the titles list and the person's name. Here is the 
-declaration of those private fields:</p>
-<div class="highlight"><pre><span></span><code>class Person implements Comparable&lt;Person&gt; {
-    private String name;
-    private ArrayList&lt;String&gt; titles;
-
-    ...
+<p>where U denotes an up move, R denotes a right move, and B denotes a back move.</p>
+<p>While we could use the multiset approach from above to describe this problem, 
+it turns out that this approach is not powerful enough to describe the problem
+of arbitrary 3D lattices.</p>
+<p>Let's pose the problem slightly more generally: we have C bags of moves or characters,
+each of a different size. We must use each character i precisely as many times as we have 
+instances in its bag C_i. How many unique permutations are there?</p>
+<p>Consider the following example string of length <span class="math">\(N = 14\)</span>, consisting of:</p>
+<div class="math">$$
+\begin{array}
+N_x &amp;=&amp; 4 \mbox{  UP moves} \\
+N_x &amp;=&amp; 4 \mbox{  RIGHT moves} \\
+N_x &amp;=&amp; 6 \mbox{  BACK moves}
+\end{array}
+$$</div>
+<p>These form a path through a 3D lattice of size <span class="math">\(4 \times 4 \times 6\)</span>:</p>
+<div class="highlight"><pre><span></span><code>UUUURRRRBBBBBB
 </code></pre></div>
 
-<p>The implementation of the compareTo method 
-utilized Stack objects to examine the 
-sequence of titles in reverse.</p>
-<p>Pop the stacks until one of them is empty.
-Then, keep popping until both are empty, 
-using "middle" in place of the empty stack.</p>
-<div class="highlight"><pre><span></span><code>    /** Compare a person to another person. */
-    public int compareTo(Person p2) { 
+<p>The number of unique permutations can be computed by breaking this into sub-problems.
+Start by asking how many permutations there are of the string:</p>
+<div class="highlight"><pre><span></span><code>UUUUXXXXXXXXXX
+</code></pre></div>
 
-        Stack&lt;String&gt; st1 = new Stack&lt;String&gt;();
-        Stack&lt;String&gt; st2 = new Stack&lt;String&gt;();
+<p>(Treating the Rs and Bs as identical). Then we get:</p>
+<div class="math">$$
+\binom{N}{N_x} = \binom{N_x + N_y + N_z}{N_x} = \binom{14}{10} = 1001
+$$</div>
+<p>Next, we deal with the other sub-problem, the Xs, by asking how many ways 
+we can permute the following string:</p>
+<div class="highlight"><pre><span></span><code>RRRRBBBBBB
+</code></pre></div>
 
-        // Add names to stack, left to right
-        for(String title : this.getTitles()) {
-            st1.push(title);
-        }
-        for(String title : p2.getTitles()) { 
-            st2.push(title);
-        }
+<p>which is solved via another binomial coefficient. This number of permutations is given by:</p>
+<div class="math">$$
+\binom{N_y + N_z}{N_y} = \binom{N_y + N_z}{N_z} = \binom{10}{4} = \binom{10}{6} = 210
+$$</div>
+<p>Now combining these, we get the overall number of permutations:</p>
+<div class="math">$$
+P = \binom{14}{4} \cdot \binom{10}{4} = 210,210
+$$</div>
+<h2 id="solving-3d-cubic-lattice-special-case">Solving 3D Cubic Lattice (Special Case)</h2>
+<p>If we have the special case of a perfect cubic lattice, the formula above reduces to the nice and symmetric:</p>
+<div class="math">$$
+\dfrac{(3n)!}{(n!)^3}
+$$</div>
+<h2 id="solving-n-dimensional-square-lattice-n-dimensional-multisets">Solving N-Dimensional Square Lattice (N-Dimensional Multisets)</h2>
+<p>Let's look at the example of a traversal of a 4D lattice, 
+which we can think of as the evolution of a 3D traversal in time
+(a step in the fourth dimension would represent a "pause" in the 3D traversal). </p>
+<p>Consider the traversal of a cube with dimensions <span class="math">\(3 \times 4 \times 5 \times 3\)</span>. Then</p>
+<div class="math">$$
+N = 3 + 4 + 5 + 3
+$$</div>
+<div class="math">$$
+N_x = 3
+$$</div>
+<div class="math">$$
+N_y = 4
+$$</div>
+<div class="math">$$
+N_z = 5
+$$</div>
+<div class="math">$$
+N_t = 3
+$$</div>
+<p>A path on this 4D lattice has the form:</p>
+<div class="highlight"><pre><span></span><code>UUURRRRBBBBBWWW
+</code></pre></div>
 
-        // Compare each name, from right-to-left.
-        // If stack 1 is not empty, pop next item, otherwise use &quot;middle&quot;
-        // If stack 2 is not empty, pop next item, otherwise use &quot;middle&quot;
+<p>(where <span class="math">\(W\)</span> denotes wait, or a step in the time dimension).</p>
+<p>The number of permutations is given by:</p>
+<div class="math">$$
+P = \binom{N_x + N_y + N_z + N_t}{N_x} \cdot \binom{N_y + N_z + N_t}{N_y} \cdot \binom{N_z + N_t}{N_z} 
+$$</div>
+<p>For our specific example,</p>
+<div class="math">$$
+P = \binom{3+4+5+3}{3} \cdot \binom{4+5+3}{4} \cdot \binom{5+3}{5} = 455 \cdot 495 \cdot 56 = 12,612,600
+$$</div>
+<p>Confirmed by Mathematica:</p>
+<p><img alt="Permutations with Mathematica" src="/images/mathematica-lattice.png"></p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
 
-        int max = Math.max(this.getTitles().size(), p2.getTitles().size());
-        for(int i=0; i&lt;max; i++) {
-
-            // Pop names from the stack, right to left.
-            String s1, s2;
-
-            if(!st1.isEmpty()) {
-                s1 = st1.pop();
-            } else {
-                s1 = &quot;middle&quot;;
-            }
-
-            if(!st2.isEmpty()) {
-                s2 = st2.pop();
-            } else {
-                s2 = &quot;middle&quot;;
-            }
-
-            // Rather than converting strings to numbers,
-            // compare the strings directly (lower &lt; middle &lt; upper).
-            int res = s2.compareTo(s1);
-
-            // Return the first non-zero value
-            if( res != 0 ) {
-                return res;
-            }
-        }
-
-        // If we reach here, there was a tie.
-        // Use name as tie breaker.
-        return this.getName().compareTo(p2.getName());
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
     }
-</code></pre></div>
 
-<p><a name="classy-code"></a></p>
-<h1 id="code">Code</h1>
-<p>Here is the entire Classy code, also available on 
-<a href="https://git.charlesreid1.com/cs/finalproject-143/src/master/classy/Classy.java">git.charlesreid1.com</a>:</p>
-<div class="highlight"><pre><span></span><code>import java.util.*; 
-import java.io.*;
-public class Classy { 
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
 
-    public static void main(String[] args) { 
-        Scanner s = new Scanner(new BufferedReader(new InputStreamReader(System.in)));
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
 
-        // Read the input file: new Person for each line
-        int n = Integer.parseInt(s.nextLine());
-        ArrayList&lt;Person&gt; people = new ArrayList&lt;Person&gt;();
-        while(s.hasNextLine()) {
-            String line = s.nextLine();
-            String[] deets = line.split(&quot; &quot;);
-            Person p = new Person(deets);
-            people.add(p);
-        }
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
 
-        Collections.sort(people);
-        for(Person p : people) { 
-            System.out.println(p);
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/combinatorics.html">combinatorics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/permutations.html">permutations</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/lattice-paths.html">lattice paths</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/puzzles.html">puzzles</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Computing Square Roots: Part 2: Using Continued Fractions
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-07-14T20:00:00-07:00" pubdate>Friday 07/14/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/computing-square-roots-part-2-using-continued-fractions.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#cf-number-systems">Number Systems and Representations</a></li>
+<li><a href="#cf-cf">Continued Fraction Representations</a></li>
+<li><a href="#cf-convergents">Convergents of Continued Fractions</a></li>
+<li><a href="#cf-example-coeffs">Example: Continued Fraction Coefficients of <span class="math">\(\sqrt{14}\)</span></a></li>
+<li><a href="#cf-example-convergents">Example: Convergents of <span class="math">\(\sqrt{14}\)</span></a></li>
+<li><a href="#cf-sqrt-approx">Approximating Square Roots</a></li>
+</ul>
+<p><a name="cf-number-systems"></a></p>
+<h2 id="continued-fractions">Continued Fractions</h2>
+<p>Let's start part 2 of our discussion of computing square roots by talking about 
+continued fractions. When we first learn mathematics, we learn to count in the 
+base 10 system: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9. We can construct representations of 
+all of the integers using these 10 digits, by arranging them in a different order.
+So, for example, saying 125 is equivalent to saying:</p>
+<div class="math">$$
+125 = 1 \times 10^2 + 2 \times 10^1 + 5 \times 10^0
+$$</div>
+<p>Later on in our mathematical lives, we learn that we can use other integers
+as our base, or <strong>radix</strong>, by expressing every integer as the sum of various 
+powers of that integer. For example, 125
+can be decomposed into powers of 2. In a base 2 system, we have only two symbols,
+0 and 1, so 125 can be represented as 1111101, which is equivalent to saying:</p>
+<div class="math">$$
+125 = 1 \times 2^6 + 1 \times 2^5 + 1 \times 2^4 + 1 \times 2^3 + 1 \times 2^2 + 1 \times 2
+$$</div>
+<p>Note that 1111101 is close to 1111111, which is <span class="math">\(2^7 = 128\)</span>.</p>
+<p>As Knuth points out in his <u>Art of Computer Programming</u>, Part II:</p>
+<blockquote>
+<i>"If our ancestors had invented arithmetic by counting with their two fists
+or their eight fingers, instead of their ten "digits," we would never have to 
+worry about writing binary-decimal conversion routines. (And we would perhaps
+never have learned as much about number systems.)
+</i>
+</blockquote>
+
+<p>This idea of an alternative radix to the traditional base 10 leads to entirely new 
+number systems with their own interesting properties. However, it goes even further - 
+as a high school student in 1955, Donald Knuth invented a number system with an
+imaginary, 4-symbol radix in base <span class="math">\(2i\)</span> (where <span class="math">\(i = \sqrt{-1}\)</span>), called 
+the <a href="https://en.wikipedia.org/wiki/Quater-imaginary_base">quater-imaginary base</a>.</p>
+<p>There are also number systems that use an irrational radix, such as 
+<a href="https://en.wikipedia.org/wiki/Golden_ratio_base">phinary</a>, which uses the golden ratio
+as its radix. Thus, the Golden Ratio <span class="math">\(\phi = \dfrac{1 + \sqrt{5}}{2}\)</span> becomes <span class="math">\(\phi = 1\)</span>,
+<span class="math">\(2 = \phi^1 + \phi^-2\)</span> becomes <span class="math">\(2 = 10.01\)</span>, <span class="math">\(5 = \phi^3 + \phi^{-1} + \phi^{-4}\)</span> 
+becomes <span class="math">\(5 = 1000.1001\)</span>, and so on. In the case of the irrational number <span class="math">\(\sqrt{5}\)</span>, 
+this number becomes a rational number in base <span class="math">\(\phi\)</span>: <span class="math">\(\sqrt{5} = \phi^2 + \phi^{-1}\)</span> 
+becomes <span class="math">\(\sqrt{5} = 10.1\)</span>.</p>
+<p>The single central idea behind these number systems is that the abstract 
+set of integers <span class="math">\(\mathbb{Z}\)</span> are being represented on an <a href="https://en.wikipedia.org/wiki/Ring_(algebra)">algebraic ring</a>,
+which is a fundamental mathematical object. Initially the idea of a ring
+may seem strange, but it creates the foundations of modern number theory.</p>
+<p><a name="cf-cf"></a></p>
+<h2 id="continued-fraction-representations">Continued Fraction Representations</h2>
+<p>(Note that while the next two sections will have a lot of "magic numbers," we will
+step through the procedure in the following sections, and it will be more clear
+where these numbers come from. There is also an excellent continued fractions calculator
+available online <a href="http://www.maths.surrey.ac.uk/hosted-sites/R.Knott/Fibonacci/cfCALC.html">here</a>.)</p>
+<p>We can use other kinds of mathematical objects to represent different numbers.
+Another technique is to use continued fractions to represent numbers.
+These are well-studied mathematical objects that date back to Euclid's <u>Elements</u>.
+The basic idea is to create a recursive expression that involves fractions nested
+beneath other fractions:</p>
+<div class="math">$$
+a_0+\cfrac{1}{a_1 +\cfrac{1}{a_2 +\cfrac{1}{
+      \begin{array}{@{}c@{}c@{}c@{}}
+        a_3 + {}\\ &amp;\ddots\\ &amp;&amp;{}+ \cfrac{1}{a_n}
+      \end{array}
+}}}
+$$</div>
+<p>For ease of writing, this is often written as:</p>
+<div class="math">$$
+a_0 + \dfrac{1}{a_1 +} \quad \dfrac{1}{a_2 +} \quad \dfrac{1}{a_3 + } \quad \dots \quad \dfrac{1}{a_{n-1} + } \quad \dfrac{1}{a_n}
+$$</div>
+<p>or, even shorter,</p>
+<div class="math">$$
+[a_0; a_1, a_2, a_3, \dots]
+$$</div>
+<p>These variables <span class="math">\(a_i\)</span> are called the <em>terms</em> of the continued fraction.
+Continued fractions can be used to represent rational numbers, in which case the continued fraction
+representation terminates after a finite number of terms. For example, <span class="math">\(\dfrac{125}{3} = [41; 1, 2]\)</span>, </p>
+<div class="math">$$
+\dfrac{125}{3} = 41 +\cfrac{1}{1 +\cfrac{1}{2}} 
+$$</div>
+<p>Continued fractions can also be used to represent irrational numbers, 
+in which case the continued fraction representation is a repeating pattern
+of variable length. For example, <span class="math">\(\sqrt{14} = [3; \overline{1,2,1,6}]\)</span>, where
+the line over the last digits indicates that the pattern repeats infinitely as
+<span class="math">\(1, 2, 1, 6, 1, 2, 1, 6, 1, 2, 1, 6, \dots\)</span>:</p>
+<div class="math">$$
+3 + \cfrac{1}{
+    1 + \cfrac{1}{
+        2+\cfrac{1}{
+            1+\cfrac{1}{
+                6+\cfrac{1}{
+                    \begin{array}{@{}c@{}c@{}c@{}}
+                        1 + {}\\ &amp;\ddots\\ &amp;&amp;{}
+                    \end{array}
+                }
+            }
         }
     }
 }
+$$</div>
+<p>A few useful properties of these patterns, for square roots, are:</p>
+<ul>
+<li>
+<p>First, the integer portion (3 in the case above) is the largest integer 
+    whose square is less than the number (14).</p>
+</li>
+<li>
+<p>Second, the sequence of integers that repeats is always palindromic,
+    and it always begins repeating once it reaches a value of <span class="math">\(2 a_0\)</span>.</p>
+</li>
+</ul>
+<p>Here are a few more square roots represented as continued fractions, to help illustrate
+the above properties:</p>
+<div class="math">$$
+\begin{array}
+_ \sqrt{19} &amp;=&amp; [4; \overline{2, 1, 3, 1, 2, 8}] \\
+\sqrt{115} &amp;=&amp; [10; \overline{1, 2, 1, 1, 1, 1, 1, 2, 1, 20}] \\
+\sqrt{988} &amp;=&amp; [31; \overline{2, 3, 4, 1, 20, 6, 1, 14, 1, 6, 20, 1, 4, 3, 2, 62}]
+\end{array}
+$$</div>
+<p>Next, we'll cover how to turn these terms <span class="math">\([a_0; a_1, a_2, \dots]\)</span> into rational
+numbers <span class="math">\(\frac{P}{Q}\)</span>. These fractions are called <em>convergents</em>.</p>
+<h2 id="convergents">Convergents</h2>
+<p>We will show an example of how to compute a continued fraction in the next section, 
+but we will cover one additional topic first. In order to be useful, we need some way
+to evaluate the continued fraction representation. One way to do this is to repeatedly
+compute common denominators, perform the fraction addition, and inert the result. 
+The fraction that results is equivalent to the continued fraction expression, but is 
+a rational number and therefore easier to evaluate. </p>
+<p>It turns out that this rational number is a very important quantity called the <strong>convergent</strong> 
+of <span class="math">\(\sqrt{n}\)</span>. However, it is cumbersome to perform the operation of de-rationalizing 
+the continued fraction. There is a useful shortcut that takes the form of a recurrence relation.</p>
+<p>The <span class="math">\(n^{th}\)</span> convergent is defined as the rational number that results when the continued fraction
+representation is carried out to <span class="math">\(n\)</span> terms, then expanded and simplified into a rational number.
+If a number like <span class="math">\(\sqrt{19}\)</span> has an infinite continued fraction representation, it means we can compute
+progressively more accurate rational approximations. </p>
+<p>For example, we know from the above that <span class="math">\(\sqrt{19} = [4; \overline{2,1,3,1,2,8}]\)</span>. Using this fact,
+we can use successive terms to write successive linear approximations:</p>
+<div class="math">$$
+\begin{array}
+_ \sqrt{19} &amp;\approx&amp; 4 \\
+\quad       &amp;\approx&amp; 4 + \frac{1}{2+0} \approx \frac{9}{2} \\
+\quad       &amp;\approx&amp; 4 + \cfrac{1}{2+\cfrac{1}{1}} \approx \frac{13}{3} \\
+\quad       &amp;\approx&amp; 4 + \cfrac{1}{2+\cfrac{1}{\cfrac{1}{3}}} \approx \frac{48}{11} \\
+\end{array}
+$$</div>
+<p>If we continue this sequence, we get a slew of approximations (there are also additional approximations between
+each of <em>these</em> terms...):</p>
+<div class="math">$$
+\begin{array}
+_ \sqrt{19} &amp;\approx&amp; \frac{61}{14} \\
+\quad       &amp;\approx&amp; \frac{170}{39} \\
+\quad       &amp;\approx&amp; \frac{1421}{326} \\
+\quad       &amp;\approx&amp; \frac{3012}{691} \\
+\quad       &amp;\approx&amp; \frac{4433}{1017} \\
+\sqrt{19}   &amp;\approx&amp; \frac{16311}{3742}
+\end{array}
+$$</div>
+<p>The numerator and denominator of the <span class="math">\(k^{th}\)</span> convergent are denoted <span class="math">\(P_k\)</span> and <span class="math">\(Q_k\)</span>, 
+respectively, and can be computed through the recurrence relation:</p>
+<div class="math">$$
+\dfrac{P_k}{Q_k} = \dfrac{P_{k-2} + a_k P_{k-1}}{Q_{k-2} + a_k Q_{k-1}}
+$$</div>
+<p>where the initial values are <span class="math">\(P_{-2} = 0, P_{-1} = 1\)</span> for P and
+<span class="math">\(Q_{-2} = 1, Q_{-1} = 0\)</span> for Q
+(making the first convergent equal to <span class="math">\(\frac{a_0}{1}\)</span>).
+This can be used to compute successive approximations.
+Note that on a computational platform, you will quickly reach the end 
+of your accuracy limit, so care must be taken for continued fraction
+sequences of longer than about 10 terms.</p>
+<p><a name="cf-example-coeffs"></a></p>
+<h2 id="example-continued-fraction-coefficients-of-sqrt14">Example: Continued Fraction Coefficients of <span class="math">\(\sqrt{14}\)</span></h2>
+<p>Let's walk through an example of how to compute the continued fraction 
+representation <span class="math">\([a_0; a_1, a_2, \dots, a_n]\)</span> for a square root,
+and how to compute the <span class="math">\(k^{th}\)</span> convergent.</p>
+<p>Begin with the square root of a given number. For variety, we will use <span class="math">\(\sqrt{14}\)</span>.
+We begin by computing the nearest integer to 14's square root. If we don't have a 
+square root routine, we can try integers by squaring them, and find the last integer
+that, when squared, is less than 14. This is <span class="math">\(a_0 = 3\)</span>. To interpret, <span class="math">\(a_0\)</span> is 
+the largest integer portion of our square root, with the residual portion 
+<span class="math">\(\sqrt{14}-3\)</span> the portion that will be represented by the continued fraction.</p>
+<p>Here's what we have:</p>
+<div class="math">$$
+\sqrt{14} = 3 + (\sqrt{14} - 3) \\
+$$</div>
+<p>We can drop the residual for an initial rational approximation of <span class="math">\(\sqrt{14} \approx 13\)</span>,
+but we can do better by going another step.</p>
+<p>We recognize that the residual, which we want write in the form <span class="math">\(\dfrac{1}{\mbox{something}}\)</span>,
+can be written as <span class="math">\(\dfrac{1}{\dfrac{1}{\sqrt{14}-3}}\)</span>: </p>
+<div class="math">$$
+\sqrt{14} = 3 + \dfrac{1}{ \frac{1}{\sqrt{14}-3} }
+$$</div>
+<p>Now examine the inverse residual term <span class="math">\(\dfrac{1}{\sqrt{14}-3}\)</span> for step 1,
+which we will call <span class="math">\(r_1\)</span>. 
+Repeat the procedure we performed above: find the nearest integer 
+portion to this quantity. In this case,</p>
+<div class="math">$$
+\dfrac{1}{r_1} = \dfrac{1}{\sqrt{14}-3} = 1.34833...
+$$</div>
+<p>Now split this into its integer portion, which becomes <span class="math">\(a_1\)</span>, 
+and its remaining fractional portion, .34833...:</p>
+<div class="math">$$
+a_1 = floor( \dfrac{1}{r_1} )
+$$</div>
+<p>and the new residual <span class="math">\(r\)</span> is written in terms of the old residual
+and the coefficent <span class="math">\(a_i\)</span>:</p>
+<div class="math">$$
+r_2 = \dfrac{1}{r_1} - a_1
+$$</div>
+<p>Generalizing, we get an iterative procedure to determine the 
+coefficients <span class="math">\(a_i\)</span>:</p>
+<div class="math">$$
+a_i = floor( \dfrac{1}{r_i} )
+$$</div>
+<p>followed by:</p>
+<div class="math">$$
+r_{i+1} = \dfrac{1}{r_i} - a_i
+$$</div>
+<p>where the initial values <span class="math">\(a_0, r_0\)</span> are computed as mentioned above,
+and the rest of the values in the sequence follow.</p>
+<p>Continuing for <span class="math">\(\sqrt{14}\)</span>, we get:</p>
+<div class="math">$$
+\begin{array}
+_ a_0 &amp;=&amp; 3 \\
+r_1 &amp;=&amp; \dfrac{1}{\sqrt{14}-3} = 1.348331 \\
+a_1 &amp;=&amp; 1 \\
+r_2 &amp;=&amp; \dfrac{1}{.348331} = 2.870829 \\
+a_2 &amp;=&amp; 2 \\
+r_3 &amp;=&amp; \dfrac{1}{0.870829} = 1.1483311 \\
+a_3 &amp;=&amp; 1 \\
+r_4 &amp;=&amp; \dfrac{1}{0.1483311} = 6.741676 \\
+a_4 &amp;=&amp; 6
+\end{array}
+$$</div>
+<p>It is at this point that we see <span class="math">\(2 a_0\)</span> and know that our (palindromic) 
+sequence will repeat. (When we evaluate the convergents, we will utilize
+the palindromic nature of this sequence.)</p>
+<p>Collecting these terms gives us the expected result: <span class="math">\(\sqrt{14} = [3; 1, 2, 1, 6]\)</span>.</p>
+<p>This gives us an algorithmic procedure for computing the 
+continued fraction representation <span class="math">\([a_0; a_1, a_2, a_n]\)</span> of a number -
+with the important caveat, as mentioned above, that some integers
+have sequences that are extremely long before they repeat, making it 
+impossible to find the full continued fraction representation 
+without arbitrary precision libraries.</p>
+<p>That being said, if you are only interested in the first 10 or so
+terms of the continued fraction representation, here is a 
+static Java method to compute them:</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/** Find the (shorter than 10) continued fraction sequence for sqrt(n). </span>
+<span class="cm">     * This returns a list of integers, [a0, a1, a2, ...]</span>
+<span class="cm">     *</span>
+<span class="cm">     * @params n Number to compute the square root of.</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">continuedFractionSqrt</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">isPerfectSquare</span><span class="p">(</span><span class="n">n</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Error: n cannot be a perfect square.&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">niters</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"> </span><span class="c1">// handbrake</span>
 
-class Person implements Comparable&lt;Person&gt; {
-    private String name;
-    private ArrayList&lt;String&gt; titles;
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">ai</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">double</span><span class="w"> </span><span class="n">remainder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span><span class="w"> </span><span class="n">coeffs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ArrayList</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span><span class="p">();</span>
 
-    /** Person constructor - pass in a String array with the deets. */
-    public Person(String[] deets) { 
-        name = deets[0];
-        // Remove : from name
-        name = name.substring(0,name.length()-1);
+<span class="w">        </span><span class="c1">// Fencepost</span>
+<span class="w">        </span><span class="n">remainder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="o">/</span><span class="n">Math</span><span class="p">.</span><span class="na">sqrt</span><span class="p">(</span><span class="n">n</span><span class="p">);</span>
 
-        // initialize list of classes 
-        titles = new ArrayList&lt;String&gt;();
-        for(int i=1; i&lt;deets.length-1; i++) { 
-            titles.add(deets[i]);
-        }
-        // Last word will be &quot;class&quot;, so ignore.
-    }
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">niters</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">val</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="o">/</span><span class="n">remainder</span><span class="p">;</span>
+<span class="w">            </span><span class="n">ai</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">floor</span><span class="p">(</span><span class="n">val</span><span class="p">);</span>
+<span class="w">            </span><span class="n">remainder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">ai</span><span class="p">;</span>
+<span class="w">            </span><span class="n">coeffs</span><span class="p">.</span><span class="na">add</span><span class="p">(</span><span class="n">ai</span><span class="p">);</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="n">coeffs</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="o">*</span><span class="n">coeffs</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">break</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">coeffs</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
 
-    /** Get a person&#39;s name. */
-    public String getName() { return name; }
+<span class="w">    </span><span class="cm">/** Check if x is a perfect square. */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="nf">isPerfectSquare</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">Math</span><span class="p">.</span><span class="na">round</span><span class="p">(</span><span class="n">Math</span><span class="p">.</span><span class="na">sqrt</span><span class="p">(</span><span class="n">x</span><span class="p">)));</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">x</span><span class="o">==</span><span class="p">(</span><span class="n">s</span><span class="o">*</span><span class="n">s</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
 
-    /** Get a person&#39;s titles in an ArrayList. */
-    public ArrayList&lt;String&gt; getTitles() { return titles; }
-
-    /** Get a string representation of a person. */
-    public String toString() { return getName(); }
-
-    /** Compare a person to another person. */
-    public int compareTo(Person p2) { 
-
-        Stack&lt;String&gt; st1 = new Stack&lt;String&gt;();
-        Stack&lt;String&gt; st2 = new Stack&lt;String&gt;();
-
-        // Add names to stack, left to right
-        for(String title : this.getTitles()) {
-            st1.push(title);
-        }
-        for(String title : p2.getTitles()) { 
-            st2.push(title);
-        }
-
-        // Compare each name, from right-to-left.
-        // If stack 1 is not empty, pop next item, otherwise use &quot;middle&quot;
-        // If stack 2 is not empty, pop next item, otherwise use &quot;middle&quot;
-
-        int max = Math.max(this.getTitles().size(), p2.getTitles().size());
-        for(int i=0; i&lt;max; i++) {
-
-            // Pop names from the stack, right to left.
-            String s1, s2;
-
-            if(!st1.isEmpty()) {
-                s1 = st1.pop();
-            } else {
-                s1 = &quot;middle&quot;;
-            }
-
-            if(!st2.isEmpty()) {
-                s2 = st2.pop();
-            } else {
-                s2 = &quot;middle&quot;;
-            }
-
-            // Rather than converting strings to numbers,
-            // compare the strings directly (lower &lt; middle &lt; upper).
-            int res = s2.compareTo(s1);
-
-            // Return the first non-zero value
-            if( res != 0 ) {
-                return res;
-            }
-        }
-
-        // If we reach here, there was a tie.
-        // Use name as tie breaker.
-        return this.getName().compareTo(p2.getName());
-    }
-}
+<span class="w">    </span><span class="cm">/** Find the floor of a double. */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">floor</span><span class="p">(</span><span class="kt">double</span><span class="w"> </span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)(</span><span class="n">Math</span><span class="p">.</span><span class="na">floor</span><span class="p">(</span><span class="n">j</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
 </code></pre></div>
 
-<p><a name="classy-refs"></a></p>
+<p>Here is a short program that uses this routine to compute 
+the continued fraction representation of <span class="math">\(\sqrt{14}\)</span>:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">SquareRootCF</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span><span class="w"> </span><span class="n">args</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;sqrt(14) = &quot;</span><span class="o">+</span><span class="n">Convergents</span><span class="p">.</span><span class="na">continuedFractionSqrt</span><span class="p">(</span><span class="mi">14</span><span class="p">));</span>
+<span class="w">        </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;sqrt(19) = &quot;</span><span class="o">+</span><span class="n">Convergents</span><span class="p">.</span><span class="na">continuedFractionSqrt</span><span class="p">(</span><span class="mi">19</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>and the corresponding output:</p>
+<div class="highlight"><pre><span></span><code>$ javac SquareRootCF.java &amp;&amp; java SquareRootCF
+sqrt(14) = [3, 1, 2, 1, 6]
+sqrt(19) = [4, 2, 1, 3, 1, 2, 8]
+</code></pre></div>
+
+<p><a name="cf-example-convergents"></a></p>
+<h2 id="example-convergents-of-sqrt14">Example: Convergents of <span class="math">\(\sqrt{14}\)</span></h2>
+<p>We now turn to the task of computing the convergents of the continued fraction,
+which will yield successive rational numbers that are progressively better approximations
+to <span class="math">\(\sqrt{14}\)</span>. </p>
+<p>We start with the expression given above for the <span class="math">\(k^{th}\)</span> convergent: </p>
+<div class="math">$$
+\dfrac{P_k}{Q_k} = \dfrac{P_{k-2} + a_k P_{k-1}}{Q_{k-2} + a_k Q_{k-1}}
+$$</div>
+<p>with initial values <span class="math">\(P_{-2} = 0, P_{-1} = 1\)</span> for P and
+<span class="math">\(Q_{-2} = 1, Q_{-1} = 0\)</span> for Q. This yields 
+the first "real" convergent:</p>
+<div class="math">$$
+\dfrac{P_1}{Q_1} = \dfrac{1 + 1 \times a_1}{0 + a_1 \times 1} = \dfrac{1 + 3}{0 + 1} = \dfrac{4}{1}
+$$</div>
+<p>Successive approximations will use the values <span class="math">\(P_1\)</span> and <span class="math">\(Q_1\)</span> to compute
+the next convergents.</p>
+<div class="math">$$
+\dfrac{P_2}{Q_2} = \dfrac{P_0 + P_1 a_1}{Q_0 + Q_1 a_1} = \frac{11}{3}
+$$</div>
+<p>Continuing in this fashion gives:</p>
+<div class="math">$$
+\begin{array}
+\quad \dfrac{P_2}{Q_2} &amp;=&amp; \dfrac{15}{4} \\
+\dfrac{P_3}{Q_3} &amp;=&amp; \dfrac{101}{27}
+\end{array}
+$$</div>
+<p>and so on. This recurrence relation is easy to code up. It starts with 
+the continued fraction coefficients for the given square root, 
+and computes successive values of P and Q. The number of terms computed
+is specified by the user. Once it reaches the end of the sequence of 
+continued fraction coefficients, it can start at the beginning again 
+(the sequence is palindromic). </p>
+<p>Finally, it returns the values of <span class="math">\(P_k\)</span> and <span class="math">\(Q_k\)</span>, and of the 
+successive convergents:</p>
+<div class="math">$$
+\begin{array}
+_ \sqrt{14} &amp;\approx&amp; 3 \\
+&amp;\approx&amp; 4 \\
+&amp;\approx&amp; 11/3 \\
+&amp;\approx&amp; 15/4 \\
+&amp;\approx&amp; 101/27 \\
+&amp;\approx&amp; 116/31 \\
+&amp;\approx&amp; 333/89 \\
+&amp;\approx&amp; 449/120 \\
+&amp;\approx&amp; 3027/809 \\
+&amp;\approx&amp; 3476/929 \\
+&amp;\approx&amp; 9979/2667 
+\end{array}
+$$</div>
+<p>Here is a static method in Java that will compute the convergents
+of a square root:</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/** </span>
+<span class="cm">     * Compute the convergents (rational representation of</span>
+<span class="cm">     * continued fraction).</span>
+<span class="cm">     *</span>
+<span class="cm">     * This uses the recurrence relation:</span>
+<span class="cm">     *</span>
+<span class="cm">     * P_n     P_n-2 + a_n P_n-1</span>
+<span class="cm">     * ---- = -----------------</span>
+<span class="cm">     *  Q_n    Q_n-2 + a_n Q_n-1</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">long</span><span class="o">[]</span><span class="w"> </span><span class="nf">convergents</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nterms</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">long</span><span class="o">[]</span><span class="w"> </span><span class="n">convergents</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="kt">long</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span><span class="p">;</span>
+
+<span class="w">        </span><span class="n">List</span><span class="o">&lt;</span><span class="n">Integer</span><span class="o">&gt;</span><span class="w"> </span><span class="n">cfrepr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">continuedFractionSqrt</span><span class="p">(</span><span class="n">n</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// Initial values for convergent recurrence relation</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">Pnm2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="c1">// P_{n-2}</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">Pnm1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">Qnm2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">Qnm1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">P</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">Q</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// Term 0 is the constant value a0.</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">accessindex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;=</span><span class="n">nterms</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">an</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cfrepr</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">accessindex</span><span class="p">);</span>
+
+<span class="w">            </span><span class="n">P</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Pnm2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">an</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">Pnm1</span><span class="p">;</span>
+<span class="w">            </span><span class="n">Q</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Qnm2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">an</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">Qnm1</span><span class="p">;</span>
+
+<span class="w">            </span><span class="n">Pnm2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Pnm1</span><span class="p">;</span>
+<span class="w">            </span><span class="n">Pnm1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">P</span><span class="p">;</span>
+
+<span class="w">            </span><span class="n">Qnm2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Qnm1</span><span class="p">;</span>
+<span class="w">            </span><span class="n">Qnm1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Q</span><span class="p">;</span>
+
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="n">accessindex</span><span class="o">+</span><span class="mi">1</span><span class="o">&gt;=</span><span class="n">cfrepr</span><span class="p">.</span><span class="na">size</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
+<span class="w">                </span><span class="c1">// Ensure we keep repeating the sequence</span>
+<span class="w">                </span><span class="c1">// if the sequence has fewer terms than</span>
+<span class="w">                </span><span class="c1">// the user asks for.</span>
+<span class="w">                </span><span class="c1">// This allows us to get really good</span>
+<span class="w">                </span><span class="c1">// approximations for numbers.</span>
+<span class="w">                </span><span class="c1">// This only works because the sequence</span>
+<span class="w">                </span><span class="c1">// is palindromic.</span>
+<span class="w">                </span><span class="n">accessindex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">accessindex</span><span class="o">++</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="n">convergents</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">P</span><span class="p">;</span>
+<span class="w">        </span><span class="n">convergents</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Q</span><span class="p">;</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">convergents</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+</code></pre></div>
+
+<p>Here is a simple driver program that prints out several
+convergents for <span class="math">\(\sqrt{14}\)</span>:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">SquareRootCF</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span><span class="w"> </span><span class="n">args</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;=</span><span class="mi">10</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="kt">long</span><span class="o">[]</span><span class="w"> </span><span class="n">conv</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Convergents</span><span class="p">.</span><span class="na">convergents</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="n">i</span><span class="p">);</span>
+<span class="w">            </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Convergent &quot;</span><span class="o">+</span><span class="n">i</span><span class="o">+</span><span class="s">&quot;: &quot;</span><span class="o">+</span><span class="n">conv</span><span class="o">[</span><span class="mi">0</span><span class="o">]+</span><span class="s">&quot;/&quot;</span><span class="o">+</span><span class="n">conv</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>and the corresponding console output:</p>
+<div class="highlight"><pre><span></span><code>$ javac SquareRootCF.java &amp;&amp; java SquareRootCF
+Convergent 1: 4/1
+Convergent 2: 11/3
+Convergent 3: 15/4
+Convergent 4: 101/27
+Convergent 5: 116/31
+Convergent 6: 333/89
+Convergent 7: 449/120
+Convergent 8: 3027/809
+Convergent 9: 3476/929
+Convergent 10: 9979/2667
+</code></pre></div>
+
+<p><a name="cf-sqrt-refs"></a></p>
 <h1 id="references">References</h1>
 <ol>
 <li>
-<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
-&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
+<p>Hardy, G. H. <u>A Course of Pure Mathematics.</u> 
+Cambridge University Press, Tenth Edition (1908-1967).</p>
 </li>
 <li>
-<p>"finalproject-143 (git repository)." Charles Reid. Modified 16 June 2017. Accessed 23 June 2017.
-&lt;<a href="https://git.charlesreid1.com/cs/finalproject-143/src/master/classy/Classy.java">https://git.charlesreid1.com/cs/finalproject-143/src/master/classy/Classy.java</a>&gt;</p>
+<p>Knuth, Donald. <u>The Art of Computer Programming, Volume 2: Seminumerical Algorithms.</u> 
+Addison-Wesley Publishing Company, Second Edition (1975).</p>
 </li>
-</ol></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/comparison.html">comparison</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sorting.html">sorting</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                CSE 143 Final Project: Checkers
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-06-19T11:00:00-07:00" pubdate>Monday 06/19/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/cse-143-final-project-checkers.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
-<ul>
-<li><a href="#checkers-intro">The Problem</a><ul>
-<li><a href="#checkers-problem">Problem Description: Checkers</a></li>
-<li><a href="#checkers-input">Input File</a></li>
-<li><a href="#checkers-output">Output</a></li>
-</ul>
-</li>
-<li><a href="#checkers-solution">The Solution</a><ul>
-<li><a href="#checkers-kiss">Keep It Simple</a></li>
-<li><a href="#checkers-parity">Solution Analysis: Parity</a></li>
-<li><a href="#checkers-euler">Solution Analysis: Graphs and Euler Tours</a></li>
-<li><a href="#checkers-algo">Solution Algorithm</a></li>
-<li><a href="#checkers-pseudocode">Solution Pseudocode</a></li>
-<li>Solution Code</li>
-</ul>
-</li>
-<li><a href="#checkers-refs">References</a></li>
-</ul>
-<p><a name="checkers-intro"></a></p>
-<h1 id="the-problem">The Problem</h1>
-<p>This is a programming challenge that was assigned to some of my CSE 143 students 
-as a final project for their class.</p>
-<p>The origin of this problem was the Association of Computing Machinery (ACM)'s 
-International Collegiate Programming Competition (ICPC),
-in particular the Pacific Northwest Regional Competition, Division 1 challenges from 2015.</p>
-<p><a href="http://acmicpc-pacnw.org/">Link to Pacific NW ACM ICPC page.</a></p>
-<p><a name="checkers-problem"></a></p>
-<h2 id="problem-description-checkers">Problem Description: Checkers</h2>
-<p>In the Checkers problem, you are presented with a checkerboard consisting of 
-black and white squares. The boards follow a normal checkers layout, that is,
-all of the pieces occupy only the light or dark squares on the board.</p>
-<p>There are several white and black pieces arranged on the checkerboard.
-Your goal is to answer the following question: can any one single 
-black piece be used to jump and capture all of the white pieces 
-in a single move? This assumes that each of the black pieces are 
-"king" pieces and can jump in either direction.</p>
-<p>For example, the following 7x7 board configuration has one black piece 
-that can jump all of the white pieces on the board with a single sequence
-of moves. The black piece at B2 jumps to D4, then to F2.</p>
-<p><img alt="Checkerboard 1 - demonstrate solution" src="/images/checkers1.png"></p>
-<p>If an additional white piece is added, there is no sequence of moves
-that will allow any black piece to jump all of the white pieces.</p>
-<p><img alt="Checkerboard 2 - demonstrate no solution" src="/images/checkers2.png"></p>
-<p><a name="checkers-input"></a></p>
-<h2 id="input-file">Input File</h2>
-<p>The input file consists of one line with a single integer, 
-representing the size of the (square) board. 
-Following are characters representing the board state.</p>
-<p><code>.</code> represents a square that pieces cannot occupy - the off-color squares.</p>
-<p><code>_</code> represents an unoccupied but valid square.</p>
-<p><code>B</code> represents a black piece. <code>W</code> represents a white piece.</p>
-<p>Example:</p>
-<div class="highlight"><pre><span></span><code>8
-._._._._
-_._._._.
-.W._.B._
-_.W.W._.
-.W.B._._
-_._._._.
-.W._.W._
-_._._._.
-</code></pre></div>
-
-<p><a name="checkers-output"></a></p>
-<h2 id="output">Output</h2>
-<p>The output is simple: simply state which of the black checkers is capable of 
-jumping each of the white checkers. If none, say "None". If multiple, say "Multiple".</p>
-<p><a name="checkers-solution"></a></p>
-<h1 id="the-solution">The Solution</h1>
-<p><a name="checkers-kiss"></a></p>
-<h2 id="keep-it-simple">Keep It Simple</h2>
-<p>To successfully solve the checkers problem, it is important to <strong>keep it simple</strong>. 
-There are different ways of representing the checkers problem abstractly,
-but the best representation in a program is the simplest one - 
-use a 2D array of chars to represent the board.</p>
-<p>Also as usual with permutations of arrangements on boards of fixed size,
-recursion will be useful here.</p>
-<p><a name="checkers-parity"></a></p>
-<h2 id="solution-analysis-parity">Solution Analysis: Parity</h2>
-<p>We can begin our analysis of the checkers problem with a few observations.</p>
-<p>First, we know that the valid squares for checkers are squares that are off by two.
-But we know further that the black checkers must only move in jumps, which mean that
-a piece at <span class="math">\((i,j)\)</span> can only reach squares indexed by 
-<span class="math">\((i + 4m, j + 4m)\)</span> or <span class="math">\((i + 4m + 2, j + 4n + 2)\)</span>, 
-where <span class="math">\(m, n\)</span> are positive/negative integers.</p>
-<p>That is, the checker pieces can make jumps of 2 squares at a time.  For example, if a checker
-starts at the square <span class="math">\((3,3)\)</span> and jumps a white piece down and to the right, it moves
-to square <span class="math">\((5,5)\)</span> or <span class="math">\((3+2, 3+2)\)</span>. If it jumps another white piece up and to the right,
-it moves to square <span class="math">\((3, 7)\)</span> or <span class="math">\((3, 3 + 4)\)</span>.</p>
-<p>Further, we know that a black checker can only jump checkers at 
-squares of the form <span class="math">\((a + 2m + 1, b + 2n + 1)\)</span>. Thus, black checkers either
-have the correct parity to jump all of the white checkers, or they have
-the same parity as the white checkers (in which case they can be ignored).</p>
-<p>If a black checker does not have the correct parity to jump white checkers, 
-we can save ourselves time by not checking it.</p>
-<p>For example, in the checkerboard below, there are four black checkers,
-but only one (row 2, column 3) has the correct parity to jump each of the 
-white pieces. The other three are </p>
-<p>The other three 
-has the correct parity, while the black checker in the right do not.</p>
-<p><img alt="Checkerboard 3 - illustrate parity" src="/images/checkers3.png"></p>
-<p><a name="checkers-euler"></a></p>
-<h2 id="solution-analysis-graphs-and-euler-tours">Solution Analysis: Graphs and Euler Tours</h2>
-<p>If we examine the squares with correct parity, we can translate the board
-into a graph representation. Squares with the "jump" parity are nodes
-on the graph that can perform jumps. (No whites should have jump parity,
-otherwise the board is impossible.) </p>
-<p>Squares with the "jumped" (i.e., white pieces) parity are nodes that are 
-being jumped. These nodes form the edges between jump parity nodes,
-and these edges must be occupied by a white piece for a black piece
-to be able to pass through them. In this way, we can think of white pieces
-as "bridges" between jump parity squares.</p>
-<p>This representation leads to thinking about the tour the black checker takes
-through the checkerboard as an Euler tour across the graph. </p>
-<p>An Euler Tour, made famous by the 
-<a href="https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg">Seven Bridges of Königsberg</a>
-problem solved by Euler in 1736, 
-is a path that visits each node of the graph, traversing 
-each edge once and only once.</p>
-<p>Euler showed that an Euler path visiting each edge of the graph
-depends on the degree of each node in the graph.
-For an Euler path to exist, the graph must be connected
-and there must be exactly zero or two nodes of 
-odd degree.</p>
-<p>If we walk through the checker board and construct the graph
-(or assemble the information that the graph would have told us), 
-we can determine whether an Euler tour exists, and find the Euler tour.</p>
-<p>The example above shows a checkerboard with two white pieces
-forming two edges. The first white piece connects a jump parity square 
-with a black piece on it to a jump parity square that is empty.
-The second white piece connects two empty jump parity squares.</p>
-<p>The black "entrance" node has an odd degree (1).
-The second, unoccupied node has an even degree (2).
-The third, unoccupied node has an odd degree (1).
-Therefore the graph has two nodes of odd degree, so an Euler tour exists. </p>
-<p>If we modify this example to add one additional white checker piece
-on a square with correct parity, the Euler Path analysis identifies this 
-as a board with no solution:</p>
-<p><img alt="Checkerboard 4 - illustrate no Euler tour" src="/images/checkers4.png"></p>
-<p>This is because three of the nodes have degree 1 and one node has degree 3,
-for a total of 4 nodes with odd degree. The requirements for an Euler Tour 
-to exist (equivalent to saying a solution to the Checkers problem can be found
-for a given black checker) are violated, so no solution can be found.</p>
-<p>If we were to add a second black checker piece two squares away,
-an alternate graph (highlighted in blue) can be constructed, 
-and an alternate Euler path through the graph is available.</p>
-<p><img alt="Checkerboard 5 - illustrate alternate Euler tour" src="/images/checkers5.png"></p>
-<p>On the red graph, each node has an odd degree, so the number of nodes with odd degree is not 0 or 2.
-On the blue graph, only the start and end nodes have an odd degree (1), while the rest of the nodes 
-have a degree of 2 (one input and one output). This means an Euler Tour exists on the blue graph.</p>
-<p>In practice, a given black piece has a given graph connecting squares on the checkerboard - 
-we can ask each node on that graph for its degree, and the degree of its neighbors,
-and if a black piece results in an invalid number of odd nodes, we can abandon it.</p>
-<p><a name="checkers-algo"></a></p>
-<h2 id="solution-algorithm">Solution Algorithm</h2>
-<p>The algorithm to find solutions to this problem very roughly follows this pattern:
-* First, perform a parity check to determine if a solution is impossible.
-* Loop over each square of the board, looking for black pieces
-* For each black piece:
-    * Look at each neighbor:
-        * Determine if there is a square to jump to if neighbor is white 
-        * Determine number of odd neighbors
-    * Fail if more than 2 odd neighbors, or 2 odd neighbors and odd self
-    * Backtracking: explore neighbors, determine if all whites can be jumped</p>
-<p><a name="checkers-pseudocode"></a></p>
-<h2 id="solution-pseudocode">Solution Pseudocode</h2>
-<p>The solution code has three basic parts (four, including the input parser):
-* Initialize and parse the board
-* Loop over each square, checking if black piece is a solution
-* Function to check if black piece is a solution piece 
-* (Recursive backtracking) function to jump each white piece possible to jump.</p>
-<p>Start with the initialization of the board and looping over each 
-black piece to check if it is a solution piece:</p>
-<div class="highlight"><pre><span></span><code>initialize solutions counter
-initialize board
-
-for each s in squares:
-    if s is black piece:
-        if s is solution piece:
-            increment solutions counter
-            save location
-
-print summary
-</code></pre></div>
-
-<p>Now we just need to implement functions that can (a) check if a square
-contains a black piece (easy) and (b) check if a black piece is a 
-solution piece (uh... kind of what the whole problem boils down to, no?)</p>
-<p>We break that functionality into a separate function. Here is the 
-pseudocode to check if a black piece in a particular square 
-is a solution piece. This function iterates over squares 
-with jump parity - that means this function traverses the 
-<strong>nodes only</strong> in the graph representation of the checkerboard.</p>
-<p>This function enforces the requirement that no node can have more than 2 odd neighbors,
-or be odd if it has more than 2 odd neighbors, since a graph must have 0 or 2 nodes
-with odd degree in the graph for an Euler Tour to exist. </p>
-<p>While we're at it, we also check if there are any white checker pieces
-without a square to land in when they are jumped (i.e., landing square blocked 
-by another black piece or at edge of board).</p>
-<div class="highlight"><pre><span></span><code>function is solution piece:
-    for each square of similar &quot;jump&quot; parity:
-        for each neighbor:
-            check if neighbor is odd 
-            if a neighbor square is white:
-                if next square is not empty:
-                    fail fast
-
-    if more than 2 odd neighbors, or 2 neighbors and odd:
-        fail fast
-
-    # we have a viable solution
-
-    recursively count number of jumped white checkers 
-
-    if number of jumped white checkers equals number of white checkers on board:
-        return true
-</code></pre></div>
-
-<p>Finding squares of similar jump parity is as easy as looping over each row and column, 
-and checking if it is off by 2 with the row/column of the black checker piece that we are
-currently checking. Checking if a neighbor is odd is as straightforward as counting its degree - 
-checking each of its four neighbors and determining which ones are open.
-This leaves finding the number of jumped white checkers as the only functionality left to define.</p>
-<div class="highlight"><pre><span></span><code>define number of jumped white checkers:
-    initialize white checkers jumped counter
-    for each neighbor:
-        if white piece, unvisited, with an empty place to jump to:
-            visit white piece
-            increment white checkers jumped
-            call number of jumped white checkers on next next neighbor
-            # this should be the empty space
-    return number white checkers jumped
-</code></pre></div>
-
-<p><a name="checkers-refs"></a></p>
-<h2 id="references">References</h2>
-<ol>
-<li>"ACM Pacific Region Programming Competition." Association of Computing Machinery. 19 June 2017.
-&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</li>
 </ol>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var align = "center",
@@ -836,397 +1030,397 @@ This leaves finding the number of jumped white checkers as the only functionalit
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Teaching Recursion with the N Queens Problem
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2017-05-16T18:00:00-07:00" pubdate>Tuesday 05/16/2017</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/teaching-recursion-with-the-n-queens-problem.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>Table of Contents:</p>
-<ul>
-<li>
-<p><a href="#8q-gentle-intro">A Gentle Introduction to Recursion</a></p>
-</li>
-<li>
-<p><a href="#8q-backtrack">Recursive Backtracking</a></p>
-</li>
-<li>
-<p><a href="#8q-decision">Paring Down the Decision Tree</a></p>
-</li>
-<li>
-<p><a href="#8q-pseudocode">The Pseudocode</a></p>
-</li>
-<li>
-<p><a href="#8q-diag">Accounting for Diagonal Attacks</a></p>
-</li>
-<li>
-<p><a href="#8q-why">Why the N Queens Problem?</a></p>
-</li>
-</ul>
-<p><a name="8q-gentle-intro"></a></p>
-<h2 id="a-gentle-introduction-to-recursion">A Gentle Introduction to Recursion</h2>
-<p>Recursion, particularly recursive backtracking, is far and away the most challenging topic 
-I cover when I teach the CSE 143 (Java Programming II) course at South Seattle College.
-Teaching the concept of recursion, on its own, is challenging: 
-the concept is a hard one to encounter in everyday life, making it unfamiliar, 
-and that creates a lot of friction when students try to understand how to apply recursion. </p>
-<p>The key, as I tell students from day one of the recursion unit,
-is to always think in terms of the base case and the recursive case.
-The base case gives your brain a "trapdoor" to exit out of an otherwise 
-brain-bending infinite conceptual loop. It helps recursion feel more manageable.
-But most importantly: it enables thinking about recursion 
-in terms of its inputs and outputs. </p>
-<p>More specifically, to understand recursion requires (no, not recursion)
-thinking about two things: <strong>where you enter the function</strong> 
-and <strong>when you stop calling the function</strong>.
-These are the two <em>least</em> complicated cases, and they 
-also happen to be the two <em>most</em> important cases.</p>
-<p>College courses move at an artificially inflated pace, 
-ill-suited for most community college students,
-and the material prescribed must be presented at the given pace
-mostly independent of any real difficulties the students face
-(there is only minimal room for adjustment, <em>at most</em> 2-3 lectures).</p>
-<p>This means that, before the students have had an opportunity to get comfortable 
-with the concept of recursion, and really nail it down, they're introduced to yet another
-mind-bending topic: recursive backtracking algorithms. </p>
-<p>These bring a whole new set of complications to the table.
-Practice is crucial to students' understanding, and all too often,
-the only way to get students to practice (particularly with difficult subject matter 
-like recursion) is to spend substantial amounts of time in class.
-My recursion lectures routinely throw my schedule off by nearly a week,
-because even the simplest recursion or backtracking exercise can eat up
-an hour or more.</p>
-<p><a name="8q-backtrack"></a></p>
-<h2 id="recursive-backtracking">Recursive Backtracking</h2>
-<p>Backtracking is an approach for exploring problems that involve
-making choices from a set of possible choices. A classic example of 
-backtracking is the 8 Queens problem, which asks: "How many ways are there
-of placing 8 queens on a chessboard, such that no queen attacks any other queen?"</p>
-<p>The problem is deceptively simple; solving it requires some mental gymnastics.
-(By the way, most people who have actually heard of the problem are computer scientists
-who were exposed to it <strong>in the process of learning how to solve it</strong>, 
-leading to the hipster effect - it's often dismissed by computer scientists as 
-an "easy" problem. The curse of knowledge at work.)</p>
-<p>The recursive backtracking algorithm requires thinking about the squares on which 
-to place the 8 queens in question as the set of choices to be made. </p>
-<p>The naive approach ignores the constraints, and makes all 8 choices of where to place
-the 8 queens before ever checking if the queen placements are valid. Thus, we could start
-by placing all 8 queens in one single row on the top, or along one single column on the left.
-Using this approach, we have 64 possibilities (64 open squares) for the first queen,
-then 63 possibilities for the second queen, then 62 possibilities for the third queen,
-and so on. This gives a total number of possible combinations of:</p>
-<div class="math">$$
-\dfrac{64!}{(64-8)!} = 178,462,987,637,760
-$$</div>
-<p>(By the way, for those of you following along at home, you can do this calculation with Python:)</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; from scipy import *
-&gt;&gt;&gt; math.factorial(64)/math.factorial(64-8)
-178462987637760L
-</code></pre></div>
-
-<p>Even for someone without a sense of big numbers, like someone in Congress, 
-that's still a pretty big number. Too many for a human being to actually try 
-in a single lifetime.</p>
-<p><a name="8q-decision"></a></p>
-<h2 id="paring-down-the-decision-tree">Paring Down the Decision Tree</h2>
-<p>But we can do better - we can utilize the fact that the queen, in chess,
-attacks horizontally and vertically, by doing two things:</p>
-<ul>
-<li>
-<p>Limit the placement of queens so that there is one queen per column;</p>
-</li>
-<li>
-<p>Limit the placement of queens so that there is one queen per row.</p>
-</li>
-</ul>
-<p>(Note that this is ignoring diagonal attacks; we'll get there in a minute.)</p>
-<p>This limits the number of solutions as follows: the first queen placed on the board
-must go in the first column, and has 8 possible squares in which it can go.
-The second queen must go in the second column, and has 7 possible squares in which 
-it can go - ignoring the square corresponding to the row that would be attacked
-by the first queen. The third queen goes into the third column, which has 6 open
-squares (ignoring the two rows attacked by the two queens already placed).</p>
-<p>That leads to far fewer solutions:</p>
-<div class="math">$$
-8! = 40,320
-$$</div>
-<p>and for those following along at home in Python:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; from scipy import *
-&gt;&gt;&gt; math.factorial(8)
-40320
-</code></pre></div>
-
-<p>To visualize how this utilization of information
-helps reduce the problem space, I often make use of 
-a decision tree, to get the students to think about
-recursive backtracking as a depth-first tree
-traversal. </p>
-<p>(By the way, this is a strategy whose usefulness 
-extends beyond the 8 queens problem, or even 
-recursive backtracking problems. For example,
-the problem of finding cycles in a directed graph
-can be re-cast in terms of trees.)</p>
-<p><img src="images/8-queens-decision-tree.png" width="500px" /></p>
-<p>So far, we have used two of the three directions of attack for queens.
-This is also enough information to begin an implementation of an algorithm - 
-a backtracking algorithm can use the fact that we place one queen per column,
-and one queen per row, to loop over each row, and steadily march through each 
-column sequentially (or vice-versa).</p>
-<p><a name="8q-pseudocode"></a></p>
-<h2 id="the-pseudocode">The Pseudocode</h2>
-<p>There is still a bit more to do to cut down on the problem space
-that needs to be explored, but before we do any of that,
-we should first decide on an approach and sketch out the psuedocode.</p>
-<p>The structure of the explore method pseudocode thus looks like:</p>
-<div class="highlight"><pre><span></span><code>explore(column):
-    if last column:
-        # base case
-        add to solutions
-    else:
-        # recursive case
-        for each row:
-            if this is a safe row:
-                place queen on this row
-                explore(column+1)
-                remove queen from this row
-</code></pre></div>
-
-<h2 id="the-actual-code">The Actual Code</h2>
-<p>Over at <a href="https://git.charlesreid1.com/charlesreid1/n-queens">git.charlesreid1.com/charlesreid1/n-queens</a> 
-I have several implementations of the N Queens problem:</p>
-<ul>
-<li>
-<p><a href="https://git.charlesreid1.com/charlesreid1/n-queens/src/master/java/NQueens.java">Java solution</a></p>
-</li>
-<li>
-<p><a href="https://git.charlesreid1.com/charlesreid1/n-queens/src/master/perl/nqueens.pl">Perl solution</a></p>
-</li>
-<li>
-<p><a href="https://git.charlesreid1.com/charlesreid1/n-queens/src/master/python/nqueens.py">Python solution</a></p>
-</li>
-<li>
-<p><a href="https://git.charlesreid1.com/charlesreid1/n-queens/src/master/cpp/nqueens.cpp">C++ solution</a></p>
-</li>
-</ul>
-<h2 id="row-column-and-diagonal-attacks">Row, Column, and Diagonal Attacks</h2>
-<p>We have already utilized knowledge that there will only be one queen 
-per column, and one queen per row. But one last bit of information we can
-utilize is the fact that queens attack diagonally. 
-This allows us to eliminate any squares that are along the diagonals
-of queens that have already been placed on the board.</p>
-<p>How to eliminate the diagonals? It basically boils down to two approaches:</p>
-<ol>
-<li>
-<p>Use a Board class to abstract away details (and the Board class will implement "magic" like an <code>isValid()</code> method).</p>
-</li>
-<li>
-<p>Hack the index - implement some index-based math to eliminate 
-   any rows that are on the diagonals of queens already on the board.</p>
-</li>
-</ol>
-<p>The first approach lets you abstract away the details,
-possibly even using <a href="http://www.buildingjavaprograms.com/code-files/4ed/ch12/Board.java">a Board class written by a textbook</a>,
-which is <s>lazy</s> fine, if you are working on a practical problem
-and need some elbow grease, but not so much if you are a computer science
-student learning the basic principles of software design.</p>
-<p>The second approach requires some deep thinking about how the locations of 
-the N (or 8) queens are being represented in the program.</p>
-<p><a name="8q-diag"></a></p>
-<h2 id="accounting-for-diagonal-attacks">Accounting for Diagonal Attacks</h2>
-<p>At some point, when you use the above pseudocode, 
-you are going to want to know the answer to the following question:
-<strong>for a given column k, what rows are invalid because they are on 
-diagonals of already-placed queens?</strong></p>
-<p>To answer this, think about where the diagonal indices of 
-chess board squares are located, and how to find the diagonals on column X 
-attacked by a queen placed in column Y.</p>
-<p>The following diagram shows a queen on row 3 of column 2, and the diagonal
-attack vectors of that queen. Each of the squares along those diagonal
-vectors can be ruled out as possible squares to place a queen. 
-When selecting a square for the third queen, which goes in the third column, 
-the second and fourth rows can both be ruled out due to the diagonals.
-(The third row, of course, can also be ruled out, due to the one-queen-per-row rule.)</p>
-<p>However, the effect of the already-placed queen propagates forward, 
-and affects the choice of possible squares for each queen after it. 
-If we jump ahead in the recursive algorithm, to say, queen number 6, 
-being placed on column number 6 (highlighted in blue), the queen in column 2 (row 3) 
-still affects the choice of squares for that column (as do all queens previously
-placed on the board).  In the case pictured in the figure, 
-the seventh row (as well as an off-the-board row) of column 6 
-can be ruled out as possible squares for the placement of the 
-6th queen.</p>
-<p><img src="images/8-queens-diag.png" width="500px" /></p>
-<p>Accounting for these diagonal attacks can lead to substantial speed-ups: 
-each queen that is placed can eliminate up to two additional squares per column,
-which means the overall decision tree for the N queens problem becomes a lot less
-dense, and faster to explore. </p>
-<p><a name="8q-why"></a></p>
-<h2 id="why-the-n-queens-problem">Why the N Queens Problem?</h2>
-<p>Invariably, some students will deal with this difficult problem
-by questioning the premise of the question - a reasonable 
-thing to wonder. </p>
-<p>This leads to a broader, more important question: 
-why do computer scientists focus so much on <em>games</em>?</p>
-<p>Games, like computers, are self-contained universes, 
-they are abstract systems, they remove messy details and complications.
-They allow you to start, from scratch, by setting up a board,
-a few rules, a few pieces - things that are easy to implement 
-in a computer.</p>
-<p>Mazes, crossword puzzles, card games, checkers, chess, 
-are all systems with a finite, small number of elements 
-that interact in finite, small numbers of ways.
-The beauty of games is that those small rule sets
-can result in immensely complex systems, so that there
-are more <a href="https://en.wikipedia.org/wiki/Shannon_number">branches in the chess decision tree</a>
-(the Shannon number, <span class="math">\(10^{120}\)</span>) than there are 
-<a href="https://en.wikipedia.org/wiki/Eddington_number">protons in the universe</a>
-(the Eddington number, <span class="math">\(10^{80}\)</span>).</p>
-<p>That simplicity is important in computer science.
-Any real-world problem is going to have to be broken down,
-eventually, into pieces, into rules, into a finite representation,
-so that anything we try to model with a computer, 
-any problem we attempt to solve computationally,
-no matter how complex, will always have a game-like representation.</p>
-<p>(Side note: much of the literature in systems operations research,
-which studies the application of mathematical optimization to
-determine the best way to manage resources, 
-came out of work on war games - which were 
-themselves game-ified, simplified representations
-of real, complex systems. Econometrics, or 
-"computational economics," is another field where 
-game theory has gained much traction and finds many 
-practical applications.)</p>
-<p>Recursion, too, is a useful concept in and of itself,
-one that shows up in sorting and searching algorithms,
-computational procedures, and even in nature. </p>
-<p>But it isn't just knowing <strong>where</strong> to look - 
-it's knowing what you're looking for in the first place. </p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/java.html">java</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    <a href="https://charlesreid1.github.io/tag/number-theory.html">number theory</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/n-queens.html">n-queens</a>
+                    <a href="https://charlesreid1.github.io/tag/square-roots.html">square roots</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/numerical-methods.html">numerical methods</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/continued-fractions.html">continued fractions</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/irrational-numbers.html">irrational numbers</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Computing Square Roots: Part 1: Using Newton's Method
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-07-14T18:00:00-07:00" pubdate>Friday 07/14/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/computing-square-roots-part-1-using-newtons-method.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li>
+<p><a href="#newton-roots">Newton's Method for Finding Roots of Equations</a></p>
+</li>
+<li>
+<p><a href="#newton-square-roots">Newton's Method for Finding Square Roots</a></p>
+</li>
+<li>
+<p><a href="#newton-program">Newton's Method for Finding Square Roots: Program</a></p>
+</li>
+<li>
+<p><a href="#newton-accuracy">Accuracy</a></p>
+</li>
+<li>
+<p><a href="#newton-speed">Speed</a></p>
+</li>
+<li>
+<p><a href="#newton-next">Next Steps</a></p>
+</li>
+<li>
+<p><a href="#newton-refs">References</a></p>
+</li>
+</ul>
+<p><a name="newton-roots"></a></p>
+<h2 id="newtons-method-for-finding-roots-of-equations">Newton's Method for Finding Roots of Equations</h2>
+<p>Suppose we have a function <span class="math">\(f(x)\)</span> and we want to 
+compute values of <span class="math">\(x\)</span> for which <span class="math">\(f(x)=0\)</span>. These values 
+of <span class="math">\(x\)</span> are called the <strong>roots</strong> of <span class="math">\(f(x)\)</span>.</p>
+<p>We can compute the roots using Newton's Method,
+which utilizes the derivative of the function
+to iteratively compute the roots of the function.</p>
+<p>Newton's method begins with an initial guess.
+It evaluates the derivative of the fnction at the 
+initial guess, which gives the slope of the tangent line,
+and computes the root of the tangent line as the next
+approximation of the root of the function.</p>
+<p>This is based on the point-slope formula,</p>
+<div class="math">$$
+y - y_0 = m(x - x_0) 
+$$</div>
+<p>Now the left side becomes </p>
+<div class="math">$$
+f(x) - f(x_0) = f'(x_0)(x - x_0)
+$$</div>
+<p>and at the root, we know <span class="math">\(f(x)=0\)</span>, so rearranging this equation
+into an expression for the root <span class="math">\(x\)</span> gives: </p>
+<div class="math">$$
+x = x_0 - \dfrac{f(x_0)}{f'(x_0)}
+$$</div>
+<p>Now, this is the equation for the next approximation for the root.
+To turn this into an iterative procedure, we write this as</p>
+<div class="math">$$
+x_{i+1} = x_{i} - \dfrac{f(x_i)}{f'(x_i)}
+$$</div>
+<p>Newton's Method then allows us to evaluate the 
+above expression as many times as we would like
+to achive the desired accuracy. </p>
+<p>Two caveats with Newton's Method: </p>
+<ul>
+<li>The function must be relatively well-behaved; 
+    Newton's Method does not converge for functions with
+    large, high-order derivatives.</li>
+<li>The convergence of the method depends on the accuracy 
+    of the initial guess. If you can make a good guess, do it!</li>
+</ul>
+<p><a name="newton-square-roots"></a></p>
+<h2 id="newtons-method-for-finding-square-roots">Newton's Method for Finding Square Roots</h2>
+<p>Note that we can use the procedure and equation from above
+to compute the numerical value of a given function to an arbitrary
+degree of accuracy, so long as we have the derivative (and a program 
+that can keep track of arbitrary digits).</p>
+<p>Suppose we want to use Newton's Method to compute <span class="math">\(\sqrt{2}\)</span>.
+Then we can solve for the roots of the following function:</p>
+<div class="math">$$
+f(x) = x^2 - a
+$$</div>
+<p>for <span class="math">\(a = 2\)</span>.</p>
+<p>Note that the derivative of this function is computed using the power rule,
+which is trivial to implement, so we can also use this method to compute
+general <span class="math">\(n^{th}\)</span> roots of <span class="math">\(a\)</span>, by solving for roots of:</p>
+<div class="math">$$
+f(x) = x^n - a
+$$</div>
+<p>For a monomial with nonzero power, the derivative is always l<span class="math">\(f'(x) = n x^{n-1}\)</span>, 
+so in the square root case we have <span class="math">\(f'(x) = 2x\)</span>. Now we plug these two functions
+into the iterative formula for Newton's Method to get:</p>
+<div class="math">$$
+\begin{array}
+a x_{i+1} &amp;=&amp; x_{i} - \dfrac{f(x_n)}{f'(x_n)} \\
+x_{i+1} &amp;=&amp; x_{i} - \dfrac{x_i^2 - a}{2 x_i }
+\end{array}
+$$</div>
+<p><a name="newton-program"></a></p>
+<h2 id="newtons-method-for-finding-square-roots-program">Newton's Method for Finding Square Roots: Program</h2>
+<p>This can be implemented in a programming language to yield an iterative
+method for computing square roots. We can either specify a tolerance (better),
+or a number of iterations. Here is a static method for computing
+a square root using Newton's method. The user specifies the value of <span class="math">\(a\)</span>,
+the number they want to compute the square root of; <span class="math">\(x_0\)</span>, the initial guess;
+and a tolerance, which controls the number of decimal places of accuracy of the 
+final answer.</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/** Compute a square root using Newton&#39;s Method, to a specified tolerance.</span>
+<span class="cm">     *</span>
+<span class="cm">     * @param a Compute the square root of a.</span>
+<span class="cm">     * @param x0 Initial guess.</span>
+<span class="cm">     * @param tol Tolerance (stopping criteria).</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="nf">nmsqrttol</span><span class="p">(</span><span class="kt">double</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">x0</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">tol</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
+<span class="w">        </span><span class="kt">double</span><span class="w"> </span><span class="n">xi</span><span class="p">,</span><span class="w"> </span><span class="n">xip1</span><span class="p">,</span><span class="w"> </span><span class="n">err</span><span class="p">;</span>
+<span class="w">        </span><span class="n">xi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">xip1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x0</span><span class="p">;</span>
+<span class="w">        </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x0</span><span class="p">;</span>
+<span class="w">        </span><span class="k">while</span><span class="p">(</span><span class="n">err</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">tol</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
+<span class="w">            </span><span class="n">xip1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">xi</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="n">xi</span><span class="o">*</span><span class="n">xi</span><span class="o">-</span><span class="n">a</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">xi</span><span class="p">);</span>
+<span class="w">            </span><span class="n">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Math</span><span class="p">.</span><span class="na">abs</span><span class="p">(</span><span class="w"> </span><span class="n">xip1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">xi</span><span class="w"> </span><span class="p">);</span>
+<span class="w">            </span><span class="n">xi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">xip1</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">xip1</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+</code></pre></div>
+
+<p>(There is no check for infinite loops because our function is a smooth
+polynomial and Newton's Method will always converge.) </p>
+<p>Here is sample output from a program that varies the tolerance and prints
+the corresponding value of the square root that was computed:</p>
+<div class="highlight"><pre><span></span><code>$ javac SquareRoot.java &amp;&amp; java SquareRoot
+Actual value sqrt(2) = 1.4142135623730951
+Testing Newton&#39;s Method, Specifying Tolerance:
+Tol         sqrt(2)
+0.1         1.4166666666666667
+0.01        1.4142156862745099
+0.001       1.4142135623746899
+0.0001      1.4142135623746899
+1e-05       1.4142135623746899
+1e-06       1.4142135623730951
+1e-07       1.4142135623730951
+1e-08       1.4142135623730951
+</code></pre></div>
+
+<p><a name="newton-accuracy"></a></p>
+<h2 id="accuracy">Accuracy</h2>
+<p>Now that we've coded up Newton's Method, we can determine the number of accurate 
+digits. There are a couple of ways to do this, but I went with a string comparison 
+method. I start with a text file containing thousands of digits of the square root of 2,
+then I compute the square root of 2 using Newton's Method. The longest common substring
+gives me the number of accurate digits, plus "1.", so if I subtract 2 I get the 
+total number of accurate digits after the decimal place. </p>
+<div class="highlight"><pre><span></span><code>javac SquareRoot.java &amp;&amp; java SquareRoot
+Tolerance = 0.1     Number of accurate digits = 2
+Tolerance = 0.01        Number of accurate digits = 5
+Tolerance = 0.001       Number of accurate digits = 11
+Tolerance = 0.0001      Number of accurate digits = 11
+Tolerance = 1e-05       Number of accurate digits = 11
+Tolerance = 1e-06       Number of accurate digits = 15
+Tolerance = 1e-07       Number of accurate digits = 15
+Tolerance = 1e-08       Number of accurate digits = 15
+Tolerance = 1e-09       Number of accurate digits = 15
+Tolerance = 1e-10       Number of accurate digits = 15
+Tolerance = 1e-11       Number of accurate digits = 15
+Tolerance = 1e-12       Number of accurate digits = 15
+Tolerance = 1e-13       Number of accurate digits = 15
+Tolerance = 1e-14       Number of accurate digits = 15
+</code></pre></div>
+
+<p><a name="newton-speed"></a></p>
+<h2 id="speed">Speed</h2>
+<p>It is also important to measure performance, in the form of speed. How fast is 
+Newton's Method relative to the built-in square root function in the math library?</p>
+<p>Turns out the performance of Newton's Method is much worse than the built-in math library's 
+square root function. The Newton's Method defined above is around 100 times slower. 
+Here are the results of a simple timing test, in which we compute the square root
+10 million times, timing how long it takes, and divide by the number of operations
+to yield the time per operation (or rather, as it is slightly easier to grasp, 
+the time per 1k operations);:</p>
+<div class="highlight"><pre><span></span><code>    /** Time Newton&#39;s Method.
+     *
+     * How long does it take to achieve 10 digits of accuracy? */
+    public static void testTime() { 
+
+        int Nops;
+        double a;
+        double initialGuess;
+        double tol;
+        double time;
+
+        Tim tim;
+
+        Nops = 10000000;
+        a = 2;
+        initialGuess = 1;
+        tol = 1E-8;
+        tim = new Tim();
+        tim.tic();
+        for(int i=0; i&lt;Nops; i++) { 
+            nmsqrttol(a, initialGuess, tol);
+        }
+        tim.toc();
+        time = 1000*tim.elapsedms()/Nops;
+        System.out.println(&quot;Newton&#39;s Method Time (ms) per 1k operations: &quot;+time);
+
+
+        Nops = 10000000;
+        a = 2;
+        tim = new Tim();
+        tim.tic();
+        for(int i=0; i&lt;Nops; i++) { 
+            Math.sqrt(a);
+        }
+        tim.toc();
+        time = 1000*tim.elapsedms()/Nops;
+        System.out.println(&quot;Math Library Time (ms) per 1k operations: &quot;+time);
+
+    }
+</code></pre></div>
+
+<p>and the results:</p>
+<div class="highlight"><pre><span></span><code>javac SquareRoot.java &amp;&amp; java SquareRoot
+Newton&#39;s Method Time (ms) per 1k operations: 0.016
+Math Library Time (ms) per 1k operations: 3.0E-4
+</code></pre></div>
+
+<p>While the accuracy of Newton's Method for square roots may not be that great,
+it ain't bad, for 9 lines of code. </p>
+<p><a name="newton-next"></a></p>
+<h2 id="next-steps">Next Steps</h2>
+<p>In a blog post to follow, we'll compare the speed and accuracy of square root computations using Newton's Method
+to an alternative approach involving the continued fraction representation of square roots. This particularly interesting
+technique can also be used to solve the Pell equation, a quadratic Diophantine equation of the form:</p>
+<div class="math">$$
+x^2 - D y^2 = 1
+$$</div>
+<p>But more on that in a future post...</p>
+<p><a name="newton-refs"></a></p>
+<h2 id="references">References</h2>
+<ol>
+<li>
+<p>Press, William et al. "Numerical Recipes in C." Cambridge Unviersity Press (2007).</p>
+</li>
+<li>
+<p>"SquareRoot.java". Charles Reid. git.charlesreid1.com.
+&lt;<a href="https://git.charlesreid1.com/cs/java/src/master/numerics/newtons-method">https://git.charlesreid1.com/cs/java/src/master/numerics/newtons-method</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/number-theory.html">number theory</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/square-roots.html">square roots</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/numerical-methods.html">numerical methods</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/newtons-method.html">newtons method</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/irrational-numbers.html">irrational numbers</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1265,6 +1459,34 @@ it's knowing what you're looking for in the first place. </p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>May 2025</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-rick-perlsteins-nixonland.html">Reading Rick Perlstein's <i>Nixonland</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/ken-binmores-game-theory-and-nash-equilibrium-in-shadowrun.html">Ken Binmore's <i>Game Theory</i> and Nash Equilibrium in Shadowrun</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-hobbess-leviathan.html">Reading Hobbes's <i>Leviathan</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/forever-blue-the-other-side-of-the-bums-story.html"><i>Forever Blue</i>: The Other Side of the Bums Story</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

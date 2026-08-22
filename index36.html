@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Enigma Cipher Implementation: Part 2: Pseudocode
+                Fixing Bottlenecks in the Guava Traveling Salesperson Problem Code
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2017-03-21T21:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
+                <time datetime="2017-03-29T14:00:00-07:00" pubdate>Wednesday 03/29/2017</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/enigma.html">Enigma</a>
+                <a href="https://charlesreid1.github.io/category/java.html">Java</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/enigma-cipher-implementation-part-2-pseudocode.html">permalink</a>
+                <a href="https://charlesreid1.github.io/fixing-bottlenecks-in-the-guava-traveling-salesperson-problem-code.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,305 +127,409 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>This is the second of several posts walking through an implementation of the Enigma cipher in code.</p>
-<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
-detailed, accurate information entirely free of graduate level mathematics, 
-and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
-<h2 id="the-goal">The Goal</h2>
-<p>The goal of analyzing the Enigma machine is to better understand the workings of a device that played an important role in the history of computing.
-It is also an excellent system to better understand some of the design decisions we make when creating a code representation of a problem. </p>
-<p>The intention is to replicate some of the encryption mechanisms of the original Enigma. 
-From the Part 1 post, which covered more about how Enigma works, we have built up a basic understanding of what each step does.
-In this post we discuss how to implement this functionality.</p>
-<p>The basic idea is to start with a plaintext input (typed by the operator) and apply a rotating cripher to encrypt it, resulting in a ciphertext output:</p>
-<div class="highlight"><pre><span></span><code>                _________
-               |         |
-PLAINTEXT ---&gt; | ENIGMA  | ----&gt; CIPHERTEXT
-               |_________|
+        <div class="entry-content"><ul>
+<li><a href="#tsp2-intro">Intro</a></li>
+<li><a href="#tsp2-graphs">The Graphs We Are Solving</a><ul>
+<li><a href="#tsp2-viz-graphs">Visualizations of Graphs</a></li>
+</ul>
+</li>
+<li><a href="#tsp2-guava-tsp-soln">Guava TSP Solution</a><ul>
+<li><a href="#tsp2-timing-guava-tsp">Timing the TSP Solution</a></li>
+</ul>
+</li>
+<li><a href="#tsp2-improving">Improving the Guava TSP Solution</a><ul>
+<li><a href="#tsp2-flaw">The Flaw</a></li>
+<li><a href="#tsp2-fixing">Fixing the Flaw</a></li>
+<li><a href="#tsp2-pessimist">The Pessimist Algorithm</a></li>
+</ul>
+</li>
+<li><a href="#tsp2-timing">Timing Results</a></li>
+<li><a href="#tsp2-future">Future Work</a></li>
+</ul>
+<p><a name="tsp2-intro"></a></p>
+<h2 id="intro">Intro</h2>
+<p>In a prior blog post we introduced you to the traveling salesperson problem (TSP),
+which involves finding the shortest path through every city in a group of cities
+connected by a network of roads. Using Google Guava, we have implemented a solution 
+to the TSP in Java.</p>
+<p>Our philosophy toward timing, profiling, and optimization is that it is always best 
+to work from data - and timing is the first place to begin collecting data.
+As we will show in this blog post, simply timing your function for different problem sizes
+can reveal scaling behavior that indicates bottlenecks, bugs, or inefficiencies in the algorithm.</p>
+<p>In this post, we use simple timing tools and a spreadsheet 
+to plot scaling behavior and identify bottlenecks in the 
+traveling salesperson problem code. Fixing the bottleneck
+led to a reduction in cost of <strong>two orders of magnitude</strong>.</p>
+<p>Here's a preview:</p>
+<p><img alt="TSP Guava Solution scaling results - initial and pessimist algorithms" src="/images/tsp-guava-initial-pessimist.png"></p>
+<p>In this post we'll cover what we did to time the problem,
+the initial results, and the algorithm improvement that led to 
+the massive performance improvement.</p>
+<p>But first, let's look at some of the graphs that are being solved.</p>
+<p><a name="tsp2-graphs"></a></p>
+<h2 id="the-graphs-we-are-solving">The Graphs We Are Solving</h2>
+<p>Let's start by having a look at some of the graphs we will be solving,
+and the representation of the problem.</p>
+<p><a name="tsp2-viz-graphs"></a></p>
+<h3 id="visualizations-of-graphs">Visualizations of Graphs</h3>
+<p>The first few graphs start out simple: here is a randomly generated 4-node traveling salesman problem
+(we wil cover the code that generates the graph pictured here in a moment):</p>
+<p><img alt="TSP graph with 4 nodes" src="/images/graphviz_tsp_4.png"></p>
+<p><strong>Shortest Route: [0, 2, 3, 1] Distance: 112.0</strong></p>
+<p>Here is another randomly generated graph with 5 nodes:</p>
+<p><img alt="TSP graph with 5 nodes" src="/images/graphviz_tsp_5.png"></p>
+<p><strong>Shortest Route: [0, 4, 2, 1, 3]   Distance: 130.0</strong></p>
+<p>With 6 nodes:</p>
+<p><img alt="TSP graph with 6 nodes" src="/images/graphviz_tsp_6.png"></p>
+<p><strong>Shortest Route: [0, 2, 4, 1, 5, 3]    Distance: 163.0</strong></p>
+<p>But problem of this sise are still trivially easy for a processor to handle.
+Our inefficient, first-pass algorithm started to show signs of eating up CPU cycles 
+at around 9 nodes (albeit less than 1 second). Here is the graph with 9 nodes:</p>
+<p><img alt="TSP graph with 9 nodes" src="/images/graphviz_tsp_9.png"></p>
+<p><strong>Shortest Route: [0, 6, 1, 7, 3, 2, 5, 8, 4]   Distance: 166.0</strong></p>
+<p>With 12 nodes:</p>
+<p><img alt="TSP graph with 12 nodes" src="/images/graphviz_tsp_12.png"></p>
+<p><strong>Shortest Route: [0, 7, 5, 4, 1, 8, 6, 10, 11, 9, 3, 2]    Distance: 236.0</strong></p>
+<p>At 14 nodes, even the efficient algorithm crosses the 1 second threshold.</p>
+<p><img alt="TSP graph with 14 nodes" src="/images/graphviz_tsp_14.png"></p>
+<p><strong>Shortest Route: [0, 2, 6, 10, 13, 12, 7, 4, 1, 11, 5, 3, 9, 8]    Distance: 277.0</strong></p>
+<p>We tested randomly-generated, fully-connected graphs of up to 18 nodes, 
+and the algorithm was able to compute solutions within a few minutes.
+Here is an 18-node graph:</p>
+<p><img alt="TSP graph with 18 nodes" src="/images/graphviz_tsp_18.png"></p>
+<p><strong>Shortest Route: [0, 3, 10, 6, 12, 5, 11, 2, 14, 8, 13, 4, 7, 1, 9]    Distance: 267.0</strong></p>
+<p><a name="tsp2-guava-tsp-soln"></a></p>
+<h2 id="the-guava-tsp-solution">The Guava TSP Solution</h2>
+<p>In a prior post we covered the implementation of a solution to the TSP 
+using Guava's Network objects. This implementation utilized a recursive
+depth-first search algorithm to search for the shortest path among all nodes.</p>
+<p>To recap, here was our pseudocode for the TSP solution:</p>
+<div class="highlight"><pre><span></span><code>explore(neighbors):
+
+    if(no more unvisited neighbors):
+        # This is the base case.
+        if total distance is less than current minimum:
+            save path and new minimum
+
+    else:
+        # This is the recursive case.
+        for neighbor in unvisited neighbors:
+            visit neighbor
+            explore(new_neighbors)
+            unvisit neighbor
 </code></pre></div>
 
-<h2 id="function-or-object">Function or Object?</h2>
-<p>One of the first decisions typically made (sometimes implicitly) is whether to implement the Enigma as a function or an object.
-Is the Enigma a noun, or a verb?</p>
-<h3 id="the-noun-approach">The Noun Approach</h3>
-<p>Programming in a language like Java or C++, the noun approach seems perfectly natural:
-start with an Enigma object (the noun), and create more objects to represent more of the nouns (the switchboard, the rotor wheels, and the reflector). 
-Each component is modeled as a black box function taking a character in and returning a character out. 
-Each component stores and organizes information important for it to perform its particular transformation.
-For example, the rotors would store the scrambled version of the alphabet that they implement, 
-while the switchboard and the reflector would store the connected letter pairs.</p>
-<p>This approach reflects the kind of engineering approach that was taken to the design of the Enigma: 
-many simple components, working together in concert, result in a more complex integrated system.</p>
-<p>But one of the reasons the Enigma machine is an interesting system for implementing in code 
-is because of the simplicity of the mechanical operations performed. 
-This can help identify where a person actually begins the software design process. 
-If the design process starts with one foot in the world of objects already, the object approach will be adopted by default.</p>
-<p>With this approach, we are reshaping our data structures to fit the problem. 
-This makes the implementation more modular and the driver easier to read at a high level. 
-However, reshaping the data structures to fit the problem and our abstraction of it 
-can lead to more inefficient code and implementations.</p>
-<h3 id="the-verb-approach">The Verb Approach</h3>
-<p>Instead, we can start by examining the encryption process itself - the verb of encryption. 
-The action of encryption consists of elementary steps - swapping out two characters. 
-Each of these actions is simple enough that it can be implemented using built-in string manipulation methods,
-and all of the quantities being stored are likewise simple enough that no exotic data structures are required. </p>
-<p>The verb approach requires considering the problem up-front (possibly recasting it in different terms),
-and thinking through the actions involved in order to best utilize simple, built-in data structures and functionality.</p>
-<p>With this approach we essentially reshape the problem to fit our data structures, rather than the other way around.</p>
-<h2 id="applying-the-verb-approach-to-the-rotors">Applying the Verb Approach to the Rotors</h2>
-<h3 id="rotors">Rotors</h3>
-<p>To get a better sense of what the verb approach looks like, let's look at the Enigma rotors.</p>
-<p>Each rotor implements a particular permutations of the 26 letters of the alphabet: </p>
-<p><img alt="Enigma rotor" src="/images/enigma_rotor.jpg"></p>
-<p>This is equivalent to matching up two strings. To make things slightly more concrete, let's look at Rotor I, nicknamed Royal
-(due to the location of its notch at the letter R), implemented the scrambled alphabet "EKMFLGDQVZNTOWYHXUSPAIBRCJ".
-With an offset of 0, this would therefore implement the following shift:</p>
-<div class="highlight"><pre><span></span><code>ABCDEFGHIJKLMNOPQRSTUVWXYZ
-||||||||||||||||||||||||||
-EKMFLGDQVZNTOWYHXUSPAIBRCJ
+<p>And here is what the recursive backtracking <code>explore()</code> method looked like
+when implemented in Java:</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/** Recursive backtracking method: explore possible solutions starting at this node, having made nchoices */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">explore</span><span class="p">(</span><span class="n">Node</span><span class="w"> </span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nchoices</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">nchoices</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">graphSize</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// </span>
+<span class="w">            </span><span class="c1">// BASE CASE</span>
+<span class="w">            </span><span class="c1">//</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="c1">// Solution base case</span>
+<span class="w">                </span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="p">;</span>
+<span class="w">                </span><span class="n">printSolution</span><span class="p">();</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">//</span>
+<span class="w">            </span><span class="c1">// RECURSIVE CASE</span>
+<span class="w">            </span><span class="c1">//  </span>
+<span class="w">            </span><span class="n">Set</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span><span class="w"> </span><span class="n">neighbors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="na">adjacentNodes</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
+<span class="w">            </span><span class="k">for</span><span class="p">(</span><span class="n">Node</span><span class="w"> </span><span class="n">neighbor</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">neighbors</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">if</span><span class="p">(</span><span class="n">neighbor</span><span class="p">.</span><span class="na">visited</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">                    </span><span class="kt">int</span><span class="w"> </span><span class="n">distance_btwn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mi">10000</span><span class="p">;</span>
+
+<span class="w">                    </span><span class="k">for</span><span class="p">(</span><span class="w"> </span><span class="n">Edge</span><span class="w"> </span><span class="n">edge</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="na">edgesConnecting</span><span class="p">(</span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="n">neighbor</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="n">distance_btwn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge</span><span class="p">.</span><span class="na">value</span><span class="p">;</span>
+<span class="w">                    </span><span class="p">}</span>
+
+<span class="w">                    </span><span class="c1">// Make a choice</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">neighbor</span><span class="p">.</span><span class="na">id</span><span class="p">;</span>
+<span class="w">                    </span><span class="n">neighbor</span><span class="p">.</span><span class="na">visit</span><span class="p">();</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">distance_btwn</span><span class="p">;</span>
+
+<span class="w">                    </span><span class="c1">// Explore the consequences</span>
+<span class="w">                    </span><span class="n">explore</span><span class="p">(</span><span class="n">neighbor</span><span class="p">,</span><span class="n">nchoices</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+
+<span class="w">                    </span><span class="c1">// Unmake the choice</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+<span class="w">                    </span><span class="n">neighbor</span><span class="p">.</span><span class="na">unvisit</span><span class="p">();</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="n">distance_btwn</span><span class="p">;</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">                </span><span class="c1">// Move on to the next choice (continue loop)</span>
+<span class="w">            </span><span class="p">}</span><span class="w">               </span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="c1">// End base/recursive case</span>
+<span class="w">    </span><span class="p">}</span>
 </code></pre></div>
 
-<p>This operation, when broken down, is trivial: we are matching two characters from two strings, both at a particular location.</p>
-<p>Starting with a char, representing the character coming into the rotor,
-we can perform a two-step operation: 
-1. Get the index of the incoming character in the normal alphabet <code>ABCDEF...</code>.
-2. Get the corresponding character at that index in the scrambled alphabet <code>EKMFLG...</code>.</p>
-<p>We will also need to perform the reverse operation when we return the signal back through the machine from the reflector.
-In that case, we're actually performing the opposite lookup, for the same wheel:</p>
-<div class="highlight"><pre><span></span><code>EKMFLGDQVZNTOWYHXUSPAIBRCJ
-||||||||||||||||||||||||||
-ABCDEFGHIJKLMNOPQRSTUVWXYZ
+<p>Note: full TSP code available at <a href="http://git.charlesreid1.com/charlesreid1/tsp">http://git.charlesreid1.com/charlesreid1/tsp</a>.</p>
+<p><a name="tsp2-timing-guava-tsp"></a></p>
+<h3 id="timing-the-tsp-solution">Timing the TSP Solution</h3>
+<p>To time the Guava solution to the TSP, we utilized Java's system time
+to measure the amount of time it took to compute solutions, 
+excluding the time spent on graph construction.</p>
+<p>Here is the code that performs the timing of the call to the explore method:</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span><span class="w"> </span><span class="n">args</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
+
+<span class="w">        </span><span class="p">...</span>
+
+<span class="w">        </span><span class="kt">double</span><span class="w"> </span><span class="n">conn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.00</span><span class="p">;</span>
+<span class="w">        </span><span class="n">TSP</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">TSP</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="n">conn</span><span class="p">);</span>
+
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">nanoTime</span><span class="p">();</span>
+<span class="w">        </span><span class="n">t</span><span class="p">.</span><span class="na">solve</span><span class="p">();</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">nanoTime</span><span class="p">();</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">duration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="p">;</span>
+
+<span class="w">        </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">printf</span><span class="p">(</span><span class="s">&quot;Elapsed time %03f s\n &quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">duration</span><span class="o">/</span><span class="mf">1E9</span><span class="p">)</span><span class="w"> </span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
 </code></pre></div>
 
-<p>When we were going through Rotor I the first time, A became E, and E became L;
-when going through in reverse, E now becomes A, and L now becomes E.</p>
-<p>The procedure can also be reversed:
-1. Get the index of the incoming character in the scrambled alphabet <code>EKMFLG...</code>.
-2. Get the corresponding character at that index in the normal alphabet <code>ABCDEF...</code>.</p>
-<p>Applying this multiple times in sequence applies multiple scrambles
-and replicates multiple rotors.</p>
-<h3 id="example-of-verb-approach-rotor-rotation">Example of Verb Approach: Rotor Rotation</h3>
-<p>One of the reasons an object-oriented approach may seem natural,
-besides the chosen language suggesting it, 
-is because the Enigma is an object with a <em>state</em>.
-Objects provide a natural way of representing things with an internal state, 
-or information specific to that entity and required for its operation.</p>
-<p>For this reason, it may seem at first blush that the Engima <em>requires</em> an object-oriented implementation.
-However, we can continue with our verb-centric thinking, and examine how the operations change when the wheels are rotated.</p>
-<div class="highlight"><pre><span></span><code>After 2 rotations:
+<p>The elapsed time is computed using <code>System.nanoTime()</code>.</p>
+<p>Writing a script to feed variable size graphs and time the resulting code 
+showed some pretty awful scaling behavior: </p>
+<p><img alt="Java Guava TSP Solution Scaling" src="/images/tsp-java-scaling.png"></p>
+<p>This scaling behavior reveals a bottleneck in the algorithm:
+the algorithm scales the same way the problem size scales.
+A more efficient algorithm would be capable of ruling out 
+more of the solution space as the graph size grows,
+allowing the algorithm to scale better at large problem sizes.</p>
+<p>This led to some reconsideration of the algorithm.</p>
+<p><a name="tsp2-improving"></a></p>
+<h2 id="improving-the-guava-tsp-solution">Improving the Guava TSP Solution</h2>
+<p>The original TSP algorithm implemented a subtle flaw - 
+not by implementing a mistake in the calculation, 
+but by ignoring an important piece of information.</p>
+<p><a name="tsp2-theflaw"></a></p>
+<h3 id="the-flaw">The Flaw</h3>
+<p>As the recursive depth-first search traverses the graph, the algorithm is checking if all nodes have been traversed.
+When all nodes have been traversed, it then compares the distance of that journey to the current shortest journey.
+If the new journey is shorter, it is saved as the new shortest journey, otherwise it is ignored and we move on.</p>
+<p>What this ignores is the fact that any path, at any point, can be checked to see if it is 
+longer than the current minimum, and if it is, any possibilities that follow from it can be skipped.</p>
+<p>For example, consider the TSP on a graph of six cities, A B C D E F.</p>
+<p>Suppose that the algorithm is in the midst of the recursive backtracking solution,
+and has a current minimum distance and minimum path of the route <code>A-B-E-D-C-F</code>, which is 24 miles.</p>
+<p>Now suppose that the algorithm is searching for solutions that begin with the choice <code>A-E-C</code>,
+and the distance <code>A-E-C</code> is 28 miles.</p>
+<p>The naive algorithm ignores this information, and continues choosing from among the 
+3 remaining cities, computing the total length for <span class="math">\(3! = 6\)</span> additional routes, and finding 
+that all six of them do not work.</p>
+<p>The smart algorithm checks <em>each time it chooses a new node</em> whether the length of the current route
+exceeds the current minimum route distance (if one has been found/set).
+If not, the algorithm keeps going, but if so, it skips choosing neighbors 
+and returns directly to the parent caller.</p>
+<p><a name="tsp2-fixing"></a></p>
+<h3 id="fixing-the-flaw">Fixing the Flaw</h3>
+<p>Fixing the flaw is surpsingly easy: we just add an if statement.</p>
+<p>Illustrating first with the pseudocode:</p>
+<div class="highlight"><pre><span></span><code>explore(neighbors):
 
-ABCDEFGHIJKLMNOPQRSTUVWXYZAB
-  ||||||||||||||||||||||||||
-  EKMFLGDQVZNTOWYHXUSPAIBRCJ
+    if(no more unvisited neighbors):
+        # This is the base case.
+        if total distance is less than current minimum:
+            save path and new minimum
 
-After 4 rotations:
-
-ABCDEFGHIJKLMNOPQRSTUVWXYZABCD
-    ||||||||||||||||||||||||||
-    EKMFLGDQVZNTOWYHXUSPAIBRCJ
+    else:
+        # This is the recursive case.
+        if current distance is greater than current minimum:
+            skip
+        else:
+            for neighbor in unvisited neighbors:
+                visit neighbor
+                explore(new_neighbors)
+                unvisit neighbor
 </code></pre></div>
 
-<p>As the wheels rotate, we are still performing the same index lookup operations, 
-we are just rotating each scrambled alphabet by one character. 
-Again, this is a trivial operation that is probably built in for string types. </p>
-<h3 id="rotor-pseudocode">Rotor Pseudocode</h3>
-<p>Putting all of this together, here's pseudocode for a single forward transformation by an Engima rotor: </p>
-<div class="highlight"><pre><span></span><code>define plaintext message
-define normal alphabet and scrambled alphabet 
-for each character in plaintext message:
-    get index of input character in normal alphabet
-    get new character at that index in scrambled alphabet
-    concatenate transformed character to ciphertext message 
+<p>In our Java implementation, the algorithm simply prints out solutions as it goes,
+then returns to the calling function whether a solution was found or not.
+Thus, we can "skip" a set of solutions by just returning to the calling function,
+using a <code>return</code> statement.</p>
+<div class="highlight"><pre><span></span><code><span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">nchoices</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">graphSize</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// </span>
+<span class="w">            </span><span class="c1">// BASE CASE</span>
+<span class="w">            </span><span class="c1">//</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="c1">// Solution base case:</span>
+<span class="w">                </span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="p">;</span>
+<span class="w">                </span><span class="n">printSolution</span><span class="p">();</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">//</span>
+<span class="w">            </span><span class="c1">// RECURSIVE CASE</span>
+<span class="w">            </span><span class="c1">//  </span>
+
+<span class="w">            </span><span class="cm">/* </span>
+<span class="cm">             * The following lines result in a huge computational cost savings.</span>
+<span class="cm">            */</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="o">&gt;</span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="o">&gt;</span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="c1">// Just give up already. It&#39;s meaningless. There&#39;s no point.</span>
+<span class="w">                </span><span class="k">return</span><span class="p">;</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">            </span><span class="c1">// Everything else stays exactly the same</span>
+<span class="w">            </span><span class="n">Set</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span><span class="w"> </span><span class="n">neighbors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="na">adjacentNodes</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
+<span class="w">            </span><span class="k">for</span><span class="p">(</span><span class="n">Node</span><span class="w"> </span><span class="n">neighbor</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">neighbors</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">if</span><span class="p">(</span><span class="n">neighbor</span><span class="p">.</span><span class="na">visited</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">                    </span><span class="kt">int</span><span class="w"> </span><span class="n">distance_btwn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mi">10000</span><span class="p">;</span>
+
+<span class="w">                    </span><span class="k">for</span><span class="p">(</span><span class="w"> </span><span class="n">Edge</span><span class="w"> </span><span class="n">edge</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="na">edgesConnecting</span><span class="p">(</span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="n">neighbor</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="n">distance_btwn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge</span><span class="p">.</span><span class="na">value</span><span class="p">;</span>
+<span class="w">                    </span><span class="p">}</span>
+
+<span class="w">                    </span><span class="c1">// Make a choice</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">neighbor</span><span class="p">.</span><span class="na">id</span><span class="p">;</span>
+<span class="w">                    </span><span class="n">neighbor</span><span class="p">.</span><span class="na">visit</span><span class="p">();</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">distance_btwn</span><span class="p">;</span>
+
+<span class="w">                    </span><span class="c1">// Explore the consequences</span>
+<span class="w">                    </span><span class="n">explore</span><span class="p">(</span><span class="n">neighbor</span><span class="p">,</span><span class="n">nchoices</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+
+<span class="w">                    </span><span class="c1">// Unmake the choice</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+<span class="w">                    </span><span class="n">neighbor</span><span class="p">.</span><span class="na">unvisit</span><span class="p">();</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="n">distance_btwn</span><span class="p">;</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">                </span><span class="c1">// Move on to the next choice (continue loop)</span>
+<span class="w">            </span><span class="p">}</span><span class="w">               </span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="c1">// End base/recursive case</span>
+<span class="w">    </span><span class="p">}</span>
 </code></pre></div>
 
-<p>Because the Enigma has multiple rotors, we also want pseudocode for multiple rotors:</p>
-<div class="highlight"><pre><span></span><code>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-    concatenate transformed character to ciphertext message 
+<p><a name="tsp2-pessimist"></a></p>
+<h3 id="the-pessimist-algorithm">The Pessimist Algorithm</h3>
+<p>This algorithm is dubbed The Pessimist Algorithm. Let's see how it works.
+Here is that new if statement:</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="o">&gt;</span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="o">&gt;</span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Just give up already. It&#39;s meaningless. There&#39;s no point.</span>
+<span class="w">    </span><span class="k">return</span><span class="p">;</span>
+<span class="p">}</span>
 </code></pre></div>
 
-<p>Likewise, to apply multiple rotations in reverse, we just swap the alphabets out:</p>
-<div class="highlight"><pre><span></span><code>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
-    for each scrambled alphabet:
-        get index of character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-    concatenate transformed character to ciphertext message 
+<p>This if statement tests two conditions - first, we check if a first minimum distance has actually been found,
+and second, we check if the distance of the current path is greater than the minimum distance.
+If it is, we give up continuing our search down this path, and just return back to the calling function.</p>
+<p>This introduces a small computational cost - 
+we now have an if statement to check every time the <code>explore()</code> method is called -
+but it results in such significant cost savings that it does not matter.</p>
+<p><a name="tsp-timing"></a></p>
+<h2 id="timing-results">Timing Results</h2>
+<p>Shown below is a graph of the walltime for various problem sizes,
+showing both the original algorithm and the pessimist algorithm
+and their scaling behavior. </p>
+<p>The pessimist algorithm led to a <em>drastic</em> improvement in scale-up -
+the results are striking.</p>
+<p><img alt="TSP Guava Solution scaling results - initial and pessimist algorithms" src="/images/tsp-guava-initial-pessimist.png"></p>
+<p>And here are the results in a table form:</p>
+<div class="highlight"><pre><span></span><code>-----------------------------------------------------------------------------------------
+| Number of Nodes N | Initial Algorithm Walltime [s] | Pessimist Algorithm Walltime [s] |
+|-------------------|--------------------------------|----------------------------------|
+| 4                 | 0.005                          | 0.006                            |
+| 5                 | 0.006                          | 0.006                            |
+| 6                 | 0.009                          | 0.008                            |
+| 7                 | 0.017                          | 0.011                            |
+| 8                 | 0.029                          | 0.020                            |
+| 9                 | 0.083                          | 0.023                            |
+| 10                | 0.305                          | 0.053                            |
+| 11                | 1.443                          | 0.118                            |
+| 12                | 15.808                         | 0.149                            |
+| 13                | 180.078                        | 0.524                            |
+| 14                |                                | 1.276                            |
+| 15                |                                | 3.905                            |
+| 16                |                                | 216.827                          |
+| 17                |                                | 106.992                          |
+| 18                |                                | 337.930                          |
+-----------------------------------------------------------------------------------------
 </code></pre></div>
 
-<h3 id="a-more-complete-enigma-pseudocode">A More Complete Enigma Pseudocode</h3>
-<p>To combine these operations, or add additional operations, we just add them before concatenating the final transformed character to the ciphertext message.
-Thus, a more complete pseudocode would include other steps:</p>
-<div class="highlight"><pre><span></span><code>define plaintext message
-define normal alphabet and scrambled alphabets
-for each character in plaintext message:
+<p>For a problem with 13 nodes, the initial algorithm took 3 minutes; 
+the pessimist algorithm didn't even break the one second mark!</p>
+<h2 id="future-work">Future Work</h2>
+<p>Now that we've got the algorithm running faster and more efficiently,
+we can tackle larger problems and explore the impact of problem topology
+on solutions, and we can rest assured we have an efficient algorithm
+that can scale to larger and more interesting problems.</p>
+<p>There are further improvements we could make to the algorithm to improve it, though.
+By examining the solutions that are found, we can see that the solutions
+usually, but not always, connects from each neighbor to its next-closest neighbor.
+If, when iterating over neighbors, we start by searching the nearest neighbors first,
+we can potentially get to the minimum solution faster, which would allow us
+to more quickly rule out larger portions of the solution space that are infeasible.</p>
+<p>This would induce an additional overhead cost of sorting, since the Guava library
+returns the edges that connect to a node as an unordered Set. These edges would 
+have to be added to a container and sorted to implement the nearest-neighbor search.</p>
+<p>However, we saw with the pessimist solution that a small increase in complexity
+can rule out large enough portions of the solution space to make it worthwhile,
+so it may be that the cost of sorting each edge pays off in the computational savings that result.</p>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
 
-    # Apply switchboard transformation
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
 
-    # Apply forward rotor transformation
-    for each scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
 
-    # Apply reflector transformation
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
 
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-
-    concatenate transformed character to ciphertext message 
-</code></pre></div>
-
-<p>Now let's cover the switchboard and reflector transformations.</p>
-<h2 id="the-switchboard">The Switchboard</h2>
-<p>We can take the same verb-based approach to the switchboard as we took for the rotors.
-When we think through the actual operation being performed by the switchboard, 
-it is even simpler than the operation performed by the rotor wheels.
-We have pairs of letters, and we are simply looking for one letter in a pair, and swapping it out with the other letter in the pair.
-In the case of the switchboard, Enigma operators utilized 7-10 wires to connect pairs of letters; the remaining letters were unchanged.
-So the switchboard step is very simple:</p>
-<div class="highlight"><pre><span></span><code>define plaintext message
-define list of switchboard swap pairs
-for each character in message:
-    for each pair in swap pairs:
-        if character in swap pair, swap its value
-    add character to ciphertext
-</code></pre></div>
-
-<p>That's it! No need for a reverse function, since the swap procedure is symmetric. 
-(Note that if there is no wire connecting a letter to another letter, there is no swap operation, and the character is added to the ciphertext directly.)</p>
-<h2 id="the-reflector">The Reflector</h2>
-<p>The reflector pseudocode looks identical to the switchboard pseudocode,
-except the reflector defines pairings for all 13 posible letter pairs, instead of only 7-10.</p>
-<div class="highlight"><pre><span></span><code>define plaintext message
-define list of reflector swap pairs
-for each character in message:
-    for each pair in swap pairs:
-        if character in swap pair, swap its value
-    add character to ciphertext
-</code></pre></div>
-
-<p>Again, no need for a reverse version, since the reflector is a symmetric transformation.</p>
-<h2 id="nearing-a-complete-enigma-pseudocode">Nearing a Complete Enigma Pseudocode</h2>
-<p>Almost there. We have one more thing going on - those rotor wheels are moving.
-Add the "increment rotor wheels" verb, and define that below.</p>
-<div class="highlight"><pre><span></span><code>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply forward rotor transformation
-    for each rotor/scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    concatenate transformed input character to ciphertext message 
-
-    increment rotor wheels
-</code></pre></div>
-
-<h2 id="incrementing-the-rotor-wheels">Incrementing the Rotor Wheels</h2>
-<p>Each rotor wheel has a notch located at a particular letter.
-The wheels were identified by the letter on which the notch was located 
-(Rotor I was "Royal" because the notch was located at "R", and so on).</p>
-<p>The notches were designed to catch on the notches of other rotor wheels,
-in such a way that the wheels would turn together periodically.
-The right-most wheel would rotate once per keypress. 
-Once per 26 letters (if S = 26), the notch would catch the notch of the next rotor over
-and advance it forward by 1 letter. It was this mechanism that kept the machine
-constantly skipping through the space of possible keys, mapping each character to each other character,
-with one distinct key (alphabet scramble) used per letter of the message.</p>
-<p>To increment the wheels in pseudocode:</p>
-<div class="highlight"><pre><span></span><code>function increment rotors:
-    for each rotor/scrambled alphabet, left to right:
-        get index of left notch in left alphabet
-        get index of right notch in right alphabet
-        if left index equals right index:
-            cycle left alphabet forward 1 character
-    cycle right-most alphabet forward 1 character
-</code></pre></div>
-
-<h2 id="enigma-pseudocode">Enigma Pseudocode</h2>
-<p>Almost there. We have one more thing going on - those rotor wheels are moving.
-Add the "increment rotor wheels" verb, and define that below.</p>
-<div class="highlight"><pre><span></span><code>define plaintext message
-define normal alphabet and scrambled alphabets
-define list of switchboard swap pairs
-define list of reflector swap pairs
-for each character in plaintext message:
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply forward rotor transformation
-    for each rotor/scrambled alphabet:
-        get index of character in normal alphabet
-        get new character at that index in scrambled alphabet
-        replace character with new character 
-
-    # Apply reflector transformation
-    for each pair in reflector swap pairs:
-        if character in swap pair, swap its value
-
-    # Apply reverse rotor transformation
-    for each scrambled alphabet:
-        get index of input character in scrambled alphabet
-        get new character at that index in normal alphabet
-        replace character with new character 
-
-    # Apply switchboard transformation
-    for each pair in switchboard swap pairs:
-        if character in swap pair, swap its value
-
-    concatenate transformed input character to ciphertext message 
-
-    # Increment rotor wheels
-    for each rotor/scrambled alphabet, left to right:
-        get index of left notch in left alphabet
-        get index of right notch in right alphabet
-        if left index equals right index:
-            cycle left alphabet forward 1 character
-    cycle right-most alphabet forward 1 character
-</code></pre></div>
-
-<h2 id="sources">Sources</h2>
-<ol>
-<li>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</li>
-</ol></div>
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
 
     </div>
 </div>
@@ -437,11 +541,15 @@ for each character in plaintext message:
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ciphers.html">ciphers</a>
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/enigma.html">enigma</a>
+                    <a href="https://charlesreid1.github.io/tag/guava.html">guava</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/encryption.html">encryption</a>
+                    <a href="https://charlesreid1.github.io/tag/graph.html">graph</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/tsp.html">TSP</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/performance.html">performance</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -459,18 +567,18 @@ for each character in plaintext message:
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Enigma Cipher Implementation: Part 1: How It Works
+                Python vs. Perl: N Queens Problem
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2017-03-21T20:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
+                <time datetime="2017-03-25T20:00:00-07:00" pubdate>Saturday 03/25/2017</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/enigma.html">Enigma</a>
+                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/enigma-cipher-implementation-part-1-how-it-works.html">permalink</a>
+                <a href="https://charlesreid1.github.io/python-vs-perl-n-queens-problem.html">permalink</a>
             </span>
             </p>
         </div>
@@ -487,117 +595,254 @@ for each character in plaintext message:
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>This is the first of several posts that will walk through an implementation of the Enigma cipher in code.</p>
-<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
-detailed, accurate information entirely free of graduate level mathematics, 
-and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
-<p>There is also a Wikipedia article offering detailed information about the mathematical cryptanalysis of the Enigma,
-and covering some of the strengths and weaknesses of the machine: <a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">Cryptanalysis of the Enigma</a>.</p>
+        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#pvp-background">Background</a></li>
+<li><a href="#pvp-nqueens">N Queens Revisited</a></li>
+<li><a href="#pvp-perlsoln">Perl Solution</a></li>
+<li><a href="#pvp-pythonsoln">Python Solution</a></li>
+<li><a href="#pvp-h2hnqueens">Python vs. Perl: Walltime vs. Number of Queens</a></li>
+<li><a href="#pvp-perlprof">Perl Profiling and Results</a></li>
+<li><a href="#pvp-pythonprof">Python Profiling</a></li>
+<li><a href="#pvp-pythonprofresults">Python Profiling Results</a></li>
+<li><a href="#pvp-pythonperl">Comparing Python to Perl</a></li>
+<li><a href="#pvp-h2hops">Python vs. Perl: Walltime vs. Number of Solutions Tested</a></li>
+<li><a href="#pvp-winner">The Winner: Perl for Small Problems, Python for Big Ones</a></li>
+<li><a href="#pvp-sources">Sources</a></li>
+</ul>
+<p><a name="pvp-background"></a></p>
 <h2 id="background">Background</h2>
-<p>The Enigma machine was a device used by the German military to encrypt communications during World War II.
-The machine was essentially a large electronic circuit implementing a black-box encrypt/decrypt function.
-By design, the circuitry of the machine could be used for both encryption and decryption. </p>
-<p>The Enigma played an important role in the development of the first electronic computer. 
-Alan Turing led a team at Bletchley Park, in England, that constructed machines that could crack the Enigma code.
-This led to the development of the conceptual Turing machine and the creation of the first electronic computers.
-By narrowing the space of possible keys using Enigma's weaknesses, 
-these electronic computers could be used to explore the remaining key space.</p>
-<p>There were several variations of the Enigma. Each operated on the same basic principle:
-the operator entered a letter, which was transformed into a signal. 
-That signal was passed through several components of the Enigma machine,
-and underwent a series of linear transformations until its ciphertext was output.
-The encrypted output character would light up on a second keyboard, and the operator could transcribe the message.</p>
-<h2 id="black-box-representation">Black Box Representation</h2>
-<p>The following diagram lays out the Enigma circuitry using black boxes. 
-The signal starts at the keyboard, where the operator types a letter.
-That letter is transformed into an electrical signal, which is sent through a series of components.
-First is the switchboard in the front, which swaps a few letter pairs.
-Next, the signal passes through three rotor wheels, each of which scrambles the alphabet.
-The signal is then passed into a reflector, which swaps every character with some other character.
-The reflector made the Enigma a symmetric machine. The signal was sent out of the reflector and passed through each rotor in reverse order.
-Finally, the signal passed through the switchboard at the front, and the resulting letter lit up, allowing the operator to transcribe the message.</p>
-<p><img alt="Image: Enigma Black Box Representation" src="/images/enigma_blackbox.jpg"></p>
-<h2 id="components">Components</h2>
-<p>There were three principal components of the machine: a <strong>switchboard</strong>, a set of <strong>rotor wheels</strong>, and a <strong>reflector</strong>.</p>
-<h3 id="switchboard">Switchboard</h3>
-<p>When the operator entered a key on the input keyboard, the key pressed was transformed into a signal.
-On the front of the Enigma machine was a set of plugs, one for each letter. Operators would connect
-pairs of letters using plugs, which would swap letters. If an operator connected the A and K ports, 
-and typed "A" on the keyboard, the signal representing "A" would travel to the switchboard, 
-where it would be transformed into the signal representing "K". </p>
-<p>Typically the Enigma operators would only connect 7-10 pairs of letters, with the remaining 6-12 letters untransformed by the switchboard. 
-The switchboard led to a huge number of possible encryption schemes, and was the single component that made the Enigma diffficult to crack.
-Commercial versions of the Enigma, without the plugboard, were sold to banks and other entities in Germany, but without the plugboard,
-the key space was reduced dramatically, making these codes "easy" to crack.</p>
-<p><img alt="Enigma switchboard illustration" src="/images/enigma_switchboard.jpg"></p>
-<p>The image above illustrates how a switchboard would work for a simple 8-symbol alphabet "ABCDEFGH". 
-Only 3 of 4 pairings are made in this example. </p>
-<h3 id="rotor-wheels">Rotor Wheels</h3>
-<p>The rotor wheels were a set of interchangeable wheels that would perform a substitution cipher. 
-Each wheel corresponded to a particular alphabet in scrambled order (these rotors were not performing simple shift Caesar ciphers).
-Based on the order of the wheels, the signal, representing the letter the operator typed on the keyboard, 
-that came out of the switchboard would undergo three alphabet scrambles (also called affine ciphers).</p>
-<p>Because the wheels rotated with each keypress, the actual Affine cipher used by each wheel changed at each step.</p>
-<p>To complicate the way the rotors turned, the designer of the Enigma added clasps and notches to each rotor at different letters.
-When the notch of one rotor and the clasp of the rotor to the left matched, they would turn together. 
-The right-most wheel rotated once each key press, the center wheel rotated once every 26 key presses, and the left wheel rotated once every 676 key presses.
-Although these rates remained the same due to the number of notches, the exact locations of the notches dictated the timing of the rotations.
-The ordering of the wheels and their initial settings were therefore important to how the message was encrypted or decrypted.</p>
-<p>The German military distributed code books that contained daily settings for the Enigma machines, so that all Enigma operators had the same settings.
-These code books specified which wheels to load into the Enigma (three out of five possible rotors I II III IV and V), as well as the initial rotation to apply to each.</p>
-<p><img alt="Enigma rotor wheels illustration" src="/images/enigma_rotor.jpg"></p>
-<p>The image above shows how the rotor would work for the 8-character alphabet "ABCDEFGH".
-The wheel has a set arrangement of scrambled letters, but the scramble shifts each time the rotor is advanced.
-This allows 1 wheel to provide as many different scrambles as there are symbols in the alphabet.</p>
-<h3 id="reflector">Reflector</h3>
-<p>Having passed through the three rotor wheels, each scrambling the original character signal input by the operator into the keyboard, the signal then entered the reflector. 
-It did precisely what the name suggests - it reflected a signal back through the machine. 
-Its design was very similar to the switchboard in the front of the machine, except it created 13 pairs of letters, so that every letter was paired with some other letter.
-The reflector, like the rotor wheels, was removable and could be selected from a set. </p>
-<p>The reflector is a curious part of the Enigma design, because it represents an attempt at convenience, which led to a gaping security flaw that Bletchley Park was able to exploit. 
-The nature of the reflector is that it is symmetric: it pairs each letter with some other letter, and the pairings are mutual. 
-If the reflector turns every "P" into "H", it also turns every "H" into "P". 
-This symmetry gives the Enigma the property that you no longer need an "encrypt" or "decrypt" mode: if you take a plaintext message and run it through the Enigma machine once, you'll get the cipher text back. 
-If you run it through the Enigma machine twice, you'll get the same plaintext back. 
-This obviated the need for a switch on the Enigma, to go between "encrypt" and "decrypt" modes.</p>
-<p>However, this property also means that no letter can ever be encoded as itself - a property called derangement. 
-While the switch board at the front and the rotor wheel scrambles would sometimes encode a letter as itself 
-(for example, Rotor I encodes "S" as "S", Rotor II encodes "A" as "A" and "Q" as "Q", and Rotor III encodes "N" as "N"),
-the reflector would never do so. 
-Thus, despite an astronomical number of possible settings, and complicated machinery and circuitry, 
-no matter what the Enigma's settings, no letter would ever be encoded as itself.
-This property can be exploited to rule out the location of certain words or phrases at certain locations in the message,
-which is precisely how Bletchley Park attacked the Enigma cipher.</p>
-<p><img alt="Enigma reflector illustration" src="/images/enigma_reflector.jpg"></p>
-<p>The image above illustrates a reflector for the 8-symbol alphabet "ABCDEFGH".
-Each of the 4 possible pairings are made, so no letter will be encoded to itself by the reflector.</p>
-<p>Had the middle rotor wheels remained stationary, multiple wheels would have been redundant - 
-any arbitrary sequence of alphabet scrambles can be collapsed into a single scramble.
-However, the wheels were designed to rotate at various rates. Each time the wheels rotated,
-it changed the scramble provided by the wheel that had rotated. </p>
-<p>This means the Enigma worked by using a totally different scramble for each character in a message,
-with the scrambles constantly changing, each character, over and over. 
-Because the number of possible scrambles with a 26 character alphabet is <span class="math">\(26! = 403,291,461,126,605,635,584,000,000\)</span>,
-which is a trillion trillions.</p>
-<h2 id="the-enigma-and-random-number-generators">The Enigma and Random Number Generators</h2>
-<p>By using a mechanical device with the same construction and the same common initial settings, 
-operators were able to generate random keys from an astronomical range of permutations, 
-but in a mechanically reproducible way. </p>
-<p>This makes Enigmas much like a random number generator, with the initial settings being the seed.
-If there are 32 or 64 bits used to store a number, that's 32 or 64 bits of randomness. 
-Large numbers of combinations indeed.</p>
+<p>Revisiting the N queens problem, this time implementing the solution in Python.</p>
+<p>Verb-oriented solution, functional, and based on Perl solution</p>
+<p>More fair comparison - both are interpreted languages, not compiled languages</p>
+<p>Compare Python and Perl, ease of implementation, speed, flexibility</p>
+<p><a name="pvp-nqueensproblem"></a></p>
+<h2 id="n-queens-problem">N Queens Problem</h2>
+<p>As a recap from the last post about the N queens problem, we're solving a chess puzzle that asks:
+how many different configurations are there for placing <span class="math">\(N\)</span> queens on an <span class="math">\(N \times N\)</span> chessboard
+such that no queen attacks any other queen?</p>
+<p>This is a popular problem in computer science because solutions often implement recursive backtracking.</p>
+<p>See <a href="https://en.wikipedia.org/wiki/N_Queens_Problem">the Wikipedia article</a> for details.</p>
+<p><a name="pvp-nqueenssoln"></a></p>
+<h2 id="n-queens-solution">N Queens Solution</h2>
+<p>Here is the pseudocode of the N queens solution being implemented here:</p>
+<div class="highlight"><pre><span></span><code>explore(column):
+    if last column:
+        # base case
+        add to solutions
+    else:
+        # recursive case
+        for each row:
+            if this is a safe row:
+                place queen on this row
+                explore(column+1)
+                remove queen from this row
+</code></pre></div>
+
+<p>This solution implements recursive backtracking to explore choices of where to place each queen.
+It keeps solutions simple, and can be implemented using only primitive built-in data types.
+Solutions are stringified version of these arrays, consisting of 8 digits, so they are likewise very simple.</p>
+<p><a name="pvp-perlsoln"></a></p>
+<h3 id="perl-solution">Perl Solution</h3>
+<p>As a reminder, the Perl solution was originally from <a href="http://rosettacode.org/wiki/N-queens_problem#Perl">Rosetta Code</a>.
+Here's another link to the Perl solution on Github.</p>
+<p><a href="https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535">Github gist: nqueens.pl</a></p>
+<p><a name="pvp-pythonsoln"></a></p>
+<h3 id="python-solution">Python Solution</h3>
+<p>The solution requires the use of one array of data that is fixed in size,
+which for a given column stores a list of rows already occupied by queens, 
+and one array of data that is variable in size, which stores where each queen has been placed.</p>
+<p>The Python solution makes use of lists by using a fixed-size list for the occupied rows
+and a variable size list for storing queen locations. 
+It utilizes buit-in methods for the list data type to append and pop, or add and remove items from the end of the list.</p>
+<p><a href="https://gist.github.com/charlesreid1/1a2ecb3a83284290d4a9daf747d0d7e4">Github gist: nqueens.py</a></p>
+<p><a name="pvp-h2hnqueens"></a></p>
+<h2 id="head-to-head-walltime-vs-number-of-queens">Head to Head: Walltime vs. Number of Queens</h2>
+<p><img alt="Graph of walltime versus number of queens" src="/images/python-vs-perl-nqueens.png"></p>
+<div class="highlight"><pre><span></span><code>----------------------------------------------------------
+| NQueens | Nsolutions | Java      | Perl     | Python   |
+|---------|------------|-----------|----------|----------|
+| 8       | 92         | 0.003628  | 0.016    | 0.018    |
+| 9       | 352        | 0.006709  | 0.067    | 0.077    |
+| 10      | 724        | 0.017473  | 0.259    | 0.359    |
+| 11      | 2680       | 0.061291  | 1.542    | 1.684    |
+| 12      | 14200      | 0.240463  | 8.431    | 8.618    |
+| 13      | 73712      | 1.113491  | 48.542   | 50.401   |
+| 14      | 365596     | 6.557336  | 303.278  | 322.576  |
+| 15      | 2279184    | 42.619426 | 2057.052 | 1979.343 |
+----------------------------------------------------------
+</code></pre></div>
+
+<p>The results of this test show that Python and Perl
+are fairly closely matched.</p>
+<p><a name="pvp-perlprof"></a></p>
+<h2 id="perl-profiling">Perl Profiling</h2>
+<p>Results of profiling the Perl code with <code>Devel::NYTProf</code> were detailed in a prior post.</p>
+<p>Here are those results once again,
+for the 11 queens problem:</p>
+<div class="highlight"><pre><span></span><code># Profile data generated by Devel::NYTProf::Reader
+# Version: v6.04
+# More information at http://metacpan.org/release/Devel-NYTProf/
+# Format: time,calls,time/call,code
+0.000238,2,0.000119,use Time::HiRes qw(time);
+0.000039,2,0.000019,use strict;
+0.000491,2,0.000246,use warnings;
+0.000021,1,0.000021,my $start = time;
+0.010338,2680,0.000004,push @solutions, &quot;@queens\n&quot;;
+0.009993,2680,0.000004,return;
+0.186298,164246,0.000001,$#attacked = 2 * $board_size;
+0.150338,164246,0.000001,for( 0 .. $#queens) { 
+0.675523,1.26035e+06,0.000001,$attacked[ $ix2 ] = 1;
+1.242624,164246,0.000008,for my $row (0 .. $board_size-1) {
+0.267469,166925,0.000002,explore($depth+1);
+0.125272,166925,0.000001,$occupied[$row] = 0;
+0.000002,1,0.000002,explore(0);
+0.000011,1,0.000011,my $duration = time - $start;
+0.000075,1,0.000075,print &quot;Found &quot;, scalar(@solutions), &quot; solutions\n&quot;;
+0.000050,1,0.000050,printf &quot;Execution time: %0.3f s \n&quot;,$duration;
+</code></pre></div>
+
+<p><a name="pvp-pythonprof"></a></p>
+<h2 id="python-profiling">Python Profiling</h2>
+<p>The Python N queens solution was profiled with two tools: <code>cProfile</code> and <code>line_profiler</code>. </p>
+<p>The built-in profiling tool <code>cProfile</code> gives a summary of how much time was spent in each method,
+but nothing lower level than that. It is similar to Java profiling tools. <a href="https://docs.python.org/2/library/profile.html">(cProfile documentation)</a></p>
+<p>The <code>line_profiler</code> tool is designed to profile Python code line-by-line, which gives a much more useful
+breakdown of where the code spent all of its time. It is also helpful because this can be compared one-to-one
+with the results from Perl, and we can get an equal basis for comparing the two languages.</p>
+<p><a name="pvp-pythonprofresults"></a></p>
+<h2 id="python-profiling-results">Python Profiling Results</h2>
+<h3 id="cprofile-results"><code>cProfile</code> Results</h3>
+<p>Here are the results from running the N queens problem for N = 11 through cProfile:</p>
+<div class="highlight"><pre><span></span><code>**************************************
+Profiling 11 queens problem with Python...
+*******************************
+cProfile:
+*******************************
+Found 2680 solutions
+         996197 function calls (829272 primitive calls) in 2.237 seconds
+
+   Ordered by: internal time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+ 166926/1    1.845    0.000    2.237    2.237 /Volumes/noospace/Users/charles/codes/hello-world/python/nqueens/nqueens.py:12(explore)
+   328492    0.275    0.000    0.275    0.000 {range}
+   166925    0.062    0.000    0.062    0.000 {method &#39;pop&#39; of &#39;list&#39; objects}
+   169605    0.029    0.000    0.029    0.000 {method &#39;append&#39; of &#39;list&#39; objects}
+   164247    0.026    0.000    0.026    0.000 {len}
+        1    0.000    0.000    2.237    2.237 /Volumes/noospace/Users/charles/codes/hello-world/python/nqueens/nqueens.py:4(&lt;module&gt;)
+        1    0.000    0.000    0.000    0.000 {method &#39;disable&#39; of &#39;_lsprof.Profiler&#39; objects}
+</code></pre></div>
+
+<h3 id="line_profiler-results"><code>line_profiler</code> Results</h3>
+<p>The <code>line_profiler</code> tool gives a more detailed picture of the code and where it spends its time,
+breaking down profiling information line-by-line. This tool can be installed with pip: <code>pip install line_profiler</code>.
+The (INSERT LINK)(nqueens repository on github) has a file that demonstrates how to use this tool.
+See <a href="https://charlesreid1.com/wiki/Python/Profiling">Python/Profiling</a></p>
+<p>Here are the results from the <code>line_profiler</code> tool run on the same (11 queens) problem:</p>
+<div class="highlight"><pre><span></span><code>**************************************
+Profiling 11 queens problem with Python...
+Found 2680 solutions
+Wrote profile results to nqueens.py.lprof
+Timer unit: 1e-06 s
+
+Total time: 14.2258 s
+File: nqueens.py
+Function: explore at line 11
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    11                                           @profile
+    12                                           def explore(depth):
+    13                                               # base case
+    14    166926       187573      1.1      1.3      if(depth==board_size):
+    15                                                   # stringify/serialize the solution
+    16      2680        31497     11.8      0.2          solutions.append(&quot;%s&quot;%(queens))
+    17      2680         3117      1.2      0.0          return
+    18                                           
+    19                                               else:
+    20    164246       384688      2.3      2.7          attacked = 2*board_size*[0,]
+    21   1424595      1690693      1.2     11.9          for i in range(0,len(queens)):
+    22   1260349      1471304      1.2     10.3              ix1 = queens[i] + depth - i
+    23   1260349      1405141      1.1      9.9              attacked[ix1] = 1
+    24                                           
+    25   1260349      1494095      1.2     10.5              ix2 = queens[i] - depth + i
+    26   1260349      1392563      1.1      9.8              attacked[ix2] = 1
+    27                                           
+    28   1970952      2229922      1.1     15.7          for row in range(0,board_size):
+    29   1806706      2031139      1.1     14.3              if(occupied[row] or attacked[row]):
+    30    379432       374466      1.0      2.6                  continue
+    31                                           
+    32                                                       # make a choice
+    33    166925       241114      1.4      1.7              queens.append(row)
+    34    166925       186833      1.1      1.3              occupied[row] = 1
+    35                                           
+    36                                                       # explore the consequences
+    37    166925       610396      3.7      4.3              explore(depth+1)
+    38                                           
+    39                                                       # unmake the choice
+    40    166925       288667      1.7      2.0              queens.pop()
+    41    166925       202555      1.2      1.4              occupied[row] = 0
+</code></pre></div>
+
+<p><a name="pvp-h2hopts"></a></p>
+<h2 id="python-vs-perl-walltime-vs-number-of-solutions-tested">Python vs Perl: Walltime vs. Number of Solutions Tested</h2>
+<p>As with the prior post, I verified that both codes were testing the same number of solutions.
+Here is that table of the number of solutions for each value of N, together with the number of solutions tested:</p>
+<div class="highlight"><pre><span></span><code>-----------------------------------------------------------------------------
+| NQueens | Nsolutions | NsolutionsTested | Java      | Perl     | Python   |
+|---------|------------|------------------|-----------|----------|----------|
+| 8       | 92         | 1965             | 0.003628  | 0.016    | 0.018    |
+| 9       | 352        | 8042             | 0.006709  | 0.067    | 0.077    |
+| 10      | 724        | 34815            | 0.017473  | 0.259    | 0.359    |
+| 11      | 2680       | 164246           | 0.061291  | 1.542    | 1.684    |
+| 12      | 14200      | 841989           | 0.240463  | 8.431    | 8.618    |
+| 13      | 73712      | 4601178          | 1.113491  | 48.542   | 50.401   |
+| 14      | 365596     | 26992957         | 6.557336  | 303.278  | 322.576  |
+| 15      | 2279184    | 168849888        | 42.619426 | 2057.052 | 1979.343 |
+-----------------------------------------------------------------------------
+</code></pre></div>
+
+<p><img alt="Graph of walltime versus number of solutions tested" src="/images/python-vs-perl-ntested.png"></p>
+<p><a name="pvp-winner"></a></p>
+<h2 id="the-winner-perl-for-small-problems-python-for-big-ones">The Winner: Perl for Small Problems, Python for Big Ones</h2>
+<p>It was not a big surprise to see that Perl and Python were nearly identical in their performance,
+and it testament to the fact that interpreted scripting languages like Perl and Python operate at one speed,
+and compiled code in C++ or Java operates at a completely different speed that is an order of magnitude faster 
+(see the comparison of Perl and Java in a prior blog post).</p>
+<p>Perl and Python were close enough in performance that, although Perl came out ahead on smaller problems
+and Python came out ahead on the biggest, a different CPU or platform, micro-optimizations, and various butterfly effects 
+could easily turn the tables. </p>
+<p><a name="pvp-sources"></a></p>
 <h2 id="sources">Sources</h2>
 <ol>
 <li>
-<p>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
-&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</p>
+<p>"N-Queens Problem". Rosetta Code, GNU Free Documentation License. Edited 6 March 2017. Accessed 21 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081421/http://rosettacode.org/wiki/N-queens_problem">https://web.archive.org/web/20170320081421/http://rosettacode.org/wiki/N-queens_problem</a>&gt;</p>
 </li>
 <li>
-<p>Copeland, B.J. "Alan Turing". Encyclopedia Britannica, Inc. Published 23 February 2016. Accessed 18 March 2017.</p>
+<p>"nqueens.py". Charles Reid. Github Gist, Github Inc. Edited 25 March 2017. Accessed 25 March 2017.
+&lt;<a href="https://gist.github.com/charlesreid1/1a2ecb3a83284290d4a9daf747d0d7e4">https://gist.github.com/charlesreid1/1a2ecb3a83284290d4a9daf747d0d7e4</a>&gt;</p>
 </li>
 <li>
-<p>"Cryptanalysis of the Enigma". Wikipedia: The Free Encyclopedia. Wikimedia Foundation, Inc. Edited 11 January 2017. Accessed 18 March 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma</a>&gt;</p>
+<p>"nqueens.pl". Charles Reid. Github Gist, Github Inc. Edited 20 March 2017. Accessed 23 March 2017.
+&lt;<a href="https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535">https://gist.github.com/charlesreid1/4ce97a5f896ff1c89855a5d038d51535</a>&gt;</p>
+</li>
+<li>
+<p>"The Python Profilers". Python 2.7.13 Documentation, Python Software Foundation. Updated 20 February 2017. Accessed 23 March 2017. 
+&lt;<a href="https://docs.python.org/2/library/profile.html">https://docs.python.org/2/library/profile.html</a>&gt;</p>
+</li>
+<li>
+<p>"line_profiler". Python Package Index, Python Software Foundation. Updated 20 October 2016. Accessed 23 March 2017.
+&lt;<a href="https://pypi.python.org/pypi/line_profiler/">https://pypi.python.org/pypi/line_profiler/</a>&gt;</p>
+</li>
+<li>
+<p>"Github - rkern/line_profiler". rkern, Github Repository, Github Inc. Updated 20 October 2016. Accessed 23 March 2017.
+&lt;<a href="https://github.com/rkern/line_profiler">https://github.com/rkern/line_profiler</a>&gt;</p>
+</li>
+<li>
+<p>"Python/Profiling". Charlesreid1.com wiki, Charles Reid. Edited 23 March 2017. Accessed 23 March 2017.
+&lt;<a href="https://web.archive.org/web/20170326031708/http://charlesreid1.com/wiki/Python/Profiling">https://web.archive.org/web/20170326031708/http://charlesreid1.com/wiki/Python/Profiling</a>&gt;</p>
 </li>
 </ol>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
@@ -673,11 +918,779 @@ Large numbers of combinations indeed.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ciphers.html">ciphers</a>
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/enigma.html">enigma</a>
+                    <a href="https://charlesreid1.github.io/tag/perl.html">perl</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/encryption.html">encryption</a>
+                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/n-queens.html">n-queens</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Solving the Traveling Salesperson Problem with Java and Guava
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2017-03-23T11:00:00-07:00" pubdate>Thursday 03/23/2017</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/java.html">Java</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/solving-the-traveling-salesperson-problem-with-java-and-guava.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#tsp1-bkg">Background: Traveling Salesperson Problem (TSP)</a></li>
+<li><a href="#tsp1-graphs">Graphs</a><ul>
+<li><a href="#tsp1-nedges">Number of Edges</a></li>
+</ul>
+</li>
+<li><a href="#tsp1-bktk">Solution: Recursive Backtracking</a> </li>
+<li><a href="#tsp1-guava">Solving the TSP with Java and Guava</a> <ul>
+<li><a href="#tsp1-basic-guava">Basics of Guava</a></li>
+<li><a href="#tsp1-guava-graphs">Guava Graphs</a></li>
+<li><a href="#tsp1-guava-mutable-immutable">Guava Mutable vs Immutable</a></li>
+<li><a href="#tsp1-importing-guava">Importing Guava</a></li>
+<li><a href="#tsp1-tsp-class">TSP Class</a></li>
+<li><a href="#tsp1-node-class">Node Class</a></li>
+<li><a href="#tsp1-edge-class">Edge Class</a></li>
+</ul>
+</li>
+<li><a href="#tsp1-building-graph">TSP Constructor and Building the Graph</a><ul>
+<li><a href="#tsp1-constructor">Constructor</a></li>
+<li><a href="#tsp1-build-graph-method">Build Graph Method</a></li>
+</ul>
+</li>
+<li><a href="#tsp1-solving-exploring">Solving and Exploring with Recursive Backtracking</a><ul>
+<li><a href="#tsp1-solve">Solve Method</a></li>
+<li><a href="#tsp1-explore">Explore (Backtrack) Method</a></li>
+</ul>
+</li>
+<li><a href="#tsp1-nextsteps">Next Steps: Timing and Profiling</a></li>
+<li><a href="#tsp1-sources">Sources</a></li>
+</ul>
+<p><a name="tsp1-bkg"></a></p>
+<h2 id="background-traveling-salesperson-problem-tsp">Background: Traveling Salesperson Problem (TSP)</h2>
+<p>The traveling salesperson problem, or TSP, is a classic programming problem and an important one in computer science,
+and applications in operations research and optimization.</p>
+<p>The idea is that you have a set of <span class="math">\(N\)</span> cities, connected by various roads, each with their own distances.
+That is, we have a set of <span class="math">\(E\)</span> roads, each with their own distance <span class="math">\(d_j, j=1 \dots E\)</span>. </p>
+<p>The question is, what is the shortest path that a salesperson can take to visit all <span class="math">\(N\)</span> cities, traveling the shortest possible total distance
+and visiting each city once and only once?</p>
+<p>Like the N queens problem, the traveling salesperson problem is a good candidate for recursive backtracking.
+Also like the N queens problem, there are certain shortcuts we can take to trim down the possibilities we explore.</p>
+<p>Computer science pages on Wikipedia are generally pretty high in quality, and the <a href="https://en.wikipedia.org/wiki/Traveling_salesman_problem">traveling salesman problem</a>
+page is no exception. It give a very thorough overview of the important aspects of the problem.</p>
+<p><a name="tsp1-graphs"></a></p>
+<h2 id="graphs">Graphs</h2>
+<p>Graphs are mathematical objects first utilized by Leonhard Euler to solve the
+<a href="https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg">Seven Bridges of Köningsberg</a> problem.
+The concept is simple: you have a bunch of dots connected with lines.</p>
+<p>The dots are called nodes, and the lines are called edges.</p>
+<p>Graphs can be directed, meaning the edges are like arrows with particular directions, or undirected, 
+meaning the edges simply represent a connection between the two nodes.</p>
+<p>Here is an example of a graph with five nodes, with each edge labeled with its distance:</p>
+<p><img style="background:#fff;" alt="A basic graph with five nodes" src="/images/basic-graph.png" /></p>
+<p>We will skip over a vast amount of detail about graph theory that is both fascinating and useful,
+but M. E. J. Newman's paper <a href="http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf">"The structure and function of complex networks"</a> 
+(self-published and written as a course review) is an extremely detailed
+and academically rigorous overview of just about every important detail of the field.</p>
+<p><a name="tsp1-nedges"></a></p>
+<h3 id="number-of-edges">Number of Edges</h3>
+<p>The maximum number of roads or edges <span class="math">\(E\)</span> depends on the number of nodes as <span class="math">\(E = \dfrac{N(N-1)}{2}\)</span>, which is derived from
+the formula for 2 choose N (because edges connect 2 nodes). For k choose N, the formula is given by:</p>
+<div class="math">$$
+C_{N,k} = \dfrac{N!}{k! (N-k)!}
+$$</div>
+<p>and for 2 choose N, it is given by:</p>
+<div class="math">$$
+C_{N,2} = \dfrac{N(N-1)}{2}
+$$</div>
+<p>This is the maximum number of undirected edges in a graph. 
+If the graph is directed, then order matters (the edgge <code>A-&gt;B</code> is no longer the same as <code>B-&gt;A</code>),
+so we have to use the formula for k pick N, </p>
+<div class="math">$$
+P_{N,k} = \dfrac{N!}{(N-k)!}
+$$</div>
+<p>which results in</p>
+<div class="math">$$
+P_{N,2} = N (N-1)
+$$</div>
+<p>possible edges.</p>
+<p><a name="tsp1-nsolutions"></a></p>
+<h3 id="number-of-solutions">Number of Solutions</h3>
+<p>Naturally, the question of the total solution space arises.
+Assuming the graph of cities is perfectly connected (representing an upper limit on problem complexity),
+how does the number of solutions change as the number of nodes increases?</p>
+<p>We can start with a trivial graph, and count the number of possible paths
+through the entire graph, starting with a specific node.
+This is equivalent to counting permutations of a string that start with a specific character.</p>
+<div class="highlight"><pre><span></span><code>ABCDE
+ABCED
+ABDCE
+ABDEC
+ABECD
+ABEDC
+</code></pre></div>
+
+<p>For a string of length <span class="math">\(N\)</span>, the string has <span class="math">\((N-1)!\)</span> possible permutations that start with a specific character.
+Therefore, as the number of nodes <span class="math">\(N\)</span> increases, the number of possible solutions increases as <span class="math">\((N-1)!\)</span>, 
+making the complexity class of the problem <span class="math">\(O(N!)\)</span>.</p>
+<p><a name="tsp1-bktk"></a></p>
+<h2 id="solution-recursive-backtracking">Solution: Recursive Backtracking</h2>
+<p>Here is pseudocode for a recursive backtracking method:</p>
+<div class="highlight"><pre><span></span><code>explore(neighbors):
+
+    if(no more unvisited neighbors):
+        # This is the base case.
+        if total distance is less than current minimum:
+            save path and new minimum
+
+    else:
+        # This is the recursive case.
+        for neighbor in unvisited neighbors:
+            visit neighbor
+            explore(new_neighbors)
+            unvisit neighbor
+</code></pre></div>
+
+<p>Care is needed to prevent infinite loops in which the traveling salesperson goes back and forth between two cities.
+As we traverse the graph, we can mark each node as visited, to ensure we don't revisit nodes and go in circles.</p>
+<p>Nodes can be implemented as a <code>Node</code> object in Java, with each Node having a few characteristics:</p>
+<ul>
+<li>String label</li>
+<li>Container of Node pointers pointing to neighbors</li>
+<li>Boolean flag: have we visited this node already?</li>
+</ul>
+<p>Likewise, the graph edges can be represented using integers or doubles.</p>
+<p><a name="tsp1-guava"></a></p>
+<h2 id="solving-the-tsp-with-java-and-guava">Solving the TSP with Java and Guava</h2>
+<p><a href="https://github.com/google/guava">Google Guava</a> is a library of high-performance data containers in Java.
+The library provides some useful graph objects that we can use to easily solve the TSP on a graph.</p>
+<p><a name="tsp1-basic-guava"></a></p>
+<h3 id="basics-of-guava">Basics of Guava</h3>
+<p>Install and use Guava by visiting the <a href="https://github.com/google/guava">Guava project on Github</a>, 
+find the page for their latest release (<a href="https://github.com/google/guava/wiki/Release21">here is version 21.0</a>), 
+and getting the latest <code>.jar</code> file.</p>
+<p>To compile with the jar file, you can either utilize an IDE like <a href="http://www.eclipse.org/">Eclipse</a> or <a href="https://www.jetbrains.com/idea/">IntelliJ</a>,
+or you can compile from the command line, specifying the class path using the <code>-cp</code> flag:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>javac<span class="w"> </span>-cp<span class="w"> </span><span class="s1">&#39;.:/path/to/guava/jars/guava-21.0.jar&#39;</span><span class="w"> </span>TSP.java
+$<span class="w"> </span>java<span class="w"> </span>-cp<span class="w"> </span><span class="s1">&#39;.:/path/to/guava/jars/guava-21.0.jar&#39;</span><span class="w"> </span>TSP
+</code></pre></div>
+
+<p>More information can be found on the charlesreid1.com wiki: <a href="https://charlesreid1.com/wiki/Guava">Guava</a></p>
+<p><a name="tsp1-guava-graphs"></a></p>
+<h3 id="guava-graphs">Guava Graphs</h3>
+<p>Graph objects in Guava are implemented using a set of objects: Graphs, ValueGraphs, and Networks.</p>
+<p>Graph objects treat edges as very simple and assumes they contain no information and simply link nodes. </p>
+<p>ValueGraphs associate a single non-unique value with each edge on the graph. This can also be used to solve the TSP.</p>
+<p>Network objects treat nodes and edges both as objects, and has the ability to deal with more complex edges: model multi-edges, repeated edges, directed edges, etc.</p>
+<p>We will use a Network object and design our own graph Node and Edge objects.</p>
+<p><a href="https://github.com/google/guava/wiki/GraphsExplained#building-graph-instances">Link to Guava wiki on how to build graph instances</a></p>
+<p><a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html">Guava API Documentation: Network</a></p>
+<p><a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html">Guava API Documentation: Graph</a></p>
+<p><a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html">Guava API Documentation: ValueGraph</a></p>
+<p><a name="tsp1-guava-mutable-immutable"></a></p>
+<h3 id="guava-mutable-vs-immutable">Guava Mutable vs Immutable</h3>
+<p>Guava makes a distinction between mutable graphs, which can be modified, and immutable graphs, which cannot.
+Immutability provides some safety and assurances to programmers, and can make things faster.</p>
+<p>When we construct the network, we need a mutable graph to modify (add nodes and edges). 
+But once the network is constructed, it is finished: we don't need to modify the network while we're solving the problem.</p>
+<p>Therefore, we construct a mutable network, assemble the graph for the given problem, and copy it into an immutable graph.
+We then use the immutable graph to access the graph while solving.</p>
+<p><a name="tsp1-importing-guava"></a></p>
+<h3 id="importing-guava">Importing Guava</h3>
+<p>Starting with import statements, we'll use a couple of objects from the Java API, and from Google's Guava library:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">java.util.Set</span><span class="p">;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">java.util.Map</span><span class="p">;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">java.util.TreeMap</span><span class="p">;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">java.util.Arrays</span><span class="p">;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">com.google.common.graph.Network</span><span class="p">;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">com.google.common.graph.NetworkBuilder</span><span class="p">;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">com.google.common.graph.ImmutableNetwork</span><span class="p">;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">com.google.common.graph.MutableNetwork</span><span class="p">;</span>
+</code></pre></div>
+
+<p>For more info on why we don't just do the lazier</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">java.util.*</span><span class="p">;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">com.google.common.graph.*</span><span class="p">;</span>
+</code></pre></div>
+
+<p>see <a href="https://google.github.io/styleguide/javaguide.html">Google's Java style guide</a>.</p>
+<p><a name="tsp1-tsp-class"></a></p>
+<h3 id="tsp-class">TSP Class</h3>
+<p>Let's lay out the TSP class definition. This class is simple, and wraps a few pieces of data:
+the current route, the current distance, and the minimum distance.
+Note that we could also save the solution in a container, instead of printing it,
+by defining a static class to hold solutions, but we'll keep it simple.</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/** This class solves the traveling salesman problem on a graph. */</span>
+<span class="kd">class</span> <span class="nc">TSP</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// The actual graph of cities</span>
+<span class="w">    </span><span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="p">,</span><span class="n">Edge</span><span class="o">&gt;</span><span class="w"> </span><span class="n">graph</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">graphSize</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Storage variables used when searching for a solution </span>
+<span class="w">    </span><span class="n">String</span><span class="o">[]</span><span class="w"> </span><span class="n">route</span><span class="p">;</span><span class="w">         </span><span class="c1">// store the route</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">this_distance</span><span class="p">;</span><span class="w">   </span><span class="c1">// store the total distance</span>
+<span class="w">    </span><span class="kt">double</span><span class="w"> </span><span class="n">min_distance</span><span class="p">;</span><span class="w">    </span><span class="c1">// store the shortest path found so far</span>
+
+<span class="w">    </span><span class="cm">/** Defaut constructor generates the graph and initializes storage variables */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">TSP</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// TODO</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="cm">/** This method actually constructs the graph. */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="p">,</span><span class="n">Edge</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">buildGraph</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// TODO</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="cm">/** Public solve method will call the recursive backtracking method to search for solutions on the graph */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">solve</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// TODO</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="cm">/** Recursive backtracking method: explore possible solutions starting at this node, having made nchoices */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">explore</span><span class="p">(</span><span class="n">Node</span><span class="w"> </span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nchoices</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// TODO</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="cm">/** Print out solution */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">printSolution</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// TODO</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="cm">/** Print out failed path */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">printFailure</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// TODO</span>
+<span class="w">    </span><span class="p">}</span>
+</code></pre></div>
+
+<p><a name="tsp1-node-class"></a></p>
+<h3 id="node-class-cities">Node Class (Cities)</h3>
+<p>Now we can define the Node class to represent cities on the graph.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span> <span class="nc">Node</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">label</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="n">visited</span><span class="p">;</span><span class="w"> </span><span class="c1">// Helps us to keep track of where we&#39;ve been on the graph</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">Node</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">){</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">label</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">visited</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">visit</span><span class="p">(){</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">visited</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">unvisit</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">visited</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Like a lined list node, we want to keep graph nodes simple. 
+Note that Nodes don't need to store information about their neighbors.
+That's what we'll use Google Guava for!</p>
+<p><a name="tsp1-edge-class"></a></p>
+<h3 id="edge-class-roads">Edge Class (Roads)</h3>
+<p>Edge classes are even simpler, wrapping a single integer:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span> <span class="nc">Edge</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="n">right</span><span class="p">;</span><span class="w"> </span><span class="c1">// For convenience in construction process. Not necessary.</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">Edge</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">right</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">left</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">left</span><span class="p">;</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">right</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">right</span><span class="p">;</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Note that left and right are used for convenience only during the graph construction process.
+Like the nodes, the edges don't need to know who their neighbors are, 
+since that's what the Google Guava graph object will take care of.</p>
+<p><a name="tsp1-building-graph"></a></p>
+<h2 id="tsp-constructor-and-building-the-graph">TSP Constructor and Building the Graph</h2>
+<p><a name="tsp1-constructor"></a></p>
+<h3 id="constructor">Constructor</h3>
+<p>The TSP class constructor should do a few things:</p>
+<ul>
+<li>Construct a graph, with a given set of cities and distances.</li>
+<li>Initialize arrays and cumulative variables that will be used by the backtracking method.</li>
+</ul>
+<p>The actual graph construction process is put into another function called <code>buildGraph()</code>,
+so really the constructor just calls a function and then does #2.</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/** Defaut constructor generates the graph and initializes storage variables */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">TSP</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Build the graph</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">graph</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">buildGraph</span><span class="p">();</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">graphSize</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">graph</span><span class="p">.</span><span class="na">nodes</span><span class="p">().</span><span class="na">size</span><span class="p">();</span>
+
+<span class="w">        </span><span class="c1">// Initialize route variable, shared across recursive method instances</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">String</span><span class="o">[</span><span class="k">this</span><span class="p">.</span><span class="na">graphSize</span><span class="o">]</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// Initialize distance variable, shared across recursive method instances</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mf">1.0</span><span class="p">;</span><span class="w"> </span><span class="c1">// negative min means uninitialized</span>
+<span class="w">    </span><span class="p">}</span>
+</code></pre></div>
+
+<p><a name="tsp1-build-graph-method"></a></p>
+<h3 id="build-graph-method">Build Graph Method</h3>
+<p>Now we actually use Guava's Immutable Network object,
+which takes two templated types, T1 and T2, 
+which correspond to the node types and the edge types.</p>
+<p>We use a NetworkBuilder object to build the Network 
+(an example of the factory template).
+This returns a MutableNetwork of Node and Edge objects,
+which we can then connect up using some built-in methods.</p>
+<p>Here are some built-in methods available for a MutableNetwork:</p>
+<div class="highlight"><pre><span></span><code>    addEdge(node1, node2, edge)
+    addNode(node1)
+    removeEdge(edge)
+    removeNode(node)
+</code></pre></div>
+
+<p>Now here is the construction of the graph, using the Google Guava library.
+There are two loops here: one for cities, and one for edges.
+In the loop over each city,we create a new node and add it to the graph.
+To be able to easily retrieve the Nodes we have created, 
+we also store references to the nodes in a map called <code>all_nodes</code>.</p>
+<p>When we construct edges, we use the map of all nodes <code>all_nodes</code> to get references to the Node objects
+that correspond to a label. That way, if an edge connects "A" with "B" at a distance of 24, 
+we can turn "A" and "B" into references to the Node objects A and B.</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/** This method actually constructs the graph. */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="p">,</span><span class="n">Edge</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">buildGraph</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="c1">// MutableNetwork is an interface requiring a type for nodes and a type for edges</span>
+<span class="w">        </span><span class="n">MutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="p">,</span><span class="n">Edge</span><span class="o">&gt;</span><span class="w"> </span><span class="n">roads</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">NetworkBuilder</span><span class="p">.</span><span class="na">undirected</span><span class="p">().</span><span class="na">build</span><span class="p">();</span>
+
+<span class="w">        </span><span class="c1">// Construct Nodes for cities,</span>
+<span class="w">        </span><span class="c1">// and add them to a map</span>
+<span class="w">        </span><span class="n">String</span><span class="o">[]</span><span class="w"> </span><span class="n">cities</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;A&quot;</span><span class="p">,</span><span class="s">&quot;B&quot;</span><span class="p">,</span><span class="s">&quot;C&quot;</span><span class="p">,</span><span class="s">&quot;D&quot;</span><span class="p">,</span><span class="s">&quot;E&quot;</span><span class="p">};</span>
+<span class="w">        </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="n">Node</span><span class="o">&gt;</span><span class="w"> </span><span class="n">all_nodes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">TreeMap</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="n">Node</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">cities</span><span class="p">.</span><span class="na">length</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Add nodes to map</span>
+<span class="w">            </span><span class="n">Node</span><span class="w"> </span><span class="n">node</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Node</span><span class="p">(</span><span class="n">cities</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="p">);</span>
+<span class="w">            </span><span class="n">all_nodes</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="n">cities</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="n">node</span><span class="p">);</span>
+
+<span class="w">            </span><span class="c1">// Add nodes to network</span>
+<span class="w">            </span><span class="n">roads</span><span class="p">.</span><span class="na">addNode</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// Construct Edges for roads,</span>
+<span class="w">        </span><span class="c1">// and add them to a map</span>
+<span class="w">        </span><span class="n">String</span><span class="o">[]</span><span class="w"> </span><span class="n">distances</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;A:B:24&quot;</span><span class="p">,</span><span class="s">&quot;A:C:5&quot;</span><span class="p">,</span><span class="s">&quot;A:D:20&quot;</span><span class="p">,</span><span class="s">&quot;A:E:18&quot;</span><span class="p">,</span><span class="s">&quot;B:C:10&quot;</span><span class="p">,</span><span class="s">&quot;B:D:20&quot;</span><span class="p">,</span><span class="s">&quot;C:D:4&quot;</span><span class="p">,</span><span class="s">&quot;C:E:28&quot;</span><span class="p">,</span><span class="s">&quot;D:E:3&quot;</span><span class="p">};</span>
+<span class="w">        </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="n">Edge</span><span class="o">&gt;</span><span class="w"> </span><span class="n">all_edges</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">TreeMap</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span><span class="n">Edge</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">distances</span><span class="p">.</span><span class="na">length</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// Parse out (city1):(city2):(distance)</span>
+<span class="w">            </span><span class="n">String</span><span class="o">[]</span><span class="w"> </span><span class="n">splitresult</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">distances</span><span class="o">[</span><span class="n">j</span><span class="o">]</span><span class="p">.</span><span class="na">split</span><span class="p">(</span><span class="s">&quot;:&quot;</span><span class="p">);</span>
+<span class="w">            </span><span class="n">String</span><span class="w"> </span><span class="n">left</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">splitresult</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span><span class="p">;</span>
+<span class="w">            </span><span class="n">String</span><span class="w"> </span><span class="n">right</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">splitresult</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span><span class="p">;</span>
+<span class="w">            </span><span class="n">String</span><span class="w"> </span><span class="n">label</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">left</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;:&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">right</span><span class="p">;</span>
+<span class="w">            </span><span class="kt">int</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Integer</span><span class="p">.</span><span class="na">parseInt</span><span class="p">(</span><span class="n">splitresult</span><span class="o">[</span><span class="mi">2</span><span class="o">]</span><span class="p">);</span>
+
+<span class="w">            </span><span class="c1">// Add edges to map</span>
+<span class="w">            </span><span class="n">Edge</span><span class="w"> </span><span class="n">edge</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Edge</span><span class="p">(</span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="n">right</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="p">);</span>
+<span class="w">            </span><span class="n">all_edges</span><span class="p">.</span><span class="na">put</span><span class="p">(</span><span class="n">label</span><span class="p">,</span><span class="w"> </span><span class="n">edge</span><span class="p">);</span>
+
+<span class="w">            </span><span class="c1">// Add edges to network</span>
+<span class="w">            </span><span class="n">roads</span><span class="p">.</span><span class="na">addEdge</span><span class="p">(</span><span class="n">all_nodes</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">edge</span><span class="p">.</span><span class="na">left</span><span class="p">),</span><span class="w"> </span><span class="n">all_nodes</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">edge</span><span class="p">.</span><span class="na">right</span><span class="p">),</span><span class="w"> </span><span class="n">edge</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// Freeze the network</span>
+<span class="w">        </span><span class="n">ImmutableNetwork</span><span class="o">&lt;</span><span class="n">Node</span><span class="p">,</span><span class="n">Edge</span><span class="o">&gt;</span><span class="w"> </span><span class="n">frozen_roads</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ImmutableNetwork</span><span class="p">.</span><span class="na">copyOf</span><span class="p">(</span><span class="n">roads</span><span class="p">);</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">frozen_roads</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+</code></pre></div>
+
+<p><a name="tsp1-recursive-backtracking"></a></p>
+<h2 id="solving-and-exploring-with-recursive-backtracking">Solving and Exploring with Recursive Backtracking</h2>
+<h3 id="solve-method">Solve Method</h3>
+<p>The structure of some recursive backtracking problems is to create a public and a private interface,
+with the public interface taking no parameters or a single parameter that the user will know, 
+and the private method taking a parameter specific to the implementation. That's the pattern we use here.</p>
+<p>The solve method sets up the problem by picking a starting node (in this case, an arbitrary starting node).
+It then gets a reference to that node on the graph, and calls the recursive <code>explore()</code> method,
+which begins the recursive backtracking method.</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/** Public solve method will call the recursive backtracking method to search for solutions on the graph */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">solve</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="cm">/** To solve the traveling salesman problem:</span>
+<span class="cm">         * Set up the graph, choose a starting node, then call the recursive backtracking method and pass it the starting node.</span>
+<span class="cm">         */</span>
+
+<span class="w">        </span><span class="c1">// We need to pass a starting node to recursive backtracking method</span>
+<span class="w">        </span><span class="n">Node</span><span class="w"> </span><span class="n">startNode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// Grab a node, any node...</span>
+<span class="w">        </span><span class="k">for</span><span class="p">(</span><span class="w"> </span><span class="n">Node</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="na">nodes</span><span class="p">()</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">startNode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span><span class="p">;</span>
+<span class="w">            </span><span class="k">break</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="c1">// Visit the first node</span>
+<span class="w">        </span><span class="n">startNode</span><span class="p">.</span><span class="na">visit</span><span class="p">();</span>
+
+<span class="w">        </span><span class="c1">// Add first node to the route</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">startNode</span><span class="p">.</span><span class="na">label</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// Pass the number of choices made</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">nchoices</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+
+<span class="w">        </span><span class="c1">// Recursive backtracking</span>
+<span class="w">        </span><span class="n">explore</span><span class="p">(</span><span class="n">startNode</span><span class="p">,</span><span class="w"> </span><span class="n">nchoices</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+</code></pre></div>
+
+<h3 id="explore-backtrack-method">Explore (Backtrack) Method</h3>
+<p>And now, on to the recursive backtracking method.</p>
+<p>The method takes as a parameter which node we are currently on and the number of cities we have visited.
+As multiple explore methods choose different paths, they pass references to different node objects in the graph,
+and they pass different values of <code>nchoices</code>. </p>
+<p>The methods, when they do not encounter a solution, will choose a next node and call the explore method on it.
+Each instance of the explore method marks nodes as visited or unvisited on the same shared graph object.
+This allows instances of the function to share information about their choices with other instances of the function.</p>
+<p>All recursive methods must consist of a base case and a recursive case:</p>
+<p>Base case:
+- We've visited as many cities as are on the graph.
+- Check if this is a new solution (distance less than the current minimum).</p>
+<p>Recursive case:
+- Make a choice (mark node as visited, add city to route).
+- Explore the consequences (recursive call).
+- Unmake the choice (mark node as unvisited, remove city from route).
+- Move on to next choice.</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/** Recursive backtracking method: explore possible solutions starting at this node, having made nchoices */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">explore</span><span class="p">(</span><span class="n">Node</span><span class="w"> </span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nchoices</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="cm">/**</span>
+<span class="cm">         * Solution strategy: recursive backtracking.</span>
+<span class="cm">         */</span>
+
+<span class="w">        </span><span class="k">if</span><span class="p">(</span><span class="n">nchoices</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">graphSize</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">// </span>
+<span class="w">            </span><span class="c1">// BASE CASE</span>
+<span class="w">            </span><span class="c1">//</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="c1">// if this_distance &lt; min_distance, this is our new minimum distance</span>
+<span class="w">                </span><span class="c1">// if min_distance &lt; 0, this is our first minimium distance</span>
+<span class="w">                </span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="p">;</span>
+<span class="w">                </span><span class="n">printSolution</span><span class="p">();</span>
+<span class="w">            </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">printFailure</span><span class="p">();</span>
+<span class="w">            </span><span class="p">}</span>
+
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="c1">//</span>
+<span class="w">            </span><span class="c1">// RECURSIVE CASE</span>
+<span class="w">            </span><span class="c1">//  </span>
+<span class="w">            </span><span class="n">Set</span><span class="o">&lt;</span><span class="n">Node</span><span class="o">&gt;</span><span class="w"> </span><span class="n">neighbors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="na">adjacentNodes</span><span class="p">(</span><span class="n">node</span><span class="p">);</span>
+<span class="w">            </span><span class="k">for</span><span class="p">(</span><span class="n">Node</span><span class="w"> </span><span class="n">neighbor</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">neighbors</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">if</span><span class="p">(</span><span class="n">neighbor</span><span class="p">.</span><span class="na">visited</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">                    </span><span class="kt">int</span><span class="w"> </span><span class="n">distance_btwn</span><span class="p">;</span>
+
+<span class="w">                    </span><span class="k">for</span><span class="p">(</span><span class="w"> </span><span class="n">Edge</span><span class="w"> </span><span class="n">edge</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">graph</span><span class="p">.</span><span class="na">edgesConnecting</span><span class="p">(</span><span class="n">node</span><span class="p">,</span><span class="w"> </span><span class="n">neighbor</span><span class="p">)</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="n">distance_btwn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge</span><span class="p">.</span><span class="na">value</span><span class="p">;</span>
+<span class="w">                    </span><span class="p">}</span>
+
+<span class="w">                    </span><span class="c1">// Make a choice</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">neighbor</span><span class="p">.</span><span class="na">label</span><span class="p">;</span>
+<span class="w">                    </span><span class="n">neighbor</span><span class="p">.</span><span class="na">visit</span><span class="p">();</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">distance_btwn</span><span class="p">;</span>
+
+<span class="w">                    </span><span class="c1">// Explore the consequences</span>
+<span class="w">                    </span><span class="n">explore</span><span class="p">(</span><span class="n">neighbor</span><span class="p">,</span><span class="n">nchoices</span><span class="o">+</span><span class="mi">1</span><span class="p">);</span>
+
+<span class="w">                    </span><span class="c1">// Unmake the choice</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="o">[</span><span class="n">nchoices</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<span class="w">                    </span><span class="n">neighbor</span><span class="p">.</span><span class="na">unvisit</span><span class="p">();</span>
+<span class="w">                    </span><span class="k">this</span><span class="p">.</span><span class="na">this_distance</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="n">distance_btwn</span><span class="p">;</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">                </span><span class="c1">// Move on to the next choice (continue loop)</span>
+<span class="w">            </span><span class="p">}</span><span class="w">               </span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="c1">// End base/recursive case</span>
+<span class="w">    </span><span class="p">}</span>
+</code></pre></div>
+
+<h2 id="main-and-utility-methods">Main and Utility Methods</h2>
+<p>Last but not least, add the method that actually calls the TSP object's solve method,
+and define what to do when we encounter a new solution.
+This program just prints out new solutions as they are found, 
+but you could also add them to a map (map routes to distances),
+or quietly keep track of the shortest path and not print it until the end.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span> <span class="nc">TSP</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span><span class="w"> </span><span class="n">args</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span>
+<span class="w">        </span><span class="n">TSP</span><span class="w"> </span><span class="n">t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">TSP</span><span class="p">();</span>
+<span class="w">        </span><span class="n">t</span><span class="p">.</span><span class="na">solve</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="p">...</span>
+</code></pre></div>
+
+<p>Additionally, we may want to perform a certain action when we find a new minimum distance.
+Note that this method may be called multiple times during the solution procedure.</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/** Print out solution */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">printSolution</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">print</span><span class="p">(</span><span class="s">&quot;@@@@@@@@@@\tNEW SOLUTION\t&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Route: &quot;</span><span class="o">+</span><span class="n">Arrays</span><span class="p">.</span><span class="na">toString</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="na">route</span><span class="p">)</span>
+<span class="w">                          </span><span class="o">+</span><span class="s">&quot;\tDistance: &quot;</span><span class="o">+</span><span class="k">this</span><span class="p">.</span><span class="na">min_distance</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="cm">/** Do nothing with failed path */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">printFailure</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Nope</span>
+<span class="w">    </span><span class="p">}</span>
+</code></pre></div>
+
+<h2 id="program-output">Program Output</h2>
+<h3 id="initial-graph-structure-and-solution">Initial Graph Structure and Solution</h3>
+<p>In the construction of the graph, we defined our graph as:</p>
+<div class="highlight"><pre><span></span><code><span class="n">String</span><span class="o">[]</span><span class="w"> </span><span class="n">distances</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;A:B:24&quot;</span><span class="p">,</span><span class="s">&quot;A:C:5&quot;</span><span class="p">,</span><span class="s">&quot;A:D:20&quot;</span><span class="p">,</span><span class="s">&quot;A:E:18&quot;</span><span class="p">,</span><span class="s">&quot;B:C:10&quot;</span><span class="p">,</span><span class="s">&quot;B:D:20&quot;</span><span class="p">,</span><span class="s">&quot;C:D:4&quot;</span><span class="p">,</span><span class="s">&quot;C:E:28&quot;</span><span class="p">,</span><span class="s">&quot;D:E:3&quot;</span><span class="p">};</span>
+</code></pre></div>
+
+<p>This is the graph that we're solving the TSP problem on.
+Here are the results when the program is compiled and run:</p>
+<div class="highlight"><pre><span></span><code>$ javac -cp &#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39; TSP.java
+
+$ java -cp &#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39; TSP
+
+@@@@@@@@@@  NEW SOLUTION    Route: [A, B, C, D, E]  Distance: 41.0
+@@@@@@@@@@  NEW SOLUTION    Route: [A, C, B, D, E]  Distance: 38.0
+@@@@@@@@@@  NEW SOLUTION    Route: [A, E, D, C, B]  Distance: 35.0
+</code></pre></div>
+
+<p>The answers given were satisfactory and correct, so we moved on to 
+a more advanced graph construction process that utilized a static class
+to generate random, fully-connected graphs. This also implemented 
+additional functionality to export to Dot format. This static RandomGraph
+class will be covered in later post.</p>
+<p>Here is the resulting output of the random graph generator for a 6-node TSP problem,
+with the sequence of shortest routes found by the algorithm:</p>
+<p><img alt="Six-node traveling salesperson problem" src="graphviz_tsp_6.png"></p>
+<div class="highlight"><pre><span></span><code>java -cp &#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39; TSP 6 
+------------------- TSP ----------------------
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 3, 2, 4, 5]   Distance: 291.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 3, 5, 4, 2]   Distance: 249.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 2, 4, 3, 5]   Distance: 246.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 5, 3, 4, 2]   Distance: 203.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 3, 5, 1, 4, 2]   Distance: 178.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 2, 4, 1, 5, 3]   Distance: 163.0
+ Done.
+</code></pre></div>
+
+<p>And for 12 nodes, a problem twice that size, here is the graph and corresponding output:</p>
+<p><img alt="Twelve-node traveling salesperson problem" src="graphviz_tsp_12.png"></p>
+<p>and the output:</p>
+<div class="highlight"><pre><span></span><code>java -cp &#39;.:/Users/charles/codes/guava/jars/guava-21.0.jar&#39; TSP 12 
+------------------- TSP Version 2: The Pessimistic Algorithm ----------------------
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 6, 8, 11]   Distance: 585.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 8, 11, 6]   Distance: 558.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 5, 3, 8, 6, 11]   Distance: 522.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 6, 5, 3, 8, 11]   Distance: 499.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 11, 8, 6, 5, 3]   Distance: 460.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 10, 11, 6, 8, 3, 5]   Distance: 459.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 11, 8, 10, 6, 5, 3]   Distance: 449.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 11, 10, 6, 8, 3, 5]   Distance: 419.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 11, 10, 8, 6, 5, 3]   Distance: 408.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 9, 3, 5, 6, 8, 10, 11]   Distance: 402.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 2, 3, 9, 11, 10, 8, 6, 5]   Distance: 385.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 11, 10, 8, 6, 2, 9, 3, 5]   Distance: 377.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 5, 3, 9, 11, 10, 8, 6, 2]   Distance: 374.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 4, 5, 6, 8, 10, 11, 9, 3, 2]   Distance: 371.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 9, 3, 5, 4, 11, 10, 8, 6, 2]   Distance: 363.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 9, 3, 2, 6, 8, 10, 11, 4, 5]   Distance: 352.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 5, 4, 11, 9, 2, 6, 8, 10]   Distance: 350.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 2, 9, 11, 4, 5, 6, 8, 10]   Distance: 347.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 9, 2, 4, 11, 10, 8, 6, 5]   Distance: 345.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 3, 9, 2, 6, 8, 10, 11, 4, 5]   Distance: 323.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 3, 9, 2, 6, 8, 10, 11, 4]   Distance: 322.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 2, 3, 9, 11, 10, 8, 6]   Distance: 316.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 2, 6, 8, 10, 11, 9, 3]   Distance: 313.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 11, 9, 3, 2, 6, 8, 10]   Distance: 306.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 7, 5, 4, 11, 10, 8, 6, 2, 9, 3]   Distance: 302.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 10, 11, 4, 5, 7, 3, 9, 2, 6, 8]   Distance: 289.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 10, 8, 6, 2, 9, 3, 7, 5, 4, 11]   Distance: 286.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 10, 8, 6, 2, 3, 9, 11, 4, 5, 7]   Distance: 283.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 8, 6, 10, 11, 4, 2, 9, 3, 7, 5]   Distance: 274.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 8, 6, 10, 11, 4, 5, 7, 3, 9, 2]   Distance: 260.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 2, 6, 8, 10, 11, 9, 3, 7, 5]   Distance: 259.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 11, 10, 8, 6, 5, 7, 3, 9, 2]   Distance: 256.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 11, 10, 8, 6, 2, 9, 3, 7, 5]   Distance: 248.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 1, 4, 5, 7, 3, 9, 11, 10, 8, 6, 2]   Distance: 245.0
+!!!!!YAY!!!!!!  NEW SOLUTION    Route: [0, 7, 5, 4, 1, 8, 6, 10, 11, 9, 3, 2]   Distance: 236.0
+ Done.
+</code></pre></div>
+
+<p>Note that these random graphs are fully connected - every node connects to every other node.
+Among the many interesting aspects of the problem, one of them is the impact of connectivity
+on the solution time. </p>
+<p>Another aspect of the problem is the topology of the network, and exploring how 
+a larger number of unconnected nodes, or groups of nodes clustered together but isolated from one another,
+affect the final solution time and the final route.</p>
+<p>But before get to that, we have some other things to work out.</p>
+<h2 id="next-steps-timing-and-profiling">Next Steps: Timing and Profiling</h2>
+<p>This post described a working implementation of a recursive backtracking solution 
+to the traveling salesperson problem on a graph. This is a naive solution, however,
+and in the next few posts about the traveling salesperson problem we'll focus on using
+timing and profiling tools for Java to profile this Guava program, identify bottlenecks, 
+and speed it up. In fact, there is one small tweak we can make to the algorithm covered above
+that will improve the performance by orders of magnitude. But more on that in a future post.</p>
+<p><a name="tsp1-sources"></a></p>
+<h2 id="sources">Sources</h2>
+<ol>
+<li>
+<p>"Traveling Salesman Problem". Wikipedia, the Free Encyclopedia. The Wikimedia Foundation. Edited 12 March 2017. Accessed 23 March 2017. 
+&lt;<a href="https://en.wikipedia.org/wiki/Travelling_salesman_problem">https://en.wikipedia.org/wiki/Travelling_salesman_problem</a>&gt;</p>
+</li>
+<li>
+<p>"Seven Bridges of Königsberg". Wikipedia, the Free Encyclopedia. The Wikimedia Foundation. Edited 11 March 2017. Accessed 23 March 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg">https://en.wikipedia.org/wiki/Seven_Bridges_of_K%C3%B6nigsberg</a>&gt;</p>
+</li>
+<li>
+<p>"The structure and function of complex networks". M. E. J. Newman. 
+&lt;<a href="http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf">http://www-personal.umich.edu/~mejn/courses/2004/cscs535/review.pdf</a>&gt;</p>
+</li>
+<li>
+<p>"Google Guava - Github". Alphabet, Inc. Released under the Apache 2.0 License. Accessed 20 March 2017.
+&lt;<a href="https://github.com/google/guava">https://github.com/google/guava</a>&gt;</p>
+</li>
+<li>
+<p>"Guava". Charles Reid. Edited 23 March 2017. Accessed 23 March 2017.
+&lt;<a href="https://www.charlesreid1.com/wiki/Guava">https://www.charlesreid1.com/wiki/Guava</a>&gt;</p>
+</li>
+<li>
+<p>"Graphs Explained". Google Guava Wiki. Accessed 23 March 2017.
+&lt;<a href="https://github.com/google/guava/wiki/GraphsExplained">https://github.com/google/guava/wiki/GraphsExplained</a>&gt;</p>
+</li>
+<li>
+<p>"Network". Google Guava API Documentation. Accessed 23 March 2017.
+&lt;<a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html">http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Network.html</a>&gt;</p>
+</li>
+<li>
+<p>"Graph". Google Guava API Documentation. Accessed 23 March 2017.
+&lt;<a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html">http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/Graph.html</a>&gt;</p>
+</li>
+<li>
+<p>"Value Graph". Google Guava API Documentation. Accessed 23 March 2017.
+&lt;<a href="http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html">http://google.github.io/guava/releases/snapshot/api/docs/com/google/common/graph/ValueGraph.html</a>&gt;</p>
+</li>
+<li>
+<p>"Google Java Style Guide". Alphabet Inc. Accessed 21 March 2017.
+&lt;<a href="https://google.github.io/styleguide/javaguide.html">https://google.github.io/styleguide/javaguide.html</a>&gt;</p>
+</li>
+</ol>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/guava.html">guava</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graph.html">graph</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/tsp.html">TSP</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -695,7 +1708,13 @@ Large numbers of combinations indeed.</p>
 
             <a class="next" href="https://charlesreid1.github.io/index35.html">&larr; Newer</a>
 
+            &nbsp;
+            &nbsp;
+            &nbsp;
+            &nbsp;
+            &nbsp;
 
+            <a class="prev" href="https://charlesreid1.github.io/index37.html">Older &rarr;</a>
         
           <br />
         </div>
@@ -710,6 +1729,34 @@ Large numbers of combinations indeed.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>May 2025</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-rick-perlsteins-nixonland.html">Reading Rick Perlstein's <i>Nixonland</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/ken-binmores-game-theory-and-nash-equilibrium-in-shadowrun.html">Ken Binmore's <i>Game Theory</i> and Nash Equilibrium in Shadowrun</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-hobbess-leviathan.html">Reading Hobbes's <i>Leviathan</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/forever-blue-the-other-side-of-the-bums-story.html"><i>Forever Blue</i>: The Other Side of the Bums Story</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

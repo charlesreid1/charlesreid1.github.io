@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                CSE 143 Final Project: Hilbert Sort: 3. The Code
+                Euler's Theorem, the Totient Function, and Calculating Totients By Hand
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2017-06-30T20:00:00-07:00" pubdate>Friday 06/30/2017</time>
+                <time datetime="2017-08-31T11:00:00-07:00" pubdate>Thursday 08/31/2017</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/cse-143-final-project-hilbert-sort-3-the-code.html">permalink</a>
+                <a href="https://charlesreid1.github.io/eulers-theorem-the-totient-function-and-calculating-totients-by-hand.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,235 +127,283 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
-<p>This is the third in a series of three posts 
-detailing the Hilbert Sort problem,
-its solution, and its implementation.
-This post deals with the code to solve the
-Hilbert Sort problem.</p>
+        <div class="entry-content"><h2 id="table-of-contents">Table of Contents</h2>
 <ul>
-<li>
-<p><a href="#hilbert3-pseudocode">Pseudocode</a></p>
-</li>
-<li>
-<p><a href="#hilbert3-code">Code</a></p>
+<li><a href="#totient-intro">Introduction</a></li>
+<li><a href="#totient-complete-reduced">Complete and Reduced Residue Systems</a></li>
+<li><a href="#totient-totient">Euler's Totient Function</a></li>
+<li><a href="#totient-byhand">Calculating the Totient Function by Hand</a></li>
+</ul>
+<!--
+* [Applications](#totient-applications)
+    * [Euler's Theorem and Fermat's Little Theorem](#totient-eulers-theorem)
+    * [RSA Cryptography](#totient-rsa)
+    * [Ramanujan's Sum](#totient-ramanujan)
+    * [Vinogradov's Theorem](#totient-vinogradov)
+-->
+
+<p><a name="totient-intro"></a></p>
+<h2 id="introduction">Introduction</h2>
+<p>Today we're going to delve into a little bit of number theory.</p>
+<p>In number theory, we are usually dealing with modular arithmetic - 
+expressions of the form:</p>
+<div class="math">$$
+a \equiv b \mod m
+$$</div>
+<p>or</p>
+<div class="math">$$
+f(x) \equiv 0 \mod m
+$$</div>
+<p>The mod indicates we're doing modular arithmetic, 
+which is (formally) an algebraic system called a ring,
+which consists of the integers 0 through m.</p>
+<p>An analogy to modular arithmetic is the way that the sine 
+and cosine function "wrap around," and </p>
+<div class="math">$$
+\sin \left( \dfrac{2 \pi}{3}  \right) \equiv
+\sin \left( \dfrac{8 \pi}{3}  \right) \equiv 
+\sin \left( \dfrac{14 \pi}{3} \right) \equiv \dots
+$$</div>
+<p>On a ring, this happens with the integers. So, for example,</p>
+<div class="math">$$
+2 \equiv 6 \equiv 10 \equiv \dots \mod 4
+$$</div>
+<p>Modular arithmetic uses the <span class="math">\(\equiv\)</span> symbol, and not the <span class="math">\(=\)</span> symbol,
+because we can't manipulate the left and right side using normal 
+rules of algebra - solving equations on a ring requires some care.</p>
+<p>The value of <span class="math">\(m\)</span> need not be prime, generally, but if it is, we have 
+some special properties that hold.</p>
+<p><a name="totient-complete-reduced"></a></p>
+<h2 id="complete-and-reduced-residue-systems">Complete and Reduced Residue Systems</h2>
+<p>Consider the ring of integers <span class="math">\(\mod 10\)</span>, which consists of the numbers</p>
+<div class="math">$$
+\{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 \}
+$$</div>
+<p>This is called the complete residue system mod 10.
+If we want to solve an equation like </p>
+<div class="math">$$
+2x \equiv 8 \mod 10
+$$</div>
+<p>we would <em>normally</em> just divide both sides by 2.
+But because of the "mod 10" we have to be a bit more careful.
+Dividing by 2 is just a way of saying, we want to multiply
+2 by some number that will make 2 into 1. </p>
+<p>However, because 2 is a factor of 10, there is no number 
+in the complete residue system that will yield 1 mod 10 when 
+we multiply it by 2:</p>
+<div class="math">$$
+\begin{eqnarray*}
+0 * 2 &amp; \equiv &amp; 0 \mod 10 \\
+1 * 2 &amp; \equiv &amp; 2 \mod 10 \\
+2 * 2 &amp; \equiv &amp; 4 \mod 10 \\ 
+3 * 2 &amp; \equiv &amp; 6 \mod 10 \\
+4 * 2 &amp; \equiv &amp; 8 \mod 10 \\
+5 * 2 \equiv 10 &amp; \equiv &amp; 0 \mod 10 \\
+6 * 2 \equiv 12 &amp; \equiv &amp; 2 \mod 10 \\
+7 * 2 \equiv 14 &amp; \equiv &amp; 4 \mod 10 \\
+8 * 2 \equiv 16 &amp; \equiv &amp; 6 \mod 10 \\
+9 * 2 \equiv 18 &amp; \equiv &amp; 8 \mod 10
+\end{eqnarray*}
+$$</div>
+<p>The same difficulty appears if we try and solve an equation like</p>
+<div class="math">$$
+5x \equiv 8 \mod 10
+$$</div>
+<p>for the same reason - 5 is a factor of 10, so it has no inverse mod 10.</p>
+<p>Contrast that with solving an equation like</p>
+<div class="math">$$
+3x \equiv 8 \mod 10
+$$</div>
+<p>which, because 3 does not share any factors with 10, means we can find a number
+such that 3 times that number yields 1 mod 10:</p>
+<div class="math">$$
+3 \times 7 \equiv 21 \equiv 1 \mod 10
+$$</div>
+<p>so we can solve the equation by multiplying both sides by 7, the inverse of 3:</p>
+<div class="math">$$
+\begin{eqnarray*}
+3 x &amp; \equiv &amp; 8 \mod 10 \\
+(7 \times 3) x &amp; \equiv &amp; (7 \times 8) \mod 10 \\
+x &amp;=&amp; 56 \mod 10 \\
+x &amp;=&amp; 6 \mod 10
+\end{eqnarray*}
+$$</div>
+<p>We can resolve this by creating a reduced residue system, which is a set of 
+integers that have inverses mod 10. The reduced residue system consists of 
+integers that </p>
 <ul>
-<li><a href="#hilbert3-utility">Utility Classes</a></li>
-<li><a href="#hilbert3-recursive">Recursive Sort Function</a></li>
-<li><a href="#hilbert3-main">Main Method</a></li>
+<li>Have no common factors with the ring size <span class="math">\(m\)</span></li>
+<li>Have no two elements that are congruent \mod m</li>
 </ul>
-</li>
-<li>
-<p><a href="#hilbert2-references">References</a></p>
-</li>
-</ul>
-<p><a name="hilbert3-pseudocode"></a></p>
-<h1 id="hilbert-sort-pseudocode">Hilbert Sort: Pseudocode</h1>
-<p>From our prior post, here is the psudocode for our Hilbert Sort function:</p>
-<div class="highlight"><pre><span></span><code>define hilbert_sort( unsorted queue, square dimension ):
-    create southwest queue
-    create northwest queue
-    create northeast queue
-    create southeast queue
-    for each point:
-        if in southwest:
-            create new point using X -&gt; Y, Y -&gt; X
-            add to southwest queue
-        if in northwest:
-            create new point using X -&gt; 2X, Y -&gt; 2Y - S
-            add to northwest queue
-        if in northeast:
-            create new point using X -&gt; 2X - S, Y -&gt; 2Y - S
-            add to northeast queue
-        if in southeast:
-            create new point using X -&gt; S - 2Y, Y -&gt; 2S - 2X
-            add to southeast queue
+<p>So a reduced residue system <span class="math">\(\mod 10\)</span> could be, for example,</p>
+<div class="math">$$
+\{ 1, 3, 7, 9 \}
+$$</div>
+<p>(other reduced residue systems are possible as well).</p>
+<p>It is important to note that we do not include 0, in general, because
+0 shares all factors with <span class="math">\(m\)</span> - that is, every number in the complete
+residue system divides 0, so the greatest common factor of <span class="math">\(0\)</span> and <span class="math">\(m\)</span> is <span class="math">\(m\)</span>
+and not 1!</p>
+<p>(The only exception to this rule is <span class="math">\(m=1\)</span>, but this is a trivial case,
+since <em>every</em> integer is congruent mod 1.)</p>
+<p>The reduced residue system has the property that any number in the complete
+residue system can be generated from the reduced residue system via addition.</p>
+<p>Further, the size of the reduced residue system can be expressed using a function
+called the Euler totient function, denoted <span class="math">\(\phi(m)\)</span>. The totient function
+quantifies the number of integers less than <span class="math">\(m\)</span> that are relatively prime 
+with <span class="math">\(m\)</span> (that is, two numbers such that the greatest common factor, denoted
+with the shorthand <span class="math">\((a,m)\)</span>, is 1).</p>
+<p><a name="totient-totient"></a></p>
+<h2 id="eulers-totient-function">Euler's Totient Function</h2>
+<p>Euler's totient function, <span class="math">\(\phi(m)\)</span>, turns out to be an extremely useful 
+quantity in number theory. It also provides a quantitative measure of how 
+divisible a number is. Take the two numbers 960 and 961 as examples:</p>
+<div class="math">$$
+\phi(960) = 256 \qquad \phi(961) = 930
+$$</div>
+<p>from this, we can see that 960 has many more factors than 961.
+Here are their prime factorizations:</p>
+<div class="math">$$
+\begin{eqnarray*}
+960 = 2^6 \times 3 \times 5 \\
+961 = 31^2
+\end{eqnarray*}
+$$</div>
+<p>This means that the ring of integers mod 960 will have far more 
+congruences that cannot be solved compared to the ring of integers mod 961.</p>
+<p><em>Historical Note:</em> The notation <span class="math">\(\phi(n)\)</span> was first used by the mathematician
+Carl Friedrich Gauss in his incredible book <em>Disquisitiones Arithmeticae</em>, 
+an important historical textbook that focused on gathering all of the results
+known to that point about number theory in a single work. (Gauss did omit the 
+parenthesis, however, writing the totient function simply as <span class="math">\(\phi n\)</span>.)</p>
+<p><a name="totient-byhand"></a></p>
+<h2 id="calculating-the-totient-function-by-hand">Calculating the Totient Function by Hand</h2>
+<p>It may be obvious that the totient function is simple to compute using a computer;
+but the question naturally arises: can we compute totient functions for large integers
+by hand?</p>
+<p>It turns out we can - we just need to be able to factor the number in question.
+(Note that this requirement is true generally; see the section on RSA Cryptography
+in a post to follow).</p>
+<p>Let's first illustrate some rules for computing the totient function of composite numbers
+with some simple examples. </p>
+<h3 id="totient-property-prime-power">Totient Property: Prime Power</h3>
+<p>The first useful property is computing the totient function of a number
+that is a prime number raised to some power. Let's take the simple example of 
+<span class="math">\(81 = 9^2 = 3^4\)</span>. We know that any number that shares factors with 81
+is a multiple of 3 less than or equal to 81, which is the set of numbers</p>
+<div class="math">$$
+\{ 1 \times 3, 2 \times 3, 3 \times 3, \dots, 3^{4-1} \times 3 \}
+$$</div>
+<p>and there are <span class="math">\(3^{4-1}\)</span> of these numbers. Thus, of all of the integers 
+from <span class="math">\(1\)</span> to <span class="math">\(3^4\)</span>, there are <span class="math">\(3^3\)</span> of them that are not relatively prime 
+with <span class="math">\(3^4\)</span>. So the totient function can be written:</p>
+<div class="math">$$
+\begin{eqnarray*}
+\phi(81) &amp;=&amp; \phi(3^4) = 3^{4} - 3^{4-1} \\
+\phi(81) &amp;=&amp; 81 - 27 \\
+\phi(81) &amp;=&amp; = 54
+\end{eqnarray*}
+$$</div>
+<p>In general, if we are considering the totient function of a prime power <span class="math">\(p^k\)</span>,
+we can write the totient function as </p>
+<div class="math">$$
+\phi(p^k) = p^{k} - p^{k-1}
+$$</div>
+<h3 id="totient-property-product-of-primes">Totient Property: Product of Primes</h3>
+<p>If we take a composite number like 20, we can split the totient function 
+of 20 into the product of the totient function of the factors of 20:</p>
+<div class="math">$$
+\begin{eqnarray*}
+20 = 5 \times 4 \\
+\phi(20) = \phi(5) \times \phi(4) \\
+\phi(20) = 4 \times 2 = 8
+\end{eqnarray*}
+$$</div>
+<p>which is, indeed, the value of <span class="math">\(\phi(20)\)</span>. However, this does not hold <em>generally</em>,
+as we can see from computing the totient of 50:</p>
+<div class="math">$$
+\begin{eqnarray*}
+50 = 5 \times 10 \\
+\phi(50) \neq \phi(5) \times \phi(10)
+\phi(50) \neq 4 \times 4
+\phi(50) \neq 16
+\end{eqnarray*}
+$$</div>
+<p>In fact, the value of <span class="math">\(\phi(50)\)</span> is 20, not 16! The problem is with our choice
+of factors, 5 and 10. These two numbers share a common factor of 5, meaning
+their totient functions do not account for <em>all</em> of the numbers that will be 
+relatively prime with 50. </p>
+<p>To fix this, we can further break down 50 into its prime factorization,
+and compute the totient function of those primes:</p>
+<div class="math">$$
+\begin{eqnarray*}
+50 &amp;=&amp; 2 \times 5^2 \\
+\phi(50) &amp;=&amp; \phi(2) \times \phi(5^2) \\
+\phi(50) &amp;=&amp; 1 \times ( 5^2 - 5 ) \\
+\phi(50) &amp;=&amp; 1 \times 20 \\
+\phi(50) &amp;=&amp; 20
+\end{eqnarray*}
+$$</div>
+<p>which gives us the correct result of 20.</p>
+<p><em>Generalizing</em> this rule, we can say that we can break down the totient function
+of a product of two numbers <span class="math">\(s \times t\)</span> into the product of totient functions 
+<span class="math">\(\phi(s)\)</span> and <span class="math">\(\phi(t)\)</span> only if the greatest common factor between <span class="math">\(s\)</span> and <span class="math">\(t\)</span> is 1.</p>
+<h3 id="totient-example">Totient Example</h3>
+<p>Let's consider the following example: suppose we wish to compute </p>
+<div class="math">$$
+\phi( 280 )
+$$</div>
+<p>We can start by recognizing some factors of 280 - we can pull out the factors 
+7 and 4, and 2 and 5. These can be further factored to yield the prime factorization 
+of 280:</p>
+<div class="math">$$
+280 = 2^3 \times 5 \times 7
+$$</div>
+<p>Now we can use the property that the totient function of an integer <span class="math">\(m\)</span> 
+can be expressed as the product of the totient functions of the factors of <span class="math">\(m\)</span>.
+So we can write <span class="math">\(\phi(280)\)</span> as any of the following equivalent expressions:</p>
+<div class="math">$$
+\begin{eqnarray*}
+\phi(280) &amp;=&amp; \phi(10) \times \phi(7) \times \phi(2^2) \\
+\phi(280) &amp;=&amp; \phi( 2^3 ) \times \phi(5) \times \phi(7) 
+\end{eqnarray*}
+$$</div>
+<p>Using the second expression, we know that</p>
+<div class="math">$$
+\begin{eqnarray*}
+\phi(2^3) &amp;=&amp; (2^3 - 2^2) = 4 \\
+\phi(5)   &amp;=&amp; 4 \\
+\phi(7)   &amp;=&amp; 6
+\end{eqnarray*}
+$$</div>
+<p>for an overall totient function value of </p>
+<div class="math">$$
+\begin{eqnarray*}
+\phi(280) &amp;=&amp; 4 \times 4 \times 6 \\
+\phi(280) &amp;=&amp; 96
+\end{eqnarray*}
+$$</div>
+<p>which is indeed the correct result:</p>
+<p><img alt="Totient function calculation with Wolfram Alpha" src="/images/alpha-totient.png"></p>
+<!--
 
-        hilbertsort(southwest queue, square dimension)
-        hilbertsort(northwest queue, square dimension)
-        hilbertsort(northeast queue, square dimension)
-        hilbertsort(southeast queue, square dimension)
+<a name="totient-applications"></a>
+## Other Applications
 
-        create new results queue
-        add points from southwest into results queue
-        add points from northwest into results queue
-        add points from northeast into results queue
-        add points from southeast into results queue
-        return results queue
-</code></pre></div>
+<a name="totient-eulers-theorem"></a>
+### Euler's Theorem and Fermat's Little Theorem
 
-<p>Because we are manually sorting, and we want order to be preserved,
-we should be using a queue to organize points as we sort them.
-That way, we add them in sorted order, and we are then able to remove
-them in sorted order.</p>
-<p><a name="hilbert3-code"></a></p>
-<h1 id="hilbert-sort-code">Hilbert Sort: Code</h1>
-<p>We begin by covering a utility class used by the Hilbert Sort method
-to store <span class="math">\((X,Y)\)</span> points. This is a simple example of a composition 
-design pattern. Next, we cover the bulk of the problem solution: 
-the recursive sort method that partiions points into quadrants.
-Finally, we cover the main method, which demonstrates reading data
-from an input file and passing it to the sort method.</p>
-<p><a name="hilbert3-utility"></a></p>
-<h2 id="hilbert-sort-utility-classes">Hilbert Sort: Utility Classes</h2>
-<p>To organize <span class="math">\((X,Y)\)</span> point data, we use a simple class
-using composition. This is defined next to the HilbertSort 
-class.</p>
-<div class="highlight"><pre><span></span><code>/**
- * An (x,y) Point class. 
- */
-class Point {
-    int x, y; // (x,y) point.
-    String name; // Each (x,y) point has a name in the file. Used for output.
-    /** Constructor. */
-    public Point(int x, int y, String name) { 
-        this.x = x; this.y = y; this.name = name;
-    }
-    /** String representation (x,y). */
-    public String toString() { 
-        return &quot;(&quot;+this.x+&quot;,&quot;+this.y+&quot;,&quot;+this.name+&quot;)&quot;;
-    }
-}
-</code></pre></div>
+<a name="totient-rsa"></a>
+### RSA Cryptography
 
-<p><a name="hilbert3-recursive"></a></p>
-<h2 id="recursive-sort-function">Recursive Sort Function</h2>
-<p>Following is the recursive sort method, which (like merge sort)
-consists of a split step, which partitions an <span class="math">\(S \times S\)</span> 
-square into quadrants and distributes points in the square into their
-corresponding quadrants, and a merge step, which stitches together
-each quadrant in the correct order. </p>
-<div class="highlight"><pre><span></span><code>    /** Recursive implementation of a Hilbert sort. */
-    public static Queue&lt;Point&gt; hilbertSort(Queue&lt;Point&gt; inputP, int S) {
-        // Recursive method:
-        // Apply the Hilbert geometrical quadrant division 
-        // to sort points by when they are visited by a Hilbert curve.
-        //
-        // Base case: 
-        // There are 1 or fewer points in each quadrant.
-        // Keep splitting into quadrants until we reach the base case. 
-        if(inputP.size()&lt;1) {
-            return new LinkedList&lt;Point&gt;();
-        } else if(inputP.size()==1) {
-            return inputP;
-        }
+<a name="totient-ramanujan"></a>
+### Ramanujan's Sum
 
-        // split by quadrant
-        Queue&lt;Point&gt; qSW = new LinkedList&lt;Point&gt;();
-        Queue&lt;Point&gt; qNW = new LinkedList&lt;Point&gt;();
-        Queue&lt;Point&gt; qNE = new LinkedList&lt;Point&gt;();
-        Queue&lt;Point&gt; qSE = new LinkedList&lt;Point&gt;();
+<a name="totient-vinogradov"></a>
+### Vinogradov's Theorem
 
-        // Sort points by dividing into quadrants
-        for(Point p : inputP) { 
+-->
 
-            // Prepare for the tricky part.
-            //
-            // Rotate the quadrant, and points in it,
-            // so that everything is now translated to fit
-            // how the template of the Hilbert curve is being drawn.
-            // (SW-&gt;NW-&gt;NE-SE)
-
-            boolean inSWquadrant = (2*p.x &lt;= S) &amp;&amp; (2*p.y &lt;= S);
-            boolean inNWquadrant = (2*p.x &lt;= S) &amp;&amp; (2*p.y &gt;= S);
-
-            boolean inNEquadrant = (2*p.x &gt;= S) &amp;&amp; (2*p.y &gt;= S);
-            boolean inSEquadrant = (2*p.x &gt;= S) &amp;&amp; (2*p.y &lt;= S);
-
-            // Each time we sort (x,y) points into quadrants,
-            // we also transform each coordinate point 
-            // in such a way that it rescales to an S x S square,
-            // but does not modify the order of the points. 
-            //
-            // Note that we can keep everything as integers by
-            // continuing to look at an S x S square,
-            // and double the x and y values to shift them over/up.
-            //
-            // Two easy cases:
-            if(inNWquadrant) {
-                // Northwest quadrant: 
-                // - shift y down by S/2
-                // - keep x and y in same order
-                qNW.add( new Point(2*p.x, 2*p.y-S, p.name) );
-
-            } else if(inNEquadrant) {
-                // Northeast quadrant:
-                // - shift x and y down by S/2
-                // - keep x and y in same order
-                qNE.add( new Point(2*p.x - S, 2*p.y - S, p.name) );
-
-            } else if(inSWquadrant) { 
-                // Southwest quadrant:
-                // - x and y need to swap places 
-                // - that&#39;s it.
-                qSW.add( new Point(2*p.y, 2*p.x, p.name) );
-
-            } else if(inSEquadrant) { 
-                // Southeast quadrant:
-                // - trickiest quadrant.
-                // - We want to preserve S - x, distance from right side
-                // - we want to use it as the new y coordinate
-                qSE.add( new Point(S - 2*p.y, 2*(S - p.x), p.name) );
-
-            }
-
-        }
-        // Sort til you reach the base case.
-        qSW = hilbertSort(qSW, S); 
-        qNW = hilbertSort(qNW, S); 
-        qNE = hilbertSort(qNE, S); 
-        qSE = hilbertSort(qSE, S);
-
-        Queue&lt;Point&gt; result = new LinkedList&lt;Point&gt;();
-        for(Point q : qSW) result.add(q);
-        for(Point q : qNW) result.add(q);
-        for(Point q : qNE) result.add(q); 
-        for(Point q : qSE) result.add(q);
-
-        return result;
-    }
-</code></pre></div>
-
-<p><a name="hilbert3-main"></a></p>
-<h2 id="main-method">Main Method</h2>
-<p>The last part of the code is the portion that loads the points and their labels 
-from a file, and populates a Queue of Point objects from it.
-This queue of points is then sorted and returned in order.</p>
-<div class="highlight"><pre><span></span><code>    /** Main driver. */
-    public static void main(String[] args) { 
-
-        Scanner stdin = new Scanner(new BufferedReader(new InputStreamReader(System.in)));
-
-        int n = stdin.nextInt();
-        int S = stdin.nextInt();
-
-        // n lines of 3 tokens each
-        Queue&lt;Point&gt; inputPoints = new LinkedList&lt;Point&gt;();
-        for(int i=0; i&lt;n; i++) { 
-            int x0 = stdin.nextInt();
-            int y0 = stdin.nextInt();
-            String label = stdin.next();
-            inputPoints.add(new Point(x0,y0,label));
-        }
-        Queue&lt;Point&gt; sortedPoints = hilbertSort(inputPoints, S);
-        for(Point p : sortedPoints) { 
-            System.out.println(p.name);
-        }
-    }
-</code></pre></div>
-
-<p><a name="hilbert3-refs"></a></p>
-<h1 id="references">References</h1>
-<ol>
-<li>
-<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
-&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
-</li>
-<li>
-<p>"Hilbert Sort." Git repository, git.charlesreid1.com. Charles Reid. Updated 16 June 2017.
-&lt;<a href="https://git.charlesreid1.com/cs/finalproject-143/src/master/hilbert/HilbertSort.java">https://git.charlesreid1.com/cs/finalproject-143/src/master/hilbert/HilbertSort.java</a>&gt;</p>
-</li>
-</ol>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var align = "center",
         indent = "0em",
@@ -429,17 +477,13 @@ This queue of points is then sorted and returned in order.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    <a href="https://charlesreid1.github.io/tag/factors.html">factors</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
+                    <a href="https://charlesreid1.github.io/tag/number-theory.html">number theory</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hilbert-sort.html">hilbert sort</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/java.html">java</a>
+                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -457,18 +501,18 @@ This queue of points is then sorted and returned in order.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                CSE 143 Final Project: Hilbert Sort: 2. The Solution Algorithm
+                Mad Combinatoric Castles
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2017-06-27T11:00:00-07:00" pubdate>Tuesday 06/27/2017</time>
+                <time datetime="2017-07-25T18:00:00-07:00" pubdate>Tuesday 07/25/2017</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/cse-143-final-project-hilbert-sort-2-the-solution-algorithm.html">permalink</a>
+                <a href="https://charlesreid1.github.io/mad-combinatoric-castles.html">permalink</a>
             </span>
             </p>
         </div>
@@ -486,303 +530,193 @@ This queue of points is then sorted and returned in order.</p>
     <div class="col-md-12" style="text-align: left;">
 
         <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
-<p>This is the second in a series of three posts 
-detailing the Hilbert Sort problem,
-its solution, and its implementation.
-This post solves the problem.</p>
 <ul>
-<li><a href="#hilbert2-problem">Hilbert Sort Problem</a></li>
-<li><a href="#hilbert2-space">Space Is The Place</a></li>
-<li><a href="#hilbert2-reflections">The Reflections</a><ul>
-<li><a href="#hilbert2-quad">Reflected Quadrants</a></li>
-<li><a href="#hilbert2-scaling">Scaling</a></li>
-<li><a href="#hilbert2-reflection">Reflection</a></li>
+<li><a href="#castles-problem">Overview: The Problem</a></li>
+<li><a href="#polyominoes">Polyominoes</a><ul>
+<li><a href="#castle-rules">Castle Rules for Polynominoes</a></li>
 </ul>
 </li>
-<li><a href="#hilbert2-reflection-solution">Solving the Reflection Problem</a></li>
-<li><a href="#hilbert2-procedure">Procedure</a></li>
-<li><a href="#hilbert2-references">References</a></li>
+<li><a href="#castles-enumerate">Don't Generate - Enumerate!</a></li>
 </ul>
-<p><a name="hilbert2-problem"></a></p>
-<h1 id="hilbert-sort-problem">Hilbert Sort Problem</h1>
-<p>In the prior post, we covered the Hilbert Sort problem, 
-but we state it once more succinctly here before 
-detailing a solution to the problem.</p>
-<p>The Hilbert Sort problem asks the following: 
-given a set of labeled <span class="math">\((x,y)\)</span> points,
-how can we sort the points according to 
-the order in which they are visited 
-by a space-filling Hilbert curve?</p>
-<p>Revisiting the example input and output provided, the input provides 
-the number of points and size of the grid on the first line, 
-followed by each point's coordinates and label.</p>
-<div class="highlight"><pre><span></span><code>Input:
-    14 25
-    5 5 Honolulu
-    5 10 PugetSound
-    5 20 Victoria
-    10 5 Berkeley
-    10 10 Portland
-    10 15 Seattle
-    10 20 Vancouver
-    15 5 LasVegas
-    15 10 Sacramento
-    15 15 Kelowna
-    15 20 PrinceGeorge
-    20 5 Phoenix
-    20 10 SaltLakeCity
-    20 20 Calgary
-
-Output:
-    Honolulu
-    Berkeley
-    Portland
-    PugetSound
-    Victoria
-    Vancouver
-    Seattle
-    Kelowna
-    PrinceGeorge
-    Calgary
-    SaltLakeCity
-    Sacramento
-    LasVegas
-    Phoenix
+<p><a name="castles-problem"></a></p>
+<h1 id="overview-the-problem">Overview: The Problem</h1>
+<p>In an earlier post, I mentioned <a href="https://charlesreid1.com/wiki/Project_Euler">my efforts on Project Euler problems</a>
+and the wide variety of problems there that can offer some profound mathematical insights.</p>
+<p>Given that the first post covered Project Euler problem 1, I thought it would be nice
+if the next problem cranked up the difficulty factor by an order of magnitude.
+<a href="https://projecteuler.net/problem=502">Project Euler Problem 502</a> is a very hairy combinatorics problem that required me to learn about 
+a wide variety of combinatorial enumeration techniques.</p>
+<p>Let's start with the problem statement.</p>
+<h2 id="building-castles">Building Castles</h2>
+<p>Problem 502 is about building castles. The problem gives an <span class="math">\(M \times N\)</span> rectangular grid,
+and asks us to count how many "castles" can be built on the rectangular grid, given its maximum
+height. </p>
+<p>Here is how the game works:</p>
+<p>First, start by defining a block as a rectangle of height 1, and an integer-valued length.
+A castle is a configuation of stacked blocks.</p>
+<p>For a game grid of size <span class="math">\(M \times N\)</span>, we can construct castles according to
+the following rules:</p>
+<ul>
+<li>Blocks can be placed on top of other blocks, but no sticking out past edge</li>
+<li>All blocks aligned to grid</li>
+<li>Two neighboring blocks must have 1 unit of space between them</li>
+<li>Maximum achieved height of castle is EXACTLY M</li>
+<li>Castle is made from even number of blocks</li>
+</ul>
+<p>Here is an example W = 8, H = 5 castle given in more compact notation:</p>
+<div class="highlight"><pre><span></span><code>  #   # 
+  #   ##
+ ## # ##
+##### ##
+########
 </code></pre></div>
 
-<p><a name="hilbert2-space"></a></p>
-<h1 id="space-is-the-place">Space is the Place</h1>
-<p>To solve the Hilbert Sort problem, we have to avoid the temptation
-to think about the Hilbert curve and the way that it is constructed.
-While we spent quite a bit of time talking about the Hilbert curve
-and how it is constructed, the curve itself is not what we are 
-interested in - we are interested in the order in which the points
-are visited. </p>
-<p>Also remember, the motivation of solving the Hilbert Sort problem is to 
-arrange spatial <span class="math">\((x,y)\)</span> points so closer points are nearer together.</p>
-<p>No matter how many iterations of the Hilbert curve we end up drawing,
-we always apply the same procedure: cut the square into four quadrants, 
-reflect the southwest corner about the bottom left to top right diagonal,
-and reflect the southeast corner about the bottom right to top left diagonal.</p>
-<p>We will always visit points in the southwest quadrant before we visit 
-points in the northwest quadrant; we will always visit points in the northwest
-corner before we visit points in the northeast corner; etc.</p>
-<p><a name="hilbert2-reflections"></a></p>
-<h1 id="the-reflections">The Reflections</h1>
-<p>The trickiest part of the Hilbert Sort problem is the reflection that happens 
-to the lower left and lower right quadrants.</p>
-<p><a name="hilbert2-quad"></a></p>
-<h2 id="reflected-quadrants">Reflected Quadrants</h2>
-<p>Start with the first step of the Hilbert sort - take a square with points contained in it. 
-Split the square into four quadrants (with the intention of creating four sub-problems).
-However, to conform to the Hilbert Curve construction process,
-the lower left and lower right squares must be reflected.
-The lower left square is reflected about the bottom left to upper right diagonal,
-while the lower right square is reflected about the bottom right to upper left diagonal.</p>
-<p>Convince yourself of this by studying the curve construction procedure as illustrated
-by Hilbert himself in his 1890 paper (a.k.a., Hilbert Illustrates A Hilbert Curve):</p>
-<p><img alt="Hilbert Illustrates Construction of Hilbert Curve" src="/images/HilbertCurve-OriginalPaper.png"></p>
-<p>We are working toward a recursive method - and recursive methods call themselves repeatedly,
-apply to subproblems that are trivially similar. However, to translate this into a recursive 
-problem, we have to deal with the rotations within the current recursive step, 
-in such a way that we don't need to know the orientation of the prior square 
-to know the order in which to visit the squares - it is always southwest, northwest, notheast, southwest.</p>
-<p>After we split the squares into quadrants, 
-after we toss out any quadrants with no points, 
-we walk through each of the four quadrants in order 
-(southwest, northwest, northeast, southwest).
-If there is a single point in the quadrant,
-we add it to the priority queue.</p>
-<p>It is here that we take care of the rotation - 
-before we recursively call the Hilbert sort method
-on the quadrant itself.</p>
-<p><a name="hilbert2-scaling"></a></p>
-<h2 id="scaling">Scaling</h2>
-<p>We have a prescribed order for the four quadrants 
-in the current recursive level, and the current recursive level
-is working its way through each of those four quadrants.
-But remember, our algorithm only cares about the order of points.
-It does not care about the <span class="math">\((x,y)\)</span> location. 
-So we can ireflect <span class="math">\((x,y)\)</span> points by changing their 
-<span class="math">\((x,y)\)</span> coordinate locations. Ultimately
-we are only changing the program's internal representation
-of each point, not the original data on disk, 
-so we can think of <span class="math">\((x,y)\)</span> as mutable for our purposes.</p>
-<p>This is an important part of our solution:
-scaling (and reflecting) each quadrant before 
-recursively calling the Hilbert sort method 
-on the points contained in it.</p>
-<p>If we are considering a single quadrant 
-of dimensions <span class="math">\(\frac{S}{2} \times \frac{S}{2}\)</span>,
-containing points <span class="math">\((x,y)\)</span>, we may be able to 
-pass in the corners of our square, plus the 
-<span class="math">\((x,y)\)</span> points contained in it.
-However, as our squares get smaller,
-the distance between points gets smaller as well,
-so this has an upper limit as to how many points 
-it can sort.</p>
-<p>On the other hand, we can avoid passing all that information around
-and using doubles, by just rescaling everything to the given
-quadrant. We want each recursive level to completely forget 
-about where in the recursive stack it is, how large its square is
-relative to the original, etc. All it should be doing is 
-solving the same problem repeatedly - which is what recursion
-is best at. If we double the sides of the square, we get 
-a shape with original size <span class="math">\(S \times S\)</span>. To keep the points 
-shifted correctly we double their <span class="math">\((x,y)\)</span> coordinates 
-to <span class="math">\((2x, 2y)\)</span>.</p>
-<p>Once this transformation is performed, we are ready to call
-the Hilbert Sort function recursively - for the 
-northwest and northeast quadrants only. The southwest and 
-southeast quadrants still have a ways to go.</p>
-<p><a name="hilbert2-reflection"></a></p>
-<h2 id="reflection">Reflection</h2>
-<p>In addition to the scale-up transformation, southwest and southeast 
-qaudrant points must be reflected about their diagonals.</p>
-<p>Here's an example of what the process looks like in action:</p>
-<p><img alt="Hilbert Sort Poster Flowchart" src="/images/hilbert-poster.png"></p>
-<p><a name="hilbert2-reflection-solution"></a></p>
-<h1 id="solving-the-reflection-problem">Solving the Reflection Problem</h1>
-<p>The above section described where in the process the reflection 
-of the <span class="math">\((x,y)\)</span> points should happen. The process of applying the 
-reflection differs between the southwest and southeast quadrants.</p>
-<p>In the southwest quadrant, points are being reflected about the 
-diagonal line <span class="math">\(y=x\)</span>, so the reflection of <span class="math">\((x,y)\)</span> points in the 
-southwest quadrant can be performed by swapping the 
-<span class="math">\(x\)</span> and <span class="math">\(y\)</span> values of all of the points in that quadrant.</p>
-<p>In the southeast quadrant, the points are refelected about the 
-diagonal <span class="math">\(y = -x\)</span>, but it is not quite <span class="math">\(y = -x\)</span>, given that there is
-an offset of a half-quadrant width on the left. </p>
-<p>After an <span class="math">\((x,y)\)</span> point is transformed, it has a height equal to
-the distance from the point's x coordinate to the start of the qudarant.
-In equations,</p>
+<p>We can also build more complicated castles, like this 10 by 100 castle:</p>
+<div class="highlight"><pre><span></span><code>X       X      XX    X     XX   XX X X                          X XX          XX   XX  X     X   XXX
+X       X      XX    X     XX X XX X X     X     X             XX XX          XX   XX  X     X   XXX
+X      XX      XX    X     XX X XXXX X     X     X             XX XX          XX   XX  X     X   XXX
+X      XX      XX    X     XX X XXXX X     X     X XXX         XX XX          XX X XX  X     X   XXX
+X      XX     XXX    X     XX X XXXX X  X  X     X XXX X X     XX XX          XX X XX  X  X  X   XXX
+X      XX  X  XXX  X X     XXXX XXXX X  XX X    XX XXX X X   X XX XX          XX XXXX  X XX XX  XXXX
+X  XX  XX  X  XXX  X X     XXXX XXXX XX XX XX XXXX XXX X XXX X XX XX    X     XX XXXXX X XX XX XXXXX
+X  XX  XXX X  XXX  X X   X XXXX XXXX XX XX XX XXXX XXXXX XXX XXXX XX  X X     XX XXXXX X XX XXXXXXXX
+X XXXXXXXX X XXXXXXX X XXXXXXXX XXXXXXX XX XX XXXXXXXXXXXXXX XXXX XX XX X  XX XX XXXXXXXXXX XXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+</code></pre></div>
+
+<p>Our objective in this problem is to enumerate all possible castles. Let <span class="math">\(F(x,y)\)</span> denote the number of 
+unique castles with a width of x and a height of exactly y. The problem gives use the trivial number
+<span class="math">\(F(4,2) = 10\)</span>. The problem also gives <span class="math">\(F(13,10)\)</span> and <span class="math">\(F(10,13)\)</span>, both of which are absolutely enormous numbers.</p>
+<p>This should be your first giant red flag that manual enumeration through a traversal of combinatoric space 
+is absolutely, positively out of the question. We'll explain why in more detail below, but suffice to say,
+there is a combinatoric explosion that occurs for castles larger than 10, so castles with a width of 
+1 trillion are going to get STUPID big.</p>
+<p>Then we're given <span class="math">\(F(100,100)\)</span>, which is so enormous it has to be reported mod 1,000,000,007.</p>
+<p>Finally, the problem asks us the following whopper of a question:</p>
+<p>What is <span class="math">\(F(10^{12},100) + F(10^4, 10^4) + F(100,10^{12}) mod 1,000,000,007\)</span>? </p>
+<p>Whew.</p>
+<h2 id="the-scale-of-the-problem">The Scale of the Problem</h2>
+<p>For solving this problem it is important to take a step back and think through
+the size of the combinatoric space being searched, and what methods we have for 
+carving out that space.</p>
+<p>As already mentioned, the size of this problem - the actual number of 
+castles - is surely larger than the <a href="https://charlesreid1.com/wiki/Eddington_Number">Eddington numer</a>,
+the number of protons in the known universe. The numbers of combinations are 
+STUPID big. There's no way for the mind to fully wrap itself around the concept.</p>
+<p>The huge numbers involved means, we must have a closed-form expression for <span class="math">\(F(x,y)\)</span> that we can
+evaluate once to get each of the <span class="math">\(F(10^{12},100), F(10^4,10^4), F(100,10^{12})\)</span> required by the answer.
+Doing so much as counting to 1 trillion takes minutes on modern computers, so if you're doing anything else
+1 trillion times, you'll end up waiting a loooong time.</p>
+<h2 id="generating-functions">Generating Functions</h2>
+<p>As it turns out, there is indeed a combinatorial enumeration method that does
+not require explicitly finding or generating each permutation in order to count
+all permutations.  I have covered <a href="https://charlesreid1.com/wiki/Generating_Functions">generating
+functions</a> on the
+charlesreid1.com wiki.  The principal idea behind generating functions is the
+observation that we can rearrange the infinite series:</p>
 <div class="math">$$
-y = S - x
+G(z) = 1 + z + z^2 + z^3 + \dots
 $$</div>
-<p>Further, after an <span class="math">\((x,y)\)</span> point is transformed, the distance from the 
-top of the bounding box to the former y coordinate 
-is the new x coordinate, </p>
+<p>into the equation </p>
 <div class="math">$$
-x = \frac{S}{2} - y
+G(z) = \dfrac{1}{1-z}
 $$</div>
-<p>The relative x coordinates of each point 
-(relative meaning, 0 starts at the beginning of the curent square,
-rather than the whole square) are 
-the x coordinates minus the half-quadrant width.</p>
-<p>Once these reflections are performed, we pass the 
-resulting <span class="math">\((x,y)\)</span> points on to a new Hilbert sort.
-The new Hilbert sort will be operating on an <span class="math">\(S x S\)</span> 
-square, as before. Importantly, the <span class="math">\((x,y)\)</span> points have been
-transformed in such a way that the order in which the Hilbert
-curve visits each point has not been affected.</p>
-<p><a name="hilbert2-procedure"></a></p>
-<h1 id="hilbert-sort-procedure">Hilbert Sort Procedure</h1>
-<p>The implementation strategy is, obviously, recursive. What we want to do at each level is:
-* Start with a square and points contained in the square. 
-* Cut the square under consideration into four quadrants.
-* Apply a transformation to each square so that it is re-oriented in a manner that matches our original Hilbert curve.</p>
-<p>Once each of those squares goes through all of its respective recursive calls, 
-it will return a sorted list of points. Then we will know what to do - 
-we collect each of the sorted points from each of the four quadrants in order, 
-maintain that order, and return those sorted quadrants.</p>
-<p>To nail down the details, treat the square under consideration as ranging from 
-<span class="math">\((0,0)\)</span> to <span class="math">\((S,S)\)</span>.</p>
-<p>Each time we cut a square into quadrants, we re-orient ourselves as to where 
-<span class="math">\((0,0)\)</span> is located and which quadrants will be visited in which order.
-If we are in the lower left quadrant, <span class="math">\(x\)</span> is below <span class="math">\(\frac{S}{2}\)</span> and 
-<span class="math">\(y\)</span> is below <span class="math">\(\frac{S}{2}\)</span>, so we rotate and reflect by swapping x and y:</p>
-<div class="highlight"><pre><span></span><code>        X -&gt; Y
-        Y -&gt; X
-</code></pre></div>
-
-<p>If we are in the upper left quadrant, x is below <span class="math">\(\frac{S}{2}\)</span>, y is above <span class="math">\(\frac{S}{2}\)</span>, 
-so subtract <span class="math">\(\frac{S}{2}\)</span> from y and we're done.</p>
-<div class="highlight"><pre><span></span><code>        X -&gt; X
-        Y -&gt; Y-(S/2)
-</code></pre></div>
-
-<p>If we are in the upper right quadrant, x is above <span class="math">\(\frac{S}{2}\)</span>, y is above <span class="math">\(\frac{S}{2}\)</span>, 
-so subtract <span class="math">\(\frac{S}{2}\)</span> from both</p>
-<div class="highlight"><pre><span></span><code>        X -&gt; X - S/2
-        Y -&gt; Y - S/2
-</code></pre></div>
-
-<p>If we are in the lower right quadrant, our x and y values are now 
-relative to the quadrant bounding box. The distance to the top of the 
-bounding box to the y coordinate becomes our new x coordinate, while the 
-distance from the right of the bounding box S to the x coordinate becomes 
-our new y coordinate:</p>
-<div class="highlight"><pre><span></span><code>        X -&gt; S/2 - Y
-        Y -&gt; S - X
-</code></pre></div>
-
-<p>Recursion always requires a base case and a recursive case. Our "base case" is the 
-simple comparison of one or no points in each of our four quadrants. If we get to 
-this base case, we know the order in which the Hilbert Curve will visit each of 
-those points.</p>
-<p>If we are not at the base case, if we have a large number of points to sort, 
-we can bin together all the points in a given quadrant, and consider the order
-in which those points go with an additional level of finer granularity. </p>
-<p><a name="hilbert2-pseudocode"></a></p>
-<h1 id="pseudocode">Pseudocode</h1>
-<div class="highlight"><pre><span></span><code>set square dimension S
-
-create unsorted queue
-load points into unsorted queue
-
-create sorted queue
-sorted queue = hilbert_sort( unsorted queue, square dimension )
-</code></pre></div>
-
-<p>Now here is the Hilbert sort function:</p>
-<div class="highlight"><pre><span></span><code>define hilbert_sort( unsorted queue, square dimension ):
-    create southwest queue
-    create northwest queue
-    create northeast queue
-    create southeast queue
-    for each point:
-        if in southwest:
-            create new point using X -&gt; Y, Y -&gt; X
-            add to southwest queue
-        if in northwest:
-            create new point using X -&gt; 2X, Y -&gt; 2Y - S
-            add to northwest queue
-        if in northeast:
-            create new point using X -&gt; 2X - S, Y -&gt; 2Y - S
-            add to northeast queue
-        if in southeast:
-            create new point using X -&gt; S - 2Y, Y -&gt; 2S - 2X
-            add to southeast queue
-
-        hilbertsort(southwest queue, square dimension)
-        hilbertsort(northwest queue, square dimension)
-        hilbertsort(northeast queue, square dimension)
-        hilbertsort(southeast queue, square dimension)
-
-        create new results queue
-        add points from southwest into results queue
-        add points from northwest into results queue
-        add points from northeast into results queue
-        add points from southeast into results queue
-        return results queue
-</code></pre></div>
-
-<p><a name="hilbert2-refs"></a></p>
-<h1 id="references">References</h1>
-<ol>
-<li>
-<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
-&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
-</li>
-<li>
-<p>"Über die stetige Abbildung einer Linie auf ein Flächenstück." D. Hilbert. 
-<strong>Mathematische Annalen</strong> 38 (1891), 459–460. <a href="/files/HilbertCurve.pdf">(pdf)</a></p>
-</li>
-<li>
-<p>"Hilbert Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 29 April 2017. Accessed 23 June 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Hilbert_curve">https://en.wikipedia.org/wiki/Hilbert_curve</a>&gt;</p>
-</li>
-</ol>
+<p>This single identity leads to a whole family of solution techniques for generating functions.
+The basic idea is to start by writing the rules of your system (see above), 
+then write a generating function that varies with characteristic variables of the problem 
+(width and height in this case, possibly others),
+and last, combine the generating functions of different rules or objects into a single generating function.</p>
+<p><a name="polyominoes"></a></p>
+<h1 id="overview-of-polyominoes">Overview of Polyominoes</h1>
+<p>Let us begin by considering a two-dimensional grid <span class="math">\(\pi\)</span> of points at positive integer coordinates,
+<span class="math">\(\pi = \mathbb{N} \times \mathbb{N}\)</span>. </p>
+<p>Let a polyomino denote a two-dimensional shape formed by connecting contiguous unit square tiles
+together, all of which align to the 2D grid of integers <span class="math">\(\pi\)</span>. </p>
+<p>(Granted, this definition sounds a bit pedantic, as we're just describing stackable squares,
+but we need to keep the definition general because there are many kinds of polyomonioes,
+and many rules that we can set for how we arrange them.)</p>
+<p>If you have played <a href="https://en.wikipedia.org/wiki/Tetris">Tetris</a> before, or 
+John Conway's <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Game of Life</a>, you will recognize
+polyominoes from those contexts.</p>
+<p>Now, we set up our generating function in terms of characteristics of the problem.</p>
+<p>It is very important to note that, while most of the rules are fairly straightforward to translate into
+a polyomonio type of framework, Rule 6 is not. In fact, it is probably Rule 6 that makes Problem 502
+so challenging. Were it not for Rule 6, this would be a nearly-trivial problem.</p>
+<p>Let's review our castle construction rules and translate them into polyomino equivalents.</p>
+<p><a name="castle-rules"></a></p>
+<h2 id="castle-rules-for-polyominoes">Castle Rules for Polyominoes</h2>
+<h3 id="generating-function-variables">Generating Function Variables</h3>
+<p>We want to construct a multivariate ordinary generating function for our castles, since we have 
+several variables we want to change, and get back a total count of castles.</p>
+<p>The two most obvious variable choices for our generating function independent variables 
+are width <span class="math">\(x\)</span> and height <span class="math">\(y\)</span>. Surely, these must be in the final generating function.</p>
+<p>However, this still doesn't give us enough information about the construction process 
+from step to step. Imagine that we place the first block on row 1.</p>
+<p>Then we may place as many blocks as we would like along row 2, wherever we would like 
+(level 2 is the least restricted layer of the castle).</p>
+<p>Now, when we get to row 3, we are only allowed to keep building where there is already 
+an existing tower from the prior row. This means, we have to pass along information 
+from the prior row - where the bricks are located and how many - so that we know where
+the next level may build towers.</p>
+<p>This will remain an open question until we cover a few other representations of 
+Problem 502 and ways of modeling it. Then we will cover what additional
+variables our generating function might need.</p>
+<h3 id="rule-1-no-overhangs">Rule 1: No Overhangs</h3>
+<p>Rule 1 stipulates that blocks can be placed on top of
+other blocks as long as nothing sticks out past the end
+or hags out.</p>
+<p>This ensures that the resulting polyomino is column
+convex. Column convexity is the property that we can
+draw a vertical line through any column of the
+polyomino, and we only intersect the polyomino in two
+places. (No internal breaks.)</p>
+<p>This rule stipulates what kind of polyomino
+constructions are allowed.</p>
+<h3 id="rule-2-snap-to-grid">Rule 2: Snap to Grid</h3>
+<p>This rule is just saying that the unit squares in the
+castle problem match the unit squares of polyominoes,
+ensuring the problems are interchangeable.</p>
+<h3 id="rule-3-neighbor-blocks-need-space">Rule 3: Neighbor Blocks Need Space</h3>
+<p>Rule 3 is crucial for being able to count blocks. If two
+side-by-side contiguous unit squares could be either one
+or two blocks, this would make the final count of
+solutions much, much, much, much, much bigger than it
+should be.</p>
+<h3 id="rule-4-bottom-row-is-one-block">Rule 4: Bottom Row is One Block</h3>
+<p>This is more of an accounting-based rule, but we define
+our castle construction process such that it begins with
+a completed row. This means that the number of blocks
+that we add on top of that single block must be odd
+overall.</p>
+<h3 id="rule-5-maximum-height-is-exactly-h">Rule 5: Maximum Height is Exactly H</h3>
+<p>As it turns out, the last two rules are the toughest -
+in a sense, because they are <strong>global</strong> conditions on
+the combinatoric solution that is being counted.  In
+other words, we will use generating functions to
+"construct" our combinatoric objects in a methodical
+way, and the challenge is on setting global conditions
+on the generating function's counted solutions.</p>
+<h3 id="rule-6-even-number-of-blocks">Rule 6: Even Number of Blocks</h3>
+<p>Rule 6 is definitely what makes this problem difficult. </p>
+<p>Our approach is going to involve coming up with a 
+counting function - but this rule tells us that the
+counting function will need to have some way of
+accounting for the total number of blocks, and
+divide by or subtract a factor that accounts for
+castles with an odd number of blocks.</p>
+<p><a name="castles-enumerate"></a></p>
+<h2 id="dont-generate-enumerate">Don't Generate - Enumerate!</h2>
+<p>We mentioned above that the number of possibilities
+here is huge, so this combinatorics problem falls 
+squarely in the realm of enumerating, not generating.</p>
+<p>That being said, and keeping in mind that the problem
+size blows up rapidly, it can still be useful to write
+an algorithm to generate castles for small values of
+width and height, to test formulas for these small
+values (and uncover corner cases!).</p>
+<p>See <a href="https://charlesreid1.com/wiki/Project_Euler/502">Project Euler/502</a>
+on the charlesreid1.com wiki for continued work on
+this problem. </p>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var align = "center",
         indent = "0em",
@@ -856,15 +790,15 @@ sorted queue = hilbert_sort( unsorted queue, square dimension )
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
+                    <a href="https://charlesreid1.github.io/tag/factors.html">factors</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hilbert-sort.html">hilbert sort</a>
+                    <a href="https://charlesreid1.github.io/tag/sequences.html">sequences</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -882,18 +816,18 @@ sorted queue = hilbert_sort( unsorted queue, square dimension )
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                CSE 143 Final Project: Hilbert Sort: 1. The Problem
+                Project Euler Problem 1
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2017-06-23T16:30:00-07:00" pubdate>Friday 06/23/2017</time>
+                <time datetime="2017-07-22T09:00:00-07:00" pubdate>Saturday 07/22/2017</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computer-science.html">Computer Science</a>
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/cse-143-final-project-hilbert-sort-1-the-problem.html">permalink</a>
+                <a href="https://charlesreid1.github.io/project-euler-problem-1.html">permalink</a>
             </span>
             </p>
         </div>
@@ -911,259 +845,107 @@ sorted queue = hilbert_sort( unsorted queue, square dimension )
     <div class="col-md-12" style="text-align: left;">
 
         <div class="entry-content"><h1 id="table-of-contents">Table of Contents</h1>
-<p>This is the first in a series of three posts 
-detailing the Hilbert Sort problem,
-its solution, and its implementation.
-This post sets up the problem.</p>
 <ul>
-<li><a href="#hilbert-motivation">Hilbert Sort: Motivation</a></li>
-<li><a href="#hilbert-spacefilling">Hilbert, Peano, and Space-Filling Curves</a></li>
-<li><a href="#hilbert-curve">Constructing a Hilbert Curve</a></li>
-<li><a href="#hilbert-sort">Performing a Hilbert Sort</a></li>
-<li><a href="#hilbert-problem">Problem Statement</a></li>
-<li><a href="#hilbert-refs">References</a></li>
+<li><a href="#pe1-problem">Overview: The Problem</a></li>
+<li><a href="#pe1-why">Why This Problem?</a></li>
+<li><a href="#pe1-deeper">Going Deeper: An Example</a></li>
 </ul>
-<p><a name="hilbert-motivation"></a></p>
-<h1 id="hilbert-sort-motivation">Hilbert Sort: Motivation</h1>
-<p>In the next few series of posts, we will cover the Hilbert Sort problem,
-how it works, and how to implement it.<br>
-However, before we describe the problem further, 
-let's start with some motivation for solving this problem.</p>
-<p>Suppose we're dealing with a very large number of independent objects
-on a 2D coordinate grid, each with a coordinate location <span class="math">\((x,y)\)</span>.
-(For example, a large population of particles moving in a fluid, or a large number 
-of characters on a map in a game.) </p>
-<p>Here is our box of particles:</p>
-<p><img alt="Box of Particles" src="/images/hilbert1a.png"></p>
-<p>Now, suppose that we have more data than can be handled by a single computer,
-and we want to arrange the data on different computers. However, we want to 
-arrange the data in such a way that we preserve the spatial characteristics
-of the data.</p>
-<p>If we implement a naive sort method for Cartesian points that sorts points by
-x coordinate value, breaking ties with the y coordinate value, 
-we end up with points that are neighbors in space, but far away 
-in the data container's storage (like an array). 
-This is particularly true if there are large crowds of points in the grid.</p>
-<p>Here is an illustration of a set of points and their resulting 
-storage schema in an array that sorts points by x coordinate.
-It shows two purple particles, close by in space, but with<br>
-several green particles further away distance-wise but 
-not with respect to the x coordinate. The spatial locality
-of points is not preserved in the data container, 
-so clearly, a better method of sorting and organizing points is needed.</p>
-<p><img alt="Bad Schema" src="/images/hilbert1b.png"></p>
-<p>An alternative to this schema that yields better locality properties,
-but that leads to a much higher cost for sorting points, involves 
-iterating over each point, and for each point, finding the closest points to it
-in space. However, this itself requires iterating over each point.
-This approach ends up walking over each point (the point whose nearest neighbors we are finding),
-and doing a second nested walk over each point (checking if a point is a nearest neighbor
-to this one). The overall cost of doing this is <span class="math">\(O(N^2)\)</span>.</p>
-<p>It is a deceptively tricky problem: how to organize a large group of points 
-in a way that preserves spatial locality?</p>
-<p>But first, we'll cover the topic of space filling curves, then return to this topic.</p>
-<p><a name="hilbert-spacefilling"></a></p>
-<h1 id="space-filling-curves">Space Filling Curves</h1>
-<p>Mathematician Giuseppe Peano was a prolific teacher and researcher known for many things,
-but one of his more curious ideas is known as the Peano Curve. Peano was attempting to
-answer the question of whether a continuous curve could be bounded by a finite space,
-and he invented a counter-example: a recipe for breaking a curve into parts
-that can be replicated and repeated and applied to the copies as many times as 
-desired, and always result in a continuous curve.</p>
-<p>The way that space-filling curves in general are constructed is to 
-create a pattern, then scale it down and repeat it, 
-attaching subsequent scaled-down, repeated curves.
-Peano simply invented the first curve; there are many variations 
-on the original space-filling curve idea (including the Hilbert Curve - 
-more on that in a moment).</p>
-<p>The <a href="/files/PeanoCurve.pdf">original 1890 paper by Giuseppe Peano</a> is entitled "Sur une courbe,
-qui remplit toute une aire plane", published in 1890 in Mathematische Annalen I, 
-Issue 36. Unfortunately, it has no pictures, but here is a rendering from 
-Wikimedia Commons:</p>
-<p><img alt="Peano Curve" src="/images/PeanoCurve-Many.png"></p>
-<p><a href="https://commons.wikimedia.org/wiki/File:Peano_curve.png">(Link to original on Mediawiki Commons)</a></p>
-<p>Now, the Peano curve was nice, but it had some mathematical properties 
-that made it difficult to deal with. So in 1890,
-<a href="/files/HilbertCurve.pdf">David Hilbert published a follow-up paper</a> 
-in Mathematische Annalen I Issue 38, entitled 
-"Ueber die stetige Abbildung einer Linie auf ein Flächenstück",
-which slightly modified the recipe to create a curve with more 
-elegant mathematical properties. </p>
-<p>Also, he included pictures.</p>
-<p>Here is the first set of figures from Hilbert's 
-<a href="/files/HilbertCurve.pdf">original 1890 paper</a>:</p>
-<p><img alt="Hilbert Curve" src="/images/HilbertCurve-OriginalPaper.png"></p>
-<p>And here is a slightly cleaner rendering of the Hilbert Curve pattern 
-repeated six times:</p>
-<p><img alt="Hilbert Curve" src="/images/HilbertCurve-Many.png"></p>
-<p><a href="https://commons.wikimedia.org/wiki/File:Hilbert_curve.svg">(Link to original on Wikimedia Commons)</a></p>
-<p>From the abstract of Hilbert's paper:</p>
+<p><a name="pe1-problem"></a></p>
+<h1 id="overview-the-problem">Overview: The Problem</h1>
+<p>Project Euler is a website that provides mathematically-oriented programming problems.
+There are many (over 500) and they are a rich source of profound mathematical insights.</p>
+<p>I have been considering a writeup that goes deep into a particular problem,
+so why not do it with problem 1?</p>
+<p>Problem 1 of Project Euler asks:</p>
 <blockquote>
-Peano has recently shown in the Mathematical Annals, 2 by an arithmetical observation, 
-how the points of a line can be mapped continuously to the points of a surface part. 
-The functions required for such a mapping can be produced more clearly by using the 
-following geometrical view. Let us divide the line to be represented-about a straight 
-line of the length 1-into four equal parts 1, 2, 3, 4, and the surface which we assume 
-in the form of a square of the side length 1 Straight into 4 equal squares 1, 2, 3, 4 
-(Fig. 1). Secondly, we divide each of the partial sections 1, 2, 3, 4 again into 4 equal
-parts so that we obtain on the straight the 16 partial sections 1, 2, 3, ..., 16; At the 
-same time, each of the 4 squares 1, 2, 3, 4 is divided into 4 equal squares, and the numbers 
-1, 2, ..., 16 are then written to the resulting 16 squares, That each successive square 
-follows the previous one with one side (Fig. 2). If we think of this method, as shown in 
-Fig. 3, the next step, it is easy to see how to assign a single definite point of the 
-square to any given point of the line. It is only necessary to determine the partial 
-stretches of the line to which the given point falls. The squares indicated by the same 
-numbers are necessarily in one another and include a certain point of the surface piece 
-in the boundary. This is the point assigned to the given point. The image thus found is 
-unambiguous and continuous, and vice versa, each point of the square corresponds to 
-one, two, or four points of the line. Moreover, it appears remarkable that, by a 
-suitable modification of the partial lines in the squares, a clear and continuous 
-representation can easily be found, the reversal of which is nowhere more than 
-three-fold.
-
-<br />
-
-- David Hilbert, "Über die stetige Abbildung einer Linie auf ein Flächenstück", Mathematische Annalen Vol 38 
-
+Find the sum of all the multiples of 3 or 5 below 1000.
 </blockquote>
 
-<p>Thanks to Google Translate for an incredible job.</p>
-<p><a name="hilbert-curve"></a></p>
-<h1 id="constructing-a-hilbert-curve">Constructing a Hilbert Curve</h1>
-<p>To construct a Hilbert curve, you just have to follow the recipe.
-It doesn't matter what your square contains so far,
-or how many levels in you are, whether it's the first curve
-or the five hundredth:</p>
-<ol>
-<li>
-<p>First, take yer square. </p>
-</li>
-<li>
-<p>Second, quadruple yer square. That means, make four copies, that all make a square.</p>
-</li>
-<li>
-<p>Now rotate the bottom left and bottom right via diagonal reflection.</p>
-</li>
-<li>
-<p>Fourth step is, you're done - that's you're new square!</p>
-</li>
-</ol>
-<p><a name="hilbert-sort"></a></p>
-<h1 id="performing-a-hilbert-sort">Performing a Hilbert Sort</h1>
-<p>We will omit a proof of the statement, but given a set of unique (x,y) points,
-we can always construct a minimal-size Hilbert Curve that visits each point only
-once. </p>
-<p>Points can be sorted, then, according to when they would be visited by 
-said Hilbert Curve. And this ordering provides better preservation of spatial 
-locality and structure of points when aligning them in memory, because 
-these space-filling curves are recursive and preserve spatial locality
-in a top-down fashion.</p>
-<p>For example, if we have two points in our square, one in the lower left 
-and one in the lower right, and we are sorting them via a Hilbert Sort,
-we definitely know that a Hilbert curve constructed to visit both of these points
-will definitely visit the lower left point (the quadrant where the Hilbert curve starts)
-before it visits the lower right point (in the quadrant where the Hilbert curve stops).</p>
-<p>This requires thinking about <span class="math">\((x,y)\)</span> points in the box in terms of quadrants, 
-and the order in which the Hilbert curve will visit each quadrant or region,
-rather than thinking in terms of the explicit Hilbert curve that will visit each 
-particular <span class="math">\((x,y)\)</span> point:</p>
-<p><img alt="Box of Particles, Divided Into Quadrants" src="/images/hilbert2a.png"></p>
-<p>This is a subtle shift in the thinking about this problem, but it is crucial
-to a successful implementation of a Hilbert sort. The problem that will follow,
-which asks to implement the Hilbert sort, has many distracting details, 
-including the Hilbert curve itself. </p>
-<p><strong>Remember, in Hilbert sort, the end goal is not the curve itself, but the sort order.</strong></p>
-<p>Here is how the quadrant-by-quadrant partitioning to sort elements ends up looking 
-when applied repeatedly: </p>
-<p><img alt="Repeated Applications" src="/images/hilbert2b.png"></p>
-<p>It is important to note that the two diagonal reflections happening in the corners
-are the trickiest part of this problem. We will cover this operation in greater detail
-in the solution blog post.</p>
-<p><a name="hilbert-problem"></a></p>
-<h1 id="problem-statement">Problem Statement</h1>
-<p>Following is a paraphrased problem statement from the <a href="/files/HilbertSort.pdf">original
-ACM ICPC Regional Programming Competition
-problem statement</a> that this problem and its solution was based on.</p>
-<p>"If points <span class="math">\((x,y)\)</span> are sorted primarily by x, breaking ties by y, then points that are 
-adjacent in memory will have similar x coordinates but not necessarily similar y,
-potentially placing them far apart on the grid. To better preserve distances, we may 
-sort the data along a continuous space-filling curve.</p>
-<p>"We consider one such space-filling curve called the Hilbert curve...</p>
-<p>"Given some locations of interest, you are asked to sort them according to when the 
-Hilbert curve visits them. Note that while the curve intersects itself at 
-infinitely many places, e.g., at <span class="math">\((\frac{S}{2}, \frac{S}{2})\)</span>, making S odd 
-guarantees all integer points are visited just once."</p>
-<p>Here is an example input file, giving a set of points 
-on an <span class="math">\(M \times N\)</span> grid:</p>
-<div class="highlight"><pre><span></span><code>    14 25
-    5 5 Honolulu
-    5 10 PugetSound
-    5 20 Victoria
-    10 5 Berkeley
-    10 10 Portland
-    10 15 Seattle
-    10 20 Vancouver
-    15 5 LasVegas
-    15 10 Sacramento
-    15 15 Kelowna
-    15 20 PrinceGeorge
-    20 5 Phoenix
-    20 10 SaltLakeCity
-    20 20 Calgary
-</code></pre></div>
-
-<p>The corresponding output can be verified intuitively,
-assuming the coordinates given above are accurate!
-Here is the output. Indeed, the order in which each
-city is visited is what we would expect if we drew
-a space-filling Hilbert curve over a map of the western
-United States and Canada.</p>
-<div class="highlight"><pre><span></span><code>    Honolulu
-    Berkeley
-    Portland
-    PugetSound
-    Victoria
-    Vancouver
-    Seattle
-    Kelowna
-    PrinceGeorge
-    Calgary
-    SaltLakeCity
-    Sacramento
-    LasVegas
-    Phoenix
-</code></pre></div>
-
-<p>Now that we've used up all of our space here describing the problem,
-in a follow-up post we will go into greater detail about
-how to solve the problem conceptually, and come up with some 
-pseudocode for a recursive method (since this is a recursive task).
-Then, a third post will go into greater detail about the 
-final Java code to perform this task.</p>
-<p><a name="hilbert-refs"></a></p>
-<h1 id="references">References</h1>
-<ol>
-<li>
-<p>"ACM Pacific Region Programming Competition." Association of Computing Machinery. Accessed 19 June 2017.
-&lt;<a href="http://acmicpc-pacnw.org/">http://acmicpc-pacnw.org/</a>&gt;</p>
-</li>
-<li>
-<p>"Sur une courbe, qui remplit toute une aire plane." G. Peano. 
-<strong>Mathematische Annalen</strong> 36 (1890), 157–160. <a href="/files/PeanoCurve.pdf">(pdf)</a></p>
-</li>
-<li>
-<p>"Über die stetige Abbildung einer Linie auf ein Flächenstück." D. Hilbert. 
-<strong>Mathematische Annalen</strong> 38 (1891), 459–460. <a href="/files/HilbertCurve.pdf">(pdf)</a></p>
-</li>
-<li>
-<p>"Hilbert Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 29 April 2017. Accessed 23 June 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Hilbert_curve">https://en.wikipedia.org/wiki/Hilbert_curve</a>&gt;</p>
-</li>
-<li>
-<p>"Peano Curve." Wikipedia: The Free Encyclopedia. Wikimedia Foundation. Edited 16 October 2016. Accessed 23 June 2017.
-&lt;<a href="https://en.wikipedia.org/wiki/Peano_curve">https://en.wikipedia.org/wiki/Peano_curve</a>&gt;</p>
-</li>
-</ol>
+<p>It is a pretty simple task - one of the first things covered in a decent programming course
+is the assortment of mathematical operators, including the modular operator and multiplication
+operator, useful here.</p>
+<p>This problem is also a familiar problem in another guise - any computer science student
+who has solved a variant of the fizz buzz problem will recognize this task 
+(in the fizz buzz problem, you print fizz every time a number is divisible by 3
+and buzz every time it is divisible by 5, etc.)</p>
+<p>It is a deceptively simple problem. In fact, it is so easy to solve with a computer
+that you almost lose a sense of what the manual process would look like.
+How might we perform this task by hand? </p>
+<p>Finally, it is an example of a problem in which we are trying to find 
+the number of outcomes of several classes of events, and some of the events
+are labeled with both classes. This means it will be important to learn and apply
+the Inclusion-Exclusion Principle. (Fortunately, this principle is fairly 
+straightforward to apply.)</p>
+<p>We will get to the algorithm to counting these factors by hand, and handling 
+more complicated constraints as well, but first I'll address why this problem - 
+this task - was deemed important enough to be the very first step that nearly 
+everyone takes on their epic (or... not so epic) Project Euler journey.</p>
+<p><a name="pe1-why"></a></p>
+<h1 id="why-this-problem">Why This Problem?</h1>
+<p>The central task in this problem is to find multiples of a number <span class="math">\(k\)</span>,
+and count them. The task is simple enough (unlike later Project Euler questions,
+which can be downright <i>frightening</i> at times), but still requires 
+knowledge of loops, operators, and basic algorithm design. It's no litmus test
+for whether you can solve Problem 100, but it gets you started.</p>
+<p>The task at the heart of this problem - iterating through a list of multiples
+of a number - is at the heart of the Sieve of Eratosthenes algorithm, 
+which in turn is at the heart of applied number theory. While it may 
+not be the algorithm applied in practice, it is the first and most important
+algorithm number theorists learn.</p>
+<p>It's also a first lesson in the subtleties of Project Euler problems - 
+the eager but naive algorithm designer will count all multiples of 3,
+then all multiples of 5, forgetting that some repeat.</p>
+<p><img alt="Project Euler Fail" style="width: 150px;" src="/images/pe-fail.png" /></p>
+<p>Welcome to Project Euler.</p>
+<p><a name="pe1-deeper"></a></p>
+<h1 id="going-deeper-an-example">Going Deeper: An Example</h1>
+<p>It's true that this problem seems a bit boring on its face. But let's dive deeper. Suppose I asked you to find the number of multiples of the integers 3 and 4, but not the integer 5, below 2,001 - and to do so without explicitly enumerating them with a computer.</p>
+<p>To do this, we can express the problem in set notation. We have three sets, A, B, C, containing multiples of 3, 4, and 5, respectively. In set theory language, we wish to find </p>
+<div class="math">$$
+( A \bigcup B ) \backslash C
+$$</div>
+<p>We can start by counting the sets A and B, as well as accounting for <span class="math">\(A \bigcap B\)</span> (numbers that are multiples of both a and b).</p>
+<p>Next, we can count <span class="math">\(A \bigcap C\)</span> and <span class="math">\(B \bigcap C\)</span>, which are the multiples of a and b that we counted that we should not have because they are multiples of c. </p>
+<p>Finally, we cannot forget <span class="math">\(A \bigcap B \bigcap C\)</span> - numbers that have a, b, and c as multiples. This case is a bit tricky. Any item that is in <span class="math">\(A \bigcap B \bigcap C\)</span> has already been removed - twice. The first time was when it was removed because it was in <span class="math">\(A \bigcap C\)</span>, and the second time was when it was removed because it was in <span class="math">\(B \bigcap C\)</span>. Therefore, we must add each of these items back in, to account for the double-removal and ensure these items are only removed once.</p>
+<p>So we will add the items in <span class="math">\(A \bigcap B \bigcap C\)</span> back into the final set.</p>
+<p>Visually representing A, B, and C with a Venn diagram,</p>
+<p><img alt="Project Euler Problem 1 Venn Diagram" style="background-color: #ddd; width: 500px;" src="/images/pe-venn.png" /></p>
+<p>To get back to the problem at hand, we can compute the size of these sets using the floor function. For example, the cardinality of A is:</p>
+<div class="math">$$
+\mbox{card}(A) = \mbox{floor}\left( \frac{2001}{3} \right) = 667
+$$</div>
+<div class="math">$$
+\mbox{card}(B) = \mbox{floor}\left( \frac{2001}{4} \right) = 500
+$$</div>
+<p>Next, we subtract the duplicates (numbers with both A and B as factors):</p>
+<div class="math">$$
+\mbox{card}(A \bigcap B) = \mbox{floor}\left( \frac{2001}{3 \cdot 4} \right) = 166
+$$</div>
+<p>Now subtract integers that have both a and c as multiples, or b and c as multiples:</p>
+<div class="math">$$
+\mbox{card}(A \bigcap C) = \mbox{floor}\left( \frac{2001}{3 \cdot 5} \right) = 133
+$$</div>
+<div class="math">$$
+\mbox{card}(B \bigcap C) = \mbox{floor}\left( \frac{2001}{4 \cdot 5} \right) = 100
+$$</div>
+<p>And last but not least, those numbers with a, b, and c as factors were just removed twice, so we add them back in once:</p>
+<div class="math">$$
+\mbox{card}(A \bigcap B \bigcap C) = \mbox{floor}\left( \frac{2001}{3 \cdot 4 \cdot 5} \right) = 33
+$$</div>
+<p>This gives a total number of multiples M below N with a or b as a factor, but not c:</p>
+<div class="math">$$
+M = \mbox{floor}\left( \frac{N}{a} \right) + \mbox{floor}\left( \frac{N}{b} \right) 
+- \mbox{floor}\left( \frac{N}{ab} \right)
+- \mbox{floor}\left( \frac{N}{ac} \right) - \mbox{floor}\left( \frac{N}{bc} \right) 
++ \mbox{floor}\left( \frac{N}{abc} \right)
+$$</div>
+<p>in our specific case,</p>
+<div class="math">$$
+\begin{align}
+M &amp;=&amp; 667 + 500 - 166 - 133 - 100 + 33 \\
+M &amp;=&amp; 801
+\end{align}
+$$</div>
 <script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
     var align = "center",
         indent = "0em",
@@ -1237,15 +1019,17 @@ final Java code to perform this task.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/final-project.html">final project</a>
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/competitive-programming.html">competitive programming</a>
+                    <a href="https://charlesreid1.github.io/tag/factors.html">factors</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hilbert-sort.html">hilbert sort</a>
+                    <a href="https://charlesreid1.github.io/tag/sequences.html">sequences</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1284,6 +1068,34 @@ final Java code to perform this task.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>May 2025</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-rick-perlsteins-nixonland.html">Reading Rick Perlstein's <i>Nixonland</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/ken-binmores-game-theory-and-nash-equilibrium-in-shadowrun.html">Ken Binmore's <i>Game Theory</i> and Nash Equilibrium in Shadowrun</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-hobbess-leviathan.html">Reading Hobbes's <i>Leviathan</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/forever-blue-the-other-side-of-the-bums-story.html"><i>Forever Blue</i>: The Other Side of the Bums Story</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

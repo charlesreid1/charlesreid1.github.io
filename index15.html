@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Deconvoluting Convolutional Neural Networks
+                Incorporating Terraform Commands into Makefiles
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-05-29T14:00:00-07:00" pubdate>Wednesday 05/29/2019</time>
+                <time datetime="2020-02-15T12:00:00-08:00" pubdate>Saturday 02/15/2020</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/machine-learning.html">Machine Learning</a>
+                <a href="https://charlesreid1.github.io/category/terraform.html">Terraform</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/deconvoluting-convolutional-neural-networks.html">permalink</a>
+                <a href="https://charlesreid1.github.io/incorporating-terraform-commands-into-makefiles.html">permalink</a>
             </span>
             </p>
         </div>
@@ -128,334 +128,448 @@
     <div class="col-md-12" style="text-align: left;">
 
         <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#introduction-a-simple-cnn-example">Introduction: A Simple CNN Example</a></li>
-<li><a href="#exploring-the-data">Exploring the Data</a></li>
-<li><a href="#create-cnn">Create CNN</a></li>
-<li><a href="#analyzing-network-architecture-and-tensor-shapes">Analyzing Network Architecture and Tensor Shapes</a><ul>
-<li><a href="#input-image-layer">Input Image Layer</a></li>
-<li><a href="#first-convolution-layer">First Convolution Layer</a></li>
-<li><a href="#first-activation-layer">First Activation Layer</a></li>
-<li><a href="#first-maxpooling-layer">First MaxPooling Layer</a></li>
-<li><a href="#second-convolution-layer">Second Convolution Layer</a></li>
-<li><a href="#second-activation-layer">Second Activation Layer</a></li>
-<li><a href="#second-maxpooling-layer">Second MaxPooling Layer</a></li>
-<li><a href="#third-convolution-layer">Third Convolution Layer</a></li>
-<li><a href="#third-activation-layer">Third Activation Layer</a></li>
-<li><a href="#third-maxpooling-layer">Third MaxPooling Layer</a></li>
-<li><a href="#flatten-and-dense-layers">Flatten and Dense Layers</a></li>
-<li><a href="#categorical-output">Categorical Output</a></li>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#step-0-directory-and-file-layout">Step 0: Directory and File Layout</a><ul>
+<li><a href="#environment-variables">Environment Variables</a></li>
 </ul>
 </li>
-<li><a href="#image-transformer">Image Transformer</a><ul>
-<li><a href="#next-steps">Next Steps</a></li>
+<li><a href="#step-1-top-level-makefile">Step 1: Top Level Makefile</a></li>
+<li><a href="#step-2-infra-level-makefile">Step 2: Infra Level Makefile</a><ul>
+<li><a href="#fake-targets">Fake Targets</a></li>
+<li><a href="#commands-for-single-components">Commands for Single Components</a></li>
+<li><a href="#commands-for-all-components">Commands for All Components</a></li>
+<li><a href="#variables">Variables</a></li>
+<li><a href="#final-makefile">Final Makefile</a></li>
+</ul>
+</li>
+<li><a href="#step-3-writing-terraform-components">Step 3: Writing Terraform Components</a></li>
+<li><a href="#step-4-initializing-terraform-components">Step 4: Initializing Terraform Components</a></li>
+<li><a href="#workflow">Workflow</a><ul>
+<li><a href="#plan">Plan</a></li>
+<li><a href="#deploy">Deploy</a></li>
+<li><a href="#update">Update</a></li>
+<li><a href="#destroy">Destroy</a></li>
 </ul>
 </li>
 </ul>
 </div>
-<h1 id="introduction-a-simple-cnn-example">Introduction: A Simple CNN Example</h1>
-<p>As part of our weekly Deep Learning for Genomics reading group
-here in the <a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology (DIB Lab)</a>,
-we are applying convolutional neural networks (deep learning) 
-to various problems in genomics and biology.</p>
-<p>For the most recent meeting, we prepared some notes on how convolutional
-neural networks work. The notes are in the form of a Jupyter notebook.
-This blog post summarizes some of the important conclusions from the
-notebook and links to relevant sections in the notebook.</p>
-<p>In the notebook covered in this blog post, we set up a 
-simple convolutional neural network from an example on the
-<a href="https://blog.keras.io/building-powerful-image-classification-models-using-very-little-data.html">keras blog</a>.
-This example is used to classify input images as being either
-a cat or a dog.</p>
-<p>All materials covered in this blog post are in the 
-<a href="https://github.com/charlesreid1/deconvoluting-convolutions">charlesreid1/deconvoluting-convolutions</a>
-repository on Github.</p>
-<h1 id="exploring-the-data">Exploring the Data</h1>
-<p><strong>TL;DR:</strong> When developing a deep learning model for a problem,
-it is important to start by exploring the data and understanding
-it thoroughly. </p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Image-Data">Link to "Image Data" section of notebook</a></p>
-<h1 id="create-cnn">Create CNN</h1>
-<p><strong>TL;DR:</strong> Our convolutional neural network consists of the following architecture:</p>
+<h1 id="summary">Summary</h1>
+<p>This blog post covers a useful pattern for incorporating terraform commands
+into a Makefile.</p>
+<p>This is useful for cases where terraform is being used to manage infrastructure.
+In the end you will be able to run a command like</p>
+<div class="highlight"><pre><span></span><code>make plan-infra
+make deploy-infra
+</code></pre></div>
+
+<p>and and have this call the corresponding terraform commands to plan and deploy your
+terraformed cloud infrastructure.</p>
+<p>The post is divided into a few steps:</p>
 <ul>
-<li>Convolutional Stage #1<ul>
-<li>Convolution (3 x 3 kernel, 32 filters)</li>
-<li>Activation (ReLU)</li>
-<li>Max Pooling (2x2)</li>
+<li>Directory and file layout - how we lay out the files for this tutorial</li>
+<li>Top level Makefile - make commands to add to the top level Makefile</li>
+<li>Infra level Makefile - make commands to add to the infra level Makefile</li>
+<li>Writing Terraform component - how to write a configurable component that is ready to terraform</li>
+<li>Initializing Terraform component - script to initialize terraform components</li>
+<li>Workflow - plan, deploy, update, destroy</li>
 </ul>
-</li>
-<li>Convolutional Stage #2<ul>
-<li>Convolution (3 x 3 kernel, 32 filters)</li>
-<li>Activation (ReLU)</li>
-<li>Max Pooling (2x2)</li>
-</ul>
-</li>
-<li>Convolutional Stage #3<ul>
-<li>Convolution (3 x 3 kernel, 64 filters)</li>
-<li>Activation (ReLU)</li>
-<li>Max Pooling (2x2)</li>
-</ul>
-</li>
-<li>Flatten</li>
-<li>Dense (64 nodes)</li>
-<li>Activation (ReLU)</li>
-<li>Dropout (0.5)</li>
-<li>Dense (1 node)</li>
-<li>Activation (ReLU)</li>
-</ul>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Create-Convolutional-Neural-Network">Link to "Create Convolutional Neural Network" section of notebook</a></p>
-<h1 id="analyzing-network-architecture-and-tensor-shapes">Analyzing Network Architecture and Tensor Shapes</h1>
-<p><strong>TL;DR:</strong> Each step of the neural network transforms
-an input tensor of a given shape into an output tensor
-of a (potentially different) shape.</p>
-<p>In this section of the notebook, we step through each
-of the neural network's layers to explain how the size
-of each layer's inputs and outputs are determined.</p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Network-Architecture/Shapes">Link to "Network Architecture/Shapes" section of notebook</a></p>
-<h2 id="input-image-layer">Input Image Layer</h2>
-<p><strong>TL;DR:</strong> The size of the cat and dog images is 150 x 150 pixels.
-Each image is a color image, so it consists of 3 channels. Therefore,
-the input to the very first layer has a shape of</p>
-<div class="math">$$
-(\mbox{None}, w_0, h_0, c_0) = (\mbox{None}, 150, 150, 3)
-$$</div>
-<p>(where "None" indicates a variable-size dimension that is equal to
-the number of total input images, or alternatively, the number of 
-images per batch, if we are using batch learning).</p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Input-Image-Layer">Link to "Input Image Layer" section of notebook</a></p>
-<h2 id="first-convolution-layer">First Convolution Layer</h2>
-<p><strong>TL;DR:</strong> A convolutional layer with a kernel size of <span class="math">\(k_1 \times k_1\)</span>
-and a number of filters <span class="math">\(c_1\)</span> will transform the shape of the input image to:</p>
-<div class="math">$$
-(\mbox{None}, w_1, h_1, c_1) = 
-(\mbox{None}, 148, 148, 32)
-$$</div>
-<p>where</p>
-<div class="math">$$
-w_1 = w_0 - k_1 + 1 \\
-h_1 = h_0 - k_1 + 1
-$$</div>
-<p>Importantly, each of the three input channels are added together to determine
-their contribution to the final convolution filters - the number of input channels
-does not affect the number of output channels. </p>
-<p>The total number of output channels is equal to the number of filters
-in the convolution layer. </p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#First-Convolution-Layer">Link to "First Convolutional Layer" section of notebook</a></p>
-<h2 id="first-activation-layer">First Activation Layer</h2>
-<p><strong>TL;DR:</strong> The activation layer is a straightforward one-to-one mapping -
-each individual value from the output of the convolution layer is fed through
-the rectified linear unit (ReLU) function and the resulting output value becomes
-the input to the next layer. The ReLU function is given by:</p>
-<div class="math">$$
-\mbox{ReLU}(x) = \max(0,x)
-$$</div>
-<p>The activation layer does not change the shape of the input tensor.</p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#First-Activation-Layer">Link to "First Activation Layer" section of notebook</a></p>
-<h2 id="first-maxpooling-layer">First MaxPooling Layer</h2>
-<p><strong>TL;DR:</strong> The max pooling layer is a way of making the final convolutional
-filters (the "feature-detectors" of the convolutional neural network) less 
-sensitive to the exact placement of features. The pooling layer only affects
-the size of the filter, not the number of channels.</p>
-<p>If we use a max pooling window of <span class="math">\(p_1 \times p_1\)</span>, we will reduce the image
-size by <span class="math">\(\mbox{ceil}(w_1/p_1)\)</span> and <span class="math">\(\mbox{ceil}(h_1/p_1)\)</span>. This reduces the input tensor shape
-to:</p>
-<div class="math">$$
-(\mbox{None}, \mbox{ceil}(w_1/p_1), \mbox{ceil}(h_1/p_1), c_1) = 
-(\mbox{None}, 74, 74, 32)
-$$</div>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#First-Max-Pooling-Layer">Link to "First Max Pooling Layer" section of notebook</a></p>
-<h2 id="second-convolution-layer">Second Convolution Layer</h2>
-<p><strong>TL;DR:</strong> The second convolutional layer has a kernel size 
-of <span class="math">\(k_2 \times k_2\)</span> and a number of filters <span class="math">\(c_2\)</span>, which will
-transform the shape of the input image in the same way as 
-described for the first convolutional layer.</p>
-<p>Note that just as the number of channels (3) in each 
-input to the first convolutional layer did not affect
-the final number of channels in the output of the convolutional
-layer (number of channels was fixed by specifying number of
-output filters for the convolutional layer), so the number of
-input channels to the second convolutional layer does not affect 
-the number of output channels from the second convolutional
-layer.</p>
-<p>The final shape coming out of the second convolutional layer is:</p>
-<div class="math">$$
-(\mbox{None}, w_2, h_2, c_2) = 
-(\mbox{None}, 72, 72, 32)
-$$</div>
-<p>where</p>
-<div class="math">$$
-w_2 = w_1 - k_2 + 1 \\
-h_2 = h_1 - k_2 + 1 \\
-$$</div>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Second-Convolution-Layer">Link to "Second Convolutional Layer" section of notebook</a></p>
-<h2 id="second-activation-layer">Second Activation Layer</h2>
-<p><strong>TL;DR:</strong> The activation layer again uses a function to
-map input values to output values in a one-to-one mapping,
-so the activation layer does not change the shape of the 
-input tensor.</p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Second-Activation-Layer">Link to "Second Activation Layer" section of notebook</a></p>
-<h2 id="second-maxpooling-layer">Second MaxPooling Layer</h2>
-<p><strong>TL;DR:</strong> The second max pooling layer uses a pooling
-window of size <span class="math">\(p_2 \times p_2\)</span>. This will reduce the input
-size to <span class="math">\(\mbox{ceil}(w_2/p_2) \times \mbox{ceil}(h_2/p_2)\)</span>. This reduces 
-the input tensor shape to:</p>
-<div class="math">$$
-(\mbox{None}, \mbox{ceil}(w_2/p), \mbox{ceil}(h_2/p), c_2) = 
-(\mbox{None}, 36, 36, 32)
-$$</div>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Second-Max-Pooling-Layer">Link to "Second Max Pooling Layer" section of notebook</a></p>
-<h2 id="third-convolution-layer">Third Convolution Layer</h2>
-<p><strong>TL;DR:</strong> The third convolution layer with a kernel size 
-of <span class="math">\(k_3 \times k_3\)</span> and <span class="math">\(c_3\)</span> output filters will transform
-the input tensor shape in the following way (note that the
-third convolutional layer has 64 filters, not 32):</p>
-<div class="math">$$
-(\mbox{None}, w_3, h_3, c_3) =
-(\mbox{None}, 34, 34, 64)
-$$</div>
-<p>where</p>
-<div class="math">$$
-w_3 = w_2 - k_3 + 1 \\
-h_3 = h_2 - k_3 + 1
-$$</div>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Third-Convolution-Layer">Link to "Third Convolutional Layer" section of notebook</a></p>
-<h2 id="third-activation-layer">Third Activation Layer</h2>
-<p><strong>TL;DR:</strong> The activation layer again uses a function to
-map input values to output values in a one-to-one mapping,
-so the activation layer does not change the shape of the 
-input tensor.</p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Third-Activation-Layer">Link to "Third Activation Layer" section of notebook</a></p>
-<h2 id="third-maxpooling-layer">Third MaxPooling Layer</h2>
-<p><strong>TL;DR:</strong> The thid max pooling layer uses a pooling
-window of size <span class="math">\(p_3 \times p_3\)</span>. This will reduce the input
-size to <span class="math">\(\mbox{ceil}(w_3/p_3) \times \mbox{ceil}(h_3/p_3)\)</span>. This reduces 
-the input tensor shape to:</p>
-<div class="math">$$
-(\mbox{None}, \mbox{ceil}(w_3/p_3), \mbox{ceil}(h_3/p_3), c_2) = 
-(\mbox{None}, 17, 17, 64)
-$$</div>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Third-Max-Pooling-Layer">Link to "Third Max Pooling Layer" section of notebook</a></p>
-<h2 id="flatten-and-dense-layers">Flatten and Dense Layers</h2>
-<p><strong>TL;DR:</strong> The flatten layer converts a tensor of dimension <span class="math">\((\mbox{None}, 17, 17, 64)\)</span>
-into a 1D vector of <span class="math">\(17 \times 17 \times 64 = 18,496\)</span> neural network nodes. This does not
-change any of the values, it simply reshapes the input tensor.</p>
-<p>The first dense layer reduces the flattened <span class="math">\(18,496\)</span> nodes to <span class="math">\(64\)</span> nodes, using a fully connected
-layer of nodes. These values are then passed through an activation function (as with the above
-activation layers, this is a one-to-one mapping and does not change the shape of the input tensor).
-The dense layer is followed by a dropout layer to help prevent overfitting; this pattern is common
-in convolutional neural networks.</p>
-<p>The second dense layer further reduces the <span class="math">\(64\)</span> nodes to a single node, whose output will determine
-whether the input image is a cat or a dog.</p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Flatten-Layer">Link to "Flatten Layer" section of notebook</a></p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Dense-(64)">Link to "Dense (64) Layers" section of notebook</a></p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Dense-(1)">Link to "Dense (1) Layers" section of notebook</a></p>
-<h2 id="categorical-output">Categorical Output</h2>
-<p><strong>TL;DR:</strong> Normally when classifying cats and dogs, we would have two output neurons, one to
-output a binary yes/no to answer "is this a cat?" and another output a binary yes/no to answer 
-"is this a dog?". However, in this example, we assume that <em>all</em> inputs contain either only cats
-or only dogs, so the single-output binary classifier is determining whether an image is a dog (0)
-or a cat (1).</p>
-<h1 id="image-transformer">Image Transformer</h1>
-<p><strong>TL;DR:</strong> The <code>ImageDataGenerator</code> class is a class provided by keras
-for loading image data from a directory and (optionally) applying various
-transformations to the images in order to generate additional training data
-from a set of images. For example, the following code block from the 
-notebook creates an <code>ImageDataGenerator</code> class that will load images from a
-folder on disk, and applies various transformations (shearing, zooming, 
-and horizontally flipping) to each image during the training process.</p>
-<div class="highlight"><pre><span></span><code><span class="n">train_datagen</span> <span class="o">=</span> <span class="n">ImageDataGenerator</span><span class="p">(</span>
-    <span class="n">rescale</span><span class="o">=</span><span class="mf">1.</span> <span class="o">/</span> <span class="mi">255</span><span class="p">,</span>
-    <span class="n">shear_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">zoom_range</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
-    <span class="n">horizontal_flip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<h1 id="step-0-directory-and-file-layout">Step 0: Directory and File Layout</h1>
+<p>This tutorial presumes you have a top level directory corresponding to a git repository.
+We will use the following directory structure for this example:</p>
+<div class="highlight"><pre><span></span><code>my-project/
+    Readme.md
+    environment
+    Makefile
+    infra/
+        Makefile
+        component-1/
+            variables.tf
+            main.tf
 </code></pre></div>
 
-<p>This can then be used to generate test image data:</p>
-<div class="highlight"><pre><span></span><code><span class="n">train_generator</span> <span class="o">=</span> <span class="n">train_datagen</span><span class="o">.</span><span class="n">flow_from_directory</span><span class="p">(</span>
-    <span class="s1">&#39;train&#39;</span><span class="p">,</span>
-    <span class="n">target_size</span><span class="o">=</span><span class="p">(</span><span class="n">img_width</span><span class="p">,</span> <span class="n">img_height</span><span class="p">),</span>
-    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
-    <span class="n">class_mode</span><span class="o">=</span><span class="s1">&#39;binary&#39;</span><span class="p">)</span>
+<h2 id="environment-variables">Environment Variables</h2>
+<p>In order to keep track of environment variables used in the terraform
+process, we use the file <code>envronment</code> in the top level project directory
+to keep all environment variable values under version control.</p>
+<div class="highlight"><pre><span></span><code><span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">while</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-h<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>readlink<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">done</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">PROJECT_HOME</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">cd</span><span class="w"> </span>-P<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">pwd</span><span class="k">)</span><span class="s2">&quot;</span>
+
+<span class="nb">set</span><span class="w"> </span>-a
+<span class="nv">PROJECT_DEPLOYMENT_STAGE</span><span class="o">=</span><span class="s2">&quot;dev&quot;</span>
+
+<span class="c1"># bucket name</span>
+<span class="nv">PROJECT_S3_BUCKET</span><span class="o">=</span><span class="s2">&quot;my-organization-my-project-my-bucket&quot;</span>
+
+<span class="c1"># aws tags</span>
+<span class="nv">PROJECT_INFRA_TAG_PROJECT</span><span class="o">=</span><span class="s2">&quot;my-project&quot;</span>
+<span class="nv">PROJECT_INFRA_TAG_SERVICE</span><span class="o">=</span><span class="s2">&quot;my-service&quot;</span>
+<span class="nv">PROJECT_INFRA_TAG_OWNER</span><span class="o">=</span><span class="s2">&quot;whoami@email.com&quot;</span>
+
+<span class="c1"># aws settings</span>
+<span class="nv">AWS_DEFAULT_OUTPUT</span><span class="o">=</span>json
+<span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span>us-east-1
+<span class="nb">set</span><span class="w"> </span>+a
 </code></pre></div>
 
-<p>This will look for images in the relative path <code>train/data/</code>
-(note the implicit <code>data/</code> directory tacked on the end).
-Note that this image data generator allows us to use images
-that do not have size <span class="math">\(150 \times 150\)</span>, as they will be re-sized
-to <code>target_size</code>.</p>
-<p><a href="https://tinyurl.com/deconvoluting-convolutions#Image-Transformer">Link to "Image Transformer" section of notebook</a></p>
-<h2 id="next-steps">Next Steps</h2>
-<p>Now that we have walked through a sample convolutional neural network
-and covered how each layer transforms the size of the input tensor, 
-we are ready to start applying convolutional neural networks to real
-problems.</p>
-<p>Our next blog post will cover the materials in the
-<a href="https://github.com/charlesreid1/deep-learning-genomics">charlesreid1/deep-learning-genomics</a>
-repository on Github, which applies the convolutional neural 
-network concept in a 1D context (applying convolutions to 1D sequences, 
-instead of 2D images) to learn about (and predict) DNA transcription factor 
-binding sites.  </p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
+<p>Optionally, a local environment file can contain environment variable values
+that are sensitive or should not be kept under version control, so add this
+to the bottom of the <code>environment</code> file too:</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">PROJECT_HOME</span><span class="si">}</span><span class="s2">/environment.local&quot;</span>
+<span class="k">fi</span>
+</code></pre></div>
 
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
+<h1 id="step-1-top-level-makefile">Step 1: Top Level Makefile</h1>
+<p>Start by creating the <code>plan-infra</code> and <code>deploy-infra</code> commands in your top-level
+Makefile. These commands will, in turn, call make commands defined in <code>infra/Makefile</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">plan-infra</span><span class="o">:</span>
+<span class="w">    </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>-C<span class="w"> </span>infra<span class="w"> </span>plan-all
 
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+<span class="nf">deploy-infra</span><span class="o">:</span>
+<span class="w">    </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>-C<span class="w"> </span>infra<span class="w"> </span>apply-all
+</code></pre></div>
 
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
+<p>The <code>-C infra</code> flag indicates make should use a Makefile in a subdirectory.</p>
+<h1 id="step-2-infra-level-makefile">Step 2: Infra Level Makefile</h1>
+<p>Next we define <code>infra/Makefile</code>. This Makefile will have two parts:</p>
+<ul>
+<li>terraform commands for a single component (example: init, plan, apply, destroy)</li>
+<li>wrapper commands to run the above commands for every component (example: for each component,
+  run the plan terraform command)</li>
+</ul>
+<p>We cover the Makefile from the bottom up.</p>
+<h2 id="fake-targets">Fake Targets</h2>
+<p>Start by defining "fake" targets or rules, that is, make rules whose names are not file names:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">.PHONY</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
+</code></pre></div>
 
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+<h2 id="commands-for-single-components">Commands for Single Components</h2>
+<p>Next, above that, we define terraform commands for a single component:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">init</span><span class="o">:</span>
+<span class="w">    </span>rm<span class="w"> </span>-rf<span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span>/.terraform/*.tfstate
+<span class="w">    </span>./build_deploy_config.py<span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span>
+<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>init<span class="p">;</span>
+
+<span class="nf">plan</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
+<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>plan<span class="w"> </span>-detailed-exitcode
+
+<span class="nf">apply</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
+<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>apply
+
+<span class="nf">destroy</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
+<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>destroy
+
+<span class="nf">clean</span><span class="o">:</span>
+<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>.terraform
+</code></pre></div>
+
+<p>Note that the <code>init</code> command is running a <code>build_deploy_config.py</code> script,
+which we will cover in a moment. This script creates the terraform variables
+file <code>variables.tf</code> and populates the variable values using environment
+variables.</p>
+<h2 id="commands-for-all-components">Commands for All Components</h2>
+<p>Above that, we have commands to perform each action on all components:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">all</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>-<span class="n">all</span>
+
+<span class="nf">init-all</span><span class="o">:</span>
+<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>init<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="nf">plan-all</span><span class="o">:</span>
+<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>plan<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="nf">apply-all</span><span class="o">:</span>
+<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>apply<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="nf">destroy-all</span><span class="o">:</span>
+<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>destroy<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="nf">clean-all</span><span class="o">:</span>
+<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>clean<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">done</span>
+</code></pre></div>
+
+<h2 id="variables">Variables</h2>
+<p>Last but not least, we define a few variables at the top of the Makefile:
+most importantly, the list of infrastructure components. This is created by
+extracting the names of subdirectories in <code>infra/</code> containing <code>*.tf</code> files:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span><span class="w"> </span><span class="se">\;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>--unique<span class="o">}</span>
+<span class="nv">COMPONENTS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> for d in </span><span class="k">$(</span>DIRS<span class="k">)</span><span class="p">; do basename </span><span class="nv">$$d</span><span class="p">; done</span><span class="si">}</span>
+</code></pre></div>
+
+<h2 id="final-makefile">Final Makefile</h2>
+<p>Here is the final <code>infra/Makefile</code>:</p>
+<p><strong><code>infra/Makefile</code>:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="nv">DIRS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> find . -name </span><span class="s2">&quot;*.tf&quot;</span><span class="p"> -exec dirname {</span><span class="si">}</span><span class="w"> </span><span class="se">\;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>--unique<span class="o">}</span>
+<span class="nv">COMPONENTS</span><span class="o">=</span><span class="si">${</span><span class="nv">shell</span><span class="p"> for d in </span><span class="k">$(</span>DIRS<span class="k">)</span><span class="p">; do basename </span><span class="nv">$$d</span><span class="p">; done</span><span class="si">}</span>
+
+<span class="nf">all</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>-<span class="n">all</span>
+
+<span class="nf">init-all</span><span class="o">:</span>
+<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>init<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="nf">plan-all</span><span class="o">:</span>
+<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>plan<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="nf">apply-all</span><span class="o">:</span>
+<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>apply<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="nf">destroy-all</span><span class="o">:</span>
+<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>destroy<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="nf">clean-all</span><span class="o">:</span>
+<span class="w">    </span>@for<span class="w"> </span>c<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>COMPONENTS<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>clean<span class="w"> </span><span class="nv">COMPONENT</span><span class="o">=</span><span class="nv">$$</span>c<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="nf">plan</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
+<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>plan<span class="w"> </span>-detailed-exitcode
+
+<span class="nf">apply</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
+<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>apply
+
+<span class="nf">destroy</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>
+<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>destroy
+
+<span class="nf">init</span><span class="o">:</span>
+<span class="w">    </span>rm<span class="w"> </span>-rf<span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span>/.terraform/*.tfstate
+<span class="w">    </span>./build_deploy_config.py<span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span>
+<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>terraform<span class="w"> </span>init<span class="p">;</span>
+
+<span class="nf">clean</span><span class="o">:</span>
+<span class="w">    </span><span class="nb">cd</span><span class="w"> </span><span class="k">$(</span>COMPONENT<span class="k">)</span><span class="p">;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>.terraform
+
+<span class="nf">.PHONY</span><span class="o">:</span><span class="w"> </span><span class="n">init</span>-<span class="n">all</span> <span class="n">plan</span>-<span class="n">all</span> <span class="n">apply</span>-<span class="n">all</span> <span class="n">clean</span>-<span class="n">all</span> <span class="n">plan</span> <span class="n">apply</span> <span class="n">destroy</span> <span class="n">init</span> <span class="n">clean</span>
+</code></pre></div>
+
+<h1 id="step-3-writing-terraform-components">Step 3: Writing Terraform Components</h1>
+<p>As an example, we will consider an example of terraform-managed buckets.</p>
+<p>Start by creating a directory called <code>infra/buckets/</code> to store terraform
+files for creating and managing the buckets.</p>
+<p>We can create one file per cloud provider. As an example, here is <code>s3.tf</code>:</p>
+<p><strong><code>s3.tf</code></strong>:</p>
+<div class="highlight"><pre><span></span><code>data &quot;aws_caller_identity&quot; &quot;current&quot; {}
+
+locals {
+  common_tags = &quot;${map(
+    &quot;project&quot;   , &quot;${var.PROJECT_INFRA_TAG_PROJECT}&quot;,
+    &quot;env&quot;       , &quot;${var.PROJECT_DEPLOYMENT_STAGE}&quot;,
+    &quot;service&quot;   , &quot;${var.PROJECT_INFRA_TAG_SERVICE}&quot;
+  )}&quot;
+  aws_tags = &quot;${map(
+  &quot;Name&quot;      , &quot;${var.PROJECT_INFRA_TAG_SERVICE}-s3-storage&quot;,
+  &quot;owner&quot;     , &quot;${var.PROJECT_INFRA_TAG_OWNER}&quot;,
+  &quot;managedBy&quot; , &quot;terraform&quot;
+  )}&quot;
 }
-</script></div>
+
+resource aws_s3_bucket dss_s3_bucket {
+  count = length(var.PROJECT_S3_BUCKET) &gt; 0 ? 1 : 0
+  bucket = var.PROJECT_S3_BUCKET
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = &quot;AES256&quot;
+      }
+    }
+  }
+  tags = merge(local.common_tags, local.aws_tags)
+}
+</code></pre></div>
+
+<p>Note that this requires several environment variables to be
+defined in <code>environment</code> and requires the operator to run:</p>
+<div class="highlight"><pre><span></span><code>source environment
+</code></pre></div>
+
+<h1 id="step-4-initializing-terraform-components">Step 4: Initializing Terraform Components</h1>
+<p>The following script will automatically generate terraform files for
+our component that are populated with the correct environment variable
+values.</p>
+<p>It is called <code>build_deploy_config.py</code>.</p>
+<p>Start with a simple argument parser that just accepts a single argument,
+the component to make terraform files for:</p>
+<div class="highlight"><pre><span></span><code><span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;component&quot;</span><span class="p">)</span>
+<span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</code></pre></div>
+
+<p>Next, we define several terraform file templates using Python's
+bracket template syntax. Start with a template for defining a
+terraform variable:</p>
+<div class="highlight"><pre><span></span><code>terraform_variable_template = &quot;&quot;&quot;
+variable &quot;{name}&quot; {{
+  default = &quot;{val}&quot;
+}}
+&quot;&quot;&quot;
+</code></pre></div>
+
+<p>Next, define a template for the terraform backend buket:</p>
+<div class="highlight"><pre><span></span><code>terraform_backend_template = &quot;&quot;&quot;# Auto-generated during infra build process.
+# Please edit infra/build_deploy_config.py directly.
+terraform {{
+  backend &quot;s3&quot; {{
+    bucket = &quot;{bucket}&quot;
+    key = &quot;{comp}-{stage}.tfstate&quot;
+    region = &quot;{region}&quot;
+    {profile_setting}
+  }}
+}}
+&quot;&quot;&quot;
+</code></pre></div>
+
+<p>Next define terraform cloud providers:</p>
+<div class="highlight"><pre><span></span><code>terraform_providers_template = &quot;&quot;&quot;# Auto-generated during infra build process.
+# Please edit infra/build_deploy_config.py directly.
+provider aws {{
+  region = &quot;{aws_region}&quot;
+}}
+&quot;&quot;&quot;
+</code></pre></div>
+
+<p>Provide a list of environment variables that should also be defined as
+terraform variables:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">env_vars_to_infra</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">[</span>
+<span class="nv">PROJECT_DEPLOYMENT_STAGE</span><span class="o">=</span><span class="s2">&quot;dev&quot;</span>
+
+<span class="c1"># bucket name</span>
+<span class="nv">PROJECT_S3_BUCKET</span><span class="o">=</span><span class="s2">&quot;my-organization-my-project-my-bucket&quot;</span>
+
+<span class="c1"># aws tags</span>
+<span class="nv">PROJECT_INFRA_TAG_PROJECT</span><span class="o">=</span><span class="s2">&quot;my-project&quot;</span>
+<span class="nv">PROJECT_INFRA_TAG_SERVICE</span><span class="o">=</span><span class="s2">&quot;my-service&quot;</span>
+<span class="nv">PROJECT_INFRA_TAG_OWNER</span><span class="o">=</span><span class="s2">&quot;whoami@email.com&quot;</span>
+
+<span class="c1"># aws settings</span>
+<span class="nv">AWS_DEFAULT_OUTPUT</span><span class="o">=</span>json
+<span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span>us-east-1
+
+<span class="w">    </span><span class="s2">&quot;AWS_DEFAULT_REGION&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;PROJECT_DEPLOYMENT_STAGE&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;PROJECT_S3_BUCKET&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;PROJECT_INFRA_TAG_PROJECT&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;PROJECT_INFRA_TAG_SERVICE&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;PROJECT_INFRA_TAG_OWNER&quot;</span>
+<span class="o">]</span>
+</code></pre></div>
+
+<p>Finally, substitute environment variable values into the templates, and write
+the templated content to the appropriate <code>*.tf</code> file. First, the backend:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Write backend.tf</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;backend.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">caller_info</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;sts&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get_caller_identity</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">):</span>
+        <span class="n">profile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_PROFILE&#39;</span><span class="p">]</span>
+        <span class="n">profile_setting</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;profile = &quot;</span><span class="si">{</span><span class="n">profile</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">profile_setting</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_backend_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">bucket</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DSS_TERRAFORM_BACKEND_BUCKET_TEMPLATE&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">account_id</span><span class="o">=</span><span class="n">caller_info</span><span class="p">[</span><span class="s1">&#39;Account&#39;</span><span class="p">]),</span>
+        <span class="n">comp</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span>
+        <span class="n">stage</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DSS_DEPLOYMENT_STAGE&#39;</span><span class="p">],</span>
+        <span class="n">region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
+        <span class="n">profile_setting</span><span class="o">=</span><span class="n">profile_setting</span><span class="p">,</span>
+    <span class="p">))</span>
+</code></pre></div>
+
+<p>Next, the <code>variables.tf</code> for the component:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Write variables.tf</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;variables.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Auto-generated during infra build process.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# Please edit infra/build_deploy_config.py directly.&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">env_vars_to_infra</span><span class="p">:</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_variable_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">val</span><span class="p">))</span>
+</code></pre></div>
+
+<p>Finally, the cloud providers file <code>providers.tf</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">infra_root</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">component</span><span class="p">,</span> <span class="s2">&quot;providers.tf&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+    <span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">terraform_providers_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">aws_region</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;AWS_DEFAULT_REGION&#39;</span><span class="p">],</span>
+        <span class="n">gcp_project_id</span><span class="o">=</span><span class="n">GCP_PROJECT_ID</span><span class="p">,</span>
+    <span class="p">))</span>
+</code></pre></div>
+
+<h1 id="workflow">Workflow</h1>
+<p>We now have a top-level Makefile that wraps the plan and apply commands directly,
+and we have an infra-level Makefile with additional commands for managing infrastructure
+(plan, apply, destroy).</p>
+<h2 id="plan">Plan</h2>
+<p>The terraform plan step assembles the various templated terraform files and substitutes
+environment variables into them, creating a new version of them with up-to-date values.</p>
+<p>The plan step (<code>make plan-infra</code>) calls the <code>build_deploy_config.py</code> script (detailed above)
+to regenerate the terraform files when environment variables are changed.</p>
+<div class="highlight"><pre><span></span><code>make plan-infra
+</code></pre></div>
+
+<p>This script will iterate over each cloud infrastructure component in <code>infra/</code>, use terraform
+to plan the changes it would make to cloud resources, and print a summary of those changes
+to the screen.</p>
+<p><strong>The <code>make plan-infra</code> command does not change any cloud infra.</strong></p>
+<h2 id="deploy">Deploy</h2>
+<p>The terraform deploy step makes the changes summarized in the <code>make plan-infra</code> step. This
+command automates the terraform commands, but still requires interactive "yes" responses
+to commands.</p>
+<h2 id="update">Update</h2>
+<p>Using the <code>make plan-infra</code> command will remake the terraform files using environment variable
+values, and will display any changes that will be made to cloud infra. This includes updates to
+existing infrastructure.</p>
+<p>When you finish deploying infrastructure, store the version of your <code>environment</code> file in version
+control and tag it as the current deployed infra. This will make it easier to delete infra later.</p>
+<p>If you need to rename infra, use the following workflow:</p>
+<ol>
+<li>
+<p>Source the old <code>environment</code> file</p>
+</li>
+<li>
+<p>Destroy the old infra with the old names using:</p>
+<p><code>text
+make -C infra COMPONENT=buckets destroy</code></p>
+<p>Or destroy all infra with the <code>destroy-all</code> command:</p>
+<p><code>text
+make -C infra destroy-all</code></p>
+</li>
+<li>
+<p>Update the environment file with the new names, and source the new <code>environment</code> file</p>
+</li>
+<li>
+<p>Plan the new infra with</p>
+<p><code>text
+make plan-infra</code></p>
+</li>
+<li>
+<p>Deploy the new infra with</p>
+<p><code>text
+make deploy-infra</code></p>
+</li>
+</ol>
+<h2 id="destroy">Destroy</h2>
+<p>As seen above, infrastructure components can be deleted with the <code>delete</code> command in the infra
+Makefile, and all infrastructure components can be deleted with the <code>delete-all</code> command.</p>
+<p>To delete a particular component:</p>
+<div class="highlight"><pre><span></span><code>make -C infra COMPONENT=buckets destroy
+</code></pre></div>
+
+<p>To destroy all infra:</p>
+<div class="highlight"><pre><span></span><code>make -C infra destroy-all
+</code></pre></div></div>
 
     </div>
 </div>
@@ -467,20 +581,14 @@ binding sites.  </p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/deep-learning.html">deep learning</a>
+                    <a href="https://charlesreid1.github.io/tag/terraform.html">terraform</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/machine-learning.html">machine learning</a>
+                    <a href="https://charlesreid1.github.io/tag/makefile.html">makefile</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/neural-networks.html">neural networks</a>
+                    <a href="https://charlesreid1.github.io/tag/make.html">make</a>
                     &nbsp;&nbsp;
                     <a href="https://charlesreid1.github.io/tag/python.html">python</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/keras.html">keras</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/convolutional-neural-networks.html">convolutional neural networks</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/cnn.html">cnn</a>
-                    &nbsp;&nbsp;
         </div>
 
     </div>
@@ -497,18 +605,18 @@ binding sites.  </p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Graphs for Bioinformatics, Part 2: Finding Eulerian Paths
+                Automatically Generating Up-To-Date requirements.txt for Python Projects
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-05-07T16:00:00-07:00" pubdate>Tuesday 05/07/2019</time>
+                <time datetime="2019-12-12T12:12:00-08:00" pubdate>Thursday 12/12/2019</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-2-finding-eulerian-paths.html">permalink</a>
+                <a href="https://charlesreid1.github.io/automatically-generating-up-to-date-requirementstxt-for-python-projects.html">permalink</a>
             </span>
             </p>
         </div>
@@ -526,423 +634,153 @@ binding sites.  </p>
     <div class="col-md-12" style="text-align: left;">
 
         <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#the-context-de-bruijn-graphs">The Context: de Bruijn Graphs</a></li>
-<li><a href="#assembling-the-de-bruijn-graph">Assembling the de Bruijn Graph</a><ul>
-<li><a href="#directed-graph-representation-adjacency-list">Directed Graph Representation: Adjacency List</a></li>
-<li><a href="#a-quick-example">A Quick Example</a></li>
-<li><a href="#python-vs-go">Python vs Go</a></li>
-<li><a href="#directed-graph-class-python-implementation">Directed Graph Class: Python Implementation</a></li>
-</ul>
-</li>
-<li><a href="#checking-for-eulerian-paths-and-cycles">Checking for Eulerian Paths and Cycles</a></li>
-<li><a href="#algorithm-building-blocks">Algorithm Building Blocks</a><ul>
-<li><a href="#depth-first-search">Depth First Search</a></li>
-<li><a href="#kosarajus-algorithm-connected-components">Kosaraju's Algorithm: Connected Components</a></li>
-</ul>
-</li>
-<li><a href="#to-be-continued">To Be Continued...</a></li>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#what-is-requirementstxt">What is requirements.txt?</a></li>
+<li><a href="#converting-requirementstxtin-to-requirementstxt">Converting requirements.txt.in to requirements.txt</a></li>
+<li><a href="#automating-the-step-with-a-make-rule">Automating the step with a make rule</a></li>
+<li><a href="#refreshing-requirements">Refreshing requirements</a></li>
 </ul>
 </div>
-<h1 id="the-context-de-bruijn-graphs">The Context: de Bruijn Graphs</h1>
-<p>In <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Part 1 of this post</a>
-we discussed a data structure called a de Bruijn graph and covered its application
-to genome assembly. To summarize, a de Bruijn graph is a type of graph that represents
-a set of k-mers as a set of directed edges on a graph, connecting the k-mer's (k-1)-mer prefix
-(the source vertex) to the k-mer's (k-1)-mer suffix (the destination vertex).</p>
-<p>As an example, if <span class="math">\(k = 5\)</span>, we can represent the k-mer "AAGCT" as an edge connecting the vertex
-<code>AAGC</code> to the vertex <code>AGCT</code>.</p>
-<p>The de Bruijn graph is used to solve a set of problems on <a href="https://rosalind.info">Rosalind.info</a>,
-a website with bioinformatics programming challenges, as part of working through the
-textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
-and its associated website (<a href="https://rosalind.info">Rosalind.info</a>).</p>
-<h1 id="assembling-the-de-bruijn-graph">Assembling the de Bruijn Graph</h1>
-<p>The problems from Rosalind.info that require the use of a de Bruijn graph come from
-Chapter 3. These problems generally give the user either a list of k-mers (to assemble
-into a de Bruijn graph, as in problem <a href="http://rosalind.info/problems/ba3e/">BA3E</a>) 
-or a long sequence of DNA (which can be turned into a list of
-k-mers and assembled into a de Bruijn graph, as in problem <a href="http://rosalind.info/problems/ba3d/">BA3D</a>).</p>
-<p>If we are starting with a long string of DNA, we can run through the entire string
-and extract k-mers using a sliding window. For a string of DNA of length <span class="math">\(d\)</span>, this procedure
-will create <span class="math">\(d - k + 1\)</span> k-mers.</p>
-<h2 id="directed-graph-representation-adjacency-list">Directed Graph Representation: Adjacency List</h2>
-<p>The de Bruijn graph is a directed graph. To represent this
-graph in memory, we utilize an adjacency list data structure.
-An adjacency list is a key-value lookup table (implemented using
-a hash map) wherein each <em>source vertex</em> in the graph is a key 
-in the lookup table, and the corresponding value is a list of
-all <em>destination vertices</em> (all vertices that have a directed
-edge starting from the source vertex and ending at that vertex).</p>
-<p>A Python dictionary can be used to implement the adjacency list
-hash table. The dictionary keys are the source vertices (or rather,
-their string labels), and the dictionary values are a list of 
-destination vertices (a list of their string labels).</p>
-<p>Thus, the graph <code>AA -&gt; BB -&gt; CC -&gt; DD</code> would be represented with
-the hash table:</p>
-<div class="highlight"><pre><span></span><code>adjacency_list[&#39;AA&#39;] = [&#39;BB&#39;]
-adjacency_list[&#39;BB&#39;] = [&#39;CC&#39;]
-adjacency_list[&#39;CC&#39;] = [&#39;DD&#39;]
+<h2 id="summary">Summary</h2>
+<p>In this post, we cover a pattern for automatically generating a <code>requirements.txt</code> file that has the latest
+compatible versions of required software, and that specifies the full and exact version of each package to
+make the Python environment reproducible.</p>
+<p>This will turn a requirements input file (called <code>requirements.txt.in</code> for example) that looks like</p>
+<div class="highlight"><pre><span></span><code>numpy
 </code></pre></div>
 
-<p>(Notice from this example that the keys of the adjacency list
-gives a list of <em>source vertices only</em>, to get all vertices we
-need to look at the values of the adjacency list too.)</p>
-<h2 id="a-quick-example">A Quick Example</h2>
-<p>As a simple example, consider the de Bruijn graph formed from
-the DNA string <code>AAGATTCTCTAC</code> and <span class="math">\(k = 4\)</span>.</p>
-<p>This is first turned into a bag of <span class="math">\(d - k + 1 = 9\)</span> 
-4-mers (our edges):</p>
-<div class="highlight"><pre><span></span><code>Sequence:   AAGATTCTCTAC
-4-mers:     AAGA
-             AGAT
-              GATT
-               ATTC
-                TTCT
-                 TCTC
-                  CTCT
-                   TCTA
-                    CTAC
+<p>into a requirements file that specifies the exact version of <code>numpy</code> and all dependencies, like</p>
+<div class="highlight"><pre><span></span><code>numpy==1.18.1
 </code></pre></div>
 
-<p>Next, we also create a bag of <span class="math">\(d - k + 1 = 10\)</span> 
-3-mers (vertices):</p>
-<div class="highlight"><pre><span></span><code>Sequence:   AAGATTCTCTAC
-3-mers:     AAG
-             AGA
-              GAT
-               ATT
-                TTC
-                 TCT
-                  CTC
-                   TCT
-                    CTA
-                     TAC
+<p>By the end of this post, you'll be able to do this to refresh and update the versions of all the software your
+project depends on:</p>
+<div class="highlight"><pre><span></span><code>make requirements.txt
 </code></pre></div>
 
-<p>Now we can iterate over every 4-mer edge, find its
-prefix 3-mer and suffix 3-mer, and create a corresponding
-entry in the adjacency list hash table.</p>
-<p>The list of edges looks like this:</p>
-<div class="highlight"><pre><span></span><code>AAG -&gt; AGA
-AGA -&gt; GAT
-ATT -&gt; TTC
-CTA -&gt; TAC
-CTC -&gt; TCT
-GAT -&gt; ATT
-TCT -&gt; CTA,CTC
-TTC -&gt; TCT
+<p><strong>All of this code comes from the Human Cell Atlas <a href="https://github.com/HumanCellAtlas/data-store">data-store</a>
+project!</strong></p>
+<h2 id="what-is-requirementstxt">What is requirements.txt?</h2>
+<p>When developing a Python project, the <code>requirements.txt</code> file is a plain text file that contains a list of
+Python software packages that need to be installed for the current Python software package to work. The software
+can be installed using the command</p>
+<div class="highlight"><pre><span></span><code>pip install -r requirements.txt
 </code></pre></div>
 
-<p>The corresponding dictionary should look like this:</p>
-<div class="highlight"><pre><span></span><code>adjacency_list[&#39;AAG&#39;] = [&#39;AGA&#39;]
-adjacency_list[&#39;AGA&#39;] = [&#39;GAT&#39;]
-adjacency_list[&#39;ATT&#39;] = [&#39;TTC&#39;]
-adjacency_list[&#39;CTA&#39;] = [&#39;TAC&#39;]
-adjacency_list[&#39;CTC&#39;] = [&#39;TCT&#39;]
-adjacency_list[&#39;GAT&#39;] = [&#39;ATT&#39;]
-adjacency_list[&#39;TCT&#39;] = [&#39;CTA&#39;,&#39;CTC&#39;]
-adjacency_list[&#39;TTC&#39;] = [&#39;TCT&#39;]
+<p>For example, if a package <code>foobar</code> has <code>import numpy</code> at the top of a Python file in the project, the <code>numpy</code> package
+must be installed before importing <code>foobar</code>. In this case, the <code>requirements.txt</code> could just contain</p>
+<div class="highlight"><pre><span></span><code>numpy
 </code></pre></div>
 
-<h2 id="python-vs-go">Python vs Go</h2>
-<p>Now that we're ready to implement a directed graph object
-and populate it using the data given in the problem, we 
-have to make the difficult choice of what language we
-want to use to implement the directed graph.</p>
-<p>We have covered our use of the Go programming language 
-for Rosalind.info problems before (we have previously 
-covered recursion for Chapter 2 problems in 
-<a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-1-counting-variations.html">Part 1</a>,
-<a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-2-generating-variations.html">Part 2</a>,
-and <a href="https://charlesreid1.github.io/recursive-backtracking-in-go-for-bioinformatics-applications-3-go-implementation-of-backtracking.html">Part 3</a>
-of another post, and we also wrote <a href="https://charlesreid1.github.io/learning-bioinformatics-with-go-and-rosalind.html">this post</a>
-on our impression of Go and its usefulness in
-bioinformatics.</p>
-<p>We are also implementing all of the solutions to the
-Rosalind.info problems in our Go libarary, <a href="https://github.com/charlesreid1/go-rosalind">go-rosalind</a>
-(see <a href="https://godoc.org/github.com/charlesreid1/go-rosalind/rosalind">corresponding documentation on godoc.org</a>).</p>
-<p><strong>However,</strong> we have learned the hard way that Go requires
-a lot of boilerplate code (boilerplate code that is necessary,
-mind you, because all of that boilerplate will eventually
-morph into something problem-specific).</p>
-<p>This all means that Go is a very cumbersome language to use
-to get an algorithm prototype up and running.</p>
-<p>Python, on the other hand, is a very easy language for
-prototyping and has plenty of handy built-in functions
-and modules that make prototyping an algorithm far 
-easier and faster than doing it in Go.</p>
-<p>Our strategy, therefore, is to prototype our algorithm
-and corresponding graph object in Python, get the
-algorithm working and tested, then convert the code 
-to Go when we are finished.</p>
-<h2 id="directed-graph-class-python-implementation">Directed Graph Class: Python Implementation</h2>
-<p>Note that while we could simply use the dictionary object
-itself as the graph data structure, this is somewhat
-inelegant, and we would like instead to define a class
-to bundle related behavior and data together.</p>
-<p>We implement the directed graph by defining an <code>AdjacencyGraph</code>
-class. This is just a glorified wrapper around the ajacency
-list dictionary, with some extra methods.</p>
-<p>We start by defining the class (it inherits from <code>object</code> so
-it has no parent type):</p>
-<div class="highlight"><pre><span></span><code>class AdjacencyGraph(object):
-    &quot;&quot;&quot;Directed graph stored using an adjacency list&quot;&quot;&quot;
-    def __init__(self):
-        &quot;&quot;&quot;Constructor&quot;&quot;&quot;
-        self.adj = {}
-        self.dfs_started = False
+<p>or it could specify a particular version of numpy, or a minimum version of numpy:</p>
+<div class="highlight"><pre><span></span><code>numpy &gt;= 1.10
 </code></pre></div>
 
-<p>The constructor just initializes an empty adjacency list dictionary.</p>
-<p>We also define two built-in methods for convenience:
-<code>__str__</code> for the string representation of the graph 
-(so we can pass the graph object to <code>print()</code>), and
-<code>__len__</code> for getting the number of (source) vertices 
-on the graph.</p>
-<div class="highlight"><pre><span></span><code>    def __str__(self):
-        &quot;&quot;&quot;String representation&quot;&quot;&quot;
-        s = []
-        for source in self.adj.keys():
-            sinks = self.adj[source]
-            for sink in sinks:
-                m = &quot;%s -&gt; %s\n&quot;%(source,sink)
-                s.append(m)
-        return &quot;&quot;.join(s)
-
-    def __len__(self):
-        &quot;&quot;&quot;Number of vertices on graph&quot;&quot;&quot;
-        s = set()
-        for source in self.adj.keys():
-            s.add(source)
-            for sink in self.adj[k]:
-                s.add(sink)
-        return len(s)
+<p>Start by creating a <code>requirements.txt.in</code>, which should look like a normal <code>requirements.txt</code> file,
+listing software packages for pip to install (and optionally version information - but version information
+does not <em>need</em> to be specified).</p>
+<p>This file is a looser set of specifications of software versions.</p>
+<p>Example <code>requirements.txt.in</code>:</p>
+<div class="highlight"><pre><span></span><code>numpy
+pandas &gt; 0.22
+sphinx
 </code></pre></div>
 
-<p>Next, we define some basic functionality useful for all graphs:</p>
-<ul>
-<li>Getting the in-degree and out-degree of a vertex</li>
-</ul>
-<div class="highlight"><pre><span></span><code>    def in_degree(self,u):
-        n = 0
-        for v in self.adj.keys():
-            sinks = self.adj[v]
-            if u in sinks:
-                n += 1
-        return n
-
-    def out_degree(self,u):
-        if u in self.adj.keys():
-            return len(self.adj[u])
-        else:
-            return 0
+<h2 id="converting-requirementstxtin-to-requirementstxt">Converting requirements.txt.in to requirements.txt</h2>
+<p>Next, we use the <code>requirements.txt.in</code> file to install the latest versions of each software package (and all
+dependent software packages) into a virtual environment.</p>
+<p>From that virtual environment, we can use <code>pip freeze</code> to output the names of each software package installed in
+the virtual environment, along with its exact version. This can be used to make a <code>requirements.txt</code> file.</p>
+<p>The manual steps are</p>
+<div class="highlight"><pre><span></span><code>virtualenv -p $(which python3) venv
+venv/bin/pip install -r requirements.txt
+venv/bin/pip install -r requirements.txt.in
+venv/bin/pip freeze &gt;&gt; requirements.txt
+rm -fr venv
 </code></pre></div>
 
-<p>We also define a generator for creating vertices:</p>
-<div class="highlight"><pre><span></span><code>    def vertices(self):
-        vertices = set()
-        for k in self.adj.keys():
-            vertices.add(k)
-            for m in self.adj[k]:
-                vertices.add(m)
-        for v in vertices:
-            yield v
-
-    def n_vertices(self):
-        return len(self)
-
-    def n_edges(self):
-        n = 0
-        for source in self.adj.keys():
-            try:
-                n += len(self.adj[source])
-            except:
-                # in case value is None
-                pass
-        return n
-
-    def get_neighbors(self,u):
-        &quot;&quot;&quot;Get all neighbors of node u&quot;&quot;&quot;
-        # Note: neighbors are stored in
-        # sorted order
-        if u in self.adj.keys():
-            return self.adj[u]
-        else:
-            return []
+<p>Using pip freeze means the resulting <code>results.txt</code> contains detailed version numbers:</p>
+<div class="highlight"><pre><span></span><code>alabaster==0.7.12
+Babel==2.7.0
+certifi==2019.11.28
+chardet==3.0.4
+docutils==0.15.2
+idna==2.8
+imagesize==1.1.0
+Jinja2==2.10.3
+MarkupSafe==1.1.1
+numpy==1.17.4
+packaging==19.2
+pandas==0.25.3
+Pygments==2.5.2
+pyparsing==2.4.5
+python-dateutil==2.8.1
+pytz==2019.3
+requests==2.22.0
+six==1.13.0
+snowballstemmer==2.0.0
+Sphinx==2.2.2
+sphinxcontrib-applehelp==1.0.1
+sphinxcontrib-devhelp==1.0.1
+sphinxcontrib-htmlhelp==1.0.2
+sphinxcontrib-jsmath==1.0.1
+sphinxcontrib-qthelp==1.0.2
+sphinxcontrib-serializinghtml==1.1.3
+urllib3==1.25.7
 </code></pre></div>
 
-<p>Finally, we add a method <code>add_edge()</code> that allows us
-to create an edge from vertex u to vertex v (and add
-the vertices to the graph if either do not yet exist
-on the graph).</p>
-<p>For convenience, we maintain the adjacency list values
-(the list of destination vertices) in lexicographic
-order.</p>
-<div class="highlight"><pre><span></span><code>    def add_edge(self, u, v):
-        &quot;&quot;&quot;Add an edge from u to v&quot;&quot;&quot;
-        # For each source vertex:
-        if u in self.adj.keys():
-
-            # Get existing sink list
-            t = self.adj[u]
-
-            # Append to it
-            t.append(v)
-
-            # Keep list of sinks sorted
-            # (lexicographic string sorting)
-            t.sort()
-
-            # Create the new edge 
-            # from source to sink
-            self.adj[u] = t
-
-        else:
-            # Initialize the list of sinks (v)
-            # for the given source (u)
-            self.adj[u] = [v]
+<p>This is automated with a make rule next.</p>
+<h2 id="automating-the-step-with-a-make-rule">Automating the step with a make rule</h2>
+<p>We have a nice Makefile rule that can be dropped into
+any Makefile that allows users to run</p>
+<div class="highlight"><pre><span></span><code>make requirements.txt
 </code></pre></div>
 
-<p>Now, to assemble the de Bruijn graph, we can iterate
-over every k-mer edge, form the prefix and suffix vertices,
-and call the <code>add_edge()</code> function on the graph.</p>
-<h1 id="checking-for-eulerian-paths-and-cycles">Checking for Eulerian Paths and Cycles</h1>
-<p>To recap Eulerian paths versus Eulerian cycles (discussed in
-<a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">Part 1 of this post</a>:</p>
-<ul>
-<li>An Eulerian path is a path that visits every edge of a given graph exactly once.</li>
-<li>An Eulerian cycle is an Eulerian path that begins and ends at the ''same vertex''.</li>
-</ul>
-<p>According to Steven Skienna's <u>Algorithm Design Handbook</u>,
-there are two conditions that must be met for an Eulerian path or
-cycle to exist. These conditions are different for undirected graphs
-versus directed graphs.</p>
-<p><strong>Undirected graphs:</strong> </p>
+<p>and it will use <code>requirements.txt.in</code>, perform the above steps, and output an updated <code>requirements.txt</code> with the
+latest compatible versions of software.</p>
+<p>Here is the Makefile rule:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">requirements.txt</span><span class="o">:</span><span class="w"> </span>%.<span class="n">txt</span> : %.<span class="n">txt</span>.<span class="n">in</span>
+<span class="w">    </span><span class="o">[</span><span class="w"> </span>!<span class="w"> </span>-e<span class="w"> </span>.requirements-env<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span>virtualenv<span class="w"> </span>-p<span class="w"> </span><span class="k">$(</span>shell<span class="w"> </span>which<span class="w"> </span>python3<span class="k">)</span><span class="w"> </span>.$&lt;-env
+<span class="w">    </span>.$&lt;-env/bin/pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span><span class="nv">$@</span>
+<span class="w">    </span>.$&lt;-env/bin/pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>$&lt;
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;# You should not edit this file directly.  Instead, you should edit </span>$<span class="s2">&lt;.&quot;</span><span class="w"> </span>&gt;<span class="p">|</span><span class="w"> </span><span class="nv">$@</span>
+<span class="w">    </span>.$&lt;-env/bin/pip<span class="w"> </span>freeze<span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="nv">$@</span>
+<span class="w">    </span>rm<span class="w"> </span>-rf<span class="w"> </span>.$&lt;-env
+</code></pre></div>
+
+<p>Summary of the make rule:</p>
 <ul>
 <li>
-<p>An undirected graph contains an Euler <strong>cycle</strong> iff
-  (1) it is connected, and (2) each vertex is of even
-  degree.</p>
+<p>The first two lines create a virtual environment at <code>.requirements-env/</code></p>
 </li>
 <li>
-<p>An undirected graph contains an Euler <strong>path</strong> iff (1)
-  it is connected, and all but two vertices are of even
-  degree. These two vertices will be the start and end
-  vertices for the Eulerian path.</p>
+<p>The next two lines run <code>pip install</code>, first on <code>requirements.txt</code> (the existing version), then
+  <code>requirements.txt.in</code> (which installs/updates any software packages in <code>requirements.txt.in</code>)</p>
+</li>
+<li>
+<p>A comment is added to the top of the <code>requirements.txt</code> file to help give users a hint about
+  where to update software requirements.</p>
+</li>
+<li>
+<p>The <code>pip freeze</code> command is used to create a <code>requirements.txt</code> file from the current virtual
+  environment</p>
 </li>
 </ul>
-<p><strong>Directed graphs:</strong></p>
-<ul>
-<li>
-<p>A directed graph contains an Euler cycle iff (1) it is
-  strongly-connected, and (2) each vertex has the same
-  in-degree as out-degree</p>
-</li>
-<li>
-<p>A directed graph contains an Euler path iff (1) it is
-  connected, and (2) all vertices except two (x,y) have
-  the same in-degree as out-degree, and (x,y) are
-  vertices with in-degree one less than and one more
-  than out-degree</p>
-</li>
-</ul>
-<h1 id="algorithm-building-blocks">Algorithm Building Blocks</h1>
-<p>Algorithm to find Eulerian paths/cycles consists of several steps using several algorithms.</p>
-<p>Undirected graphs are the simpler case; directed graphs are more complicated.</p>
-<h2 id="depth-first-search">Depth First Search</h2>
-<p>To perform a DFS on a directed graph, implement two functions:</p>
-<ol>
-<li>
-<p>Write a DFS function that takes a graph as an input argument and that visits each node of the
-   graph in a depth-first search.</p>
-</li>
-<li>
-<p>Write a visitation function that takes a node as an input argument and that performs some action
-   on the node. This visitation function is called by the DFS function on each node that it visits.</p>
-</li>
-</ol>
-<h2 id="kosarajus-algorithm-connected-components">Kosaraju's Algorithm: Connected Components</h2>
-<p>On an undirected graph, can use Fleury's Algorithm
-to follow edges (classify edges as bridge or non-bridge,
-then leave bridges for last).</p>
-<p>On a directed graph, we have twice the amount of work:
-we are not just checking that all vertices are reachable
-from a given vertex, we are also checking that all vertices
-can also reach that vertex.</p>
-<h1 id="to-be-continued">To Be Continued...</h1>
-<p>In the next part of this post, we will start with the slightly simpler case of finding an Euler cycle
-(which has no start or end vertices). Then we will show how finding the Euler path is actually a special
-case of finding the Euler cycle.</p>
-<p>First, we will use <a href="https://charlesreid1.com/wiki/Graphs/Euler_Circuit#Directed_Graphs:_Hierholzer.27s_Algorithm">Hierholzer's
-Algorithm</a>
-to find Euler cycles (this is the simpler case). Order does not matter because it is a cycle;
-Hierholzer's algorithm is used to find the Euler cycle.</p>
-<p>Next, we will modify the above algorithm to find Euler paths. This requires keeping track of
-the start and end candidate nodes. We verify only one each; we complete the cycle by adding an edge.
-Once we find the cycle, we remove the edge. Finally, we rearrange the cycle to have the correct
-start and end nodes.</p>
-<p>Stay tuned for Part 3...</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
+<h2 id="refreshing-requirements">Refreshing requirements</h2>
+<p>To update the requirements, update the <code>requirements.txt</code> with these manual steps:</p>
+<div class="highlight"><pre><span></span><code><span class="nf">refresh_all_requirements</span><span class="o">:</span>
+<span class="w">    </span>@cat<span class="w"> </span>/dev/null<span class="w"> </span>&gt;<span class="w"> </span>requirements.txt
+<span class="w">    </span>@if<span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$$</span><span class="o">(</span>uname<span class="w"> </span>-s<span class="o">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">&quot;Darwin&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span><span class="w"> </span>sleep<span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="k">fi</span><span class="w">  </span><span class="c1"># this is require because Darwin HFS+ only has second-resolution for timestamps.</span>
+<span class="w">    </span>@touch<span class="w"> </span>requirements.txt.in
+<span class="w">    </span>@<span class="k">$(</span>MAKE<span class="k">)</span><span class="w"> </span>requirements.txt
+</code></pre></div>
 
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
+<p>Now <code>requirements.txt</code> can be updated with</p>
+<div class="highlight"><pre><span></span><code>make refresh_all_requirements
+</code></pre></div>
 
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+<p>This can be done periodically, and the new <code>requirements.txt</code> updated in the version control system.</p></div>
 
     </div>
 </div>
@@ -954,29 +792,15 @@ start and end nodes.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
+                    <a href="https://charlesreid1.github.io/tag/pip.html">pip</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
+                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
+                    <a href="https://charlesreid1.github.io/tag/make.html">make</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
+                    <a href="https://charlesreid1.github.io/tag/makefile.html">makefile</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -994,18 +818,18 @@ start and end nodes.</p>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Graphs for Bioinformatics, Part 1: de Bruijn Graphs, Hamiltonian Paths, and Eulerian Paths
+                Git Workflows, Part 3: Refactoring Large Branches and Pull Requests
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2019-05-02T19:00:00-07:00" pubdate>Thursday 05/02/2019</time>
+                <time datetime="2019-12-08T15:00:00-08:00" pubdate>Sunday 12/08/2019</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/computational-biology.html">Computational Biology</a>
+                <a href="https://charlesreid1.github.io/category/git.html">Git</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/graphs-for-bioinformatics-part-1-de-bruijn-graphs-hamiltonian-paths-and-eulerian-paths.html">permalink</a>
+                <a href="https://charlesreid1.github.io/git-workflows-part-3-refactoring-large-branches-and-pull-requests.html">permalink</a>
             </span>
             </p>
         </div>
@@ -1023,278 +847,389 @@ start and end nodes.</p>
     <div class="col-md-12" style="text-align: left;">
 
         <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#the-context-rosalindinfo">The Context: Rosalind.info</a></li>
-<li><a href="#graphs-for-bioinformatics">Graphs for Bioinformatics</a><ul>
-<li><a href="#building-a-k-mer-graph-the-wrong-graph">Building a K-mer Graph (The Wrong Graph)</a></li>
-<li><a href="#building-a-de-bruijn-graph-the-right-graph">Building a De Bruijn Graph (The Right Graph)</a></li>
-<li><a href="#transform-the-problem-hamiltonian-paths-to-eulerian-paths">Transform the Problem: Hamiltonian Paths to Eulerian Paths</a></li>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#managing-complexity">Managing Complexity</a></li>
+<li><a href="#refactoring-large-branches">Refactoring Large Branches</a><ul>
+<li><a href="#converting-a-set-of-commits-to-unstaged-changes">Converting a Set of Commits to Unstaged Changes</a><ul>
+<li><a href="#git-format-patch">git format-patch</a></li>
+<li><a href="#cherry-pick-and-unstage">cherry-pick and unstage</a></li>
+<li><a href="#soft-reset-and-commit">soft reset and commit</a></li>
 </ul>
 </li>
-<li><a href="#an-example">An Example</a></li>
-<li><a href="#back-to-dna">Back to DNA</a></li>
+</ul>
+</li>
+<li><a href="#refactoring-large-pull-requests">Refactoring Large Pull Requests</a><ul>
+<li><a href="#chaining-pull-requests">Chaining Pull Requests</a></li>
+<li><a href="#preparing-to-merge-a-large-pull-request">Preparing to Merge a Large Pull Request</a></li>
+<li><a href="#rinse-and-repeat">Rinse and Repeat</a></li>
+<li><a href="#final-merge-into-master">Final Merge into Master</a></li>
+</ul>
+</li>
 </ul>
 </div>
-<h1 id="the-context-rosalindinfo">The Context: Rosalind.info</h1>
-<p>To provide a bit of context for a discussion of Euler paths and Euler cycles:
-starting around December, a group of us in the <a href="http://ivory.idyll.org/lab/">Lab for Data Intensive Biology (DIB Lab)</a>
-started working through the textbook <a href="http://bioinformaticsalgorithms.com/">Bioinformatics Algorithms: An Active Learning Approach</a>
-and the associated website, <a href="https://rosalind.info">Rosalind.info</a>.</p>
-<p>Rosalind.info is a site that is similar in style to <a href="https://projecteuler.net/">Project Euler</a>,
-a <a href="https://charlesreid1.github.io/tag/project-euler.html">familiar topic on this blog</a>.
-Project Euler poses computationally challenging problems in the domain of mathematics.</p>
-<p>Like Project Euler, the visitor is given one small example input and the corresponding 
-correct output, and one large example input and corresponding output. Also like Project
-Euler, the problems vary in how much computer science versus domain expertise is needed,
-but they are largely focused on writing algorithms rather than on the science behind the
-computations.</p>
-<p>Unlike Project Euler, however, Rosalind.info does give plenty of hints (via the textbook,
-if you have a copy), and sometimes even gives pseudocode for the algorithm. <strong>The book is
-required to get enough context to answer some of the Rosalind.info problems.</strong></p>
-<h1 id="graphs-for-bioinformatics">Graphs for Bioinformatics</h1>
-<p>The textbook focuses on different problems in each chapter. For example, Chapter 1 uses
-the example of a string of DNA that marks where replication begins to introduce some
-basic bioinformatics concepts and algorithms. Chapter 2 uses the concept of molecular
-clocks to introduce motifs and motif-finding, the focus of most of the problems in
-Chapter 2.</p>
-<p>Chapter 3 focuses on the problem of genome assembly - how we assemble an entire genome
-from short segments alone. In particular, the chapter focuses on de Bruijn graphs, 
-which are graphs that, given a sequence of symbols drawn from an alphabet, are composed 
-of edges (one for each <strong>k-mer</strong>, that is, a chunk of the sequence of length k),
-and vertices (one for each k-mer prefix and k-mer suffix, connected by a directed edge
-of the k-mer). We will cover more of the details of these graphs shortly.</p>
-<h2 id="building-a-k-mer-graph-the-wrong-graph">Building a K-mer Graph (The Wrong Graph)</h2>
-<p>The Bioinformatics Algorithm book starts with a general discussion of how to 
-represent a sequence of DNA nucleotides using a graph. The idea they discuss 
-initially (which is an obvious, but not necessarily good, one) is splitting
-the sequence into k-mer chunks, like so:</p>
-<div class="highlight"><pre><span></span><code>      Sequence:   TAATGCCATGGGATGTT
-      Pieces:     TAA 
-                   AAT
-                    ATG 
-                     TGC
-                      GCC 
-                       CCA
-                        CAT 
-                         ATG
-                          TGG 
-                           GGG
-                            GGA 
-                             GAT
-                              ATG 
-                               TGT
-                                GTT
+<h1 id="summary">Summary</h1>
+<ul>
+<li>If a feature branch or pull request gets too complicated and should be refactored
+  into simpler pieces:<ul>
+<li>Create a new feature branch from the original destination branch</li>
+<li>Turn commits into patches, or cherry-pick commits (leaving changes unstaged)</li>
+<li>Apply patches or cherry-picks to the feature branch</li>
+<li>Use <code>git add --patch</code> or <code>git add --edit</code> to selectively split out changes into separate commits</li>
+</ul>
+</li>
+</ul>
+<p>This post contains many common patterns applied to different workflows.</p>
+<h1 id="managing-complexity">Managing Complexity</h1>
+<p>When collaborating on software, especially large software with people who are not the
+primary developers, it is important to limit the complexity of features and proposed
+changes. Why is it bad practice to propose large, complex changes?</p>
+<ul>
+<li>It is harder to review the proposed changes</li>
+<li>Bugs increase in likelihood, and increase in likelihood far faster than the amount of code.</li>
+<li>More complex changes usually combine multiple concerns, making them harder to review, revert, or bisect when something goes wrong.</li>
+</ul>
+<h1 id="refactoring-large-branches">Refactoring Large Branches</h1>
+<p>Consider the case of a large feature branch that is suffering from feature creep (trying to
+cram too many changes into one branch.) For example, in the process of implementing a feature,
+you may also implement significant fixups, refactoring of functions, and code cleanup that is
+in the same file but not entirely related. While writing tests for the new feature, you may also
+refactor tests to be cleaner, or to use context manager foobar, or etc.</p>
+<p>To illustrate: suppose you are on a branch called <code>feature</code> (created off of <code>master</code>) that consists of
+three sets of changes, DEF:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
 </code></pre></div>
 
-<p>and letting one k-mer be represented by one vertex. Then the sequence
-above could be turned into the graph:</p>
-<div class="highlight"><pre><span></span><code>TAA -&gt; AAT -&gt; ATG -&gt; TGC -&gt; GCC -&gt; CCA -&gt; CAT -&gt; ATG -&gt; TGG -&gt; GGG -&gt; GGA -&gt; GAT -&gt; ATG -&gt; TGT -&gt; GTT
+<ul>
+<li>D corresponds to implementing the new feature and writing tests for it</li>
+<li>E corresponds to fixups to the same file that was changed to implement the feature</li>
+<li>F corresponds to fixups to tests unrelated to the new feature</li>
+</ul>
+<p>Now, in reality, if things were really so clean, if you had a time machine or the patience to
+to rebase commits one at a time and split them into atomic changes only to the features in their
+scope (which would be super easy because of course your git logs are filled with helpful, concise
+commit messages) you could use <code>git cherry-pick</code> to replay commits D1, D2, D3 onto a new D
+branch, and so on. </p>
+<p>But in reality, commit F1 contains a little bit of E1, and D2, and vice versa, and so on.
+It's much easier to navigate a diff and select pieces from it.  That's were <code>git add -e</code>
+(or <code>--edit</code>) will help.</p>
+<p>We also have to turn a set of commits into a single set of unstaged changes (meaning, replay
+the changes each commit made but not replay the commits themselves). There are a few ways
+to do this, we'll cover two ways: squashing and rolling back a set of commits, and converting
+a set of commits into a set of patch files.</p>
+<p>Once the commits have been rolled back and unstaged, particular changes can be staged for each
+split commit using <code>git add -e</code> and using the editor to select which changes to include or exclude
+from the commit. As each commit is created, branches can be created that are linked to the group
+of changes in each new commit.</p>
+<h2 id="converting-a-set-of-commits-to-unstaged-changes">Converting a Set of Commits to Unstaged Changes</h2>
+<p>We are trying to untangle a set of unrelated changes into separate commits that group related
+changes together. For the example, we want to convert this:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
 </code></pre></div>
 
-<p>On this graph, every edge has the property that the first (k-1)
-nucleotides of the destination match the last (k-1) nucleotides
-of the source. </p>
-<p>If we did not know this sequence in advance, we could draw <em>every</em>
-edge with that property - every time the last (k-1) characters of
-a k-mer match the first (k-1) characters of another k-mer, an edge
-is drawn between those two vertices. </p>
-<p>That graph would result in <em>many</em> more edges than the graph shown above.</p>
-<p>Furthermore, in theory, if each read sequence came from a single genome
-and we had the entire genome covered by read sequences, a path through
-the graph that visits every vertex (every k-mer) would yield the full
-genome.</p>
-<p>A path through a graph that visits every vertex once is called a 
-<strong>Hamiltonian path</strong>.</p>
-<p>Why is this hard? Because the problem of proving a Hamiltonian
-path exists, let alone finding it, becomes very difficult for
-large graphs.</p>
-<h2 id="building-a-de-bruijn-graph-the-right-graph">Building a De Bruijn Graph (The Right Graph)</h2>
-<p>Nicolaas de Bruijn introduced (in 1946, in a paper entitled simply
-<a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>)
-a new way of representing a sequence with a graph. He split a given
-sequence into k-mers, as before, but instead of representing
-each k-mer as a <em>vertex</em> on the graph, he represented each 
-k-mer as an <em>edge</em> on the graph.</p>
-<p>This type of graph is called a <strong>de Bruijn graph</strong>.</p>
-<p>Specifically, for a DNA sequence, each k-mer from the sequence is
-represented by an edge, where the source vertex
-is that k-mer's (k-1)-nucleotide suffix and the destination vertex
-is that k-mer's (k-1)-nucleotide prefix.</p>
-<div class="highlight"><pre><span></span><code>      Sequence:   TAATGCCATGGGATGTT
-      Pieces:     TA  
-                   AA
-                    AT 
-                     TG
-                      GC 
-                       CC
-                        CA 
-                         AT
-                          TG 
-                           GG
-                            GG 
-                             GA 
-                              AT  
-                               TG 
-                                GT 
-                                 TT
+<p>to this:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D - E - F (feature)
 </code></pre></div>
 
-<p>Now this sequence is written as the graph:</p>
-<div class="highlight"><pre><span></span><code>TA -&gt; AA -&gt; AT -&gt; TG -&gt; GC -&gt; CC -&gt; CA -&gt; AT -&gt; TG -&gt; GG -&gt; GG -&gt; GA -&gt; AT -&gt; TG -&gt; GT -&gt; TT
+<p>so that the changes in commits D, E, and F are simpler, more limited in scope, and easier to review.</p>
+<p>We cover three strategies for turning a sequence of commits like <code>D1-E1-...-E3</code> into a set of unstaged
+changes. Then, particular changes can be selectively added to commits using <code>git add -e</code> (<code>--edit</code>) or
+<code>git add -p</code> (<code>--patch</code>).</p>
+<h3 id="git-format-patch">git format-patch</h3>
+<p>To create a set of patches, one per commit, to edit them or apply them in various orders,
+you can use <code>git format-patch</code> with a commit range:</p>
+<div class="highlight"><pre><span></span><code>git format-patch B..E3
 </code></pre></div>
 
-<p>so that the original breakup of the sequence into k-mers is still
-represented, but now as edges rather than as vertices. That is, the 
-k-mer <code>TAA</code> is represented by the edge <code>TA -&gt; AA</code>.</p>
-<h2 id="transform-the-problem-hamiltonian-paths-to-eulerian-paths">Transform the Problem: Hamiltonian Paths to Eulerian Paths</h2>
-<p>The change in the problem representation (k-mers as vertices to k-mers
-as edges) changes the problem of finding the <strong>Hamiltonian path</strong> 
-(a path through the graph that visits every <em>vertex</em> exactly once) 
-into the problem of finding the <strong>Eulerian path</strong>
-(a path through the graph that visits every <em>edge</em> exactly once).</p>
-<h1 id="an-example">An Example</h1>
-<p>Let's look at a slightly simpler example - the one de Bruijn was
-originally considering - so we can see de Bruijn graphs in action
-in a slightly simpler case.</p>
-<p>In his 1946 paper <a href="https://pure.tue.nl/ws/files/4442708/597473.pdf">"A combinatorial problem"</a>,
-de Bruijn describes the problem thus:</p>
-<blockquote>
-<p>Some years ago Ir. K. Posthumus stated an interesting conjecture
-concerning certain cycles of digits 0 or 1, which we shall call
-<span class="math">\(P_n\)</span> cycles. For <span class="math">\(n = 1, 2, 3, \dots\)</span>, a <span class="math">\(P_n\)</span> cycle be an ordered
-cycle of <span class="math">\(2^n\)</span> digits 0 or 1, such that the <span class="math">\(2^n\)</span> possible ordered
-sets of <span class="math">\(n\)</span> consecutive digits of that cycle are all different.
-As a consequence, any ordered set of <span class="math">\(n\)</span> digits 0 or 1 occurs exactly
-once in that cycle.</p>
-<p>For example, a <span class="math">\(P_3\)</span> cycle is <span class="math">\(00010111\)</span>, respectively showing the
-triples 000, 001, 010, 011, 111, 100, 100, which are all the possible
-triples indeed.</p>
-</blockquote>
-<p>In this case, de Bruijn is discussing <em>complete</em> de Bruijn graphs - he
-constructs a de Bruijn graph of all possible 3-mers (our k-mers, <span class="math">\(k = 3\)</span>),
-and constructs a path through the graph that visits every edge of the
-graph. Here is the sequence broken down as above:</p>
-<div class="highlight"><pre><span></span><code>      Sequence:   00010111
-      Pieces:     00  
-                   00
-                    01
-                     10
-                      01
-                       11
-                        11
+<p>Note that the <code>A..B</code> range syntax is <em>exclusive</em> of <code>A</code>, so we use <code>B</code>
+(the last commit on <code>master</code> before the feature branch) as the range
+start — that way commit <code>D1</code> is included. Equivalently, <code>D1~1..E3</code> would
+also include <code>D1</code>.</p>
+<p>This will create a series of patches like</p>
+<div class="highlight"><pre><span></span><code>0001-the-D1-commit-message.patch
+0002-the-E1-commit-message.patch
+0003-the-D2-commit-message.patch
+0004-the-F1-commit-message.patch
+0005-the-E2-commit-message.patch
+0006-the-F2-commit-message.patch
+0007-the-D3-commit-message.patch
+0008-the-F3-commit-message.patch
+0009-the-E3-commit-message.patch
 </code></pre></div>
 
-<p>The alphabet here is binary: 0 and 1. </p>
-<p>This (seemingly simple) example is a bit confusing, but here's
-what's going on: we have four vertices on the de Bruijn graph,
-consisting of the 2-mers:</p>
-<div class="highlight"><pre><span></span><code>00
-01
-10
-11
+<p>Patches can be further split or modified, and can be applied in the desired order (although
+changes in line numbers happening out of order may confuse the program applying the patch).</p>
+<p>Start by creating a branch from the desired commit (commit <code>B</code> in the diagram above):</p>
+<div class="highlight"><pre><span></span><code>git checkout B
 </code></pre></div>
 
-<p>Now, if we draw an edge for every possible 3-mer, we would 
-start with the 3-mer <code>000</code>, which is actually represented
-by a self-edge from vertex <code>00</code> to vertex <code>00</code>, because the
-prefix matches the suffix.</p>
-<p>Similarly, the 3-mer <code>111</code> is represented by a self-edge
-from vertex <code>11</code> to vertex <code>11</code>.</p>
-<p>The other 3-mers are represented by their corresponding edges:
-<code>001</code> is represented by the edge <code>00 -&gt; 01</code>, <code>010</code> by the edge
-<code>01 -&gt; 10</code>, etc.</p>
-<p>By drawing <strong>every possible edge</strong> (to represent every possible
-3-mer), we assemble the <strong>complete de Bruijn graph</strong> (that is,
-the de Bruijn graph containing vertices for all possible
-2-mers connected by edges representing every possible 3-mer
-in the given alphabet).</p>
-<p>The sequence de Bruijn gives in his paper is an Euler path
-through the <em>complete</em> (de Bruijn) graph (that is, a path 
-through the de Bruijn graph that visits every edge exactly 
-once):</p>
-<div class="highlight"><pre><span></span><code>Sequence: 00010111
-
-00 -&gt; 00 -&gt; 01 -&gt; 10 -&gt; 01 -&gt; 11 -&gt; 11
+<p>(where <code>B</code> should be either the commit hash for commit B, or a tag or branch that is associated
+with commit B). Now create a branch that will start from that commit (we'll start with our branch
+for feature D here):</p>
+<div class="highlight"><pre><span></span><code>git checkout -b feature-d
 </code></pre></div>
 
-<h1 id="back-to-dna">Back to DNA</h1>
-<p>Now the utility of the de Bruijn methodology is more clear:
-if we can come up with fast, efficient algorithms to find
-Euler paths on large graphs, we can transform the assembly 
-problem (given fragments of a long sequence, reconstruct
-the sequence) into the problem of finding an Eulerian path,
-which is tractable even for large graphs.</p>
-<p>Compare this with string matching algorithms utilizing
-dynamic programming, which can cost <span class="math">\(O(N^2)\)</span> and make
-genome assembly computationally infeasible.</p>
-<p>Part 1 (this post) has covered the basic idea behind 
-assembling DNA sequences using de Bruijn graphs. In
-Part 2 of this post, we will move on to a discussion
-of the "real world" problem, warts and all, and how 
-we can relax some of the strict assumptions (like assuming
-perfect coverage of the original sequence and assuming
-that all reads are perfect).</p>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
+<p>Now apply patches to the new branch, which will start from commit <code>B</code>.</p>
+<p>To apply a patch, use <code>patch -p1</code>:</p>
+<div class="highlight"><pre><span></span><code>patch -p1 &lt; 0001-the-D1-commit-message.patch
+</code></pre></div>
 
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
+<p>The <code>-p1</code> strips the prefix by 1 directory level, which is necessary with patches created
+by git. We use <code>patch</code> rather than <code>git am</code> to apply the patch, because we want to apply
+the changes independent of git, and only stage the changes we want into our next commit.</p>
+<p>If you have a series of commits that you want to squash, that's also easy to do by applying
+each patch for those commits, then staging all the changes from those patches into a new
+commit.</p>
+<p>As patches are applied, particular changes can be staged and commits can be crafted. Use 
+the <code>--edit</code> or <code>--patch</code> flags of <code>git add</code>:</p>
+<div class="highlight"><pre><span></span><code>git add --edit &lt;filename&gt;
+git add --patch &lt;filename&gt;
+</code></pre></div>
 
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+<p>This allows selective filtering of particular edits into the next commit, so that one patch
+(or any number of patches) can be applied, and selective changes can be staged into a commit.</p>
+<p>Once you are ready, just run</p>
+<div class="highlight"><pre><span></span><code>git commit
+</code></pre></div>
 
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
+<p>without specifying the filename. (If you specify the filename, it will stage all changes,
+and ignore the crafting you've done.)</p>
+<p>As you create a commit or a set of commits specific to changeset D, you can work on a D branch.
+When you finish all commits related to D, you can start a new branch with</p>
+<div class="highlight"><pre><span></span><code>git checkout feature-e
+</code></pre></div>
 
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
+<p>that will start a new branch from where the d-branch left off. Chaining your
+changes together into several small branches that build on each other will 
+help keep pull requests simpler too.</p>
+<p>The advantages of this approach include:</p>
+<ul>
+<li>Commits can be split by applying the patch and staging particular edits</li>
+<li>The ability to split single commits into more commits, or combine/squash commits together, means
+  this approach has a lot of flexibility</li>
+<li>Best for some situations where, e.g., a long series of commits with many small commits that should
+  be squashed and some large commits that should be split </li>
+</ul>
+<p>The disadvantages of this approach include:</p>
+<ul>
+<li>Patches applied out of order can confuse the program applying the patches</li>
+</ul>
+<h3 id="cherry-pick-and-unstage">cherry-pick and unstage</h3>
+<p>An alternative to the above workflow is to use <code>git cherry-pick</code> to apply the changes from particular
+commits, but to leave those changes unstaged using the <code>--no-commit</code> or <code>-n</code> flag:</p>
+<div class="highlight"><pre><span></span><code>git cherry-pick --no-commit &lt;commit-hash&gt;
+git cherry-pick -n &lt;commit-hash&gt;
+</code></pre></div>
+
+<p>Alternatively, a range of commits can be used instead:</p>
+<div class="highlight"><pre><span></span><code>git cherry-pick -n &lt;commit-hash-start&gt;..&lt;commit-hash-end&gt;
+</code></pre></div>
+
+<p>This can help achieve a similar level of flexibility to the patch approach.</p>
+<h3 id="soft-reset-and-commit">soft reset and commit</h3>
+<p>Suppose the commit history is simple enough that you can squash all of the commits together
+into a single diff set, and pick the changes to split into commits D, E, and F.</p>
+<p>In that case, the easiest way might be to roll back all of the commits made, but preserve
+the changes that each commit made. This is precisely what a <em>soft reset</em> will do.</p>
+<p>For the git commit history</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D1 - E1 - D2 - F1 - E2 - F2 - D3 - F3 - E3 (feature)
+</code></pre></div>
+
+<p>Run the command</p>
+<div class="highlight"><pre><span></span><code>git reset --soft B
+</code></pre></div>
+
+<p>to move the HEAD pointer to commit B, while also <em>preserving</em> all changes made from the
+start of the feature branch <code>D1</code> to the tip of the feature branch <code>E3</code>, all added as
+staged changes (as though they had been <code>git add</code>-ed).</p>
+<p>The changes will be staged, but changes to files can be unstaged using</p>
+<div class="highlight"><pre><span></span><code>git restore --staged &lt;filename&gt;
+</code></pre></div>
+
+<p>Now add changes selectively using the <code>--edit</code> or <code>--patch</code> flags</p>
+<div class="highlight"><pre><span></span><code>git add --edit &lt;filename&gt;
+git add --patch &lt;filename&gt;
+</code></pre></div>
+
+<p>If desired, those changes can be unstaged, and then re-staged using <code>git add --edit</code> or
+<code>git add --patch</code> to selectively add changes to particular commits.</p>
+<p>When done, run </p>
+<div class="highlight"><pre><span></span><code>git commit
+</code></pre></div>
+
+<p>with no arguments to commit the changes you made.</p>
+<h1 id="refactoring-large-pull-requests">Refactoring Large Pull Requests</h1>
+<p>The approaches above can be useful for refactoring branches. The end result will look something like this:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D (feature-d)
+      \ 
+       E (feature-e)
+        \
+         F (feature-f)
+</code></pre></div>
+
+<p>Now 3 pull requests can be made, one for each feature. Thanks to the refactoring above, each branch
+should be a more isolated set of changes that are all related, and therefore easier to review.</p>
+<h2 id="chaining-pull-requests">Chaining Pull Requests</h2>
+<p>The three D E F branches should be merged in together, since they are all related. But their changes should
+be kept separate to make reviewing each branch easier. To accomplish this, chain the pull requests together
+like so:</p>
+<p>Pull Request 1: merge <code>feature-d</code> into <code>master</code></p>
+<p>Pull Request 2: merge <code>feature-e</code> into <code>feature-d</code></p>
+<p>Pull Request 3: merge <code>feature-f</code> into <code>feature-e</code></p>
+<p>In this way, each pull request only shows the changes specific to that branch.</p>
+<p>(If each pull request were made against <code>master</code>, then later branches (F) would also incorporate changes
+from prior branches (D), resulting in messy and hard-to-review pull requests.)</p>
+<p>Pull requests are reviewed and discussed, and new commits will probably be added to fix things or incorporate
+feedback:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D - DA - DB (feature-d)
+      \ 
+       E - EA - EB (feature-e)
+        \
+         F - FA - FB (feature-f)
+</code></pre></div>
+
+<h2 id="preparing-to-merge-a-large-pull-request">Preparing to Merge a Large Pull Request</h2>
+<p>All of your pull requests are approved and ready to merge. Now what?</p>
+<p>Pull requests will need to be merged in reverse order (last PR is merged first - f into e, e into d, d into
+master).  To test that things go smoothly with the first pull request (<code>feature-f</code> into <code>feature-e</code>), we should
+create a local E-F integration branch.</p>
+<p>The local integration branch will have new commits if changes are needed to resolve merge conflicts or fix
+broken tests. Any changes made can be added to the <code>feature-f</code> branch and pushed to the remote, so that
+they are part of the pull request, making the merge into <code>feature-e</code> go smoothly.</p>
+<p>To create a throwaway E-F integration branch, we start by creating a test integration branch from the tip of the
+<code>feature-f</code> branch, and we will merge branch <code>feature-e</code> into branch <code>feature-f</code>.</p>
+<div class="highlight"><pre><span></span><code>git checkout feature-f
+</code></pre></div>
+
+<p>Now we create a local E-F integration branch:</p>
+<div class="highlight"><pre><span></span><code>git checkout -b integration-e-f
+</code></pre></div>
+
+<p>Now we merge <code>feature-e</code> into <code>integration-e-f</code>, which is the same as <code>feature-f</code>:</p>
+<div class="highlight"><pre><span></span><code>git merge --no-ff feature-e
+</code></pre></div>
+
+<p>The <code>--no-ff</code> flag creates a separate merge commit, which is useful here to keep our commit history clean.</p>
+<p>If merge conflicts are encountered, those can be resolved in the usual manner, and the (conflict-free) new
+versions of each file, reflecting changes from <code>feature-f</code> and <code>feature-e</code>, will all be present after the
+merge commit.</p>
+<p>Further commits can also be made to make tests pass, with a resulting git diagram:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D - DA - DB (feature-d)
+      \ 
+       E - EA - EB ----
+        \              \
+         F - FA - FB - EF1 - EF2 (integration-e-f)
+                              ^
+                             HEAD
+</code></pre></div>
+
+<p>Once the <code>integration-e-f</code> branch is polished and passing tests, we can re-label it as <code>feature-f</code> and push
+the new commits to the remote. To re-label <code>integration-e-f</code> as <code>feature-f</code>, assuming we're at the tip of
+the <code>integration-e-f</code> branch (where we left off above):</p>
+<div class="highlight"><pre><span></span><code>git checkout -B feature-f
+</code></pre></div>
+
+<p>The <code>-B</code> flag creates or resets the named branch at HEAD in one step, so
+you don't have to (and can't) delete the branch you're currently on.</p>
+<p>and push the new commits to the remote's <code>feature-f</code> branch, before you merge in the pull request (<code>feature-f</code>
+into <code>feature-e</code>):</p>
+<div class="highlight"><pre><span></span><code>git push origin feature-f
+</code></pre></div>
+
+<p>Now you are ready to merge pull request 3 (F into E).</p>
+<h2 id="rinse-and-repeat">Rinse and Repeat</h2>
+<p>Rinse and repeat for pull requests 2 and 1.</p>
+<p>For Pull Request 2, we start by creating a new <code>integration-d-e-f</code> branch from the tip of the
+<code>integration-e-f</code> branch, like so:</p>
+<div class="highlight"><pre><span></span><code>git checkout integration-e-f
+git checkout -b integration-d-e-f
+</code></pre></div>
+
+<p>and use the same approach of merging in the <code>feature-d</code> branch with an explicit merge commit:</p>
+<div class="highlight"><pre><span></span><code>git merge --no-ff feature-d
+</code></pre></div>
+
+<p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
+and you should now have a git commit history like this:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+    \
+     D - DA - DB ----------------
+      \                          \
+       E - EA - EB ----           \
+        \              \           \
+         F - FA - FB - EF1 - EF2 - DEF1 - DEF2 (integration-d-e-f)
+                                            ^
+                                           HEAD
+</code></pre></div>
+
+<p>Now re-label the <code>integration-d-e-f</code> branch as <code>feature-e</code>:</p>
+<div class="highlight"><pre><span></span><code>git checkout -B feature-e
+</code></pre></div>
+
+<p>Finally, push all new commits to the remote, including the new merge
+commit, which will make sure the pull request can be merged without
+any conflicts:</p>
+<div class="highlight"><pre><span></span><code>git push origin feature-e
+</code></pre></div>
+
+<p>Now PR 2 (E into D) can be merged.</p>
+<h2 id="final-merge-into-master">Final Merge into Master</h2>
+<p>The last and final PR, D into master, will merge all combined feature
+branches into the master branch. We start with a <code>feature-d</code> branch
+that has several commits related to feature D, then several commits
+from merging the <code>feature-e</code> branch in (pull request 2, E into D),
+and the <code>feature-e</code> branch also had <code>feature-f</code> merged into it.</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+     \
+      D - DA - DB - DEF1 - DEF2 (feature-d)
+</code></pre></div>
+
+<p>Now we will create one more commit on the <code>feature-d</code> branch that is
+merging <code>master</code> into <code>feature-d</code>, which will help the merge happen
+smoothly for pull request 1 (D into master).</p>
+<p>But first we switch to an integration branch, in case things don't go
+smoothly and we want to throw away the merge commit:</p>
+<div class="highlight"><pre><span></span><code>git checkout feature-d
+git checkout -b integration-def-master
+</code></pre></div>
+
+<p>Create an explicit merge commit to merge <code>master</code> into <code>integration-def-master</code>:</p>
+<div class="highlight"><pre><span></span><code>git merge --no-ff master
+</code></pre></div>
+
+<p>Work out any merge conflicts that result, and add any additional changes needed to get tests passing,
+and you should now have a git commit history like this:</p>
+<div class="highlight"><pre><span></span><code>A - B - C (master)
+     \   \--------------------------
+      \                             \
+       D - DA - DB - DEF1 - DEF2 - DEF3 (integration-def-master)
+</code></pre></div>
+
+<p>where commit <code>DEF3</code> is the merge commit created with the <code>--no-ff</code> command.</p>
+<p>The merge commit will resolve any conflicts. When you're satisfied with the
+merge commit, you can switch out the <code>integration-def-master</code> branch with the
+<code>feature-d</code> branch like so:</p>
+<div class="highlight"><pre><span></span><code>git checkout -B feature-d
+</code></pre></div>
+
+<p>Now you can push the merge commit to the remote:</p>
+<div class="highlight"><pre><span></span><code>git push origin feature-d
+</code></pre></div>
+
+<p>and you're now ready to merge your (conflict-free) pull request!</p></div>
 
     </div>
 </div>
@@ -1306,29 +1241,15 @@ that all reads are perfect).</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/go.html">go</a>
+                    <a href="https://charlesreid1.github.io/tag/git.html">git</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golang.html">golang</a>
+                    <a href="https://charlesreid1.github.io/tag/rebase.html">rebase</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/rosalind.html">rosalind</a>
+                    <a href="https://charlesreid1.github.io/tag/cherry-pick.html">cherry-pick</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computational-biology.html">computational biology</a>
+                    <a href="https://charlesreid1.github.io/tag/branching.html">branching</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/bioinformatics.html">bioinformatics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/euler.html">euler</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/backtracking.html">backtracking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/graphs.html">graphs</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hamiltonian.html">hamiltonian</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/eulerian.html">eulerian</a>
+                    <a href="https://charlesreid1.github.io/tag/version-control.html">version control</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -1367,6 +1288,34 @@ that all reads are perfect).</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>May 2025</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-rick-perlsteins-nixonland.html">Reading Rick Perlstein's <i>Nixonland</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/ken-binmores-game-theory-and-nash-equilibrium-in-shadowrun.html">Ken Binmore's <i>Game Theory</i> and Nash Equilibrium in Shadowrun</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-hobbess-leviathan.html">Reading Hobbes's <i>Leviathan</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/forever-blue-the-other-side-of-the-bums-story.html"><i>Forever Blue</i>: The Other Side of the Bums Story</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Blind SQL Injection with Conditional Responses
+                Project Euler 312: Hamiltonian Cycles on Sierpiński Graphs
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2023-05-22T14:00:00-07:00" pubdate>Monday 05/22/2023</time>
+                <time datetime="2025-04-20T20:00:00-07:00" pubdate>Sunday 04/20/2025</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/blind-sql-injection-with-conditional-responses.html">permalink</a>
+                <a href="https://charlesreid1.github.io/project-euler-312-hamiltonian-cycles-on-sierpinski-graphs.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,102 +127,843 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>Part 4 of our
-<a href="working-through-the-portswigger-web-security-academy.html">PortSwigger Web Security Academy series</a>.
-This one covers blind SQL injection with conditional responses, which is
-the easier of the two blind SQLi flavors we work through in this series.</p>
+        <div class="entry-content"><p><a href="https://projecteuler.net/problem=312">Project Euler problem 312</a> is one
+of the harder problems we have worked through. It combines graph theory,
+fractal geometry, combinatorial counting, and modular arithmetic, and
+the final answer requires computing <code>C(C(C(10000))) mod 13^8</code> where
+<code>C(n)</code> is the number of Hamiltonian cycles on a Sierpiński graph of
+order <code>n</code>.</p>
+<p>We ended up leaning on OEIS to get the recurrence in closed form, which
+we will confess to below. Full notes:
+<a href="https://charlesreid1.com/wiki/Project_Euler/312">Project Euler/312</a>.</p>
+<h2 id="the-problem">The Problem</h2>
+<p>A <strong>Sierpiński graph</strong> of order 1, denoted <code>S_1</code>, is an equilateral
+triangle - three vertices, three edges.</p>
+<p><code>S_{n+1}</code> is built from three copies of <code>S_n</code> positioned so each pair
+of copies shares one corner vertex.</p>
+<p>Let <code>C(n)</code> be the number of cycles that pass through every vertex of
+<code>S_n</code> exactly once - the number of <strong>Hamiltonian cycles</strong>. The problem
+tells us <code>C(1) = C(2) = 1</code>, and <code>C(5) = 71,328,803,586,048</code>.</p>
+<p>The goal: find <code>C(C(C(10000))) mod 13^8</code>.</p>
+<p>Two things to notice about the goal. First, <code>C(10000)</code> is astronomically
+large - you cannot actually compute it and then feed it to <code>C</code> again.
+Second, <code>mod 13^8</code> is a big hint: the whole calculation is going to
+happen in modular arithmetic, and there is going to be some periodicity
+trick.</p>
+<h2 id="vertices-and-edges">Vertices and Edges</h2>
+<p>Some easy facts to nail down before doing anything clever.</p>
+<p>Number of edges of <code>S_n</code>:</p>
+<div class="math">$$
+e(S_n) = 3^{n+1}
+$$</div>
+<p>Number of vertices of <code>S_n</code>:</p>
+<div class="math">$$
+v(S_n) = \frac{3}{2}\left(3^n + 1\right)
+$$</div>
+<p>So <code>S_10000</code> has on the order of <code>3^10000</code> vertices, which is a number
+with about 4,700 decimal digits. A Hamiltonian cycle visits every
+vertex, so the number of Hamiltonian cycles is going to have on the
+order of <code>3^10000</code> factorial-ish in its combinatorics. There is no
+approach that involves listing anything.</p>
+<h2 id="the-recursive-structure">The Recursive Structure</h2>
+<p>The critical observation is that <code>S_{n+1}</code> is built from three copies of
+<code>S_n</code>. A Hamiltonian cycle on <code>S_{n+1}</code> has to traverse all three
+copies, and the only places it can move between copies are at the
+shared corner vertices. So any Hamiltonian cycle on <code>S_{n+1}</code> consists
+of:</p>
+<ul>
+<li>A Hamiltonian <strong>path</strong> through the first copy of <code>S_n</code>, entering and
+  exiting at two of its three outer corners</li>
+<li>A Hamiltonian path through the second copy, similarly</li>
+<li>A Hamiltonian path through the third copy, similarly</li>
+<li>Plus the three edges that connect the copies together at the shared
+  corners</li>
+</ul>
+<p>So counting Hamiltonian cycles reduces to counting certain kinds of
+Hamiltonian paths on smaller graphs.</p>
+<p>Let</p>
+<ul>
+<li><code>C(n)</code> = number of Hamiltonian cycles on <code>S_n</code></li>
+<li><code>P(n)</code> = number of Hamiltonian paths on <code>S_n</code> where <strong>both</strong>
+  endpoints are outer corners</li>
+<li><code>P̄(n)</code> = number of Hamiltonian paths on <code>S_n</code> where <strong>exactly one</strong>
+  endpoint is an outer corner</li>
+</ul>
+<p>Then</p>
+<div class="math">$$
+C(n) = [P(n-1)]^3
+$$</div>
+<p>(three copies, each contributing a Hamiltonian path with both endpoints
+at outer corners, one path per copy, chosen independently).</p>
+<p>Similarly, by tracking which paths piece together into which combined
+paths, we get</p>
+<div class="math">$$
+P(n) = 2 [P(n-1)]^2 P̄(n-1)
+$$</div>
+<div class="math">$$
+P̄(n) = 2 [P̄(n-1)]^2 P(n-1)
+$$</div>
+<p>These recurrences let us compute <code>P(n)</code>, <code>P̄(n)</code>, and <code>C(n)</code> in
+principle. The values grow explosively - by the time <code>n = 5</code>, <code>C(n)</code> is
+already <code>7.1 × 10^13</code>.</p>
+<h2 id="closed-form-confession-time">Closed Form (Confession Time)</h2>
+<p>At this point we did the thing everyone does: computed <code>C(1)</code> through
+<code>C(5)</code> from the recurrence, dropped the sequence into OEIS, and
+immediately hit
+<a href="https://oeis.org/A246959">A246959</a> - the "number of Hamiltonian cycles
+in the Sierpiński graph."</p>
+<p>The closed form given by OEIS is</p>
+<div class="math">$$
+C(n) = 8 \cdot 12^{(3^{n-2} - 3)/2} \qquad n \geq 3
+$$</div>
+<p>which is very compact. Equivalently, the recurrence</p>
+<div class="math">$$
+C(n) = (3 \cdot C(n-1))^3 \qquad n \geq 4
+$$</div>
+<p>Sanity check against the given value <code>C(5) = 71,328,803,586,048</code>.
+Wolfram Alpha confirms.</p>
+<p>First few values:</p>
+<table>
+<thead>
+<tr>
+<th><code>n</code></th>
+<th><code>C(n)</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>8</td>
+</tr>
+<tr>
+<td>4</td>
+<td>13,824</td>
+</tr>
+<tr>
+<td>5</td>
+<td>71,328,803,586,048</td>
+</tr>
+</tbody>
+</table>
+<p>Note that <code>C(2) = 2</code> above, but the problem states <code>C(1) = C(2) = 1</code>.
+The mismatch is a convention issue about what counts as a Hamiltonian
+cycle on the tiniest graphs (traversal direction, effectively). We
+used the OEIS convention for anything <code>n ≥ 3</code>, which is where the
+counting matters.</p>
+<h2 id="nested-evaluation-under-a-modulus">Nested Evaluation Under a Modulus</h2>
+<p>Now for the actual goal: <code>C(C(C(10000))) mod 13^8</code>.</p>
+<p>The magnitude of <code>C(10000)</code> is not something you can hold in memory.
+By <code>n = 20</code> the exponent in <code>12^((3^(n-2) - 3)/2)</code> is already millions
+of digits long, and we are being asked about <code>n = 10000</code>. So the whole
+calculation has to happen without ever materializing an intermediate
+value in full.</p>
+<p>The trick is that we don't <em>need</em> the intermediate values in full. We
+need <code>C(C(C(10000))) mod 13^8</code>. That means for the outermost <code>C</code>, we
+only need its argument modulo something that makes the outermost <code>C</code>
+computable. And that "something" is much smaller than the argument
+itself.</p>
+<p>Three techniques do the work.</p>
+<h3 id="technique-1-periodicity-of-cn-mod-m">Technique 1: Periodicity of <code>C(n) mod M</code></h3>
+<p>The sequence <code>C(1), C(2), C(3), ...</code> taken modulo any fixed <code>M</code> is
+eventually periodic. It has to be - the state at step <code>n</code> in the
+recurrence <code>C(n) = (3 · C(n-1))^3 mod M</code> is a single residue in
+<code>Z/MZ</code>, and there are only <code>M</code> possible residues, so the sequence must
+eventually enter a cycle.</p>
+<p>Let <code>P</code> be the period. Then</p>
+<div class="math">$$
+C(X) \bmod M = C(((X - X_0) \bmod P) + X_0) \bmod M
+$$</div>
+<p>for <code>X</code> at least as large as the pre-period offset <code>X_0</code>. In practice
+you compute successive <code>C(n) mod M</code> values until you see a repeat, and
+that tells you <code>X_0</code> and <code>P</code>.</p>
+<p>This is the workhorse. It lets you reduce "compute <code>C</code> at an
+astronomically large index" to "compute <code>C</code> at an index in the range
+<code>[X_0, X_0 + P)</code>."</p>
+<h3 id="technique-2-choosing-the-right-modulus-at-each-layer">Technique 2: Choosing the Right Modulus at Each Layer</h3>
+<p>The three <code>C</code> calls need different moduli.</p>
+<p>The <strong>outermost</strong> <code>C</code> operates modulo <code>13^8</code>. That is what the problem
+asks for.</p>
+<p>The <strong>middle</strong> <code>C</code> needs to produce a residue that determines the
+outermost <code>C(x) mod 13^8</code>. By technique 1, the outermost <code>C</code> is
+periodic mod <code>13^8</code> with some period <code>P_out</code>. So the middle <code>C</code> only
+needs to compute its result <strong>modulo <code>P_out</code></strong> (well, modulo the
+pre-period plus period - be careful with the offset).</p>
+<p>The <strong>innermost</strong> <code>C(10000)</code> needs to produce a residue that determines
+the middle <code>C(y) mod P_out</code>. So find the period <code>P_mid</code> of <code>C</code> mod
+<code>P_out</code>, and compute <code>C(10000) mod P_mid</code>.</p>
+<p>So the algorithm is:</p>
+<ol>
+<li>Find the period of <code>C(n) mod 13^8</code>. Call it <code>P_out</code>.</li>
+<li>Find the period of <code>C(n) mod P_out</code>. Call it <code>P_mid</code>.</li>
+<li>Compute <code>C(10000) mod P_mid</code>. Call the result <code>a</code>.</li>
+<li>Compute <code>C(a) mod P_out</code>. Call the result <code>b</code>.</li>
+<li>Compute <code>C(b) mod 13^8</code>.</li>
+</ol>
+<p>Each step uses either the recurrence directly (<code>b = (3·b_prev)^3 mod M</code>)
+or, for the innermost step at <code>n = 10000</code>, the recurrence run 10000
+times mod the appropriate modulus. Ten thousand modular multiplications
+is nothing.</p>
+<h3 id="technique-3-handling-the-cube-under-a-prime-power">Technique 3: Handling the Cube Under a Prime Power</h3>
+<p>The recurrence <code>C(n) = (3 · C(n-1))^3</code> involves a cube, so under a
+prime power modulus you have to be careful about invertibility. Cubing
+is well-defined mod <code>13^8</code> (or mod anything else), so the forward
+recurrence is not a problem - you just cube and multiply. What can go
+wrong is if you try to <em>invert</em> the cubing at some point, which you
+would need if you tried to do matrix exponentiation on the logarithm of
+the recurrence.</p>
+<p>We did not need to invert. The three-layer periodicity approach above
+uses only forward evaluation of the recurrence, so cubing mod <code>13^8</code> is
+fine.</p>
+<h3 id="chinese-remainder-theorem">Chinese Remainder Theorem</h3>
+<p>CRT is worth mentioning for completeness. If the modulus had been
+composite with multiple distinct prime factors, we would compute the
+answer separately modulo each prime power and glue the results
+together with CRT.</p>
+<p>Here the modulus is <code>13^8</code>, a single prime power, so CRT is not
+needed - but if the problem had asked for <code>mod (7^5 · 11^3 · 13^8)</code>,
+the approach would be to solve three separate problems and CRT the
+answers.</p>
+<h2 id="what-we-learned">What We Learned</h2>
+<p>Three things worth carrying forward.</p>
+<p><strong>Recursive structure beats brute force by a lot.</strong> The naive approach
+of enumerating cycles on <code>S_n</code> is impossible for anything <code>n &gt; 4</code> or so.
+The recursive approach reduces the problem to counting paths on
+<code>S_{n-1}</code> with three specific endpoint types, and that recursion
+collapses to a single-variable formula. Every time you can find a
+recursive structure, use it.</p>
+<p><strong>OEIS is not cheating.</strong> Recognizing a sequence and looking up its
+closed form is a legitimate research tool, not shortcut. The people who
+computed and cataloged OEIS A246959 did the work of proving the closed
+form. Standing on their shoulders is what mathematics has always looked
+like. The alternative - re-deriving every known result from scratch - is
+how you never finish anything.</p>
+<p><strong>Nested modular evaluation is a real technique.</strong> When a problem asks
+for <code>f(f(f(n))) mod M</code> with a huge <code>n</code>, you rarely need to compute the
+intermediate values. You work outward-in through periods: the outermost
+period tells you what modulus the middle layer actually needs to
+produce, which tells you what modulus the innermost layer needs to
+produce. Astronomical intermediate values reduce to residues in
+tractable rings. This shape of problem shows up a lot in number theory
+and cryptography, and it is worth having the pattern in your head.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our wiki notes:
+  <a href="https://charlesreid1.com/wiki/Project_Euler/312">Project Euler/312</a></li>
+<li><a href="https://projecteuler.net/problem=312">PE 312 on projecteuler.net</a></li>
+<li><a href="https://oeis.org/A246959">OEIS A246959</a> - Hamiltonian cycles in
+  Sierpiński graphs</li>
+<li>Useful paper: <a href="https://arxiv.org/pdf/0909.5541">https://arxiv.org/pdf/0909.5541</a> (Hamiltonian
+  properties of Sierpiński graphs)</li>
+</ul>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graph-theory.html">graph theory</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hamiltonian-cycles.html">hamiltonian cycles</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sierpinski.html">sierpinski</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/oeis.html">oeis</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Project Euler 227 (The Chase): When Brute Force Costs 80 Days
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2025-04-19T20:00:00-07:00" pubdate>Saturday 04/19/2025</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/project-euler-227-the-chase-when-brute-force-costs-80-days.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><a href="https://projecteuler.net/problem=227">Project Euler problem 227</a> - "The
+Chase" - is a nice example of a problem where the brute force approach
+is completely reasonable to reach for first, completely infeasible to
+actually finish, and directly points you at the right mathematical
+reformulation.</p>
+<p>This is what we ended up with. Our full working notes are on the wiki at
+<a href="https://charlesreid1.com/wiki/Project_Euler/227">Project Euler/227</a>.</p>
+<h2 id="the-problem">The Problem</h2>
+<p>An even number of players sit around a table. Two players sitting
+directly opposite each other each start with a die. Each round, both
+players roll:</p>
+<ul>
+<li>Roll a 1 → pass the die to your left neighbor</li>
+<li>Roll a 6 → pass the die to your right neighbor</li>
+<li>Anything else → keep the die</li>
+</ul>
+<p>The game ends when one player is holding both dice at the end of a
+round. That player loses.</p>
+<p>The question: with 100 players, what is the expected number of rounds
+before someone loses?</p>
+<h2 id="reaching-for-the-brute-force">Reaching For the Brute Force</h2>
+<p>The first thing we did was write a very small Python simulator. Two
+integer pointers, one per die. Each round, roll two dice, update each
+pointer with <code>+1</code>, <code>-1</code>, or nothing, modulo the number of players. Stop
+when the pointers collide. Average over many trials.</p>
+<p>This works. It gives you an estimate that gets more accurate as you run
+more trials. And then you start measuring how expensive that gets.</p>
+<p>The cost has two knobs:</p>
+<ul>
+<li><strong>Trials.</strong> Linear. Four decimal places of accuracy needs about 1,000
+  trials. Ten decimal places needs billions.</li>
+<li><strong>Players.</strong> Not linear. Playing with 5, 10, 15, 20, and 25 players
+  and measuring, the runtime looked quadratic in the number of players.</li>
+</ul>
+<p>So the total execution time is roughly</p>
+<div class="math">$$
+T(N, S) \approx c \cdot S \cdot N^2
+$$</div>
+<p>Extrapolating our measured constant <code>c</code> from small experiments up to
+<code>N = 100</code> players and <code>S = 9</code> billion trials (to get sufficient accuracy
+on the answer), we got about <strong>7,000,000 seconds</strong>. Call it 80 days.</p>
+<p>Project Euler problems are supposed to have solutions that run in about
+a minute. 80 days is not a minute. Even switching to a compiled language
+and multithreading, we would need a <strong>10,000×</strong> speedup to get into the
+right ballpark. And the loop body is already about as tight as a loop
+body gets - two random integers, two pointer updates, a comparison.
+There is not much to optimize.</p>
+<p>So the brute force is out. What is it about the problem that makes brute
+force so bad, and what does the answer look like if we ask a different
+question?</p>
+<h2 id="reformulating-as-a-markov-chain">Reformulating as a Markov Chain</h2>
+<p>The key observation is that the game has no memory. The next state only
+depends on the current state. That is the definition of a Markov chain.</p>
+<p>The <strong>state</strong> is the pair of positions of the two dice, <code>(i, j)</code>, where
+<code>i</code> and <code>j</code> are player indices in <code>{0, 1, ..., N-1}</code>. For 100 players,
+that's a state space with 10,000 pairs, minus the 100 pairs where <code>i = j</code>
+(dice have collided - game over). So we have 9,900 transient states and
+100 absorbing states.</p>
+<p>Note: <code>(i, j)</code> and <code>(j, i)</code> represent the same physical situation. There
+is a symmetry we could exploit to cut the state count roughly in half,
+but for the initial derivation we ignored it and paid the extra factor.</p>
+<p>Transitions: each die independently keeps, moves left, or moves right,
+with probabilities <code>4/6</code>, <code>1/6</code>, <code>1/6</code>. So the joint transition from
+<code>(i, j)</code> to <code>(i', j')</code> has probability equal to the product of the two
+individual probabilities. Each transient state has at most 9 possible
+next states (3 outcomes per die × 3 outcomes per die).</p>
+<h2 id="the-fundamental-matrix">The Fundamental Matrix</h2>
+<p>The clean way to compute expected time to absorption in a finite Markov
+chain is via the <strong>fundamental matrix</strong>. It works like this.</p>
+<p>Arrange the states so transient states come first and absorbing states
+come second. Then the transition probability matrix has the block form</p>
+<div class="math">$$
+P = \begin{bmatrix} Q &amp; R \\ 0 &amp; I \end{bmatrix}
+$$</div>
+<p>where</p>
+<ul>
+<li><code>Q</code> is <code>t × t</code>, the transition probabilities among transient states</li>
+<li><code>R</code> is <code>t × r</code>, the transitions from transient to absorbing states</li>
+<li><code>0</code> and <code>I</code> in the bottom row represent the fact that absorbing states
+  don't leave themselves</li>
+</ul>
+<p>The <strong>fundamental matrix</strong> is</p>
+<div class="math">$$
+N = (I - Q)^{-1}
+$$</div>
+<p>Entry <code>N[i, j]</code> gives the expected number of visits to transient state
+<code>j</code> before absorption, starting from transient state <code>i</code>. That means the
+expected number of steps until absorption, starting from state <code>i</code>, is
+the sum of row <code>i</code> of <code>N</code>.</p>
+<p>Or equivalently: solve the linear system <code>(I - Q) x = 1</code>, where <code>1</code> is a
+column of ones. Entry <code>x[i]</code> is the expected number of steps starting
+from state <code>i</code>.</p>
+<h2 id="building-q-for-100-players">Building Q for 100 Players</h2>
+<p>For 100 players there are <code>100 × 99 = 9900</code> transient states. <code>Q</code> is
+<code>9900 × 9900</code>. We only need to fill in the roughly nine nonzero entries
+per row, so <code>Q</code> is very sparse.</p>
+<p>Two things to get right when you build it:</p>
+<ol>
+<li><strong>State-to-index mapping.</strong> Some canonical ordering of the <code>(i, j)</code>
+   pairs with <code>i ≠ j</code>. Any consistent bijection between pairs and row
+   indices works.</li>
+<li><strong>Iterating over next states.</strong> For each <code>(i, j)</code>, enumerate the nine
+   <code>(i', j')</code> transitions. For each, check whether <code>i' = j'</code> (in which
+   case that probability mass flows to an absorbing state and doesn't
+   go into <code>Q</code>).</li>
+</ol>
+<p>Then invert <code>I - Q</code>, sum the row of <code>N</code> that corresponds to the starting
+state <code>(0, 50)</code> (opposite sides of the table), and you have your answer.</p>
+<h2 id="the-uncomfortable-confession">The Uncomfortable Confession</h2>
+<p>Ours took <strong>1,687 seconds</strong> to run. Twenty-eight minutes. Better than 80
+days, but not great.</p>
+<p>The slow part is inverting the 9,900 × 9,900 matrix. We tried
+reformulating as a linear solve <code>(I - Q) x = 1</code> and using LU
+decomposition instead of computing the full inverse, on the theory that
+LU should be faster. It was almost twice as slow. That was a surprise
+but probably a story about the specific dense linear algebra library we
+were using rather than a fundamental issue.</p>
+<p>The obvious next moves we did <em>not</em> take:</p>
+<ul>
+<li><strong>Sparse matrix representation.</strong> <code>Q</code> has at most 9 nonzeros per row
+  out of 9,900. Using a proper sparse solver would probably drop us into
+  the seconds.</li>
+<li><strong>Exploit the symmetry.</strong> Treating <code>(i, j)</code> and <code>(j, i)</code> as the same
+  state cuts the matrix size in half. Combined with sparsity, this
+  should be very fast.</li>
+<li><strong>Iterative methods.</strong> The system <code>(I - Q) x = 1</code> is a great candidate
+  for something like BiCGSTAB or GMRES, which don't build the inverse at
+  all.</li>
+</ul>
+<h2 id="the-real-solution-times">The Real Solution Times</h2>
+<p>For fun, we looked at the Project Euler forum posts after we submitted.
+The first person to solve it did it in <strong>0.1 seconds in C++ in 2009</strong>.
+That is 16,000× faster than ours.</p>
+<p>They used a completely different approach, involving grouping the six
+die outcomes into three groups (<code>+1</code>, <code>-1</code>, keep) and using symmetries
+to reduce the state space dramatically. There is a shape of insight that
+turns "big linear algebra problem" into "small closed-form recurrence"
+that we did not find.</p>
+<p>Some of the fun of Project Euler is exactly this: finishing the problem,
+submitting the answer, and then finding out that half the people who
+solved it did it 10,000× faster with a technique you did not think of.
+The correct response is not embarrassment. It is to open the forum, read
+their write-ups, and steal their trick for next time.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our full notes:
+  <a href="https://charlesreid1.com/wiki/Project_Euler/227">Project Euler/227</a></li>
+<li><a href="https://projecteuler.net/problem=227">PE 227 on projecteuler.net</a></li>
+<li>Fundamental matrix: standard reference is Kemeny &amp; Snell, <em>Finite
+  Markov Chains</em> (1960)</li>
+</ul>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/markov-chains.html">markov chains</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/probability.html">probability</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/brute-force.html">brute force</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/fundamental-matrix.html">fundamental matrix</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Project Euler 198 and Continued Fractions: When Is a Rational Ambiguous?
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2025-04-15T22:00:00-07:00" pubdate>Tuesday 04/15/2025</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/project-euler-198-and-continued-fractions-when-is-a-rational-ambiguous.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><a href="https://projecteuler.net/problem=198">Project Euler problem 198</a> is a
+number theory problem that turns out to be almost entirely about
+continued fractions. The problem hides this - the statement talks about
+"ambiguous" real numbers - but the ambiguity has a clean characterization
+in terms of continued fraction expansions, and once you see it, the
+problem gets a lot smaller.</p>
 <p>Wiki notes:
-<a href="https://charlesreid1.com/wiki/SQL_Injection/Blind">SQL Injection/Blind</a>.</p>
-<h2 id="the-setup">The Setup</h2>
-<p>Some SQL injection vulnerabilities never give you a direct channel back
-for the query results. The application runs a SQL query with your input,
-but the response doesn't render the result or leak database errors. The
-canonical example is a cookie tracking ID: the ID gets used in a SQL
-query on every request, but the query output is not rendered anywhere on
-the page.</p>
-<p>You can still exploit it. The technique is called <em>blind</em> SQL injection,
-because you can't see the query result directly, but you can <em>infer</em> it
-from other things the page does.</p>
-<h2 id="the-boolean-oracle">The Boolean Oracle</h2>
-<p>The version we cover in this post relies on the page rendering
-<em>differently</em> depending on whether the injected query returns a row.
-Classic PortSwigger example: a page that shows "Welcome back" if the
-tracking ID matches a valid user in the database, and doesn't otherwise.</p>
-<p>Send this request:</p>
-<div class="highlight"><pre><span></span><code>TrackingId=xyz&#39; AND &#39;1&#39;=&#39;1
-</code></pre></div>
-
-<p>The <code>AND '1'='1'</code> is unconditionally true, so if the outer query would
-have matched anything, it still matches. Welcome-back banner shows up.</p>
-<p>Now send this one:</p>
-<div class="highlight"><pre><span></span><code>TrackingId=xyz&#39; AND &#39;1&#39;=&#39;2
-</code></pre></div>
-
-<p>The <code>AND '1'='2'</code> is unconditionally false, so no rows match. No
-welcome-back banner.</p>
-<p>Two requests. Two different pages. That's your boolean oracle. Any yes/no
-question you can encode as a SQL condition, you can ask the database and
-get an answer via page behavior.</p>
-<h2 id="extracting-a-password-one-character-at-a-time">Extracting a Password One Character at a Time</h2>
-<p>Once you have the oracle, the game is to encode useful yes/no questions.
-The useful one is "is the first character of the administrator's password
-greater than X?"</p>
-<div class="highlight"><pre><span></span><code>TrackingId=xyz&#39; AND SUBSTRING((SELECT Password FROM Users WHERE Username = &#39;Administrator&#39;), 1, 1) &gt; &#39;m
-</code></pre></div>
-
-<p>If the welcome-back banner appears, the first character is greater than
-<code>m</code>. If not, it's less than or equal to <code>m</code>.</p>
-<p>Binary-search the alphabet:</p>
+<a href="https://charlesreid1.com/wiki/Project_Euler/198">Project Euler/198</a>.</p>
+<h2 id="the-problem">The Problem</h2>
+<p>Define a <strong>best approximation</strong> to a real number <code>x</code> with denominator
+bound <code>d</code> as a rational <code>r/s</code> in reduced form with <code>s ≤ d</code>, such that
+any other rational <code>p/q</code> closer to <code>x</code> than <code>r/s</code> has <code>q &gt; d</code>. In other
+words: it is the rational number with the smallest denominator that
+gets as close to <code>x</code> as anything with a small enough denominator can.</p>
+<p>Usually the best approximation is unique for each denominator bound.
+But sometimes there are two equally-good best approximations. The
+problem gives the example of <code>x = 9/40</code>, which has both <code>1/4</code> and <code>1/5</code>
+as best approximations for the denominator bound <code>d = 6</code>. Both are
+tied for closest to <code>9/40</code> among rationals with denominator at most 6.</p>
+<p>Call a real number <code>x</code> <strong>ambiguous</strong> if there is at least one denominator
+bound for which it has two best approximations. Ambiguous numbers are
+necessarily rational.</p>
+<p>The question: how many ambiguous <code>x = p/q</code> with <code>0 &lt; x &lt; 1/100</code> and
+<code>q ≤ 10^8</code> are there?</p>
+<h2 id="why-continued-fractions">Why Continued Fractions</h2>
+<p>Any real number <code>x</code> has a <strong>continued fraction expansion</strong></p>
+<div class="math">$$
+x = a_0 + \cfrac{1}{a_1 + \cfrac{1}{a_2 + \cfrac{1}{a_3 + \ddots}}}
+$$</div>
+<p>which we write compactly as <code>[a_0; a_1, a_2, a_3, ...]</code>. For rational
+numbers, the expansion terminates. For irrationals, it does not.</p>
+<p>The <strong>convergents</strong> of a continued fraction are the rationals you get
+by truncating the expansion at each step. The convergents of
+<code>[a_0; a_1, a_2, ..., a_n]</code> are</p>
+<div class="math">$$
+[a_0], [a_0; a_1], [a_0; a_1, a_2], \ldots
+$$</div>
+<p>There is a beautiful classical theorem that says: <strong>the convergents of
+the continued fraction expansion of <code>x</code> are exactly the best
+approximations to <code>x</code></strong>. Every convergent is a best approximation for
+some denominator bound, and every best approximation is a convergent
+or a certain kind of intermediate fraction.</p>
+<p>For <code>x = 9/40</code>:</p>
 <ul>
-<li>Is char 1 &gt; <code>m</code>? Yes → search <code>n</code> through <code>z</code></li>
-<li>Is char 1 &gt; <code>s</code>? Yes → search <code>t</code> through <code>z</code></li>
-<li>Is char 1 &gt; <code>v</code>? No → search <code>t</code> through <code>v</code></li>
-<li>Is char 1 &gt; <code>u</code>? No → search <code>t</code> through <code>u</code></li>
-<li>Is char 1 &gt; <code>t</code>? No → char 1 is <code>t</code></li>
+<li>CF expansion: <code>[0; 4, 2, 4]</code></li>
+<li>First convergent: <code>[0; 4] = 1/4</code></li>
+<li>Second convergent: <code>[0; 4, 2] = 1 / (4 + 1/2) = 2/9</code></li>
+<li>Third (final) convergent: <code>[0; 4, 2, 4] = 9/40</code></li>
 </ul>
-<p>Repeat for character 2. Then character 3. And so on until the password is
-in your notebook.</p>
-<h2 id="automating-it-in-burp-suite">Automating It In Burp Suite</h2>
-<p>Doing this by hand for a 20-character password is not something a normal
-person will finish. Burp Intruder does the automation.</p>
-<p>The recipe:</p>
+<p>So <code>1/4</code> is one best approximation for <code>9/40</code> at some bound. Where does
+the <em>other</em> one, <code>1/5</code>, come from?</p>
+<h2 id="where-ambiguity-comes-from">Where Ambiguity Comes From</h2>
+<p>The answer is that not all best approximations are convergents. There
+are also <strong>intermediate fractions</strong>, which sit between successive
+convergents. Specifically, when a partial quotient <code>a_k</code> is larger than
+1, you can form intermediate fractions</p>
+<div class="math">$$
+\frac{p_{k-1} + j \cdot p_k}{q_{k-1} + j \cdot q_k}
+$$</div>
+<p>for <code>j = 1, 2, ..., a_{k+1} - 1</code>, where <code>p_k / q_k</code> is the <code>k</code>-th
+convergent. These intermediate fractions are best approximations for
+certain denominator bounds.</p>
+<p>The situation where a real number has <strong>two</strong> best approximations for
+some denominator bound is exactly when a convergent and an intermediate
+fraction happen to sit equidistant from <code>x</code>. This can only happen when
+the continued fraction expansion has some partial quotient bigger than 1
+sitting in the right place.</p>
+<p>The clean characterization we ended up with is this:</p>
+<p><strong>A rational <code>p/q</code> is <em>non-ambiguous</em> if and only if its continued
+fraction expansion has the form</strong></p>
+<div class="math">$$
+[0; a_1] \quad \text{or} \quad [0; a_1, 1, 1, \ldots, 1]
+$$</div>
+<p>Everything else is ambiguous.</p>
+<p>This is the crux of the problem. Instead of counting ambiguous fractions
+directly, count the total number of relevant fractions and subtract the
+non-ambiguous ones - or, better, characterize the ambiguous ones
+directly by generating their continued fraction expansions.</p>
+<h2 id="constraints-from-the-problem">Constraints From the Problem</h2>
+<p>The problem restricts to <code>0 &lt; p/q &lt; 1/100</code> and <code>q ≤ 10^8</code>.</p>
+<p>Since <code>p ≥ 1</code> and <code>p/q &lt; 1/100</code>, we have <code>q &gt; 100 p ≥ 100</code>. So <code>q</code>
+ranges from 101 up to <code>10^8</code>.</p>
+<p>For a given <code>q</code>, valid <code>p</code> values satisfy:</p>
+<ul>
+<li><code>p ≥ 1</code></li>
+<li><code>p ≤ q/100</code></li>
+<li><code>gcd(p, q) = 1</code> (reduced form)</li>
+</ul>
+<p>That gives us roughly <code>q/100</code> candidate numerators per denominator, but
+we also have to intersect with "coprime to <code>q</code>" and "continued fraction
+has the right shape to be ambiguous."</p>
+<h2 id="the-search">The Search</h2>
+<p>The high-level approach:</p>
 <ol>
-<li>Right-click the request in Burp, "Send to Intruder"</li>
-<li>In Intruder → Positions, mark the <code>m</code> (the letter being tested) as
-   the payload position</li>
-<li>In Intruder → Payloads, set payload type to "Brute forcer" and give
-   it the alphabet you care about (<code>abcdefghijklmnopqrstuvwxyz</code> plus
-   digits and any symbols the password might contain)</li>
-<li>Run the attack. Sort results by response length or by whether the
-   welcome-back string appears in the body. The one match is your
-   answer.</li>
+<li>Iterate over denominators <code>q</code> from 101 to <code>10^8</code></li>
+<li>For each <code>q</code>, enumerate valid <code>p</code> values (coprime to <code>q</code>, in range)</li>
+<li>Compute the continued fraction expansion of <code>p/q</code></li>
+<li>Check whether the expansion has the "ambiguous" shape</li>
+<li>Count</li>
 </ol>
-<p>For 20 characters, you would normally repeat this 20 times. Or, better,
-use Intruder's "Cluster bomb" attack type with two payload positions
-(one for character index, one for the letter), which runs all
-combinations in one go. Cluster bomb is worth learning - it comes up a
-lot in this kind of extraction work.</p>
-<h2 id="when-it-doesnt-work">When It Doesn't Work</h2>
-<p>Conditional-response blind SQLi is not always available. Sometimes the
-page renders identically no matter what the query returns. When that
-happens, you fall back to either</p>
-<ul>
-<li><strong>Conditional errors</strong> - deliberately cause a SQL error when your
-  boolean condition is true, and use HTTP 500 vs 200 as the oracle. This
-  is <a href="blind-sql-injection-with-conditional-errors.html">the next post</a>
-  in the series.</li>
-<li><strong>Time-based</strong> - deliberately make the query sleep for a few seconds
-  when your boolean is true, and use response time as the oracle. Useful
-  when even errors are suppressed.</li>
-</ul>
-<p>The theme is: as long as <em>anything</em> the server does depends on the truth
-of your boolean, you have an oracle. The rest is engineering.</p>
+<p>The bottleneck is that step 1 is <code>10^8</code> iterations, and even a very
+fast inner loop times out. So the real approach is to invert the
+problem: instead of iterating over fractions and checking whether
+their CF is ambiguous, iterate over the <em>shapes</em> of ambiguous CF
+expansions and count the fractions those shapes produce that fall in
+the range.</p>
+<p>This is a nice example of a general technique: when you have a
+characterization of the objects you want to count in terms of some
+structural property, generating objects by structure is usually faster
+than filtering.</p>
+<h2 id="the-bigger-point">The Bigger Point</h2>
+<p>Problems that look purely computational often turn out to have a clean
+structural characterization hiding underneath. The PE 198 statement
+never mentions continued fractions - it's about "best approximations"
+and "ambiguous real numbers." But the moment you dig into what best
+approximation actually means for rationals, continued fractions appear
+naturally, and the entire problem reduces to counting fractions whose
+CF has a certain shape.</p>
+<p>This kind of translation - from a definition in one language to a
+characterization in another - is where number theory earns its
+reputation for being satisfying. You start with "count the ambiguous
+fractions" and you end with "count the fractions whose CF is not of
+the form <code>[0; a₁, 1, 1, ..., 1]</code>," and the second version is much
+easier to work with.</p>
 <h2 id="references">References</h2>
 <ul>
-<li>Our wiki: <a href="https://charlesreid1.com/wiki/SQL_Injection/Blind">SQL Injection/Blind</a></li>
-<li><a href="https://portswigger.net/web-security/sql-injection/blind">PortSwigger blind SQL injection</a></li>
-<li><a href="https://portswigger.net/web-security/sql-injection/blind/lab-conditional-responses">Lab 11 - Blind SQLi with conditional responses</a></li>
-</ul></div>
+<li>Our wiki notes:
+  <a href="https://charlesreid1.com/wiki/Project_Euler/198">Project Euler/198</a></li>
+<li><a href="https://projecteuler.net/problem=198">PE 198 on projecteuler.net</a></li>
+<li>Classical reference: Hardy &amp; Wright, <em>An Introduction to the Theory
+  of Numbers</em>, chapters on continued fractions</li>
+</ul>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
 
     </div>
 </div>
@@ -234,396 +975,13 @@ of your boolean, you have an oracle. The rest is engineering.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sql-injection.html">sql injection</a>
+                    <a href="https://charlesreid1.github.io/tag/continued-fractions.html">continued fractions</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sqli.html">sqli</a>
+                    <a href="https://charlesreid1.github.io/tag/number-theory.html">number theory</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/blind-sqli.html">blind sqli</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/portswigger.html">portswigger</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/burp-suite.html">burp suite</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                SQL Injection UNION Attacks: Turning a Product Listing Into a User Dump
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2023-05-21T17:00:00-07:00" pubdate>Sunday 05/21/2023</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/sql-injection-union-attacks-turning-a-product-listing-into-a-user-dump.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>Part 3 of our
-<a href="working-through-the-portswigger-web-security-academy.html">PortSwigger Web Security Academy series</a>.
-<a href="sql-injection-fundamentals-four-attack-shapes.html">Part 2</a> sketched the
-four SQL injection shapes at a bird's-eye view. This post drills into one
-of them: the UNION attack. It is one of the most useful shapes to
-understand because it converts a small SQLi foothold into an "I can read
-anything in the database" primitive.</p>
-<p>Wiki reference:
-<a href="https://charlesreid1.com/wiki/SQL_Injection/UNION_Attack">SQL Injection/UNION Attack</a>.</p>
-<h2 id="the-idea">The Idea</h2>
-<p>Say a page runs</p>
-<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;Gifts&#39;
-</code></pre></div>
-
-<p>The columns you can see in the response are <code>name</code> and <code>description</code>,
-because that is what the query is selecting. UNION lets you attach a
-second <code>SELECT</code> to the query whose results get returned alongside the
-first. If we inject</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT username, password FROM users--
-</code></pre></div>
-
-<p>the query becomes</p>
-<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;&#39;
-UNION SELECT username, password FROM users--&#39;
-</code></pre></div>
-
-<p>and the page renders product names, product descriptions, usernames,
-and passwords, all in the same result set.</p>
-<p>Simple enough in principle. The devil is in getting the UNION to actually
-be valid SQL.</p>
-<h2 id="two-requirements-for-a-valid-union">Two Requirements for a Valid UNION</h2>
-<p>SQL is picky about UNIONs. The two SELECTs on either side of the UNION
-have to agree on:</p>
-<ol>
-<li><strong>The number of columns.</strong> If the first query returns 2 columns, your
-   injected SELECT also has to return exactly 2 columns.</li>
-<li><strong>The data types of the columns.</strong> In practice, this means "the column
-   you want to display text from has to line up with a column position
-   that the outer query returned as text-compatible."</li>
-</ol>
-<p>Most of the work of pulling off a UNION attack is figuring these two
-things out from the outside.</p>
-<h2 id="finding-the-column-count">Finding the Column Count</h2>
-<p>Two techniques.</p>
-<p><strong>Technique 1: <code>ORDER BY</code> bumping.</strong> Send</p>
-<div class="highlight"><pre><span></span><code>&#39; ORDER BY 1--
-&#39; ORDER BY 2--
-&#39; ORDER BY 3--
-&#39; ORDER BY 4--
-</code></pre></div>
-
-<p>and so on. <code>ORDER BY N</code> tells the database to sort by column N. If N
-exceeds the actual column count, you get a SQL error. So you increment
-until the error appears - the last value that <em>didn't</em> error is the
-column count.</p>
-<p><strong>Technique 2: <code>UNION SELECT NULL</code> bumping.</strong> Send</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT NULL--
-&#39; UNION SELECT NULL, NULL--
-&#39; UNION SELECT NULL, NULL, NULL--
-</code></pre></div>
-
-<p>and so on. NULLs are type-compatible with anything, so the only thing
-that will make the UNION fail is a column count mismatch. When the query
-stops erroring, you have found the column count.</p>
-<p><code>ORDER BY</code> is usually faster because you can binary-search it.
-<code>UNION SELECT NULL</code> is the fallback when the target database is picky
-about <code>ORDER BY</code> in weird ways.</p>
-<h2 id="finding-a-text-compatible-column">Finding a Text-Compatible Column</h2>
-<p>Once you know the column count, you need a column whose position will
-render as text in the response. If the outer query returns 3 columns and
-only one of them shows up in the rendered page, you want to know which
-one.</p>
-<p>Send</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT &#39;a&#39;, NULL, NULL--
-&#39; UNION SELECT NULL, &#39;a&#39;, NULL--
-&#39; UNION SELECT NULL, NULL, &#39;a&#39;--
-</code></pre></div>
-
-<p>Whichever variant makes the letter <code>a</code> show up on the rendered page is
-your target column position. If the database complains about <code>'a'</code> being
-the wrong type for that position, that column is not text-compatible and
-you have to move on to the next one.</p>
-<h2 id="putting-it-together">Putting It Together</h2>
-<p>Now you have a column count and a text-compatible position. Say the count
-is 3 and position 2 is text-compatible. Then</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT NULL, username, NULL FROM users--
-</code></pre></div>
-
-<p>dumps every username, and</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT NULL, password, NULL FROM users--
-</code></pre></div>
-
-<p>dumps every password.</p>
-<p>You can also concatenate multiple values into a single column, which is
-useful when only one column position is text-compatible. Depending on the
-database:</p>
-<ul>
-<li>Oracle: <code>||</code> concatenation - <code>' UNION SELECT NULL, username || '~' || password, NULL FROM users--</code></li>
-<li>MySQL: <code>CONCAT()</code> or space-separated string literals</li>
-<li>Microsoft SQL Server: <code>+</code> concatenation</li>
-</ul>
-<h2 id="finding-interesting-tables">Finding Interesting Tables</h2>
-<p>At this point you probably want to know which tables exist and what
-columns they have. Every major database exposes this through metadata
-tables. On most (Postgres, MySQL, Microsoft SQL Server):</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT table_name, NULL FROM information_schema.tables--
-&#39; UNION SELECT column_name, NULL FROM information_schema.columns WHERE table_name = &#39;users&#39;--
-</code></pre></div>
-
-<p>Oracle uses <code>all_tables</code> and <code>all_tab_columns</code> instead of
-<code>information_schema</code>, because Oracle is Oracle.</p>
-<h2 id="the-fix">The Fix</h2>
-<p>Same fix as every SQL injection: parameterized queries. The parameters
-never become part of the query syntax, so no <code>UNION</code>, no <code>--</code>, no <code>OR
-1=1</code> is going to change the shape of the query. It becomes data, not
-code.</p>
-<h2 id="references">References</h2>
-<ul>
-<li>Our wiki: <a href="https://charlesreid1.com/wiki/SQL_Injection/UNION_Attack">SQL Injection/UNION Attack</a></li>
-<li><a href="https://portswigger.net/web-security/sql-injection/union-attacks">PortSwigger UNION attacks</a></li>
-<li>Labs 3-6 in the PortSwigger SQL Injection Academy</li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sql-injection.html">sql injection</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sqli.html">sqli</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/union.html">union</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/portswigger.html">portswigger</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/burp-suite.html">burp suite</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                SQL Injection Fundamentals: Four Attack Shapes
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2023-05-21T14:00:00-07:00" pubdate>Sunday 05/21/2023</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/sql-injection-fundamentals-four-attack-shapes.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is part 2 of our series on working through the
-<a href="working-through-the-portswigger-web-security-academy.html">PortSwigger Web Security Academy</a>.
-This one covers SQL injection at a bird's-eye view - the four main attack
-shapes that show up over and over, with the smallest possible example of
-each. Later posts will drill into specific attack types.</p>
-<p>Full notes on our wiki:
-<a href="https://charlesreid1.com/wiki/SQL_Injection">SQL Injection</a>.</p>
-<h2 id="what-sql-injection-is">What SQL Injection Is</h2>
-<p>SQL injection is a web security bug that lets attackers execute their own
-SQL against your database, by taking advantage of user inputs that are
-not sanitized before being pasted into a SQL query.</p>
-<p>The reason it is worth caring about is impact vs. effort. SQL injection
-is one of the highest-impact web vulnerabilities (attacker can potentially
-read or modify anything in the database), and one of the lowest-effort
-to actually pull off. That combination is why it has been in the
-<a href="https://charlesreid1.com/wiki/OWASP">OWASP Top 10</a> since forever.</p>
-<h2 id="the-four-shapes">The Four Shapes</h2>
-<p>Our notes group SQL injection into four attack shapes:</p>
-<ol>
-<li>Retrieving hidden data</li>
-<li>Subverting application logic</li>
-<li>UNION attacks</li>
-<li>Blind SQL injection</li>
-</ol>
-<p>The rest of this post walks through the smallest example of each.</p>
-<h2 id="shape-1-retrieving-hidden-data">Shape 1: Retrieving Hidden Data</h2>
-<p>Suppose a shopping site has this URL for showing product listings:</p>
-<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts
-</code></pre></div>
-
-<p>Behind the scenes, that URL runs this SQL query:</p>
-<div class="highlight"><pre><span></span><code>SELECT * FROM products WHERE category = &#39;Gifts&#39; AND released = 1
-</code></pre></div>
-
-<p>The <code>released = 1</code> clause hides unreleased products from the public. If
-the <code>category</code> parameter is not sanitized, we can smuggle in SQL that
-comments out the rest of the query:</p>
-<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts&#39;--
-</code></pre></div>
-
-<p>The <code>--</code> starts a SQL comment. Everything after it is ignored, including
-the <code>AND released = 1</code> check. Result: all products, including
-unreleased ones, get returned.</p>
-<p>Same trick with an unconditional truthy clause:</p>
-<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts&#39;+OR+1=1--
-</code></pre></div>
-
-<h2 id="shape-2-subverting-application-logic">Shape 2: Subverting Application Logic</h2>
-<p>Same idea, applied to authentication. If a login form runs</p>
-<div class="highlight"><pre><span></span><code>SELECT * FROM users WHERE username = &#39;user&#39; AND password = &#39;nopass&#39;
-</code></pre></div>
-
-<p>and doesn't sanitize the username field, you can log in as anyone by
-supplying the username:</p>
-<div class="highlight"><pre><span></span><code>administrator&#39;--
-</code></pre></div>
-
-<p>Everything after the <code>--</code> (including the entire password check) becomes
-a comment. The query returns the administrator row. You are logged in.</p>
-<p>You have to guess the username - <code>admin</code>, <code>administrator</code>, <code>root</code>,
-<code>superuser</code> - so this is not a one-shot attack, but it is not a hard
-attack either. If you see a login page throwing internal server errors
-when you put a single quote in the username field, that is your signal.</p>
-<h2 id="shape-3-union-attacks">Shape 3: UNION Attacks</h2>
-<p>UNION attacks use SQL's <code>UNION</code> operator to piggyback data from other
-tables into the results of the original query. If a shopping site runs</p>
-<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;Gifts&#39;
-</code></pre></div>
-
-<p>and the <code>category</code> parameter is injectable, we can attach a UNION:</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT username, password FROM users--
-</code></pre></div>
-
-<p>The final query becomes</p>
-<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;&#39;
-UNION SELECT username, password FROM users--&#39;
-</code></pre></div>
-
-<p>which returns product listings and every username/password pair. Whatever
-UI was going to display product name and description now also displays
-usernames and passwords.</p>
-<p>The oversimplified version above works out cleanly, but in practice you
-need to figure out the column count of the outer query first, then make
-sure the columns you union in are type-compatible. We covered that in
-<a href="sql-injection-union-attacks.html">the next post</a>.</p>
-<h2 id="shape-4-blind-sql-injection">Shape 4: Blind SQL Injection</h2>
-<p>Blind SQLi is what you do when the application is vulnerable but the
-query results don't come back to you in the HTTP response. Cookie tracking
-IDs are the classic example - the ID gets fed to a SQL query on every
-request, but the query result is never rendered on the page.</p>
-<p>Even without seeing the result directly, you can often <em>infer</em> it from
-how the page behaves. Ship one of these two requests:</p>
-<div class="highlight"><pre><span></span><code>xyz&#39; AND &#39;1&#39;=&#39;1
-xyz&#39; AND &#39;1&#39;=&#39;2
-</code></pre></div>
-
-<p>If the page renders differently in the two cases (say, one shows a
-"Welcome back" banner and the other doesn't), congratulations, you have
-a boolean oracle. Now you can ask the database yes/no questions and get
-answers via page behavior. Wrap the boolean around anything you want to
-know:</p>
-<div class="highlight"><pre><span></span><code>xyz&#39; AND SUBSTRING((SELECT Password FROM Users WHERE Username = &#39;Administrator&#39;), 1, 1) &gt; &#39;m
-</code></pre></div>
-
-<p>That request returns "Welcome back" if the first character of the
-administrator's password is greater than <code>m</code>, and doesn't otherwise. Do
-that in a binary search per character, and you have the whole password.</p>
-<p>Blind SQLi comes in a few flavors - conditional responses (above),
-conditional errors, and time-based. We cover the first two in
-<a href="blind-sql-injection-with-conditional-responses.html">the next</a>
-<a href="blind-sql-injection-with-conditional-errors.html">couple</a> of posts.</p>
-<h2 id="what-ties-them-together">What Ties Them Together</h2>
-<p>Every one of these attacks is a variation on the same theme: a user input
-is being pasted directly into a SQL query, and the attacker can supply
-SQL syntax that changes the meaning of the query. The fix is the same in
-every case: parameterized queries. Not string concatenation. Not escaping.
-Parameterized queries.</p>
-<h2 id="references">References</h2>
-<ul>
-<li>Our wiki: <a href="https://charlesreid1.com/wiki/SQL_Injection">SQL Injection</a></li>
-<li><a href="https://portswigger.net/web-security/sql-injection/cheat-sheet">PortSwigger SQL Injection cheat sheet</a></li>
-<li><a href="https://portswigger.net/web-security/sql-injection">Web Security Academy - SQL Injection</a></li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sql-injection.html">sql injection</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sqli.html">sqli</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/portswigger.html">portswigger</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/web-security.html">web security</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/owasp.html">owasp</a>
+                    <a href="https://charlesreid1.github.io/tag/rational-approximation.html">rational approximation</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -662,6 +1020,34 @@ Parameterized queries.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>May 2025</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-rick-perlsteins-nixonland.html">Reading Rick Perlstein's <i>Nixonland</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/ken-binmores-game-theory-and-nash-equilibrium-in-shadowrun.html">Ken Binmore's <i>Game Theory</i> and Nash Equilibrium in Shadowrun</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-hobbess-leviathan.html">Reading Hobbes's <i>Leviathan</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/forever-blue-the-other-side-of-the-bums-story.html"><i>Forever Blue</i>: The Other Side of the Bums Story</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

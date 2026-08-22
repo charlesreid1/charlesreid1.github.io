@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                A Singleton Configuration Class in Python
+                September 2021 TILs
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2020-04-28T16:00:00-07:00" pubdate>Tuesday 04/28/2020</time>
+                <time datetime="2021-12-31T11:09:00-08:00" pubdate>Friday 12/31/2021</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                <a href="https://charlesreid1.github.io/category/til.html">TIL</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/a-singleton-configuration-class-in-python.html">permalink</a>
+                <a href="https://charlesreid1.github.io/september-2021-tils.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,249 +127,59 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#the-singleton-pattern">The Singleton Pattern</a></li>
-<li><a href="#get-variable-functions">Get Variable Functions</a></li>
-<li><a href="#config-functions">Config Functions</a></li>
-<li><a href="#reset-method">Reset method</a></li>
-<li><a href="#creating-a-configuration-context-manager">Creating a configuration context manager</a></li>
-<li><a href="#next-steps">Next steps</a></li>
+        <div class="entry-content"><p>This year we've been keeping track of some of the surprising things that we have learned.
+For December, we're compiling a list of some of the things we've learned this year.</p>
+<p>Here are the "Today I Learned", or TILs, from September 2021.</p>
+<p>September 2, 2021:</p>
+<ul>
+<li>
+<p>TIL One inch of rainfall equals 4.7 gallons of water per square yard</p>
+</li>
+<li>
+<p>TIL about hobby tunneling - people who dig tunnels for a hobby. <a href="https://en.wikipedia.org/wiki/Hobby_tunneling">https://en.wikipedia.org/wiki/Hobby_tunneling</a></p>
+</li>
 </ul>
-</div>
-<h1 id="overview">Overview</h1>
-<p>In this post we cover a strategy for managing configurations for programs using
-a Singleton pattern to create a static <code>Config</code> class.</p>
-<p>This allows the user to create an instance of the <code>Config</code> class, pointing it
-to a specific config file, which it loads into memory.</p>
-<p>The <code>Config</code> class provides several static methods for accessing configuration
-options from the config file. Here's an example of its usage:</p>
-<div class="highlight"><pre><span></span><code>Config(&#39;/path/to/config.json&#39;)
-
-if Config.get_foo() == &quot;bar&quot;:
-    do_stuff()
-</code></pre></div>
-
-<p>The principle is to <strong>define one configuration file location, and be done with it.</strong>
-The configuration file is JSON formatted, but the pattern can be adapted to use
-any format.</p>
-<p>The <code>Config</code> class can also be used to wrap and process both variables in the configuration
-file <em>and</em> environment variables.</p>
-<p>The <code>Config</code> class implements a <strong>separation of concerns</strong> by only processing top-level
-configuration variable options, and leaving more detailed configuration file parsing
-to the classes that need it. This allows for more flexible config files.</p>
-<h1 id="the-singleton-pattern">The Singleton Pattern</h1>
-<p>The Singleton pattern involves the use of instance variables, which the variables
-<code>_CONFIG_FILE</code> and <code>_CONFIG</code> are. These are shared across all instances of class
-<code>Config</code> and can be accessed via <code>Config._CONFIG_FILE</code>, etc.</p>
-<p>The location of the config file can be set in the constructor,
-or can be provided via the <code>CONFIG_FILE</code> environment variable.
-The config class also provides a method for accessing environment
-variables that are required by the Config class, and raising a
-custom exception if it is not present.</p>
-<p>The constructor starts by checking that the configuration file exists, then loads
-the configuration file into memory (at <code>Config._CONFIG</code> as a dictionary):</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="c1">#########################</span>
-    <span class="c1"># Begin Singleton Section</span>
-    <span class="c1">#########################</span>
-
-    <span class="n">_CONFIG_FILE</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">_CONFIG</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">config_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">config_file</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_env_var</span><span class="p">(</span><span class="s2">&quot;CONFIG_FILE&quot;</span><span class="p">)</span>
-
-        <span class="c1"># Check that specified config file exists</span>
-        <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
-
-        <span class="c1"># Use singleton pattern to store config file location/load config once</span>
-        <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG_FILE</span> <span class="o">=</span> <span class="n">config_file</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_config_file</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG_FILE</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_required_env_var</span><span class="p">(</span><span class="n">envvar</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">envvar</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">ConfigException</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Please set the </span><span class="si">{</span><span class="n">envvar</span><span class="si">}</span><span class="s2"> environment variable&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">envvar</span><span class="p">]</span>
-</code></pre></div>
-
-<p>Aside from the constructor, every method in the <code>Config</code> class is a
-<code>@staticmethod</code> or a <code>@classmethod</code>.</p>
-<h1 id="get-variable-functions">Get Variable Functions</h1>
-<p>We add two additional methods to get configuration variables: one to get variables
-from the config file, one to get environment variables. Here they are:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="o">...</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_required_env_var</span><span class="p">(</span><span class="n">envvar</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">envvar</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Please set the </span><span class="si">{envvar}</span><span class="s2"> environment variable&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">envvar</span><span class="p">]</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_required_config_var</span><span class="p">(</span><span class="n">configvar</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">assert</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span>
-        <span class="k">if</span> <span class="n">configvar</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Please set the </span><span class="si">{</span><span class="n">configvar</span><span class="si">}</span><span class="s2"> variable in the config file </span><span class="si">{</span><span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG_FILE</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">[</span><span class="n">configvar</span><span class="p">]</span>
-</code></pre></div>
-
-<p>We saw the get_required_env_var()<code>function in action in the constructor.
-The</code>get_required_config_var()` can be useful for config variables that
-are dependent on other config variables.</p>
-<h1 id="config-functions">Config Functions</h1>
-<p>Continuing with the <code>Config</code> class defined above,
-we now define methods that implement logic for specific 
-configuration variables.</p>
-<p>Here are two example config variables.</p>
-<p>The variable <code>foo</code> is set using the configuration file.
-The configuration file is a dictionary, meaning it consists
-of key-value pairs, so the variable <code>foo</code> is set by the value
-corresponding to the <code>foo</code> key in the config file.</p>
-<p>For example, using the following simple configuration file:</p>
-<div class="highlight"><pre><span></span><code>{
-    &quot;foo&quot;: &quot;hello world&quot;
-}
-</code></pre></div>
-
-<p>if the <code>Config</code> class is initialized with that configuration file,
-<code>Config.get_foo_var()</code>  will return the string <code>hello world</code>.</p>
-<p>Similarly, the <code>bar</code>variable is set using the environment variable <code>BAR</code>.
-If the <code>BAR</code> variable is not set, the program will raise an exception
-when <code>Config.get_bar_var()</code> is called.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="o">...</span><span class="n">see</span> <span class="n">singleton</span> <span class="n">section</span> <span class="n">above</span><span class="o">...</span>
-
-    <span class="c1">#############################</span>
-    <span class="c1"># Begin Configuration Section</span>
-    <span class="c1">#############################</span>
-
-    <span class="n">_FOO</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">_BAR</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_foo_var</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Example variable that is set in the config file (preferred)&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_FOO</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">_FOO</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_config_var</span><span class="p">(</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_FOO</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_bar_var</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Example variable that is set via env var (not preferred)&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_BAR</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">_BAR</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_env_var</span><span class="p">(</span><span class="s1">&#39;BAR&#39;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_BAR</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_wuz</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="s1">&#39;wuz&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">:</span>
-                <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_env_var</span><span class="p">(</span><span class="s1">&#39;WUZ&#39;</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">[</span><span class="s1">&#39;wuz&#39;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: Path </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span><span class="si">}</span><span class="s2"> is not a directory&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span>
-</code></pre></div>
-
-<p>The <code>wuz</code> variable, in this example, is a variable that can be set with a config
-file variable, or (if it is not present in the config file) with an environment
-variable. The <code>wuz</code> variable msut also be a path, so there is logic for checking
-whether the path exists.</p>
-<h1 id="reset-method">Reset method</h1>
-<p>It can be useful to clear out an existing config file in order to
-load a new config file - specifically, when testing. Here we define a <code>reset()</code>
-method that clears out variable values. We will show an example of how to
-use the <code>reset()</code> method below.</p>
-<div class="highlight"><pre><span></span><code>    @classmethod
-    def reset(cls) -&gt; None:
-        cls._CONFIG_FILE = None
-        cls._CONFIG = None
-        cls._FOO = None
-        cls._BAR = None
-        cls._WUZ = None
-</code></pre></div>
-
-<p>This could be done more gracefully by iterating over each attribute of the Config class
-and only nullifying those attributes whose variable name matches the given pattern (start
-with an underscore, only contain capital letters and underscores) using a regular expression.</p>
-<h1 id="creating-a-configuration-context-manager">Creating a configuration context manager</h1>
-<p>To make tests more convenient, we define a context manager that takes
-a dictionary as an input. The context manager creates a temporary file
-with the contents of that dictionary, and resets the Config class using
-the temporary file as the new config file. This allows tests to be written
-using different configurations on the fly, very useful when testing
-different configuration options:</p>
-<div class="highlight"><pre><span></span><code><span class="n">cfg</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;peanut_butter&quot;</span><span class="p">:</span> <span class="s2">&quot;jelly&quot;</span><span class="p">}</span>
-<span class="k">with</span> <span class="n">TempConfig</span><span class="p">(</span><span class="n">cfg</span><span class="p">)</span> <span class="k">as</span> <span class="n">config_file</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Temporary configuration file is at </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">val</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_config_var</span><span class="p">(</span><span class="s2">&quot;peanut_butter&quot;</span><span class="p">)</span>
-    <span class="k">assert</span> <span class="n">val</span><span class="o">==</span><span class="s2">&quot;jelly&quot;</span>
-</code></pre></div>
-
-<p>Here is the context manager class to temporarily replace the configuration
-wrapped by the <code>Config</code> class:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">TempConfig</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Temporarily patch the Config class to use the config</span>
-<span class="sd">    dictionary specified in the constructor.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_dict</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;This is the step that&#39;s run when object constructed&quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="c1"># This is the temp configuration the user specified</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">config_dict</span> <span class="o">=</span> <span class="n">config_dict</span>
-        <span class="c1"># Make a temp dir for our temp config file</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
-        <span class="c1"># Make a temp config file</span>
-        <span class="n">_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.json&quot;</span><span class="p">,</span> <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span><span class="p">)</span>
-        <span class="c1"># Set the wuz variable to the temporary directory</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;wuz&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span>
-
-    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;This is what&#39;s returned to the &quot;as X&quot; portion of the context manager&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_write_config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_dict</span><span class="p">))</span>
-        <span class="c1"># Re-init Config with new config file</span>
-        <span class="n">Config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span>
-
-    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Close the context and clean up; the *args are needed in case there is</span>
-<span class="sd">        an exception (we don&#39;t deal with those here)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Delete temp file</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span><span class="p">)</span>
-        <span class="c1"># Delete temp dir</span>
-        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span><span class="p">)</span>
-        <span class="c1"># Reset all config variables</span>
-        <span class="n">Config</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">_write_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">contents</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Utility method: write string contents to config file&quot;&quot;&quot;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span>
-</code></pre></div>
-
-<h1 id="next-steps">Next steps</h1>
-<p>That's it for now. This singleton configuration class is being written into a
-new version of <a href="https://charlesreid1.github.io/centillion-a-document-search-engine.html">centillion</a>,
-which will be <a href="https://github.com/chmreid/centillion/pull/3">centillion version 2.0</a>.
-This is still a pull request in a centillion fork, though, so it's a work in progress.
-Stay tuned!</p></div>
+<blockquote>
+<p>The American engineer and supercomputer architect Seymour Cray is known to have been a hobby tunneller. Cray
+built an 8 by 4 feet (2.4 by 1.2 m) cedar-floored tunnel under his house, explaining that the digging helped him
+to think about computer designs. "While I'm digging in the tunnel, the elves will often come to me with solutions
+to my problem," he said. </p>
+</blockquote>
+<p>September 5, 2021:</p>
+<ul>
+<li>TIL the human eye can see more shades of green than any other color. I don't quite understand why, but it is
+  deeply tied up with rod cells vs cone cells, the different densities of those types of cells, and which
+  frequencies of light they capture. Also relates to why red-green colorblindness is the most common type, and why
+  green screen backgrounds produce the best edge detection for the human eye.  And probably evolved so that
+  long-ago humans could better detect and evade predators stalking around in the brush.</li>
+</ul>
+<p>September 6, 2021: </p>
+<ul>
+<li>TIL Fargo, North Dakota is right across the ND-MN border from Cass County, MN, where my maternal grandfather grew up. </li>
+</ul>
+<p>September 15, 2021:</p>
+<ul>
+<li>TIL: legs for days <a href="https://www.theguardian.com/australia-news/2021/sep/15/rainbow-colours-and-legs-for-days-australian-fly-species-named-after-drag-star-rupaul">https://www.theguardian.com/australia-news/2021/sep/15/rainbow-colours-and-legs-for-days-australian-fly-species-named-after-drag-star-rupaul</a></li>
+</ul>
+<p>September 16, 2021:</p>
+<ul>
+<li>TIL TIL: All GISers know about null island (located at 0, 0), but today I learned about Soulbuoy, which is
+  actually located at 0, 0 and is part of a 17-piece buoy network, all named after music genres. </li>
+</ul>
+<p>September 20, 2021:</p>
+<ul>
+<li>TIL one in every three Americans experiencing homelessness lives in California.
+  <a href="https://www.huduser.gov/portal/sites/default/files/pdf/2020-AHAR-Part-1.pdf">https://www.huduser.gov/portal/sites/default/files/pdf/2020-AHAR-Part-1.pdf</a></li>
+</ul>
+<p>September 24, 2021:</p>
+<ul>
+<li>TIL the ham sandwich theorem <a href="https://en.wikipedia.org/wiki/Ham_sandwich_theorem">https://en.wikipedia.org/wiki/Ham_sandwich_theorem</a></li>
+</ul>
+<p>September 29, 2021:</p>
+<ul>
+<li>TIRLFTTT (today I re-learned for the third time) about apscheduler, this is kind of embarrassing, I also forgot its name so I spent 15 minutes trying to find it.
+  <a href="https://apscheduler.readthedocs.io/en/3.x/userguide.html">https://apscheduler.readthedocs.io/en/3.x/userguide.html</a></li>
+</ul></div>
 
     </div>
 </div>
@@ -381,17 +191,7 @@ Stay tuned!</p></div>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/patterns.html">patterns</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/design-patterns.html">design patterns</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/registry.html">registry</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    <a href="https://charlesreid1.github.io/tag/til.html">til</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -409,18 +209,18 @@ Stay tuned!</p></div>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Using Mock API Servers
+                August 2021 TILs
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2020-03-09T19:00:00-07:00" pubdate>Monday 03/09/2020</time>
+                <time datetime="2021-12-31T11:08:00-08:00" pubdate>Friday 12/31/2021</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                <a href="https://charlesreid1.github.io/category/til.html">TIL</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/using-mock-api-servers.html">permalink</a>
+                <a href="https://charlesreid1.github.io/august-2021-tils.html">permalink</a>
             </span>
             </p>
         </div>
@@ -437,157 +237,40 @@ Stay tuned!</p></div>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#summary">Summary</a></li>
-<li><a href="#the-mockapiserver-class">The MockAPIServer Class</a></li>
-<li><a href="#a-basic-unit-test-with-mockapiserver">A Basic Unit Test with MockAPIServer</a></li>
-</ul>
-</div>
-<h1 id="summary">Summary</h1>
-<p>In a prior post, we covered how to write a mock API server that stored a thread
-as a class attribute and used it to run the server in the background by starting
-a thread.</p>
-<p>However, we neglected to cover how to actually <em>use</em> the mock API server. So here
-we include some examples of how you can use the mock API server to write better
-tests for components that require interacting with APIs.</p>
-<h1 id="the-mockapiserver-class">The MockAPIServer Class</h1>
-<p>Let's start with a recap of the mock API server class. Major features included:</p>
+        <div class="entry-content"><p>This year we've been keeping track of some of the surprising things that we have learned.
+For December, we're compiling a list of some of the things we've learned this year.</p>
+<p>Here are the "Today I Learned", or TILs, from August 2021.</p>
+<p>August 4, 2021:</p>
 <ul>
-<li>
-<p>Inheriting from the base HTTP server class in Python, to take advantage of
-  the methods available through it</p>
-</li>
-<li>
-<p>Using a singleton design pattern to start and stop the fake API server</p>
-</li>
+<li>TIL the Boise, Idaho real estate market is booming. :expressionless:
+  (<a href="https://www.youtube.com/watch?v=E2joBjQKe50&amp;t=15m">Link</a>)</li>
 </ul>
-<p>Basically we create the server, call <code>start_serving()</code>, and that starts the
-server on a thread in the background.</p>
-<p>Here is the source code:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
-    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
-        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
-        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
-        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Get the bind address and port</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
-
-        <span class="c1"># Create an HTTP server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
-
-        <span class="c1"># Create a thread to run the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
-
-        <span class="c1"># Start the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Shut down the server</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
-
-        <span class="c1"># Let the thread rejoin the worker pool</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
-        <span class="c1"># Enforce rule: JSON only</span>
-        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-            <span class="k">return</span>
-        <span class="c1"># Convert received JSON to dict</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
-        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
-
-        <span class="c1"># Process the json</span>
-
-        <span class="c1"># Send a response</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-</code></pre></div>
-
-<h1 id="a-basic-unit-test-with-mockapiserver">A Basic Unit Test with MockAPIServer</h1>
-<p>Let's make a basic test that uses the <code>MockAPIServer</code> class. We'll use
-<code>unittest</code> for simplicity, other testing frameworks offer similar
-functionality.</p>
-<p>Before testing our code, we'll need to make sure the API URL is configurable,
-sicne we will need to get the mock API server's bind address and port and use
-those to instruct our code where to find the API server.</p>
-<p>Here is a short example function that we'll test:</p>
-<p><strong><code>foobar.py</code></strong>:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">urllib.parse</span>
-
-<span class="k">def</span> <span class="nf">make_api_call</span><span class="p">(</span><span class="n">api_url</span><span class="p">)</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A simple function that gets an API endpoint</span>
-<span class="sd">    and returns if no problems raised.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Assemble our API call</span>
-    <span class="n">endpoint</span> <span class="o">=</span> <span class="s1">&#39;/hello/world&#39;</span>
-    <span class="n">url</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urljoin</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">)</span>
-    <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s1">&#39;hello world&#39;</span><span class="p">)</span>
-
-    <span class="c1"># The basic mock server will just echo our request back</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-    <span class="k">return</span>
-</code></pre></div>
-
-<p>Now we write a short test for our foobar script:</p>
-<p><strong><code>test_foobar.py</code></strong>:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">foobar</span> <span class="kn">import</span> <span class="n">make_api_call</span>
-<span class="kn">import</span> <span class="nn">unittest</span>
-
-<span class="k">class</span> <span class="nc">TestAPICalls</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">setUpClass</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span> <span class="o">=</span> <span class="n">MockAPIServer</span><span class="p">()</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">start_serving</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">test_api_call</span><span class="p">():</span>
-        <span class="n">addr</span><span class="p">,</span> <span class="n">port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span>
-        <span class="n">api_url</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urljoin</span><span class="p">(</span>
-            <span class="s1">&#39;http://&#39;</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
-        <span class="p">)</span>
-        <span class="n">make_api_cal</span><span class="p">(</span><span class="n">api_url</span><span class="p">)</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">tearDownClass</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">stop_serving</span><span class="p">()</span>
-</code></pre></div>
-
-<p>We can run the test like so:</p>
-<div class="highlight"><pre><span></span><code>python test_foobar.py
-</code></pre></div>
-
-<p>Here's what happens when we run the test:</p>
+<p>August 6, 2021:</p>
 <ul>
-<li>The <code>setUpClass()</code> method is called, which creates a mock API server that starts on
-  localhost on port 9876 and runs the server on a thread.</li>
-<li>The <code>test_api_call()</code> method is run, which makes the API call to the mock API server.
-  (Nothing interesting is happening on either end, right now, but stay tuned for more
-  examples.)</li>
-<li>The <code>tearDownClass()</code> method is called, which stops the mock API server and returns
-  the thread worker to the pool of workers.</li>
+<li>TIL the Licklider Transmission Protocol is used for point-to-point networks in deep space.
+  (<a href="https://en.wikipedia.org/wiki/Licklider_Transmission_Protocol">Link</a>)</li>
 </ul>
-<p>Stay tuned for more complicated examples in the future - we are currently working on
-extending this mock API server to mock calls to the Github API.</p></div>
+<p>August 9, 2021:</p>
+<ul>
+<li>TIL Bill Hwang lost $20 billion over the course of 10 days in March 2021.
+  Roughly $1.5M per second. I did not know money could travel at that velocity.
+  (<a href="https://en.wikipedia.org/wiki/Bill_Hwang">Link</a>)</li>
+</ul>
+<p>August 10, 2021:</p>
+<ul>
+<li>TIL you can open a wine bottle with a shoe.
+  (<a href="https://www.youtube.com/watch?v=pELPxMOKtew">Link</a>)</li>
+</ul>
+<p>August 11, 2021:</p>
+<ul>
+<li>TIL about the Dambusters, a Royal Air Force squadron specializing in precision bombing. 
+  (<a href="https://en.wikipedia.org/wiki/No._617_Squadron_RAF#Second_World_War">Link</a>)</li>
+</ul>
+<p>August 16, 2021:</p>
+<ul>
+<li>TIL about Isambard Kingdom Brunel, an English civil engineer considered one of the most ingenious and prolific figures in engineering history.
+  (<a href="https://en.wikipedia.org/wiki/Isambard_Kingdom_Brunel">Link</a>)</li>
+</ul></div>
 
     </div>
 </div>
@@ -599,21 +282,7 @@ extending this mock API server to mock calls to the Github API.</p></div>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/http.html">http</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/server.html">server</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/api.html">api</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/flask.html">flask</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/web-server.html">web server</a>
+                    <a href="https://charlesreid1.github.io/tag/til.html">til</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -631,18 +300,18 @@ extending this mock API server to mock calls to the Github API.</p></div>
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Creating Mock API Servers
+                July 2021 TILs
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2020-02-26T22:00:00-08:00" pubdate>Wednesday 02/26/2020</time>
+                <time datetime="2021-12-31T11:07:00-08:00" pubdate>Friday 12/31/2021</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                <a href="https://charlesreid1.github.io/category/til.html">TIL</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/creating-mock-api-servers.html">permalink</a>
+                <a href="https://charlesreid1.github.io/july-2021-tils.html">permalink</a>
             </span>
             </p>
         </div>
@@ -659,223 +328,87 @@ extending this mock API server to mock calls to the Github API.</p></div>
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#mock-api-server-class">Mock API Server Class</a><ul>
-<li><a href="#startstop-serving">Start/Stop Serving</a><ul>
-<li><a href="#getting-bind-addressport">Getting Bind Address/Port</a></li>
-<li><a href="#start-serving">Start Serving</a></li>
-<li><a href="#stop-serving">Stop Serving</a></li>
+        <div class="entry-content"><p>This year we've been keeping track of some of the surprising things that we have learned.
+For December, we're compiling a list of some of the things we've learned this year.</p>
+<p>Here are the "Today I Learned", or TILs, from July 2021.</p>
+<p>July 2, 2021:</p>
+<ul>
+<li>TIL Ted Kaczynski, the Unabomber, who went to Harvard to study mathematics when he was 16, was recruited in
+  his sophomore year to participate in a "purposely brutalizing psychological experiment" where students would
+  share their deepest-held beliefs, views, and goals, which were then used to belittle and verbally abuse the
+  students. The study was a part of the CIA's MK-Ultra program studying methods of mind control. 
+  (<a href="https://en.wikipedia.org/wiki/Ted_Kaczynski#Harvard_College">Link</a>)</li>
 </ul>
-</li>
-<li><a href="#handling-requests">Handling Requests</a><ul>
-<li><a href="#defining-post-response-method">Defining POST Response Method</a></li>
+<p>July 8, 2021:</p>
+<ul>
+<li>TIL Nunavut is a territory of Canada that was formed in 1999 and provided to the Inuit people for independent
+  governance. (<a href="https://en.wikipedia.org/wiki/Nunavut">Link</a>)</li>
 </ul>
-</li>
-</ul>
-</li>
-<li><a href="#putting-it-all-together">Putting it all together</a></li>
-</ul>
-</div>
-<h1 id="overview">Overview</h1>
-<p>In this post we discuss a way of mocking an API server during tests.
-This technique will let you create a fake API server that can respond
-to API calls however you want.</p>
-<p>The technique is twofold:</p>
+<p>July 9, 2021:</p>
 <ul>
 <li>
-<p>First, we create a mock API handler that extends <code>BaseHTTPRequestHandler</code>, which is the built-in HTTP server
-  class in Python. We can extend the server class to control how it responds to requests - to implement a
-  method to respond to POST requests, we implement a <code>do_POST()</code> method, to respond to GET requests
-  we implement a <code>do_GET()</code> method, and so on. (In the example below, we restrict the types of requests
-  to JSON content only.)</p>
+<p>TIL people 55 and older own 72% of the wealth in the US; they make up 28.5% of the population. 
+  (Source: USA FACTS, via PBS News Hour)</p>
 </li>
 <li>
-<p>Second, we use the Singleton design pattern, by implementing 
-  two class methods, <code>start_serving()</code> and <code>stop_serving()</code>, that
-  we can call before and after our tests to set up and tear down
-  the fake API server. This method will take care of starting the
-  HTTP server on a separate thread, so that it does not block 
-  execution.</p>
+<p>TIL that throughout most of the 2010s, the population of millennials was soaring, but number of households headed
+  by people under 35 was declining. But since 2016, household formation rates among millennials have been rising,
+  with the pandemic having only a short term negative impact on that trend. 
+  (Source: Harvard report, <a href="https://www.jchs.harvard.edu/sites/default/files/reports/files/Harvard_JCHS_State_Nations_Housing_2021.pdf">"The State of the Nation's
+  Housing"</a>)</p>
 </li>
 </ul>
-<h1 id="mock-api-server-class">Mock API Server Class</h1>
-<p>Let's start with the mock server class. This is going to extend the
-<code>BaseHTTPRequestHandler</code> class from the <code>http.server</code> module, and
-extend it.</p>
-<p>We implement a stub method for the POST response behavior; this is the
-only type of request that our mock API server will respond to.</p>
-<p>We also have two stub class methods to start and stop the server.</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
-    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">pass</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">pass</span>
-</code></pre></div>
-
-<h2 id="startstop-serving">Start/Stop Serving</h2>
-<p>We start with the two class methods to start and stop the server.</p>
-<h3 id="getting-bind-addressport">Getting Bind Address/Port</h3>
-<p>Define another static method to get the address to bind to, and the
-port to use; in this case we'll hard code values, but this function
-could also find unused networking ports, etc.</p>
-<div class="highlight"><pre><span></span><code>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
-        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
-        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
-        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
-</code></pre></div>
-
-<h3 id="start-serving">Start Serving</h3>
-<p>Next, the <code>start_serving()</code> method should start a thread
-(using the <code>cls._thread</code> attribute to store it for later)
-and create an underlying HTTP server (and using the <code>self._server</code>
-attribute to store it for later):</p>
-<div class="highlight"><pre><span></span><code>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Get the bind address and port</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
-
-        <span class="c1"># Create an HTTP server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
-
-        <span class="c1"># Create a thread to run the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
-
-        <span class="c1"># Start the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-</code></pre></div>
-
-<h3 id="stop-serving">Stop Serving</h3>
-<p>The <code>stop_serving()</code> method stops the thread</p>
-<div class="highlight"><pre><span></span><code>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Shut down the server</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
-
-        <span class="c1"># Let the thread rejoin the worker pool</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
-</code></pre></div>
-
-<h2 id="handling-requests">Handling Requests</h2>
-<p>The mock API server should only process POST requests, and should
-only accept JSON-formatted requests. We can implement those checks
-and have the server return a 500 error if clients do not send a
-properly formatted JSON request.</p>
-<h3 id="defining-post-response-method">Defining POST Response Method</h3>
-<p>To define a response to POST requests made to the API we are mocking,
-we start by validating the JSON request that is received.</p>
-<p>Note: this utilizes several built-in methods of the HTTP server class.</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
-        <span class="c1"># Enforce rule: JSON only</span>
-        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-            <span class="k">return</span>
-        <span class="c1"># Convert received JSON to dict</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
-        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
-
-        <span class="c1"># Process the json</span>
-        <span class="o">...</span>
-</code></pre></div>
-
-<p>Now, the JSON can be processed using a validate function,
-for example, or generic success/failure responses returned
-based on the contents of a request.</p>
-<p>Let's do something very simple: have the API server return
-whatever was sent in the request.</p>
-<p>We can turn the dictionary <code>message</code> (a dictionary containing
-the original request) back into a string, and the string into
-a stream of bytes. Then we can write headers and the stream of
-bytes into the response.</p>
-<div class="highlight"><pre><span></span><code>        <span class="c1"># Send a response</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-</code></pre></div>
-
-<p>The <code>_set_headers()</code> method is a short method that just sends
-(writes) the correct headers:</p>
-<div class="highlight"><pre><span></span><code>    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-</code></pre></div>
-
-<p>Note: the <code>send_headers()</code> and <code>end_headers()</code> methods are built-in
-to the HTTP server base class we are using.</p>
-<h1 id="putting-it-all-together">Putting it all together</h1>
-<p>Putting it all together, we get one final mock API server class:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
-    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
-        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
-        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
-        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Get the bind address and port</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
-
-        <span class="c1"># Create an HTTP server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
-
-        <span class="c1"># Create a thread to run the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
-
-        <span class="c1"># Start the server</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="c1"># Shut down the server</span>
-        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
-
-        <span class="c1"># Let the thread rejoin the worker pool</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
-
-    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
-        <span class="c1"># Enforce rule: JSON only</span>
-        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-            <span class="k">return</span>
-        <span class="c1"># Convert received JSON to dict</span>
-        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
-        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
-
-        <span class="c1"># Process the json</span>
-
-        <span class="c1"># Send a response</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
-</code></pre></div></div>
+<p>July 10, 2021:</p>
+<ul>
+<li>TIL how modifying the number of suits and number of cards per suit in a deck of cards can affect the relative
+  probability of the most rare outcomes (straight, flush, and full house). <ul>
+<li>For example, for regular deck of cards, 13 cards per suit, 4 suits, the ranking is straights lose to flushes lose
+  to full houses. </li>
+<li>But if you use a modified deck with 13 cards per suit and 8 suits
+  (clubs/spades/diamonds/hearts/tridents/roses/hatchets/doves), straights are easier, as are full houses, so
+  the ranking becomes straights lose to full houses lose to flushes. </li>
+<li>Related: <a href="https://charlesreid1.com/wiki/Cards">https://charlesreid1.com/wiki/Cards</a></li>
+</ul>
+</li>
+</ul>
+<p>July 11, 2021:</p>
+<ul>
+<li>TIL about apscheduler (advanced Python scheduler), which allows you to run Python code at specified dates, intervals,
+  or schedules. (<a href="https://apscheduler.readthedocs.io/en/stable/userguide.html">Link</a>)</li>
+</ul>
+<p>July 15, 2021:</p>
+<ul>
+<li>TIL that giant brushes make cows very happy. (<a href="https://www.youtube.com/watch?v=h3SG72cKA9o">Link</a>)</li>
+</ul>
+<p>July 16, 2021:</p>
+<ul>
+<li>TIL about the gamer motivation model. There is a survey by the inventors to see what kind of a gamer you are.
+  I am a bounty hunter. (<a href="https://quantic.page.link/cUacLBeXB2tdmEm67">Link</a>)</li>
+</ul>
+<p>July 17, 2021:</p>
+<ul>
+<li>TIL that China was formerly referred to as the Celestial Empire. It was common in 19th century US, Canada, and Australia.
+  The name originates from how the Chinese characters for "China" are translated (basically, celestial/heavenly dynasty)</li>
+</ul>
+<p>July 18, 2021:</p>
+<ul>
+<li>TIL you can calculate the perimeter of a Möbius strip, all you have to do is integrate a complex parametric curve from
+  0 to 4π (also fun fact, it can't be done analytically). (<a href="https://mathworld.wolfram.com/MoebiusStrip.html">Link</a>)</li>
+</ul>
+<p>July 30, 2021:</p>
+<ul>
+<li>TIL: Monrovia, the capital of Liberia, is named after US President James Monroe. (It's the second capital city
+  named after a US president, the other being Washington DC.) It was called that because in 1816 a group of
+  emancipated slaves arrived there under the American Colonization Society, with support from the US government.
+  They named the city after James Monroe because of his support of the colony as a place for emancipated slaves to go,
+  if they preferred that to life as an emancipated slave in the US.</li>
+</ul>
+<p>July 31, 2021:</p>
+<ul>
+<li>TIL there's a branch of mathematics called braid theory, that is a kind of intersection of topology and
+  linear algebra, and has some really interesting applications (and visualizations). 
+  (<a href="https://encyclopediaofmath.org/wiki/Braid_theory">Link</a>)</li>
+</ul></div>
 
     </div>
 </div>
@@ -887,21 +420,7 @@ to the HTTP server base class we are using.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/http.html">http</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/server.html">server</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/api.html">api</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/flask.html">flask</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/web-server.html">web server</a>
+                    <a href="https://charlesreid1.github.io/tag/til.html">til</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -940,6 +459,34 @@ to the HTTP server base class we are using.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>May 2025</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-rick-perlsteins-nixonland.html">Reading Rick Perlstein's <i>Nixonland</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/ken-binmores-game-theory-and-nash-equilibrium-in-shadowrun.html">Ken Binmore's <i>Game Theory</i> and Nash Equilibrium in Shadowrun</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/reading-hobbess-leviathan.html">Reading Hobbes's <i>Leviathan</i></a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/forever-blue-the-other-side-of-the-bums-story.html"><i>Forever Blue</i>: The Other Side of the Bums Story</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
