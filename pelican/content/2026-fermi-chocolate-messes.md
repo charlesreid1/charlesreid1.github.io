@@ -61,7 +61,7 @@ reeks of Fermi sub-problems.)
 
 **National Confectioners Association's State of Treating 2025/2026 report**,
 compiled using Circana retail-panel data and Euromonitor market modeling,
-reports **US chocolate sales of $28.4 billion in 2025** (51.7% of the $55B
+reports **US chocolate sales of \$28.4 billion in 2025** (51.7% of the \$55B
 total confectionery market). This is a real industry number with named
 data providers.
 
@@ -104,27 +104,27 @@ lab coat.
 
 ## Upper-Bound Fermi Problem: Dollar Sales → Bars
 
-Starting from $28.4B/year in US chocolate sales, the chain is shorter but
+Starting from \$28.4B/year in US chocolate sales, the chain is shorter but
 each step is fuzzier:
 
 1. **Dollar sales → bar-equivalents.** We need an average retail price per
-   "bar." Full-size checkout bar: ~$1.50–$2.00. Premium bar (Lindt,
-   Ghirardelli): $3–$5. Fun-size piece from a Halloween bag: ~$0.15–$0.30.
+   "bar." Full-size checkout bar: ~\$1.50–\$2.00. Premium bar (Lindt,
+   Ghirardelli): \$3–\$5. Fun-size piece from a Halloween bag: ~\$0.15–\$0.30.
    Bulk seasonal chocolate (Easter eggs, Valentine's boxes, advent
-   calendars): wildly varying $/oz, but each *piece* often counts as an
+   calendars): wildly varying \$/oz, but each *piece* often counts as an
    eating event.
 2. **Weighted average.** If bar-form full-size chocolate dominates sales
-   dollars, the average is close to $1.50/bar. If fun-size and bulk
-   dominate the *count*, the average is closer to $0.50/piece.
+   dollars, the average is close to \$1.50/bar. If fun-size and bulk
+   dominate the *count*, the average is closer to \$0.50/piece.
 
 That's not a factor of two; it's a factor of three, and the whole answer
 sits on it:
 
-| Average $/bar | Implied bars/year |
+| Average \$/bar | Implied bars/year |
 |---------------|-------------------|
-| $0.50         | ~57 billion       |
-| $1.00         | ~28 billion       |
-| $1.50         | ~19 billion       |
+| \$0.50         | ~57 billion       |
+| \$1.00         | ~28 billion       |
+| \$1.50         | ~19 billion       |
 
 **The "upper bound from real primary data" is anywhere from 19B to 57B**,
 depending entirely on how we resolve one knob - which is itself the same
@@ -147,7 +147,7 @@ somebody else already solved:
   imputations for missing data, seasonal adjustments. USDA analysts did
   their own Fermi decomposition to produce that number; we just don't see
   the pieces.
-- NCA's $28.4B in chocolate sales is Circana's retail-panel extrapolation
+- NCA's \$28.4B in chocolate sales is Circana's retail-panel extrapolation
   (some measured stores × a scaling factor for coverage) blended with
   Euromonitor's channel-mix model. Both of those are big decomposition
   chains ending in a single reported number.
@@ -158,8 +158,8 @@ decided to stop decomposing and report a total. Push on any leaf hard
 enough and you find yet another decomposition underneath.
 
 And the decomposition doesn't just go *deeper*; it goes *sideways* into
-whole other disciplines. Take the "$/bar" knob from the upper-bound
-problem. We handwaved it as $0.50 to $1.50 depending on whether fun-size
+whole other disciplines. Take the "\$/bar" knob from the upper-bound
+problem. We handwaved it as \$0.50 to \$1.50 depending on whether fun-size
 or full-size dominates. But the honest way to attack that knob is to
 estimate **the joint distribution of chocolate bar types across the US
 market** - Hershey's checkout bars vs. Costco Toblerones vs. Halloween
