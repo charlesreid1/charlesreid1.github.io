@@ -1,7 +1,7 @@
 Title: Fermi Problems Are Quadrature Problems
 Date: 2026-09-03 12:00
 Category: Mathematics
-Tags: mathematics, fermi problems, quadrature, estimation, numerical methods, interviews
+Tags: mathematics, fermi problems, quadrature, numerical methods, chocolate
 
 Here's a Fermi problem you'll run into sooner or later, usually in a job
 interview, sometimes over drinks with someone who wants to see how you think:
