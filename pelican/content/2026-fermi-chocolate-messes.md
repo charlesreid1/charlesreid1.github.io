@@ -3,8 +3,6 @@ Date: 2026-09-03 13:00
 Category: Mathematics
 Tags: mathematics, fermi problems, chocolate
 
-Status: draft
-
 In a prior post [Fermi Problems are Quadrature Problems]({filename}2026-fermi-quadrature.md) 
 we worked through
 the classic Fermi problem *"how many chocolate bars are eaten each year in
