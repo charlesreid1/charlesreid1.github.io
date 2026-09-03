@@ -16,6 +16,32 @@ McKinsey and Google into the standard interview format, but the underlying
 move is Fermi's: break a hard question into smaller questions you can each
 guess within a factor of two, and let the errors mostly cancel.
 
+## Does Size Matter?
+
+Before we start estimating, there's an elephant in the room that deserves to
+be named and then, deliberately, ignored. What counts as "a chocolate bar"?
+A fun-size Snickers you get in a Halloween bucket? A king-size Twix? A
+square of a Hershey's bar? A Costco-sized Toblerone? The answer changes the
+final count by an arbitrary factor of 1/2 or 2 or worse - it's the single
+variable this whole problem is most sensitive to, and it's not really a
+quantitative question at all. It's a *linguistic* knob. Turning it doesn't
+teach us anything about populations or quadrature; it just relabels what
+we're counting.
+
+So we're going to do what physicists do when a problem has a knob like this:
+we're going to assume a spherical cow. In the spirit of Fermi, "eating a
+chocolate bar" is an idealized, dimensionless *event* - a discrete unit of
+chocolate consumption, roughly the size of whatever the reader pictures when
+they hear the phrase. We're not going to quibble about grams or servings or
+whether a Reese's cup counts. If your definition differs from mine by a
+factor of two, your final answer differs from mine by a factor of two, and
+that's fine. The interesting structure of this problem lives in the
+population and its interactions, not in the definition of the counting unit,
+and the machinery we're about to build works the same way whichever
+definition you pick.
+
+With that noted and set aside, on to the actual estimation.
+
 ## The Naive Approach and What It's Secretly Assuming
 
 The textbook approach to the chocolate question looks like this. Guess that
