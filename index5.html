@@ -99,6 +99,232 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Blind SQL Injection with Conditional Errors (and Oracle's `dual` Table)
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2023-05-22T21:00:00-07:00" pubdate>Monday 05/22/2023</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/blind-sql-injection-with-conditional-errors-and-oracles-dual-table.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>Part 5 of our
+<a href="working-through-the-portswigger-web-security-academy.html">PortSwigger Web Security Academy series</a>.
+This is the meaty one. We already covered
+<a href="blind-sql-injection-with-conditional-responses.html">blind SQLi with conditional responses</a>,
+where the page renders differently depending on the truth of an injected
+boolean. This post covers what to do when the page <em>doesn't</em> render
+differently - but you can still smuggle information out by deliberately
+causing SQL errors.</p>
+<p>The example is PortSwigger's Lab 12, which is Oracle-flavored. Full notes:
+<a href="https://charlesreid1.com/wiki/SQL_Injection/Blind">SQL Injection/Blind</a>.</p>
+<h2 id="the-six-steps">The Six Steps</h2>
+<p>The full attack has six steps:</p>
+<ol>
+<li>Prove the parameter is injectable</li>
+<li>Fingerprint the database</li>
+<li>Confirm a <code>users</code> table exists</li>
+<li>Confirm the <code>administrator</code> user exists</li>
+<li>Find the password length</li>
+<li>Extract the password one character at a time</li>
+</ol>
+<p>Every step builds on the previous one. This is the shape of most serious
+SQLi attacks - you don't get from "the parameter looks funny" to "here is
+the admin password" in a single request.</p>
+<h2 id="step-1-prove-injectability">Step 1: Prove Injectability</h2>
+<p>Start with an injection that would be a valid SQL fragment if pasted into
+a query, using SQL string concatenation:</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select &#39;&#39;) || &#39;
+</code></pre></div>
+
+<p>This is well-formatted SQL. It should not error. But the server returns
+a 500.</p>
+<p>Why? Because on Oracle, <code>SELECT</code> statements <em>require</em> a <code>FROM</code> clause.
+Oracle has a built-in single-row single-column table called <code>dual</code> that
+exists specifically for <code>SELECT</code>s that don't have a real table to draw
+from. Try:</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select &#39;&#39; from dual) || &#39;
+</code></pre></div>
+
+<p>That returns 200. Well-formatted. Now confirm it wasn't a fluke:</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select &#39;&#39; from dualoiweuroqiurepoiquwer) || &#39;
+</code></pre></div>
+
+<p>That returns 500, because there is no such table. Two data points - one
+using a real Oracle table, one using a garbage table - confirms both that
+the parameter is injectable and that the database is Oracle.</p>
+<p>That is the <em>fingerprint</em>. Every major database has one or two quirks
+like this that betray it. Oracle's is <code>dual</code> + the <code>FROM</code>-required rule.</p>
+<h2 id="step-2-confirm-the-users-table-exists">Step 2: Confirm the <code>users</code> Table Exists</h2>
+<p>Now that we know the database is Oracle, we can start reconnaissance:</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select &#39;&#39; from users) || &#39;
+</code></pre></div>
+
+<p>If <code>users</code> exists, this should return 200 - but it may return 500 anyway,
+because the subquery might return multiple rows and the outer query
+expected a scalar. Add a row limiter:</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select &#39;&#39; from users where rownum = 1) || &#39;
+</code></pre></div>
+
+<ol>
+<li>The <code>users</code> table exists. <code>rownum</code> is another Oracle-ism - it's the
+one-indexed row number of the current result, and <code>rownum = 1</code> gives you
+exactly one row.</li>
+</ol>
+<h2 id="step-3-confirm-the-administrator-user-exists">Step 3: Confirm the <code>administrator</code> User Exists</h2>
+<p>Here is where things get interesting. Try:</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select &#39;&#39; from users where username=&#39;administrator&#39;) || &#39;
+</code></pre></div>
+
+<p>The problem: this returns 200 whether or not the administrator user
+exists. If there is no matching row, the subquery returns nothing (empty
+string), and the concatenation is still valid. We need a way to make the
+query error <em>only</em> when our condition is true.</p>
+<p>The trick is <code>CASE WHEN ... THEN TO_CHAR(1/0) ELSE '' END</code>. Divide by
+zero throws a runtime error, but only when the <code>WHEN</code> branch executes.
+Wrap it in a boolean:</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select CASE WHEN (1=1) THEN TO_CHAR(1/0) ELSE &#39;&#39; END FROM dual) || &#39;
+</code></pre></div>
+
+<p>This returns 500, because <code>1=1</code> is true and we hit the divide-by-zero.</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select CASE WHEN (1=0) THEN TO_CHAR(1/0) ELSE &#39;&#39; END FROM dual) || &#39;
+</code></pre></div>
+
+<p>This returns 200, because <code>1=0</code> is false and we take the <code>ELSE</code> branch.</p>
+<p>Now we have an oracle where <strong>500 means true</strong> and <strong>200 means false</strong>.
+Combine it with the users-table check:</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select CASE WHEN (1=1) THEN TO_CHAR(1/0) ELSE &#39;&#39; END FROM users where username=&#39;administrator&#39;) || &#39;
+</code></pre></div>
+
+<p>The <code>FROM</code> clause is executed first. If the user exists, the <code>CASE</code>
+executes and we get 500. If the user doesn't exist, the <code>SELECT</code> returns
+no rows and no error fires - 200.</p>
+<p>500 confirms the administrator user exists.</p>
+<h2 id="step-4-find-the-password-length">Step 4: Find the Password Length</h2>
+<p>Same primitive, different condition:</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select CASE WHEN (1=1) THEN TO_CHAR(1/0) ELSE &#39;&#39; END FROM users where username=&#39;administrator&#39; and LENGTH(password)&gt;1) || &#39;
+</code></pre></div>
+
+<p>500 if password length is greater than 1. 200 if not.</p>
+<p>Fire this at every integer from 1 to 50. The largest N that returns 500
+is the password length minus one (because when <code>LENGTH(password) &gt; N</code> is
+false, we get 200).</p>
+<p>For efficiency, use Burp Intruder:</p>
+<ul>
+<li>Send to Intruder</li>
+<li>Positions → Clear all positions, then mark the <code>1</code> as the payload</li>
+<li>Payloads → Numbers, sequential, 1 to 50, step 1</li>
+<li>Run</li>
+</ul>
+<p>At N = 20, response switches from 500 to 200. Password length is 20.</p>
+<h2 id="step-5-extract-the-password-character-by-character">Step 5: Extract the Password Character by Character</h2>
+<p>Same idea, one more condition wrapper:</p>
+<div class="highlight"><pre><span></span><code>&#39; || (select CASE WHEN (1=1) THEN TO_CHAR(1/0) ELSE &#39;&#39; END FROM users where username=&#39;administrator&#39; and SUBSTR(password,1,1)=&#39;a&#39;) || &#39;
+</code></pre></div>
+
+<p>500 if the first character of the password is <code>a</code>, 200 otherwise.</p>
+<p>Fire at all 36 alphanumeric characters. One returns 500. That's character
+1.</p>
+<p>Then character 2:</p>
+<div class="highlight"><pre><span></span><code>&#39; || ... and SUBSTR(password,2,1)=&#39;a&#39;) || &#39;
+</code></pre></div>
+
+<p>Then character 3. And so on. 20 characters, 36 letters each - 720
+requests total.</p>
+<h2 id="step-6-automate-with-cluster-bomb">Step 6: Automate With Cluster Bomb</h2>
+<p>Doing 720 requests one at a time is not fun. Burp Intruder's Cluster Bomb
+attack type is built for exactly this:</p>
+<ul>
+<li>Send to Intruder</li>
+<li>Positions → Mark the substring position (the <code>1</code> in <code>SUBSTR(password,1,1)</code>)
+  as payload 1</li>
+<li>Positions → Mark the guessed character (the <code>a</code>) as payload 2</li>
+<li>Attack type → Cluster bomb (runs every combination of payload 1 × payload 2)</li>
+<li>Payload 1 → Numbers 1 to 20, step 1</li>
+<li>Payload 2 → Brute forcer, alphabet <code>abcdefghijklmnopqrstuvwxyz0123456789</code>, min 1, max 1</li>
+<li>Filter results by response code 500</li>
+</ul>
+<p>You get exactly 20 hits, one per position. Read them off in order.
+Password extracted.</p>
+<h2 id="why-this-attack-is-worth-understanding">Why This Attack Is Worth Understanding</h2>
+<p>Every one of these tricks is small on its own. <code>dual</code>. <code>rownum</code>.
+<code>CASE WHEN ... TO_CHAR(1/0)</code>. <code>SUBSTR</code>. Combined, they let you exfiltrate
+an entire password from a database that isn't showing you anything.</p>
+<p>The 500-vs-200 oracle is the key move, and it generalizes. Anywhere the
+server does something you can observe based on a boolean you injected,
+you can build an oracle. Conditional errors are one instance. Time-based
+attacks (deliberately calling <code>pg_sleep()</code> or <code>WAITFOR DELAY</code>) are
+another. The plumbing changes, the shape is the same.</p>
+<h2 id="the-fix">The Fix</h2>
+<p>Parameterized queries. Same as every other post in this series. There is
+no clever mitigation for SQL injection that isn't "stop building queries
+with string concatenation."</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our wiki: <a href="https://charlesreid1.com/wiki/SQL_Injection/Blind">SQL Injection/Blind</a></li>
+<li><a href="https://portswigger.net/web-security/sql-injection/blind/lab-conditional-errors">Lab 12 - Blind SQLi with conditional errors</a></li>
+<li><a href="https://portswigger.net/burp/documentation/desktop/tools/intruder">Burp Suite Intruder documentation</a></li>
+</ul></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sql-injection.html">sql injection</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sqli.html">sqli</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/blind-sqli.html">blind sqli</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/oracle.html">oracle</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/burp-suite.html">burp suite</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/portswigger.html">portswigger</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Blind SQL Injection with Conditional Responses
             </b></h1>
         
@@ -443,196 +669,6 @@ code.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                SQL Injection Fundamentals: Four Attack Shapes
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2023-05-21T14:00:00-07:00" pubdate>Sunday 05/21/2023</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/sql-injection-fundamentals-four-attack-shapes.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is part 2 of our series on working through the
-<a href="working-through-the-portswigger-web-security-academy.html">PortSwigger Web Security Academy</a>.
-This one covers SQL injection at a bird's-eye view - the four main attack
-shapes that show up over and over, with the smallest possible example of
-each. Later posts will drill into specific attack types.</p>
-<p>Full notes on our wiki:
-<a href="https://charlesreid1.com/wiki/SQL_Injection">SQL Injection</a>.</p>
-<h2 id="what-sql-injection-is">What SQL Injection Is</h2>
-<p>SQL injection is a web security bug that lets attackers execute their own
-SQL against your database, by taking advantage of user inputs that are
-not sanitized before being pasted into a SQL query.</p>
-<p>The reason it is worth caring about is impact vs. effort. SQL injection
-is one of the highest-impact web vulnerabilities (attacker can potentially
-read or modify anything in the database), and one of the lowest-effort
-to actually pull off. That combination is why it has been in the
-<a href="https://charlesreid1.com/wiki/OWASP">OWASP Top 10</a> since forever.</p>
-<h2 id="the-four-shapes">The Four Shapes</h2>
-<p>Our notes group SQL injection into four attack shapes:</p>
-<ol>
-<li>Retrieving hidden data</li>
-<li>Subverting application logic</li>
-<li>UNION attacks</li>
-<li>Blind SQL injection</li>
-</ol>
-<p>The rest of this post walks through the smallest example of each.</p>
-<h2 id="shape-1-retrieving-hidden-data">Shape 1: Retrieving Hidden Data</h2>
-<p>Suppose a shopping site has this URL for showing product listings:</p>
-<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts
-</code></pre></div>
-
-<p>Behind the scenes, that URL runs this SQL query:</p>
-<div class="highlight"><pre><span></span><code>SELECT * FROM products WHERE category = &#39;Gifts&#39; AND released = 1
-</code></pre></div>
-
-<p>The <code>released = 1</code> clause hides unreleased products from the public. If
-the <code>category</code> parameter is not sanitized, we can smuggle in SQL that
-comments out the rest of the query:</p>
-<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts&#39;--
-</code></pre></div>
-
-<p>The <code>--</code> starts a SQL comment. Everything after it is ignored, including
-the <code>AND released = 1</code> check. Result: all products, including
-unreleased ones, get returned.</p>
-<p>Same trick with an unconditional truthy clause:</p>
-<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts&#39;+OR+1=1--
-</code></pre></div>
-
-<h2 id="shape-2-subverting-application-logic">Shape 2: Subverting Application Logic</h2>
-<p>Same idea, applied to authentication. If a login form runs</p>
-<div class="highlight"><pre><span></span><code>SELECT * FROM users WHERE username = &#39;user&#39; AND password = &#39;nopass&#39;
-</code></pre></div>
-
-<p>and doesn't sanitize the username field, you can log in as anyone by
-supplying the username:</p>
-<div class="highlight"><pre><span></span><code>administrator&#39;--
-</code></pre></div>
-
-<p>Everything after the <code>--</code> (including the entire password check) becomes
-a comment. The query returns the administrator row. You are logged in.</p>
-<p>You have to guess the username - <code>admin</code>, <code>administrator</code>, <code>root</code>,
-<code>superuser</code> - so this is not a one-shot attack, but it is not a hard
-attack either. If you see a login page throwing internal server errors
-when you put a single quote in the username field, that is your signal.</p>
-<h2 id="shape-3-union-attacks">Shape 3: UNION Attacks</h2>
-<p>UNION attacks use SQL's <code>UNION</code> operator to piggyback data from other
-tables into the results of the original query. If a shopping site runs</p>
-<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;Gifts&#39;
-</code></pre></div>
-
-<p>and the <code>category</code> parameter is injectable, we can attach a UNION:</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT username, password FROM users--
-</code></pre></div>
-
-<p>The final query becomes</p>
-<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;&#39;
-UNION SELECT username, password FROM users--&#39;
-</code></pre></div>
-
-<p>which returns product listings and every username/password pair. Whatever
-UI was going to display product name and description now also displays
-usernames and passwords.</p>
-<p>The oversimplified version above works out cleanly, but in practice you
-need to figure out the column count of the outer query first, then make
-sure the columns you union in are type-compatible. We covered that in
-<a href="sql-injection-union-attacks.html">the next post</a>.</p>
-<h2 id="shape-4-blind-sql-injection">Shape 4: Blind SQL Injection</h2>
-<p>Blind SQLi is what you do when the application is vulnerable but the
-query results don't come back to you in the HTTP response. Cookie tracking
-IDs are the classic example - the ID gets fed to a SQL query on every
-request, but the query result is never rendered on the page.</p>
-<p>Even without seeing the result directly, you can often <em>infer</em> it from
-how the page behaves. Ship one of these two requests:</p>
-<div class="highlight"><pre><span></span><code>xyz&#39; AND &#39;1&#39;=&#39;1
-xyz&#39; AND &#39;1&#39;=&#39;2
-</code></pre></div>
-
-<p>If the page renders differently in the two cases (say, one shows a
-"Welcome back" banner and the other doesn't), congratulations, you have
-a boolean oracle. Now you can ask the database yes/no questions and get
-answers via page behavior. Wrap the boolean around anything you want to
-know:</p>
-<div class="highlight"><pre><span></span><code>xyz&#39; AND SUBSTRING((SELECT Password FROM Users WHERE Username = &#39;Administrator&#39;), 1, 1) &gt; &#39;m
-</code></pre></div>
-
-<p>That request returns "Welcome back" if the first character of the
-administrator's password is greater than <code>m</code>, and doesn't otherwise. Do
-that in a binary search per character, and you have the whole password.</p>
-<p>Blind SQLi comes in a few flavors - conditional responses (above),
-conditional errors, and time-based. We cover the first two in
-<a href="blind-sql-injection-with-conditional-responses.html">the next</a>
-<a href="blind-sql-injection-with-conditional-errors.html">couple</a> of posts.</p>
-<h2 id="what-ties-them-together">What Ties Them Together</h2>
-<p>Every one of these attacks is a variation on the same theme: a user input
-is being pasted directly into a SQL query, and the attacker can supply
-SQL syntax that changes the meaning of the query. The fix is the same in
-every case: parameterized queries. Not string concatenation. Not escaping.
-Parameterized queries.</p>
-<h2 id="references">References</h2>
-<ul>
-<li>Our wiki: <a href="https://charlesreid1.com/wiki/SQL_Injection">SQL Injection</a></li>
-<li><a href="https://portswigger.net/web-security/sql-injection/cheat-sheet">PortSwigger SQL Injection cheat sheet</a></li>
-<li><a href="https://portswigger.net/web-security/sql-injection">Web Security Academy - SQL Injection</a></li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sql-injection.html">sql injection</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sqli.html">sqli</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/portswigger.html">portswigger</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/web-security.html">web security</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/owasp.html">owasp</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -662,6 +698,19 @@ Parameterized queries.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>September 2026</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/fermi-problems-are-quadrature-problems.html">Fermi Problems Are Quadrature Problems</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

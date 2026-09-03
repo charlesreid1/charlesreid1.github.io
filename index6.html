@@ -99,6 +99,196 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                SQL Injection Fundamentals: Four Attack Shapes
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2023-05-21T14:00:00-07:00" pubdate>Sunday 05/21/2023</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/sql-injection-fundamentals-four-attack-shapes.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>This is part 2 of our series on working through the
+<a href="working-through-the-portswigger-web-security-academy.html">PortSwigger Web Security Academy</a>.
+This one covers SQL injection at a bird's-eye view - the four main attack
+shapes that show up over and over, with the smallest possible example of
+each. Later posts will drill into specific attack types.</p>
+<p>Full notes on our wiki:
+<a href="https://charlesreid1.com/wiki/SQL_Injection">SQL Injection</a>.</p>
+<h2 id="what-sql-injection-is">What SQL Injection Is</h2>
+<p>SQL injection is a web security bug that lets attackers execute their own
+SQL against your database, by taking advantage of user inputs that are
+not sanitized before being pasted into a SQL query.</p>
+<p>The reason it is worth caring about is impact vs. effort. SQL injection
+is one of the highest-impact web vulnerabilities (attacker can potentially
+read or modify anything in the database), and one of the lowest-effort
+to actually pull off. That combination is why it has been in the
+<a href="https://charlesreid1.com/wiki/OWASP">OWASP Top 10</a> since forever.</p>
+<h2 id="the-four-shapes">The Four Shapes</h2>
+<p>Our notes group SQL injection into four attack shapes:</p>
+<ol>
+<li>Retrieving hidden data</li>
+<li>Subverting application logic</li>
+<li>UNION attacks</li>
+<li>Blind SQL injection</li>
+</ol>
+<p>The rest of this post walks through the smallest example of each.</p>
+<h2 id="shape-1-retrieving-hidden-data">Shape 1: Retrieving Hidden Data</h2>
+<p>Suppose a shopping site has this URL for showing product listings:</p>
+<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts
+</code></pre></div>
+
+<p>Behind the scenes, that URL runs this SQL query:</p>
+<div class="highlight"><pre><span></span><code>SELECT * FROM products WHERE category = &#39;Gifts&#39; AND released = 1
+</code></pre></div>
+
+<p>The <code>released = 1</code> clause hides unreleased products from the public. If
+the <code>category</code> parameter is not sanitized, we can smuggle in SQL that
+comments out the rest of the query:</p>
+<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts&#39;--
+</code></pre></div>
+
+<p>The <code>--</code> starts a SQL comment. Everything after it is ignored, including
+the <code>AND released = 1</code> check. Result: all products, including
+unreleased ones, get returned.</p>
+<p>Same trick with an unconditional truthy clause:</p>
+<div class="highlight"><pre><span></span><code>https://insecure-website.com/products?category=Gifts&#39;+OR+1=1--
+</code></pre></div>
+
+<h2 id="shape-2-subverting-application-logic">Shape 2: Subverting Application Logic</h2>
+<p>Same idea, applied to authentication. If a login form runs</p>
+<div class="highlight"><pre><span></span><code>SELECT * FROM users WHERE username = &#39;user&#39; AND password = &#39;nopass&#39;
+</code></pre></div>
+
+<p>and doesn't sanitize the username field, you can log in as anyone by
+supplying the username:</p>
+<div class="highlight"><pre><span></span><code>administrator&#39;--
+</code></pre></div>
+
+<p>Everything after the <code>--</code> (including the entire password check) becomes
+a comment. The query returns the administrator row. You are logged in.</p>
+<p>You have to guess the username - <code>admin</code>, <code>administrator</code>, <code>root</code>,
+<code>superuser</code> - so this is not a one-shot attack, but it is not a hard
+attack either. If you see a login page throwing internal server errors
+when you put a single quote in the username field, that is your signal.</p>
+<h2 id="shape-3-union-attacks">Shape 3: UNION Attacks</h2>
+<p>UNION attacks use SQL's <code>UNION</code> operator to piggyback data from other
+tables into the results of the original query. If a shopping site runs</p>
+<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;Gifts&#39;
+</code></pre></div>
+
+<p>and the <code>category</code> parameter is injectable, we can attach a UNION:</p>
+<div class="highlight"><pre><span></span><code>&#39; UNION SELECT username, password FROM users--
+</code></pre></div>
+
+<p>The final query becomes</p>
+<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;&#39;
+UNION SELECT username, password FROM users--&#39;
+</code></pre></div>
+
+<p>which returns product listings and every username/password pair. Whatever
+UI was going to display product name and description now also displays
+usernames and passwords.</p>
+<p>The oversimplified version above works out cleanly, but in practice you
+need to figure out the column count of the outer query first, then make
+sure the columns you union in are type-compatible. We covered that in
+<a href="sql-injection-union-attacks.html">the next post</a>.</p>
+<h2 id="shape-4-blind-sql-injection">Shape 4: Blind SQL Injection</h2>
+<p>Blind SQLi is what you do when the application is vulnerable but the
+query results don't come back to you in the HTTP response. Cookie tracking
+IDs are the classic example - the ID gets fed to a SQL query on every
+request, but the query result is never rendered on the page.</p>
+<p>Even without seeing the result directly, you can often <em>infer</em> it from
+how the page behaves. Ship one of these two requests:</p>
+<div class="highlight"><pre><span></span><code>xyz&#39; AND &#39;1&#39;=&#39;1
+xyz&#39; AND &#39;1&#39;=&#39;2
+</code></pre></div>
+
+<p>If the page renders differently in the two cases (say, one shows a
+"Welcome back" banner and the other doesn't), congratulations, you have
+a boolean oracle. Now you can ask the database yes/no questions and get
+answers via page behavior. Wrap the boolean around anything you want to
+know:</p>
+<div class="highlight"><pre><span></span><code>xyz&#39; AND SUBSTRING((SELECT Password FROM Users WHERE Username = &#39;Administrator&#39;), 1, 1) &gt; &#39;m
+</code></pre></div>
+
+<p>That request returns "Welcome back" if the first character of the
+administrator's password is greater than <code>m</code>, and doesn't otherwise. Do
+that in a binary search per character, and you have the whole password.</p>
+<p>Blind SQLi comes in a few flavors - conditional responses (above),
+conditional errors, and time-based. We cover the first two in
+<a href="blind-sql-injection-with-conditional-responses.html">the next</a>
+<a href="blind-sql-injection-with-conditional-errors.html">couple</a> of posts.</p>
+<h2 id="what-ties-them-together">What Ties Them Together</h2>
+<p>Every one of these attacks is a variation on the same theme: a user input
+is being pasted directly into a SQL query, and the attacker can supply
+SQL syntax that changes the meaning of the query. The fix is the same in
+every case: parameterized queries. Not string concatenation. Not escaping.
+Parameterized queries.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our wiki: <a href="https://charlesreid1.com/wiki/SQL_Injection">SQL Injection</a></li>
+<li><a href="https://portswigger.net/web-security/sql-injection/cheat-sheet">PortSwigger SQL Injection cheat sheet</a></li>
+<li><a href="https://portswigger.net/web-security/sql-injection">Web Security Academy - SQL Injection</a></li>
+</ul></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sql-injection.html">sql injection</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sqli.html">sqli</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/portswigger.html">portswigger</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/web-security.html">web security</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/owasp.html">owasp</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Working Through the PortSwigger Web Security Academy
             </b></h1>
         
@@ -413,157 +603,6 @@ words to keep on the wall.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Reading Bums: Peter Golenbock's Oral History of the Brooklyn Dodgers
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2022-11-21T21:00:00-08:00" pubdate>Monday 11/21/2022</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/reading-bums-peter-golenbocks-oral-history-of-the-brooklyn-dodgers.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p><em>Bums: An Oral History of the Brooklyn Dodgers</em> by Peter Golenbock is
-exactly what it says on the tin. It is an oral history, which means the
-book is stitched together mostly out of firsthand accounts - players,
-managers, executives, sportswriters, and fans - with Golenbock providing
-just enough connective tissue to keep the timeline moving.</p>
-<p>We read it in the fall of 2022 and it turned out to be one of the better
-baseball books we have picked up. Below are our notes, chapter by chapter.</p>
-<h2 id="the-setup">The Setup</h2>
-<p>The Brooklyn Dodgers were, until 1957, one of the two National League
-teams in New York (the other being the Giants), and the Dodgers are one
-of the great tragic love stories in American sports. They lost, and lost,
-and lost, and then finally won a championship in 1955, and then two years
-later Walter O'Malley moved the team to Los Angeles and the borough of
-Brooklyn never really recovered.</p>
-<p>The nickname "Bums" was affectionate. Sort of.</p>
-<h2 id="chapter-by-chapter">Chapter-by-Chapter</h2>
-<p><strong>Prologue.</strong> Sets the stage. Establishes why Brooklyn and its baseball
-team had a relationship that was different in kind from other city-team
-relationships. Introduces the oral history format and the "Bums" nickname.</p>
-<p><strong>Chapter 1 - The Daffiness Boys.</strong> Covers the pre-WWII years. This is the
-era of Babe Herman getting hit on the head with fly balls, Casey Stengel
-managing the team into and out of trouble, and the general reputation of
-the Dodgers as lovably incompetent. Ebbets Field is the third character.</p>
-<p><strong>Chapter 2 - MacPhail.</strong> Larry MacPhail arrives as general manager in the
-late 1930s. He is the person who brings night baseball to Ebbets Field,
-brings radio broadcasts (with Red Barber calling games), and generally
-drags the Dodgers into professional respectability. Team gets competitive.
-Wins the 1941 pennant. Loses the World Series to the Yankees, which is
-the beginning of a pattern.</p>
-<p><strong>Chapter 3 - Rickey.</strong> Branch Rickey arrives after MacPhail leaves for
-war service (and then, later, jumps to the Yankees). Rickey builds out a
-minor-league farm system, which was a serious strategic innovation at the
-time. The chapter sets up the next one.</p>
-<p><strong>Chapter 4 - The Noble Experiment.</strong> The Jackie Robinson chapter. It is
-the emotional center of the book. Golenbock gets voices from Robinson
-himself (via earlier interviews), teammates like Pee Wee Reese, opponents,
-Rickey, and observers. The abuse Robinson faced is described directly, not
-softened. His talent and his composure both come through. This chapter is
-worth the price of the book on its own.</p>
-<p><strong>Chapter 5 - The Boys of Summer.</strong> The core roster that would define the
-1940s and 1950s Dodgers: Duke Snider, Gil Hodges, Roy Campanella, Carl
-Furillo, Carl Erskine, Preacher Roe, Pee Wee Reese, Billy Cox. The
-chapter is mostly personalities and clubhouse chemistry, and it is a lot
-of fun.</p>
-<p><strong>Chapter 6 - Wait 'Til Next Year.</strong> The heartbreak chapter. Repeated
-losses to the Yankees in the World Series. The 1951 playoff loss to the
-Giants on Bobby Thomson's "Shot Heard 'Round the World." The rivalry with
-the Giants, which was intense in a way that modern baseball rivalries
-mostly are not. And the perennial fan slogan that names the chapter.</p>
-<p><strong>Chapter 7 - Nineteen Fifty-Five.</strong> The one year they won it all. After
-all the near-misses, the Dodgers beat the Yankees in the 1955 World Series.
-Johnny Podres's Game 7 shutout gets the spotlight. The chapter captures a
-level of borough-wide joy that is very hard to imagine now.</p>
-<p><strong>Chapter 8 - The End.</strong> The move. Walter O'Malley consolidates power
-after Rickey leaves, decides he wants a new stadium, runs into Robert
-Moses in the process, and eventually decides Los Angeles is a better bet
-than Brooklyn. Players, sportswriters, and fans express shock, betrayal,
-and grief in that order. The 1957 season is the last one in Brooklyn.</p>
-<p><strong>Epilogue.</strong> Reflections on what the team meant, what the borough lost,
-and what the departure symbolized about postwar American cities in
-general.</p>
-<h2 id="what-makes-the-book-good">What Makes the Book Good</h2>
-<p>The oral history format works because so many of the primary sources were
-still alive when Golenbock did the interviews. You get Pee Wee Reese
-talking about Jackie Robinson in his own voice. You get Ebbets Field vendors
-and ticket-takers remembering what it smelled like. You get sportswriters
-talking about deadlines and games they covered from the press box.</p>
-<p>If you want a synthesized, analytical baseball history, this is not that
-book. Golenbock's editorial hand is light. He is stitching, not arguing.</p>
-<p>If you want to hear what it was like to be there, this is that book.</p>
-<h2 id="recommended-if">Recommended If</h2>
-<ul>
-<li>You like baseball history.</li>
-<li>You like New York history.</li>
-<li>You have ever wondered why Brooklyn is the way Brooklyn is.</li>
-<li>You want a Jackie Robinson chapter that treats him as a person and an
-  athlete instead of an icon.</li>
-</ul>
-<h2 id="references">References</h2>
-<ul>
-<li>Golenbock, Peter. <em>Bums: An Oral History of the Brooklyn Dodgers.</em>
-  Contemporary Books, 1984.</li>
-<li>Our wiki notes: <a href="https://charlesreid1.com/wiki/Bums">https://charlesreid1.com/wiki/Bums</a></li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/baseball.html">baseball</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/brooklyn-dodgers.html">brooklyn dodgers</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/history.html">history</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/oral-history.html">oral history</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/golenbock.html">golenbock</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -593,6 +632,19 @@ book. Golenbock's editorial hand is light. He is stitching, not arguing.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>September 2026</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/fermi-problems-are-quadrature-problems.html">Fermi Problems Are Quadrature Problems</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">

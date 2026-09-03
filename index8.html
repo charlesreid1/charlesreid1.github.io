@@ -99,6 +99,240 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Generating Functions Part 1: Solving the Quicksort Recurrence
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2022-10-23T12:00:00-07:00" pubdate>Sunday 10/23/2022</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/generating-functions-part-1-solving-the-quicksort-recurrence.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>This post is part 1 of a series on generating functions, based on notes
+we have been working through from Sedgewick and Flajolet's <em>Analysis of
+Algorithms</em> and Trotter's <em>Applied Combinatorics</em>. The full set of notes
+lives on our wiki:
+<a href="https://charlesreid1.com/wiki/Generating_Functions">Generating Functions</a>.</p>
+<p>Generating functions are one of those techniques that look completely
+mysterious the first time you see them, and then look like the obvious
+thing to do the tenth time you see them. They turn recurrences into
+functions, functions into series, and series back into closed forms for
+the coefficients you actually wanted. This post walks through one of the
+nicest applications: solving the recurrence relation for quicksort.</p>
+<h2 id="the-recurrence">The Recurrence</h2>
+<p>The average number of comparisons quicksort makes on an array of size <span class="math">\(n\)</span>
+satisfies the recurrence</p>
+<div class="math">$$
+C_n = n + 1 + \dfrac{2}{n} \sum_{1 \leq k \leq n} C_{k-1}
+$$</div>
+<p>The <span class="math">\(n+1\)</span> term is the cost of the partition step. The sum averages the cost
+of recursing on the two subarrays over all possible choices of pivot.</p>
+<p>Staring at that sum inside the recurrence is not a great starting point.
+Everything on the right depends on every <span class="math">\(C_k\)</span> that came before. Generating
+functions are how we get out.</p>
+<h2 id="setting-up-the-generating-function">Setting Up the Generating Function</h2>
+<p>The plan is to introduce a generating function</p>
+<div class="math">$$
+C(z) = \sum_{n \geq 0} C_n z^n
+$$</div>
+<p>and then translate each piece of the recurrence into an operation on <span class="math">\(C(z)\)</span>.</p>
+<p>Multiplying the recurrence by <span class="math">\(n\)</span> to clear the <span class="math">\(\tfrac{2}{n}\)</span>, and then by
+<span class="math">\(z^n\)</span>, and summing over <span class="math">\(n\)</span>, we end up with</p>
+<div class="math">$$
+\sum_{n \geq 1} n C_n z^n = \sum_{n \geq 1} n(n+1) z^n + 2 \sum_{n \geq 1} \sum_{1 \leq k \leq n} C_{k-1} z^n
+$$</div>
+<p>Each of these three terms turns into something in <span class="math">\(C(z)\)</span>:</p>
+<ul>
+<li>The left side is <span class="math">\(z C'(z)\)</span>, since taking a derivative and multiplying by <span class="math">\(z\)</span>
+  pulls out an <span class="math">\(n\)</span> from each term of the series</li>
+<li>The first term on the right involves the second derivative of
+  <span class="math">\(\tfrac{1}{1-z}\)</span>, and simplifies to <span class="math">\(\tfrac{2}{(1-z)^3}\)</span></li>
+<li>The double sum is a partial-sum operation, which corresponds to multiplying
+  by <span class="math">\(\tfrac{1}{1-z}\)</span></li>
+</ul>
+<p>Putting it all together, we get</p>
+<div class="math">$$
+C'(z) = \dfrac{2}{(1-z)^3} + \dfrac{2 C(z)}{1 - z}
+$$</div>
+<p>The recurrence has become a first-order linear differential equation.</p>
+<h2 id="solving-the-ode">Solving the ODE</h2>
+<p>To solve</p>
+<div class="math">$$
+C'(z) - \dfrac{2 C(z)}{1 - z} = \dfrac{2}{(1-z)^3}
+$$</div>
+<p>we look for an integrating factor <span class="math">\(\rho(z)\)</span> such that
+<span class="math">\(\rho'(z) = -\dfrac{2 \rho(z)}{1-z}\)</span>. That works out to <span class="math">\(\rho(z) = (1-z)^2\)</span>.</p>
+<p>Multiplying through:</p>
+<div class="math">$$
+\left( (1-z)^2 C(z) \right)' = \dfrac{2}{1-z}
+$$</div>
+<p>Integrating both sides:</p>
+<div class="math">$$
+(1-z)^2 C(z) = 2 \ln \left( \dfrac{1}{1-z} \right)
+$$</div>
+<p>And so</p>
+<div class="math">$$
+C(z) = \dfrac{2}{(1-z)^2} \ln \left( \dfrac{1}{1-z} \right)
+$$</div>
+<p>That is the generating function for the average number of comparisons in
+quicksort. Not obvious.</p>
+<h2 id="reading-off-the-coefficient">Reading Off the Coefficient</h2>
+<p>Now we extract <span class="math">\(C_n = [z^n] C(z)\)</span>. The expression <span class="math">\(\tfrac{1}{(1-z)^2}\)</span> has
+the well-known expansion <span class="math">\(\sum (n+1) z^n\)</span>, and <span class="math">\(\ln \left( \tfrac{1}{1-z} \right)\)</span>
+has the expansion <span class="math">\(\sum \tfrac{z^k}{k}\)</span>, which is the generating function
+for the sequence <span class="math">\(H_k = 1 + \tfrac{1}{2} + \dots + \tfrac{1}{k}\)</span> (the
+harmonic numbers, once you divide by <span class="math">\(\tfrac{1}{1-z}\)</span> to accumulate).</p>
+<p>Working through the convolution, we land at</p>
+<div class="math">$$
+C_n = 2(n+1)(H_{n+1} - 1)
+$$</div>
+<p>That is the closed form. Since <span class="math">\(H_n \approx \ln n + \gamma\)</span> for large <span class="math">\(n\)</span>,
+this gives <span class="math">\(C_n \sim 2 n \ln n\)</span>, which recovers the familiar
+<span class="math">\(O(n \log n)\)</span> average case for quicksort - with an actual constant in front
+of it.</p>
+<h2 id="why-this-is-worth-learning">Why This Is Worth Learning</h2>
+<p>The reason this technique is so satisfying is that we started with a
+recurrence that looked completely intractable - <span class="math">\(C_n\)</span> depends on the entire
+prefix <span class="math">\(C_0, C_1, \dots, C_{n-1}\)</span> - and ended with a clean closed form.</p>
+<p>The mechanical steps are:</p>
+<ol>
+<li>Turn the recurrence into a functional equation in <span class="math">\(C(z)\)</span> by multiplying
+   by <span class="math">\(z^n\)</span> and summing.</li>
+<li>Solve the functional equation. Sometimes it is algebraic, sometimes it
+   is a differential equation (as here).</li>
+<li>Extract the <span class="math">\(n\)</span>-th coefficient of the solution.</li>
+</ol>
+<p>In upcoming posts in this series, we will look at simpler examples that
+show how the coefficient extraction step works, including a nice puzzle
+about distributing colored marbles into cans with weird constraints.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our full notes:
+  <a href="https://charlesreid1.com/wiki/Generating_Functions">Generating Functions</a>
+  on the wiki (Sedgewick/Flajolet and Trotter, side by side)</li>
+<li>Knuth-flavored coverage:
+  <a href="https://charlesreid1.com/wiki/AOCP/Generating_Functions">AOCP/Generating Functions</a></li>
+</ul>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/generating-functions.html">generating functions</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/algorithms.html">algorithms</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/quicksort.html">quicksort</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recurrence.html">recurrence</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sedgewick.html">sedgewick</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 A Pair of Dice Games (or, Why Chevalier de Méré Lost Money)
             </b></h1>
         
@@ -440,140 +674,6 @@ not the MacTeX version, and things get confusing quickly.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                How to Subscribe to Infinite Mailing Lists
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2022-06-08T16:42:00-07:00" pubdate>Wednesday 06/08/2022</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/how-to-subscribe-to-infinite-mailing-lists.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is a quick hack, but a useful one.</p>
-<p>Here's the hack:</p>
-<ul>
-<li>
-<p>Create a new and separate Gmail address, whose purpose is to be a 
-  "reading material" email address. The purpose of this email address
-  is to sign up for mailing lists and reading material - that's it.</p>
-</li>
-<li>
-<p>Once you have done that, log in to your primary email address. Find
-  every mailing list you're subscribed to, and unsubscribe. This will
-  give you a massive feeling of relief.</p>
-</li>
-<li>
-<p>Sign up for the mailing lists you wish to keep on your reading list,
-  but this time do it using the new mailing list email address.</p>
-</li>
-<li>
-<p>This is key: on your phone, your laptop, any device, log out from your
-  primary email address, and log in permanently to the new reading material
-  email address instead. (This is a big security win - you're no longer 
-  permanently logged in to a sensitive personal email address just so you
-  can read a monthly newsletter on your phone.)</p>
-</li>
-</ul>
-<p>This approach has several advantages:</p>
-<ul>
-<li>
-<p>Being permanently logged in to your primary email address on your computer
-  or phone is a big security risk, since once a malicious actor has access to
-  the device, they have access to your primary email, and through your primary
-  email, the power to reset passwords for just about every service linked
-  to that email address. (Yikes.)</p>
-</li>
-<li>
-<p>Splitting high-impact duties from mundane duties (getting the newspaper versus
-  the ability to reset the password for your bank account) is a good decision always.
-  Now you can stay permanently logged in to the mailing list email address,
-  and read about your favorite baseball team or cryo currency, without risking 
-  a massive security compromise or idientity theft because you were permanently
-  logged in to your identity-attached primary email address.</p>
-</li>
-<li>
-<p>Having a separate email address greatly reduces the anxiety around signing up
-  for new mailing lists. Since every new mailing list email goes into one 
-  giant melting pot of reading material - a cross between a digital un-library
-  and a well-organized email inbox with the opposite goal of Inbox Zero - 
-  there's no concern that signing up for a new mailing list is going to create
-  a new and unwelcome stream of distractions in your primary email account.
-  It goes into a reading room that can accumulate - if you so desire - centuries'
-  worth of unread material. With a mailing list email address, you will feel
-  none of the anxiety of having to read the material your un-library is accumulating,
-  and you will gain all of the benefit of having a vast library that you can
-  wander through in your free time.</p>
-</li>
-<li>
-<p>(Hence, infinite mailing lists.)</p>
-</li>
-</ul>
-<p>Pro tips:</p>
-<ul>
-<li>
-<p>When you sign up for a new mailing list, it's good to create a filter for that
-  mailing list as soon as it shows up in your reading inbox. The way my reading
-  inbox is set up, I'm signed up for dozens of mailing lists, but only two or three
-  emails actually arrive in the inbox each weekday (and one on the weekend).</p>
-</li>
-<li>
-<p>By picking the most important mailing lists and having them filtered to always
-  be delivered to the inbox, it helps cut through the noise of dozens of mailing
-  list subscriptions.</p>
-</li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mailing-lists.html">mailing lists</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/productivity.html">productivity</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -603,6 +703,19 @@ not the MacTeX version, and things get confusing quickly.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>September 2026</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/fermi-problems-are-quadrature-problems.html">Fermi Problems Are Quadrature Problems</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
