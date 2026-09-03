@@ -99,6 +99,228 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Building an Nmap Short Course from Scratch
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2025-05-27T12:00:00-07:00" pubdate>Tuesday 05/27/2025</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>We spent a good chunk of late May 2025 building a short course on Nmap
+from scratch - 12 lectures, 12 companion labs, plus the entire virtual
+lab infrastructure the students would use to run the labs. The whole
+thing lives on our wiki under
+<a href="https://charlesreid1.com/wiki/Nmap/Short_Course">Nmap/Short Course</a>.</p>
+<p>This post is not about the Nmap material itself (that comes in the next
+post). It is about the design decisions behind the course - why 12
+lectures, why a fully isolated cloud lab, why Vagrant + Docker +
+Ansible instead of picking one, and what we would do differently if
+we started over.</p>
+<h2 id="course-shape">Course Shape</h2>
+<p>The course is organized into three modules:</p>
+<ul>
+<li><strong>Module 1: Nmap Mastery - Beyond the Basics.</strong> The core Nmap
+  material: host discovery, port scanning, service and OS detection,
+  the scripting engine (NSE), and output formats.</li>
+<li><strong>Module 2: Red Team Nmap - Offensive Recon &amp; Vuln Identification.</strong>
+  Using Nmap for reconnaissance in an authorized engagement:
+  fingerprinting, vulnerability enumeration via NSE, and integrating
+  results into a broader recon workflow.</li>
+<li><strong>Module 3: Blue Team Nmap - Auditing, Defense &amp; Network Monitoring.</strong>
+  The other side: using Nmap for asset inventory, compliance checks,
+  detecting unauthorized services, and pairing Nmap output with IDS
+  rules.</li>
+</ul>
+<p>Twelve lectures split across those three modules. Every lecture has a
+companion lab. The labs share a single virtual environment that gets
+richer over the course - by the time students are in Module 3 they are
+scanning the same infrastructure they attacked in Module 2.</p>
+<h2 id="why-twelve-lectures">Why Twelve Lectures</h2>
+<p>We picked 12 because it maps cleanly to a compressed summer session (a
+lecture + lab per week for a 12-week course, or two per week for a
+6-week intensive). It also gave us enough room to introduce Nmap
+options in the order they build on each other, without cramming.</p>
+<p>Twelve is a round number, each lecture is a coherent unit, and the
+whole thing still fits in a summer course.</p>
+<h2 id="the-lab-environment-the-big-boy">The Lab Environment: The Big Boy</h2>
+<p>The lab infrastructure is the part we spent the most time on. Our
+requirements:</p>
+<ul>
+<li>Students should be able to scan without touching any network they
+  don't have explicit permission to scan</li>
+<li>The lab should have a variety of realistic services and
+  vulnerabilities, not just one target</li>
+<li>Adding a new lab scenario should be a few lines of code, not a
+  reinstall</li>
+<li>The instructor should be able to reset the whole environment to a
+  known-good state before every class</li>
+</ul>
+<p>The design we landed on:</p>
+<p><strong>A single large EC2 instance as the lab host.</strong> We call it "the big
+boy" in our notes. Something like an <code>m5.xlarge</code> if the budget allows.
+Ubuntu Server LTS on the host, because Vagrant/libvirt/KVM has the
+smoothest experience there. Storage is EBS <code>gp3</code>, 80-100 GB.</p>
+<p><strong>Nested virtualization on that host.</strong> The EC2 instance runs KVM
+(via libvirt), which runs full VMs for the more heavyweight targets
+(and one attacker VM per student), plus Docker for lightweight
+containerized services. Vagrant orchestrates the VMs, Docker Compose
+orchestrates the containers, and both live on the same private virtual
+network (<code>192.168.50.0/24</code> in our example).</p>
+<p><strong>Ansible for configuration management.</strong> Every target service, every
+firewall rule, every open port is defined in an Ansible playbook.
+Changing the lab is editing YAML, not clicking around in Docker or
+SSHing into VMs and running commands.</p>
+<p><strong>Students SSH into an attacker VM.</strong> They do not SSH into the EC2
+host directly, and they do not connect via VPN. Each student (or
+shared pair of students) gets a preconfigured attacker VM with Nmap
+and the other course tools installed. That VM sits inside the lab
+network and can reach all the targets.</p>
+<p>The recommendation we did not take: a VPN-based approach where students
+connect to the EC2 host and run Nmap from their own laptops. We ruled
+it out because it puts environment consistency on the student's
+shoulders - their local Nmap version, their local firewall, their
+local OS. The attacker-VM approach guarantees everyone is running the
+same tool from the same place.</p>
+<h2 id="why-this-stack">Why This Stack</h2>
+<p>The "why Vagrant + Docker + Ansible instead of picking one" question
+comes up a lot. Short version:</p>
+<ul>
+<li><strong>Vagrant</strong> is the right tool for full VMs that need to look and
+  behave like real hosts (a Windows target, an outdated Linux with a
+  vulnerable SSH). Vagrant plays well with libvirt/KVM on Linux.</li>
+<li><strong>Docker Compose</strong> is the right tool for lightweight service
+  targets: a vulnerable web app, an FTP server, a Samba share. One
+  container, one service, one IP.</li>
+<li><strong>Ansible</strong> is the right tool for configuration - install this
+  software, open this port, run this service - and it works
+  identically on Vagrant VMs and Docker containers.</li>
+</ul>
+<p>Each tool does waht it is best at. Trying to make
+Docker do full-VM work is possible but painful. Trying to make Vagrant
+manage 30 tiny services is possible but slow. Ansible glues them
+together with the same configuration language.</p>
+<h2 id="cost-model">Cost Model</h2>
+<p>The EC2 instance is the main cost driver. Some things we do to keep
+it reasonable:</p>
+<ul>
+<li><strong>Stop the instance when not in use.</strong> Evenings, weekends, and
+  between class sessions. We only pay for the EBS storage during
+  those times, not the compute.</li>
+<li><strong>Start small on the instance size.</strong> If it is not enough, we
+  upgrade.</li>
+<li><strong>Use Elastic IP or a cheap domain.</strong> Use an easy to remember
+  domain like <code>nmap-lab.our-course.net</code>.</li>
+</ul>
+<p>Spot Instances would save a lot more, but we ruled them out because
+they can be terminated with little notice, and getting evicted 15
+minutes into a lab session is not the experience we want to give
+students.</p>
+<h2 id="notes-for-the-instructor">Notes for the Instructor</h2>
+<p>A few things we would tell anyone building a course like this from
+scratch:</p>
+<p><strong>Version everything.</strong> The whole lab is a Git repo:
+Vagrantfile, <code>docker-compose.yml</code>, Ansible playbooks, and the Ansible
+inventory. Every branch is a different lab scenario. Rolling back is
+<code>git checkout</code>.</p>
+<p><strong>Test the lab reset every time.</strong> Before every session, tear the
+whole environment down (<code>docker-compose down -v &amp;&amp; vagrant destroy
+-f</code>) and bring it back up from scratch. This catches "works on my machine"
+bugs.</p>
+<p><strong>Write the lab handout after you build the lab.</strong> The lab handout is
+the source of truth for what students see and do. If you write the
+handout first and then build the lab to match it, you will end up
+writing two things that don't quite line up.</p>
+<p><strong>Instrument the attacker VM.</strong> We put a shell history file that
+survives resets, plus a script that logs every Nmap command run
+during the session, so students can review what they did. Also
+useful when a student says "I typed the command exactly and it
+didn't work."</p>
+<h2 id="what-this-cost-us">What This Cost Us</h2>
+<p>The course took roughly two solid weeks to build end-to-end - one week
+on the lab infrastructure, one week on the lecture content and lab
+exercises. </p>
+<p>expected to run more than once. If we were doing it as a one-off, we
+would have skipped the Ansible layer and hard-coded the target
+configurations, saving maybe two or three days at the cost of a much
+worse experience if we ever wanted to change anything.</p>
+<p>If you are considering doing this: yes, do it. The single biggest
+teaching lever is being able to show students a live network with
+real services responding to their scans, and this setup does that
+without ever putting them or you in legal jeopardy.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our full course notes:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course">Nmap/Short Course</a></li>
+<li>Lab infrastructure design:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course/Running_the_Labs">Nmap/Short Course/Running the Labs</a></li>
+<li>Nmap itself: <a href="https://nmap.org/">https://nmap.org/</a></li>
+</ul></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/nmap.html">nmap</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/teaching.html">teaching</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/curriculum.html">curriculum</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/aws.html">aws</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/vagrant.html">vagrant</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/docker.html">docker</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/ansible.html">ansible</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pentesting.html">pentesting</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Reading Rick Perlstein's Nixonland
             </b></h1>
         
@@ -640,245 +862,6 @@ this one.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Reading Hobbes's Leviathan
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2025-05-01T22:00:00-07:00" pubdate>Thursday 05/01/2025</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/reading-hobbess-leviathan.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>We read (parts of) Thomas Hobbes's <em>Leviathan</em> (1651) in April and early May
-2025. It is one of the founding texts of modern political philosophy,
-and reading it is about as enjoyable as drinking five cement milkshakes in a row.</p>
-<p>Hobbes's arguments have all the subtlety of a boiling pot of water thrown in
-your face. And they're written in 17th-century English prose that seems to
-simultaneously look down its nose at you, treats you like you have the intelligence
-of a toddler, and is trapped in an age when people were much more close-minded and
-ignorant. The organization is not much better - massive 4-part books, with 47 chapters,
-and headers that are long run-on sentences - so the whole thing is a frustrating
-exercise. One might even use the phrase "interminable biblical exegesis," if one were
-reaching for ten dollar words.</p>
-<p>Full notes on the wiki:
-<a href="https://charlesreid1.com/wiki/Leviathan">Leviathan</a>.</p>
-<h2 id="the-argument-in-one-paragraph">The Argument in One Paragraph</h2>
-<p>Hobbes says: if there were no government, life would be a war of
-everyone against everyone else, and would be "solitary, poor, nasty,
-brutish, and short." To escape this, rational individuals agree
-(hypothetically, via a "social contract") to give up nearly all
-their natural rights and submit to an absolute sovereign - a
-person or an assembly - whose job is to keep the peace by force.</p>
-<p>Equally important is Hobbes' proposition that any sovereign, 
-no matter how bad, is preferable to no sovereign at
-all, because anarchy is worse than tyranny.</p>
-<p>That is the whole book. Everything else is Hobbes methodically
-building the argument up from first principles, then defending it
-against every objection he can think of - including all the biblical
-objections that mattered in 1651 England.</p>
-<h2 id="why-this-book-was-written-when-it-was">Why This Book Was Written When It Was</h2>
-<p>Hobbes was writing during and immediately after the English Civil
-War (1642-1651). Charles I had been executed. The country had spent
-almost a decade in a chaotic three-way war between royalists,
-parliamentarians, and various religious factions. Hobbes's family
-had fled to France. When he wrote <em>Leviathan</em>, "war of all against
-all" was not a thought experiment - it was recent memory.</p>
-<p>This context matters because modern readers instinctively resist
-Hobbes's absolutism. Absolute sovereignty sounds like tyranny. But
-Hobbes had watched what happens when there is <em>no</em> sovereign, and
-he thought tyranny was clearly the lesser evil.</p>
-<p>The book is aimed at people who lived through the same collapse he
-did. Reading it in a functioning democracy in 2025 is a very
-different experience than reading it in 1651.</p>
-<h2 id="the-four-parts">The Four Parts</h2>
-<p><em>Leviathan</em> has four parts, roughly:</p>
-<p><strong>Part I: Of Man</strong> (16 chapters). Hobbes builds up an account of
-human nature from mechanistic first principles - all thought comes
-from sensory experience, all action is motion, all motivation is
-appetite or aversion. He argues that humans are roughly equal in
-capability, driven by "a perpetual and restless desire of power
-after power, that ceaseth only in death," and so in the absence of
-a common power, they will inevitably fight each other for
-competition, safety, and glory.</p>
-<p><em>Personal opinion: this is dreadfully boring - it has all the
-action-packed excitement of (insert the most boring Old Testament
-passage imaginable here) - and is cringe-inducing.</em></p>
-<p><strong>Part II: Of Commonwealth</strong> (15 chapters). Given the argument in
-Part I, Hobbes derives the necessity of an absolute sovereign,
-lays out the sovereign's rights (which are essentially unlimited),
-and describes the three types of commonwealth (monarchy,
-aristocracy, democracy). He argues monarchy is best because the
-monarch's private interest is most closely aligned with the public
-interest.</p>
-<p><em>Personal opinion: the only portion of this book actually worth anything.</em></p>
-<p><strong>Part III: Of a Christian Commonwealth</strong> (11 chapters). Hobbes
-argues that religious authority must be subordinate to civil
-authority in a Christian society. This part is a lot of biblical
-interpretation, most of which is only interesting if you care
-about the 17th-century debate over church-state relations.</p>
-<p><em>Personal opinion: worthless, skip.</em></p>
-<p><strong>Part IV: Of the Kingdom of Darkness</strong> (4 chapters). A polemic
-against the Catholic Church and Aristotelian philosophy, both of
-which Hobbes blames for confusing people about the proper
-relationship between religious and civil authority. </p>
-<p><em>Personal opinion: if reading a 17th-century philosopher score
-some hits on the Pope is your idea of "fun" reading, then
-(a) Part IV is definitely for you, and (b) you should check
-yourself into a mental hospital, because you are not okay.</em></p>
-<h2 id="the-passages-worth-underlining">The Passages Worth Underlining</h2>
-<p>A few of the passages that stopped us:</p>
-<p><strong>On the desire for power</strong> (Chapter 11):</p>
-<blockquote>
-<p>So that in the first place, I put for a general inclination of
-all mankind, a perpetual and restless desire of power after
-power, that ceaseth only in death.</p>
-</blockquote>
-<p>This is the anthropological premise of the whole book. Hobbes is
-not saying humans are evil - he is saying humans are driven, and a
-world of driven people without a common referee is a world at war.</p>
-<p><strong>On the state of nature</strong> (Chapter 13):</p>
-<blockquote>
-<p>In such condition there is no place for industry, because the
-fruit thereof is uncertain... no arts; no letters; no society;
-and which is worst of all, continual fear, and danger of violent
-death; and the life of man, solitary, poor, nasty, brutish, and
-short.</p>
-</blockquote>
-<p>The most famous sentence in the book. Worth reading in context -
-the argument is that everything worthwhile in human life (industry,
-arts, letters, society) requires <em>predictability</em>, and
-predictability requires an enforcer.</p>
-<p><strong>On the social contract</strong> (Chapter 17):</p>
-<blockquote>
-<p>This is the generation of that great LEVIATHAN, or rather (to
-speak more reverently) of that mortal god to which we owe, under
-the immortal God, our peace and defence.</p>
-</blockquote>
-<p>The image the whole book takes its name from. The famous frontispiece
-of the 1651 edition shows a giant crowned king whose body is made
-of hundreds of tiny individual people - the sovereign as the
-literal composite of all his subjects.</p>
-<p><strong>On liberty</strong> (Chapter 21):</p>
-<blockquote>
-<p>The liberty of a subject lieth therefore only in those things
-which, in regulating their actions, the sovereign hath
-praetermitted [omitted]: such as is the liberty to buy and sell
-and otherwise contract with one another; to choose their own
-abode, their own diet, their own trade of life, and institute
-their children as they themselves think fit; and the like.</p>
-</blockquote>
-<p>Freedom is whatever the sovereign has not made a law about. This
-is the definition of liberty that makes modern readers most
-uncomfortable, and probably the one that is most philosophically
-distant from what we mean by liberty today.</p>
-<h2 id="the-one-exception-self-preservation">The One Exception: Self-Preservation</h2>
-<p>Hobbes "gives" the sovereign nearly unlimited power. But there is one
-right the sovereign cannot take away, because it is the entire
-reason people submit to the sovereign in the first place - the
-right of self-preservation.</p>
-<p>From Chapter 21:</p>
-<blockquote>
-<p>If the sovereign command a man (though justly condemned) to
-kill, wound, or maim himself; or not to resist those that
-assault him; or to abstain from the use of food, air, medicine,
-or any other thing without which he cannot live, yet hath that
-man the liberty to disobey.</p>
-</blockquote>
-<p>This is the entire modern human-rights tradition in embryo. It is
-also a very narrow exception. You can refuse to kill yourself. You
-cannot refuse to be taxed, censored, drafted, or otherwise
-regulated.</p>
-<h2 id="why-read-this-in-2025">Why Read This In 2025</h2>
-<p>Reading Hobbes today is uncomfortable because his framing is
-almost the exact opposite of modern political intuition. </p>
-<p>We tend to worry about state overreach - the risk that the sovereign 
-will have too much power. Hobbes worried about state collapse - the
-risk that the sovereign will have too little. </p>
-<p>In a country that has been at war with itself, Hobbes's worry 
-is the more urgent one.</p>
-<p>The reason to read the book anyway is that it clarifies what
-liberal democracy is <em>for</em>. Liberal democracy is a very
-particular set of institutions that try to prevent both failure
-modes - both state overreach <em>and</em> state collapse - by dividing
-sovereignty across branches, making the sovereign accountable to
-elections, and constraining the sovereign with a bill of rights.
-When you understand Hobbes, you understand what all those
-institutional constraints are working against. They are working
-against the pull toward either total sovereignty or none.</p>
-<p>You can disagree with Hobbes's conclusions (we do, almost universally) 
-and still find his framing of the problem useful. Political
-institutions have to solve the problem Hobbes identified: how do
-we get out of the state of nature without ending up with a
-tyrant? The modern answer is elaborate and multi-layered, and it
-mostly works. But it is worth remembering that the alternative
-Hobbes was writing about - a country tearing itself apart - is
-not a thought experiment. It happens, in living memory of some
-readers of this blog, in several countries.</p>
-<h2 id="references">References</h2>
-<ul>
-<li>Our wiki notes:
-  <a href="https://charlesreid1.com/wiki/Leviathan">Leviathan</a></li>
-<li>Hobbes, Thomas. <em>Leviathan.</em> 1651. The Penguin Classics edition
-  edited by C. B. Macpherson is our standard recommendation.</li>
-<li>Companion post on political theory:
-  <a href="reading-rick-perlsteins-nixonland.html">Reading Rick Perlstein's <em>Nixonland</em></a></li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hobbes.html">hobbes</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/leviathan.html">leviathan</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/political-philosophy.html">political philosophy</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/philosophy.html">philosophy</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -914,6 +897,9 @@ readers of this blog, in several countries.</p>
 
             <h2>September 2026</h2>
 
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/fermi-problems-are-chocolate-messes-all-the-way-down.html">Fermi Problems Are Chocolate Messes All the Way Down</a>
+            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/fermi-problems-are-quadrature-problems.html">Fermi Problems Are Quadrature Problems</a>
             </p>

@@ -99,18 +99,18 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Installing LaTeX Packages on macOS: The `~/Library/texmf` Layout
+                Enigma Cipher Implementation: Part 1: How It Works
             </b></h1>
         
             <p class="lead">
                 Posted 
-                <time datetime="2022-06-19T20:00:00-07:00" pubdate>Sunday 06/19/2022</time>
+                <time datetime="2017-03-21T20:00:00-07:00" pubdate>Tuesday 03/21/2017</time>
                 in 
-                <a href="https://charlesreid1.github.io/category/latex.html">LaTeX</a>
+                <a href="https://charlesreid1.github.io/category/enigma.html">Enigma</a>
                 </p>
             <p>
             <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/installing-latex-packages-on-macos-the-librarytexmf-layout.html">permalink</a>
+                <a href="https://charlesreid1.github.io/enigma-cipher-implementation-part-1-how-it-works.html">permalink</a>
             </span>
             </p>
         </div>
@@ -127,81 +127,181 @@
 <div class="row">
     <div class="col-md-12" style="text-align: left;">
 
-        <div class="entry-content"><p>Every few years, we find ourselves installing a new LaTeX package on a Mac,
-and every few years, we find ourselves searching for the same set of directory
-paths, the same <code>texhash</code> invocation, and the same reminders that the LaTeX
-package installer is not, in fact, going to create any directories for us.</p>
-<p>So this post is here mostly as a note to our future selves.</p>
-<h2 id="where-tex-looks-first">Where TeX Looks First</h2>
-<p>We use MacTeX (<a href="http://www.tug.org/mactex/">http://www.tug.org/mactex/</a>), and MacTeX installs its files
-under <code>/usr/local/texlive/</code>. That is the system-wide <code>texmf</code> tree.</p>
-<p>Personal TeX files should not go there. They should go under
-<code>~/Library/texmf</code>, which is your user-level <code>texmf</code> tree. When TeX needs to
-find a file, it looks in <code>~/Library/texmf/</code> first, and the system-wide <code>texmf</code>
-second. So if you drop a modified version of a system file into your user
-tree, the modified version wins.</p>
-<h2 id="the-directory-layout">The Directory Layout</h2>
-<p>The folder structure inside <code>~/Library/texmf</code> should mirror the structure
-of the system <code>texmf</code> tree. Here is where different kinds of files go:</p>
-<ul>
-<li>TeX files: <code>~/Library/texmf/tex</code> (or any subfolder of it)</li>
-<li>LaTeX files: <code>~/Library/texmf/tex/latex</code></li>
-<li>LyX files: <code>~/Library/texmf/tex/latex/lyx</code></li>
-<li>BibTeX .bib files: <code>~/Library/texmf/bibtex/bib</code></li>
-<li>BibTeX .bst (bib style) files: <code>~/Library/texmf/bibtex/bst</code></li>
-</ul>
-<p><strong>If any of these directories don't exist, you have to create them.</strong> Most
-TeX or LaTeX installers will not create them for you. Just run</p>
-<div class="highlight"><pre><span></span><code>mkdir -p ~/Library/texmf/tex/latex
-</code></pre></div>
-
-<p>and you are on your way.</p>
-<h2 id="rehashing-after-you-add-files">Rehashing After You Add Files</h2>
-<p>When you drop a new file or folder into the <code>texmf</code> tree, TeX will not
-find it until you rehash the TeX database. The command is:</p>
-<div class="highlight"><pre><span></span><code>texhash ~/Library/texmf
-</code></pre></div>
-
-<p>If you don't know where your <code>texmf</code> directories are in the first place,
-running <code>texhash</code> on its own will update the database and print the paths
-it found, which is a nice way to discover the layout on any given machine.</p>
-<h2 id="example-the-cancel-package">Example: The <code>cancel</code> Package</h2>
-<p>The <a href="https://charlesreid1.com/wiki/Cancel_Package"><code>cancel</code> package</a> is a
-small package for drawing slashing arrows through terms in equations (nice
-for "goes to zero" or "goes to infinity" annotations in engineering
-equations).</p>
-<p>Installing it on a Mac is one of the easier cases:</p>
-<ul>
-<li>Download the package zip</li>
-<li>Unzip it</li>
-<li>Drop the <code>.sty</code> file into <code>~/Library/texmf/tex/latex</code></li>
-<li>Run <code>texhash ~/Library/texmf</code></li>
-</ul>
-<p>That's it - no <code>sudo</code>, no system-wide install, no touching <code>/usr/local</code>.</p>
-<h2 id="what-about-windows">What About Windows?</h2>
-<p>Use MikTeX: <a href="http://miktex.org/">http://miktex.org/</a>. MikTeX has its own package manager and
-handles most of this automatically. Consider yourself lucky.</p>
-<h2 id="when-things-go-wrong-conflicts-with-fink">When Things Go Wrong: Conflicts With Fink</h2>
-<p>One historical footgun that we hit years ago, and mention here in case
-someone else runs into it: if you have <a href="https://finkproject.org">Fink</a>
-installed, Fink may install its own copy of <code>pdftex</code>, and Fink may be putting
-<code>/sw</code> (or whatever your Fink prefix is) at the <em>front</em> of your <code>$PATH</code>.</p>
-<p>If that happens, <code>pdftex</code> from the command line resolves to the Fink version,
-not the MacTeX version, and things get confusing quickly.</p>
-<p>Two fixes:</p>
+        <div class="entry-content"><p>This is the first of several posts that will walk through an implementation of the Enigma cipher in code.</p>
+<p>Thanks to <a href="http://www.codesandciphers.org.uk/enigma/index.htm">the website of the late Tony Sale</a> for providing a wealth of 
+detailed, accurate information entirely free of graduate level mathematics, 
+and includes some very clear <a href="http://www.codesandciphers.org.uk/enigma/example1.htm">examples</a> for luddites like me who need everything spelled out really clearly.</p>
+<p>There is also a Wikipedia article offering detailed information about the mathematical cryptanalysis of the Enigma,
+and covering some of the strengths and weaknesses of the machine: <a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">Cryptanalysis of the Enigma</a>.</p>
+<h2 id="background">Background</h2>
+<p>The Enigma machine was a device used by the German military to encrypt communications during World War II.
+The machine was essentially a large electronic circuit implementing a black-box encrypt/decrypt function.
+By design, the circuitry of the machine could be used for both encryption and decryption. </p>
+<p>The Enigma played an important role in the development of the first electronic computer. 
+Alan Turing led a team at Bletchley Park, in England, that constructed machines that could crack the Enigma code.
+This led to the development of the conceptual Turing machine and the creation of the first electronic computers.
+By narrowing the space of possible keys using Enigma's weaknesses, 
+these electronic computers could be used to explore the remaining key space.</p>
+<p>There were several variations of the Enigma. Each operated on the same basic principle:
+the operator entered a letter, which was transformed into a signal. 
+That signal was passed through several components of the Enigma machine,
+and underwent a series of linear transformations until its ciphertext was output.
+The encrypted output character would light up on a second keyboard, and the operator could transcribe the message.</p>
+<h2 id="black-box-representation">Black Box Representation</h2>
+<p>The following diagram lays out the Enigma circuitry using black boxes. 
+The signal starts at the keyboard, where the operator types a letter.
+That letter is transformed into an electrical signal, which is sent through a series of components.
+First is the switchboard in the front, which swaps a few letter pairs.
+Next, the signal passes through three rotor wheels, each of which scrambles the alphabet.
+The signal is then passed into a reflector, which swaps every character with some other character.
+The reflector made the Enigma a symmetric machine. The signal was sent out of the reflector and passed through each rotor in reverse order.
+Finally, the signal passed through the switchboard at the front, and the resulting letter lit up, allowing the operator to transcribe the message.</p>
+<p><img alt="Image: Enigma Black Box Representation" src="/images/enigma_blackbox.jpg"></p>
+<h2 id="components">Components</h2>
+<p>There were three principal components of the machine: a <strong>switchboard</strong>, a set of <strong>rotor wheels</strong>, and a <strong>reflector</strong>.</p>
+<h3 id="switchboard">Switchboard</h3>
+<p>When the operator entered a key on the input keyboard, the key pressed was transformed into a signal.
+On the front of the Enigma machine was a set of plugs, one for each letter. Operators would connect
+pairs of letters using plugs, which would swap letters. If an operator connected the A and K ports, 
+and typed "A" on the keyboard, the signal representing "A" would travel to the switchboard, 
+where it would be transformed into the signal representing "K". </p>
+<p>Typically the Enigma operators would only connect 7-10 pairs of letters, with the remaining 6-12 letters untransformed by the switchboard. 
+The switchboard led to a huge number of possible encryption schemes, and was the single component that made the Enigma diffficult to crack.
+Commercial versions of the Enigma, without the plugboard, were sold to banks and other entities in Germany, but without the plugboard,
+the key space was reduced dramatically, making these codes "easy" to crack.</p>
+<p><img alt="Enigma switchboard illustration" src="/images/enigma_switchboard.jpg"></p>
+<p>The image above illustrates how a switchboard would work for a simple 8-symbol alphabet "ABCDEFGH". 
+Only 3 of 4 pairings are made in this example. </p>
+<h3 id="rotor-wheels">Rotor Wheels</h3>
+<p>The rotor wheels were a set of interchangeable wheels that would perform a substitution cipher. 
+Each wheel corresponded to a particular alphabet in scrambled order (these rotors were not performing simple shift Caesar ciphers).
+Based on the order of the wheels, the signal, representing the letter the operator typed on the keyboard, 
+that came out of the switchboard would undergo three alphabet scrambles (also called affine ciphers).</p>
+<p>Because the wheels rotated with each keypress, the actual Affine cipher used by each wheel changed at each step.</p>
+<p>To complicate the way the rotors turned, the designer of the Enigma added clasps and notches to each rotor at different letters.
+When the notch of one rotor and the clasp of the rotor to the left matched, they would turn together. 
+The right-most wheel rotated once each key press, the center wheel rotated once every 26 key presses, and the left wheel rotated once every 676 key presses.
+Although these rates remained the same due to the number of notches, the exact locations of the notches dictated the timing of the rotations.
+The ordering of the wheels and their initial settings were therefore important to how the message was encrypted or decrypted.</p>
+<p>The German military distributed code books that contained daily settings for the Enigma machines, so that all Enigma operators had the same settings.
+These code books specified which wheels to load into the Enigma (three out of five possible rotors I II III IV and V), as well as the initial rotation to apply to each.</p>
+<p><img alt="Enigma rotor wheels illustration" src="/images/enigma_rotor.jpg"></p>
+<p>The image above shows how the rotor would work for the 8-character alphabet "ABCDEFGH".
+The wheel has a set arrangement of scrambled letters, but the scramble shifts each time the rotor is advanced.
+This allows 1 wheel to provide as many different scrambles as there are symbols in the alphabet.</p>
+<h3 id="reflector">Reflector</h3>
+<p>Having passed through the three rotor wheels, each scrambling the original character signal input by the operator into the keyboard, the signal then entered the reflector. 
+It did precisely what the name suggests - it reflected a signal back through the machine. 
+Its design was very similar to the switchboard in the front of the machine, except it created 13 pairs of letters, so that every letter was paired with some other letter.
+The reflector, like the rotor wheels, was removable and could be selected from a set. </p>
+<p>The reflector is a curious part of the Enigma design, because it represents an attempt at convenience, which led to a gaping security flaw that Bletchley Park was able to exploit. 
+The nature of the reflector is that it is symmetric: it pairs each letter with some other letter, and the pairings are mutual. 
+If the reflector turns every "P" into "H", it also turns every "H" into "P". 
+This symmetry gives the Enigma the property that you no longer need an "encrypt" or "decrypt" mode: if you take a plaintext message and run it through the Enigma machine once, you'll get the cipher text back. 
+If you run it through the Enigma machine twice, you'll get the same plaintext back. 
+This obviated the need for a switch on the Enigma, to go between "encrypt" and "decrypt" modes.</p>
+<p>However, this property also means that no letter can ever be encoded as itself - a property called derangement. 
+While the switch board at the front and the rotor wheel scrambles would sometimes encode a letter as itself 
+(for example, Rotor I encodes "S" as "S", Rotor II encodes "A" as "A" and "Q" as "Q", and Rotor III encodes "N" as "N"),
+the reflector would never do so. 
+Thus, despite an astronomical number of possible settings, and complicated machinery and circuitry, 
+no matter what the Enigma's settings, no letter would ever be encoded as itself.
+This property can be exploited to rule out the location of certain words or phrases at certain locations in the message,
+which is precisely how Bletchley Park attacked the Enigma cipher.</p>
+<p><img alt="Enigma reflector illustration" src="/images/enigma_reflector.jpg"></p>
+<p>The image above illustrates a reflector for the 8-symbol alphabet "ABCDEFGH".
+Each of the 4 possible pairings are made, so no letter will be encoded to itself by the reflector.</p>
+<p>Had the middle rotor wheels remained stationary, multiple wheels would have been redundant - 
+any arbitrary sequence of alphabet scrambles can be collapsed into a single scramble.
+However, the wheels were designed to rotate at various rates. Each time the wheels rotated,
+it changed the scramble provided by the wheel that had rotated. </p>
+<p>This means the Enigma worked by using a totally different scramble for each character in a message,
+with the scrambles constantly changing, each character, over and over. 
+Because the number of possible scrambles with a 26 character alphabet is <span class="math">\(26! = 403,291,461,126,605,635,584,000,000\)</span>,
+which is a trillion trillions.</p>
+<h2 id="the-enigma-and-random-number-generators">The Enigma and Random Number Generators</h2>
+<p>By using a mechanical device with the same construction and the same common initial settings, 
+operators were able to generate random keys from an astronomical range of permutations, 
+but in a mechanically reproducible way. </p>
+<p>This makes Enigmas much like a random number generator, with the initial settings being the seed.
+If there are 32 or 64 bits used to store a number, that's 32 or 64 bits of randomness. 
+Large numbers of combinations indeed.</p>
+<h2 id="sources">Sources</h2>
 <ol>
 <li>
-<p>Stop sourcing <code>/sw/bin/init.sh</code> (or <code>pathsetup.sh</code>) from your dotfiles,
-   and add <code>/sw</code> to your <code>$PATH</code> manually so MacTeX wins.</p>
+<p>"The Enigma Cipher". Tony Sale and Andrew Hodges. Publication date unknown. Accessed 18 March 2017.
+&lt;<a href="https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm">https://web.archive.org/web/20170320081639/http://www.codesandciphers.org.uk/enigma/index.htm</a>&gt;</p>
 </li>
 <li>
-<p>Call <code>pdftex</code> with the full path when you mean the MacTeX version:
-   <code>/usr/texbin/pdftex ...</code></p>
+<p>Copeland, B.J. "Alan Turing". Encyclopedia Britannica, Inc. Published 23 February 2016. Accessed 18 March 2017.</p>
+</li>
+<li>
+<p>"Cryptanalysis of the Enigma". Wikipedia: The Free Encyclopedia. Wikimedia Foundation, Inc. Edited 11 January 2017. Accessed 18 March 2017.
+&lt;<a href="https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma">https://en.wikipedia.org/wiki/Cryptanalysis_of_the_Enigma</a>&gt;</p>
 </li>
 </ol>
-<p>Both are annoying. Option 1 is less annoying long-term.</p>
-<h2 id="related">Related</h2>
-<p>More notes on our LaTeX page: <a href="https://charlesreid1.com/wiki/LaTeX">https://charlesreid1.com/wiki/LaTeX</a></p></div>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
 
     </div>
 </div>
@@ -213,374 +313,11 @@ not the MacTeX version, and things get confusing quickly.</p>
 
         <div class="tags">
             <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/latex.html">latex</a>
+                    <a href="https://charlesreid1.github.io/tag/ciphers.html">ciphers</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mac.html">mac</a>
+                    <a href="https://charlesreid1.github.io/tag/enigma.html">enigma</a>
                     &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/tex.html">tex</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/texmf.html">texmf</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/packages.html">packages</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                How to Subscribe to Infinite Mailing Lists
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2022-06-08T16:42:00-07:00" pubdate>Wednesday 06/08/2022</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/how-to-subscribe-to-infinite-mailing-lists.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>This is a quick hack, but a useful one.</p>
-<p>Here's the hack:</p>
-<ul>
-<li>
-<p>Create a new and separate Gmail address, whose purpose is to be a 
-  "reading material" email address. The purpose of this email address
-  is to sign up for mailing lists and reading material - that's it.</p>
-</li>
-<li>
-<p>Once you have done that, log in to your primary email address. Find
-  every mailing list you're subscribed to, and unsubscribe. This will
-  give you a massive feeling of relief.</p>
-</li>
-<li>
-<p>Sign up for the mailing lists you wish to keep on your reading list,
-  but this time do it using the new mailing list email address.</p>
-</li>
-<li>
-<p>This is key: on your phone, your laptop, any device, log out from your
-  primary email address, and log in permanently to the new reading material
-  email address instead. (This is a big security win - you're no longer 
-  permanently logged in to a sensitive personal email address just so you
-  can read a monthly newsletter on your phone.)</p>
-</li>
-</ul>
-<p>This approach has several advantages:</p>
-<ul>
-<li>
-<p>Being permanently logged in to your primary email address on your computer
-  or phone is a big security risk, since once a malicious actor has access to
-  the device, they have access to your primary email, and through your primary
-  email, the power to reset passwords for just about every service linked
-  to that email address. (Yikes.)</p>
-</li>
-<li>
-<p>Splitting high-impact duties from mundane duties (getting the newspaper versus
-  the ability to reset the password for your bank account) is a good decision always.
-  Now you can stay permanently logged in to the mailing list email address,
-  and read about your favorite baseball team or cryo currency, without risking 
-  a massive security compromise or idientity theft because you were permanently
-  logged in to your identity-attached primary email address.</p>
-</li>
-<li>
-<p>Having a separate email address greatly reduces the anxiety around signing up
-  for new mailing lists. Since every new mailing list email goes into one 
-  giant melting pot of reading material - a cross between a digital un-library
-  and a well-organized email inbox with the opposite goal of Inbox Zero - 
-  there's no concern that signing up for a new mailing list is going to create
-  a new and unwelcome stream of distractions in your primary email account.
-  It goes into a reading room that can accumulate - if you so desire - centuries'
-  worth of unread material. With a mailing list email address, you will feel
-  none of the anxiety of having to read the material your un-library is accumulating,
-  and you will gain all of the benefit of having a vast library that you can
-  wander through in your free time.</p>
-</li>
-<li>
-<p>(Hence, infinite mailing lists.)</p>
-</li>
-</ul>
-<p>Pro tips:</p>
-<ul>
-<li>
-<p>When you sign up for a new mailing list, it's good to create a filter for that
-  mailing list as soon as it shows up in your reading inbox. The way my reading
-  inbox is set up, I'm signed up for dozens of mailing lists, but only two or three
-  emails actually arrive in the inbox each weekday (and one on the weekend).</p>
-</li>
-<li>
-<p>By picking the most important mailing lists and having them filtered to always
-  be delivered to the inbox, it helps cut through the noise of dozens of mailing
-  list subscriptions.</p>
-</li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mailing-lists.html">mailing lists</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/productivity.html">productivity</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                How to Read Ulysses
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2022-03-02T21:00:00-08:00" pubdate>Wednesday 03/02/2022</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/ulysses.html">Ulysses</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/how-to-read-ulysses.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#a-little-bit-about-ulysses">A Little Bit About Ulysses</a></li>
-<li><a href="#how-we-read-ulysses">How We Read Ulysses</a></li>
-<li><a href="#two-parallel-routes-through-ulysses">Two Parallel Routes Through Ulysses</a><ul>
-<li><a href="#the-blue-route">The Blue Route</a></li>
-<li><a href="#the-red-route">The Red Route</a></li>
-</ul>
-</li>
-<li><a href="#more-resources">More Resources</a></li>
-<li><a href="#happy-100th-birthday-ulysses">Happy 100th Birthday, Ulysses!</a></li>
-</ul>
-</div>
-<p><img alt="A visual map of our route through Ulysses." src="images/ulysses-transparent.png"></p>
-<p>A visual map of our route through <em>Ulysses</em>. Read on for an explanation...</p>
-<h2 id="a-little-bit-about-ulysses">A Little Bit About Ulysses</h2>
-<p>Let's talk about <a href="https://en.wikipedia.org/wiki/Ulysses_(novel)"><em>Ulysses</em></a> for a minute.</p>
-<p><em>Ulysses</em> is regarded as one of the greatest books ever written. But, of course, it's also
-barely comprehensible when you first read it.</p>
-<p>Getting to know why <em>Ulysses</em> is so famous requires a lot of context, in the same way that understanding
-what makes a film such a classic requires not just an appreciation of the aesthetics and the experience
-of the film, but also the historical, social, and cultural context, the story surrounding the story.</p>
-<p>The best way we can describe <em>Ulysses</em> is saying that it is a meta-novel. It is a novel that is nominally about
-June 16, 1904, and how the two main characters spend that day - but throughout the story, there are so many more layers
-that are added on - linguistics, art, language, history all make their appearances (as does just about every
-major bodily function).</p>
-<p>The novel is meta in the way that it weaves together layer upon layer of storytelling and narrative tehnique,
-aping so many different styles (newspaper headings, Old English legends, Irish mythology, vignettes that
-have the feel of a short indie film, even FAQs).</p>
-<h2 id="how-we-read-ulysses">How We Read Ulysses</h2>
-<p>Our first time reading through Ulysses was in 2011, (ironically) as a way of taking a mental break from
-the stress of school. We had a special affinity for Joyce based on reading his short story collection
-<em>Dubliners</em>, so making it through <em>Ulysses</em> was a goal we had had for a while.</p>
-<p>Almost immediately, it was clear that this was not a book that could simple be "read", start to finish,
-the way a normal book is read. No, <em>Ulysses</em> had more in common with a physics textbook than it did with
-your typical novel. It is a thing to be experienced and studied, and taken slowly.</p>
-<p>We spent the first three chapters of <em>Ulysses</em> extremely confused and without any hope of finishing the novel.
-But then, we discovered two game-changing strategies:</p>
-<p><strong>First</strong>, we consulted books about <em>Ulysses</em>. Visit any academic library and you'll likely find an entire shelf of
-books on <em>Ulysses</em>, but there are a few that are considered classics. One of the works that is considered a
-definitive interpretation of <em>Ulysses</em> was written by Stuart Gilbert, who published his commentary on <em>Ulysses</em> in 1930.
-Gilbert knew Joyce personally, lending an air of officiality to the interpretation. The commentary includes a chapter-by-chapter 
-discussion of themes, images, symbols, callbacks to Homer's <em>Odyssey</em>, and key quotes to help make certain
-passages of <em>Ulysses</em> stand out in the mind much more clearly. This book gave us the road map to each chapter
-of <em>Ulysses</em>, and crucially, helped us realize that the chapters don't need to be read in linear order - there
-are many converging and diverging timelines in <em>Ulysses</em> and there are many routes through the book.</p>
-<p><strong>Second</strong>, we discovered a wonderful audiobook version of <em>Ulysses</em> from Naxos audiobooks. (We started with Librivox
-recordings, which were very hit-and-miss. Professionally-produced audiobooks are a cut above, and well worth 
-seeking out.)</p>
-<p>When we discovered audiobooks, we sometimes listened to the audio book version of the <em>Ulysses</em> chapter by itself,
-and sometimes we read along with the audio recording. Either way, it's a very different way to experience a book,
-to hear it read aloud, and doubly so with <em>Ulysses</em>, which has many sections that seem to take on a completely
-different tone and life when they are read aloud versus read off of the page.</p>
-<h2 id="two-parallel-routes-through-ulysses">Two Parallel Routes Through Ulysses</h2>
-<p>As we got to know <em>Ulysses</em> better, we gravitated toward Leopold Bloom's character. In particular,
-we charted two different routes through the book - the first (mostly) following Leopold Bloom, and
-the second following Stephen Dedalus. Here's a visual guide to our map to reading <em>Ulysses</em>:</p>
-<p><img alt="A visual map of our route through Ulysses." src="images/ulysses-transparent.png"></p>
-<p>We start with the blue route, which means the first few chapters of <em>Ulysses</em> that we read are
-Chapters 4, 5, and 6. This is out of order, but the important thing is <em>enjoying</em> the experience
-of reading <em>Ulysses</em> - and Chapters 4, 5, and 6 are far more enjoyable and comprehensible than
-Chapters 1, 2, and 3.</p>
-<h3 id="the-blue-route">The Blue Route</h3>
-<p>The Blue Route through <em>Ulysses</em> (the first route that we take when we read it)
-consists of the following chapters:</p>
-<ul>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Calypso">Chapter 4 - Calypso</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Lotus_Eaters">Chapter 5 - Lotus Eaters</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Hades">Chapter 6 - Hades</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Lestrygonians">Chapter 8 - Lestrygonians</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Wandering_Rocks">Chapter 10 - Wandering Rocks</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Sirens">Chapter 11 - Sirens</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Cyclops">Chapter 12 - Cyclops</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Oxen_of_the_Sun">Chapter 14 - Oxen of the Sun</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Eumaeus">Chapter 16 - Eumaeus</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Ithaca">Chapter 17 - Ithaca</a></li>
-</ul>
-<p>This route follows Bloom from the start of his day (Chapter 4), follows him as he wanders
-about town in the morning (Chapter 5), attends a funeral (Chapter 6), eats lunch (Chapter 8),
-visits a pub in the afternoon (Chapter 12), and visits a hospital in the evening (Chapter 14).</p>
-<p>The two main characters, Stephen Dedalus and Leopold Bloom, finally meet in Chapter 14, so
-Chapters 16 and 17 cover the drunken evening and long path back home that the two take.</p>
-<p>Chapter 17 is an absolute delight and takes the cake as our favorite chapter. It takes the form
-of an FAQ, and reads almost like a technical specification for some omnipotent entity that will
-one day need to reproduce, from scratch, every detail of the scenes depicted in Chapter 17.</p>
-<p>Taken on its own, the Blue Path may leave out "notable" or "significant" chapters of <em>Ulysses</em>,
-but the selection is lighter and more enjoyable than reading the novel start to finish.</p>
-<p>One curious aspect of the Blue Path (perhaps true of the novel in general, though) is the way the
-chapters seem to balloon in size, and sometimes in complexity. For example, Chapters 4, 5, 6, and 8
-are similar in style, yet Chapter 4 is far shorter than Chapter 8; by the time the novel reaches Chapter 8
-the narrative begins to wander a great deal, the stream of consciousness grows thicker and more
-complicated with each page, the narrative captures ever more goings-on, and time seems to stretch and
-dilate as the novel progresses.</p>
-<p>(The novel's longest chapter, Chapter 15, comes near the end of the Red Path.)</p>
-<p>Regarding the way the Blue and Red Paths read the novel out of order - one of the things that makes
-it so easy to read <em>Ulysses</em> out of order is the nebulous nature of cross-references in the book.
-You could read the entire novel backwards and probably find the same structure of references as if
-you were reading it forward. Chapter 8 references Chaper 14, Chpater 12 references Chapter 8, then 14,
-then 11, 5 references 3, 14 references everyone, and so on. Certain themes, words, motifs, and images
-recur through the book, like cycles.</p>
-<p><em>Ulysses</em> must be pieced together, and read many times. Whatever order you read it in, reading the text
-is like scouring for clues in a crime scene, except it's a perfectly-preserved crime scene that yields
-infinite clues. The deeper you dig, the more clues you find, the more intricate the weaved web becomes.</p>
-<p>The Blue Path makes <em>Ulysses</em> lighter, easier, and more digestible. If you only finish the Blue Route,
-it's an accomplishment all in itself!</p>
-<h3 id="the-red-route">The Red Route</h3>
-<p>The Red Route through <em>Ulysses</em> (the second route that we take through the book)
-consists of the following chapters:</p>
-<ul>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Telemachus">Chapter 1 - Telemachus</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Nestor">Chapter 2 - Nestor</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Proteus">Chapter 3 - Proteus</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Aeolus">Chapter 7 - Aeolus</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Scylla_and_Cherybdis">Chapter 9 - Scylla and Charybdis</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Nausicaa">Chapter 13 - Nausicaa</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Circe">Chapter 15 - Circe</a></li>
-<li><a href="https://charlesreid1.com/wiki/Ulysses/Penelope">Chapter 18 - Penelope</a></li>
-</ul>
-<p>The Red Route through the novel mainly follows Stephen Dedalus (with the exception of Chapter 7 (Aeolus), but it 
-links up with Chapter 9 (Scylla and Charybdis)). Be warned, the Red Route chapters start off easy with Chapters 1 and 2,
-but Chapter 3 (Proteus) feels like intellectual quicksand, and is a significant hurdle to getting through the novel
-(hence its inclusion in the Red Path).</p>
-<p>Chapter 3 is difficult because it's a rambling stream of consciousness from Stephen Dedalus, who is
-a lot more intellectual (professorial) and abstract than Leopold Bloom. It makes Chapter 3 one of the more 
-difficult chapters in <em>Ulysses</em>. But after taking the entire Blue Path through the novel, Chapter 3 is easier
-to handle - the stream of consciousness format is familiar, but more abstract than the streams of consciousness
-we saw from Leopold Bloom. Being familiar with the stream of consciousness format makes it easier to wade through
-the generous heaping of historical, literary, and linguistic references in Chapter 3.</p>
-<p>(Side note: Chapter 3 is when we first discovered the wonder of asking the library for help understanding
-what the hell is going on in <em>Ulysses</em>. It turns out, a lot of people have a lot to say, and the last thing
-anyone should do is get frustrated trying to make it through Chapter 3 by themselves!)</p>
-<p>Chapter 7 (Aeolus) is left out of the Blue Path because its format of newspaper-like headlines and paragraphs
-is a significant break from the stream of consciousness format of Chapters 4, 5, 6, and 8.</p>
-<p>Chapter 9 is like the scene in the movie when we think the two storylines are finally going to converge,
-except it turns out to be a near-miss, and the storylines remain separate. Bloom visits the library to 
-retrieve a picture of two keys for an advertisement he's placing in the newspaper (for a client) in Chapter 7,
-while Stephen is holding forth on Shakespeare in a discussion at the same library.</p>
-<p>Chapter 13 is the infamous chapter that got <em>Ulysses</em> banned for its stream of consciousness description 
-of Bloom getting his jollies off while watching fireworks at the beach. Another deviation of the Red Path
-back to Bloom, but we think Chapter 13 is better appreciated after going through the Blue Path - especially
-after Chapter 14.</p>
-<p>Chapter 15 is, hands down, the single most difficult chapter of <em>Ulysses</em>, but also the richest.
-Chapter 15 is best experienced by not reading it start-to-finish, not reading it off the page, but by
-hearing it, by visualizing it. The less you read Chapter 15 like a novel, the more you get out of it.</p>
-<p>Chapter 18 is the perfect way to end the book. Reading Chapter 18 at the end of the Red Path is like
-finishing a long, excruciating, multi-day excursion through the woods by sitting beside a babbling brook,
-peeling off your socks, and sticking your feet in the stream to soak for an hour or two.</p>
-<p>And that's it - that's my recommended path through <em>Ulysses</em> in a nutshell.</p>
-<h2 id="more-resources">More Resources</h2>
-<p>Notes on <em>Ulysses</em> on our charlesreid1.com wiki: <a href="https://charlesreid1.com/wiki/Ulysses">https://charlesreid1.com/wiki/Ulysses</a></p>
-<p>Notes from our (very first) 2011 reading of <em>Ulysses</em>: <a href="https://charlesreid1.com/wiki/Ulysses/2011">https://charlesreid1.com/wiki/Ulysses/2011</a></p>
-<p>Notes from our 2016 reading of <em>Ulysses</em> (the first year we charted the Blue Path and the Red Path): <a href="https://charlesreid1.com/wiki/Ulysses/2016">https://charlesreid1.com/wiki/Ulysses/2016</a></p>
-<p>Notes from our (current) 2022 reading of <em>Ulysses</em>: <a href="https://charlesreid1.com/wiki/Ulysses/2022">https://charlesreid1.com/wiki/Ulysses/2022</a></p>
-<h2 id="happy-100th-birthday-ulysses">Happy 100th Birthday, Ulysses!</h2>
-<p>A very happy (belated) 100th birthday to one of the greatest novels of all time,
-if only measuring by the enjoyment that we have extracted from this 
-novel-puzzle-enigma-slash-undefinable-book-thing.</p>
-<p><em>Ulysses</em> was first published on February 2, 1922, a little over 100 years ago today.</p>
-<p>We think the Wikipedia article for <em>Ulysses</em> sums it up best:</p>
-<blockquote>
-<p>The publication history of Ulysses is complex.</p>
-<ul>
-<li>https://en.wikipedia.org/wiki/Ulysses_(novel)#Publication_history</li>
-</ul>
-</blockquote></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ulysses.html">Ulysses</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/joyce.html">Joyce</a>
+                    <a href="https://charlesreid1.github.io/tag/encryption.html">encryption</a>
                     &nbsp;&nbsp;
         </div>
 
@@ -596,15 +333,9 @@ novel-puzzle-enigma-slash-undefinable-book-thing.</p>
 
         <div class="pagination">
 
-            <a class="next" href="https://charlesreid1.github.io/index8.html">&larr; Newer</a>
+            <a class="next" href="https://charlesreid1.github.io/index38.html">&larr; Newer</a>
 
-            &nbsp;
-            &nbsp;
-            &nbsp;
-            &nbsp;
-            &nbsp;
 
-            <a class="prev" href="https://charlesreid1.github.io/index10.html">Older &rarr;</a>
         
           <br />
         </div>
