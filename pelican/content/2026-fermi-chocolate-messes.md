@@ -88,7 +88,7 @@ of unit conversions goes something like:
    finished chocolate (Toblerone, Lindt, Cadbury via Canada, etc.), which
    adds back roughly the same order of magnitude as the non-bar leakage.
    Call these a wash to first order.
-5. **Pounds → bars.** At 1.55 oz/bar → 10.3 bars/lb → 3.75 × 10e9 lb × 10.3 → **~39 billion bars/year**.
+5. **Pounds → bars.** At 1.55 oz/bar → 10.3 bars/lb → 3.75 × 1e9 lb × 10.3 → **~39 billion bars/year**.
 
 That five-step decomposition had at least a factor-of-two uncertainty at each step.
 Bean yield could be 75% or 85%. Average cocoa content could be 15% or 25%.
