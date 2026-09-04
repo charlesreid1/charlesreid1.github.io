@@ -90,12 +90,14 @@ of unit conversions goes something like:
    Call these a wash to first order.
 5. **Pounds → bars.** At 1.55 oz/bar → 10.3 bars/lb → 3.75 × 1e9 lb × 10.3 → **~39 billion bars/year**.
 
-That five-step decomposition had at least a factor-of-two uncertainty at each step.
-Bean yield could be 75% or 85%. Average cocoa content could be 15% or 25%.
-Non-bar share could be 10% or 30%. Every arrow in that chain is a Fermi
-sub-problem, and every one of its inputs is a number *someone else*
-estimated by decomposing *their* problem into pieces they could each guess
-within a factor of two.
+Every step in that five-step decomposition carries real uncertainty.
+Bean yield could be 75% or 85% (±6%). Average cocoa content could be
+15% or 25% (±25%). Non-bar share could be 10% or 30% (±33%). Net trade
+is a wash only to first order. Individually these are tens-of-percent
+knobs, not factor-of-two ones - but they compose multiplicatively, and
+five stacked ±25%-ish knobs is already enough to smear the answer by
+roughly ±2×. And every arrow in the chain is a Fermi sub-problem whose
+inputs are numbers *someone else* estimated the same way.
 
 If we swing the knobs pessimistically, we land at ~25B bars. Optimistically,
 ~55B. **The "lower bound from real primary data" is a range of ~25–55B**,
@@ -205,9 +207,12 @@ happened to land. Union those ranges and we get roughly [19B, 57B], which
 comfortably contains our two original estimates (40B and 44B). But we
 should be honest about what that means: it doesn't mean the original
 estimates were validated. It means every path we can take to an answer
-inherits the same factor-of-two-per-knob budget, and those knobs *compose
-multiplicatively*, so a five-step chain of factor-of-two knobs has a
-factor-of-32 total spread even if every individual knob is honest.
+inherits the same tens-of-percent-per-knob budget, and those knobs
+*compose multiplicatively*, so a five-step chain of ±25%-ish knobs
+smears the answer by roughly ±2× even if every individual knob is
+honest - and if any single knob is genuinely factor-of-two (like the
+\$/bar knob in the upper-bound problem), it dominates the whole budget
+by itself.
 
 The interesting thing isn't that our Fermi estimate landed in the middle
 of the corridor. The interesting thing is that **the corridor is the same
