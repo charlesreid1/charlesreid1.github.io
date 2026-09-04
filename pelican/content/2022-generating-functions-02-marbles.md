@@ -332,7 +332,7 @@ coefficient. That is fine. In those cases you switch questions: instead
 of "what is $a_n$ exactly?" you ask "how does $a_n$ grow with $n$?" The
 answer usually falls out of the location and type of the singularities
 of $A(z)$ nearest the origin — this is *singularity analysis*, and
-Flajolet and Sedgewick's *Analytic Combinatorics* is the reference. It
+Flajolet and Sedgewick's [*Analytic Combinatorics*](https://charlesreid1.com/wiki/Analytic_Combinatorics) is the reference. It
 is out of scope for this series, but worth knowing exists: even when
 you cannot read off an answer, you can often read off the growth rate.
 
@@ -392,3 +392,6 @@ from ordinary generating functions to exponential generating functions.
 * Our wiki notes:
   [Generating Functions](https://charlesreid1.com/wiki/Generating_Functions)
 * Trotter, *Applied Combinatorics*, Chapter 8
+* Flajolet and Sedgewick,
+  [*Analytic Combinatorics*](https://charlesreid1.com/wiki/Analytic_Combinatorics)
+  — for singularity analysis and asymptotics
