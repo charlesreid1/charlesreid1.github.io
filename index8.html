@@ -201,6 +201,200 @@ coefficient of <span class="math">\(z^n\)</span> in <span class="math">\(G(z)\)<
 $$</div>
 <p>So there are exactly 210 different cans of 20 marbles that satisfy all
 the rules.</p>
+<h2 id="the-general-problem-how-do-you-read-coefficients-off-anything">The General Problem: How Do You Read Coefficients Off <em>Anything</em>?</h2>
+<p>The step above worked because we recognized <span class="math">\(\tfrac{1}{(1-z)^3}\)</span> on
+sight. That is not the general case. In real problems you multiply four
+or five generating functions together, simplify, and end up staring at
+some expression like</p>
+<div class="math">$$
+\dfrac{1 + z^2}{(1 - z)^2 (1 - 2z)}
+$$</div>
+<p>and the question is: <strong>now what?</strong> How do you turn that back into a
+sequence, a closed form for <span class="math">\(a_n\)</span>, or at least something you can look
+up? This is the reverse direction of the whole generating-function
+program, and it deserves an explicit toolkit rather than a "you'll
+recognize it" hand-wave.</p>
+<p>Here is the toolkit we actually reach for, in order of first resort.
+The first three steps are practical tools that will hand you an answer
+in seconds. The rest are the by-hand techniques that let you <em>understand</em>
+or <em>manipulate</em> what the tools give back.</p>
+<h3 id="1-just-ask-wolfram-alpha">1. Just ask Wolfram Alpha</h3>
+<p>This is the first tool to reach for. Full stop. Ahead of the algebra,
+ahead of the cheat sheet, ahead of everything. Type your generating
+function into <a href="https://www.wolframalpha.com">Wolfram Alpha</a> with a
+natural-language series request and it will hand you back the expansion:</p>
+<div class="highlight"><pre><span></span><code>series (1-z^4)/((2-4z^2)*(1-z)) to 50 terms
+</code></pre></div>
+
+<p>or</p>
+<div class="highlight"><pre><span></span><code>series expansion of z/(1-z)^3 at z=0 to order 22
+</code></pre></div>
+
+<p>You get the first N coefficients, immediately, with no setup, no
+notebook, no environment. Wolfram Alpha will also do partial fractions
+(<code>partial fractions of ...</code>), Taylor expansions, and single-coefficient
+extraction (<code>coefficient of z^20 in ...</code>) as one-line queries. If you
+want a closed form, <code>sequence 1, 3, 6, 10, 15, 21</code> will often produce
+one, plus the generating function and recurrence.</p>
+<p>The reason this matters more than it might sound: an enormous class of
+counting problems has generating functions that factor into a product
+of <span class="math">\(\tfrac{1}{1 - z^{c_i}}\)</span> terms — one factor per denomination, coin
+type, box size, whatever the allowed "units" are in the problem.
+Polya's classic <em>change for a dollar</em> problem is exactly this shape:</p>
+<div class="math">$$
+G(z) = \dfrac{1}{(1 - z)(1 - z^5)(1 - z^{10})(1 - z^{25})(1 - z^{50})(1 - z^{100})}
+$$</div>
+<p>The number of ways to make change for <span class="math">\(n\)</span> cents is <span class="math">\([z^n] G(z)\)</span>. Doing
+partial fractions on that by hand is a slog and the closed form is
+ugly. Asking Wolfram Alpha
+<code>series expansion of 1/((1-z)(1-z^5)(1-z^10)(1-z^25)(1-z^50)(1-z^100)) to 101 terms</code>
+gives you the whole table in one shot, including the famous answer of
+293 for <span class="math">\(n = 100\)</span>.</p>
+<p>For anything in this family — restricted partitions, compositions with
+allowed part sizes, Frobenius / coin problems, our marble problem —
+this is a one-shot solution. Do not talk yourself out of using it. The
+by-hand techniques below are for when you want a closed form or an
+identity you can prove; if all you want is the <em>number</em>, Wolfram Alpha
+is done before you have finished writing the query.</p>
+<h3 id="2-compute-a-few-terms-and-look-them-up-in-oeis">2. Compute a few terms and look them up in OEIS</h3>
+<p>Once you have coefficients from step 1 (or by hand), if the sequence
+does not have an obvious closed form, type the integers into
+the <a href="https://oeis.org">Online Encyclopedia of Integer Sequences</a>.</p>
+<p>OEIS will tell you the sequence's name, closed-form expression if one
+exists, recurrence, generating function, and every combinatorial
+interpretation anyone has ever noticed. If your sequence starts
+<span class="math">\(1, 1, 2, 5, 14, 42, \dots\)</span>, OEIS hands you back "Catalan numbers" and
+a page of context. If it starts <span class="math">\(1, 3, 11, 50, 274, \dots\)</span> you learn it
+is A000670, the Fubini numbers, counting ordered set partitions — a
+connection you would probably not have made from the generating
+function alone.</p>
+<p>The Wolfram Alpha → OEIS pipeline is the single most powerful move in
+this whole toolkit. Half the sequences that come up in combinatorics
+have names, and knowing the name gives you access to identities and
+asymptotics that would take you weeks to rederive.</p>
+<h3 id="3-drop-into-a-computer-algebra-system">3. Drop into a computer algebra system</h3>
+<p>When you want to keep the result in a script, do further manipulation,
+or extract many coefficients programmatically, use <code>sympy</code> or
+Mathematica. In <code>sympy</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">sympy</span> <span class="kn">import</span> <span class="n">symbols</span><span class="p">,</span> <span class="n">series</span><span class="p">,</span> <span class="n">apart</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">symbols</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">)</span>
+<span class="n">G</span> <span class="o">=</span> <span class="n">z</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">z</span><span class="p">)</span><span class="o">**</span><span class="mi">3</span>
+<span class="n">series</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">22</span><span class="p">)</span>          <span class="c1"># expand as a power series</span>
+<span class="n">apart</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span>                  <span class="c1"># partial fraction decomposition</span>
+<span class="n">G</span><span class="o">.</span><span class="n">series</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">22</span><span class="p">)</span><span class="o">.</span><span class="n">coeff</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>   <span class="c1"># coefficient of z^20</span>
+</code></pre></div>
+
+<p>Wolfram Alpha handles one-off queries in the browser; <code>sympy</code> is what
+you reach for when the generating function is being constructed
+programmatically or the coefficients feed into further computation.</p>
+<hr>
+<p>The three tools above will get you a <em>number</em> — often the number you
+wanted. The next four techniques are for the case where you want more
+than a number: a closed form, a proof, or an understanding of <em>why</em> the
+sequence looks the way it does.</p>
+<h3 id="4-match-against-a-table-of-standard-series">4. Match against a table of standard series</h3>
+<p>The single most productive by-hand move is to keep a cheat sheet of
+standard generating functions and their coefficients. If you can
+massage your expression into a sum of these, you have a closed form.</p>
+<p>The core list:</p>
+<div class="math">$$
+\dfrac{1}{1 - z} = \sum_{n \geq 0} z^n
+\qquad
+\dfrac{1}{(1 - z)^2} = \sum_{n \geq 0} (n+1)\, z^n
+$$</div>
+<div class="math">$$
+\dfrac{1}{(1 - z)^k} = \sum_{n \geq 0} \binom{n + k - 1}{k - 1} z^n
+\qquad
+\dfrac{1}{1 - az} = \sum_{n \geq 0} a^n z^n
+$$</div>
+<div class="math">$$
+(1 + z)^k = \sum_{n \geq 0} \binom{k}{n} z^n
+\qquad
+e^z = \sum_{n \geq 0} \dfrac{z^n}{n!}
+$$</div>
+<p>The third one, the <strong>negative binomial series</strong>, is the workhorse.
+Almost every rational generating function with only <span class="math">\((1-z)^k\)</span>-style
+denominators reduces to a sum of these, and their coefficients are
+binomial coefficients in <span class="math">\(n\)</span>.</p>
+<h3 id="5-partial-fractions-to-break-the-expression-apart">5. Partial fractions to break the expression apart</h3>
+<p>If your expression is a rational function <span class="math">\(\tfrac{P(z)}{Q(z)}\)</span> where
+<span class="math">\(Q(z)\)</span> factors into simple pieces like <span class="math">\((1 - a_i z)^{k_i}\)</span>, expand it by
+partial fractions:</p>
+<div class="math">$$
+\dfrac{P(z)}{(1 - a_1 z)(1 - a_2 z)^2 \cdots}
+= \dfrac{A}{1 - a_1 z}
++ \dfrac{B}{1 - a_2 z}
++ \dfrac{C}{(1 - a_2 z)^2}
++ \cdots
+$$</div>
+<p>Each piece is a standard series from step 4. Reading coefficients off
+the sum is then just adding standard-series coefficients term by term.
+This is how you get closed forms with mixed geometric and polynomial
+behavior, like <span class="math">\(a_n = A \cdot a_1^n + (B + C n) \cdot a_2^n\)</span>.</p>
+<p>For the Fibonacci generating function <span class="math">\(\tfrac{z}{1 - z - z^2}\)</span>, this
+exact procedure produces Binet's formula. It is a very general hammer.</p>
+<h3 id="6-use-the-calculus-of-generating-functions">6. Use the calculus of generating functions</h3>
+<p>A handful of operations on a generating function correspond to clean
+operations on its coefficient sequence. Recognizing them lets you build
+up unfamiliar expressions from familiar ones.</p>
+<ul>
+<li><strong>Multiplying by <span class="math">\(z\)</span></strong> shifts coefficients: if
+  <span class="math">\(A(z) = \sum a_n z^n\)</span> then <span class="math">\(z \cdot A(z) = \sum a_{n-1} z^n\)</span>. This is
+  what we used above to get from <span class="math">\(\binom{n+2}{2}\)</span> to <span class="math">\(\binom{n+1}{2}\)</span>.</li>
+<li><strong>Differentiating</strong> produces <span class="math">\(A'(z) = \sum n \, a_n \, z^{n-1}\)</span>, and
+  multiplying that by <span class="math">\(z\)</span> gives <span class="math">\(\sum n \, a_n \, z^n\)</span>. So the "times
+  <span class="math">\(n\)</span>" operator on a sequence is <span class="math">\(z \tfrac{d}{dz}\)</span> on the generating
+  function. This is how you get things like <span class="math">\(\sum n z^n\)</span> from
+  <span class="math">\(\sum z^n\)</span>.</li>
+<li><strong>Integrating</strong> goes the other way: dividing coefficients by <span class="math">\(n\)</span>.</li>
+<li><strong>Multiplying two generating functions</strong> convolves their coefficient
+  sequences: <span class="math">\(\sum_{k=0}^{n} a_k \, b_{n-k}\)</span>. Sometimes you will
+  recognize a convolution in a combinatorial identity you are trying
+  to prove.</li>
+<li><strong>Substituting</strong> <span class="math">\(z \to z^m\)</span> spreads coefficients out, putting zeros
+  between them. Substituting <span class="math">\(z \to a z\)</span> multiplies coefficient <span class="math">\(n\)</span>
+  by <span class="math">\(a^n\)</span>.</li>
+</ul>
+<p>If you see a generating function that looks like a standard one with an
+extra factor of <span class="math">\(z\)</span> or an extra power of <span class="math">\(n\)</span> in front, these operations
+are usually how it got there — and they tell you how to undo it.</p>
+<h3 id="7-extract-a-single-coefficient-directly">7. Extract a single coefficient directly</h3>
+<p>Sometimes you do not need the whole sequence, just one term. The
+formal notation is</p>
+<div class="math">$$
+[z^n] \, A(z) = a_n
+$$</div>
+<p>and there are algebraic rules for pushing <span class="math">\([z^n]\)</span> around:</p>
+<div class="math">$$
+[z^n] \, z \cdot A(z) = [z^{n-1}] \, A(z)
+\qquad
+[z^n] \, A(z) B(z) = \sum_{k=0}^{n} [z^k] A(z) \cdot [z^{n-k}] B(z)
+$$</div>
+<p>For rational <span class="math">\(A(z)\)</span> with small denominators, you can also just do long
+division of the series until you reach the <span class="math">\(z^n\)</span> term. Tedious but
+mechanical, and useful for a sanity check against Wolfram Alpha.</p>
+<h3 id="8-when-nothing-closes-asymptotics">8. When nothing closes: asymptotics</h3>
+<p>Some generating functions simply do not have a nice closed-form
+coefficient. That is fine. In those cases you switch questions: instead
+of "what is <span class="math">\(a_n\)</span> exactly?" you ask "how does <span class="math">\(a_n\)</span> grow with <span class="math">\(n\)</span>?" The
+answer usually falls out of the location and type of the singularities
+of <span class="math">\(A(z)\)</span> nearest the origin — this is <em>singularity analysis</em>, and
+Flajolet and Sedgewick's <em>Analytic Combinatorics</em> is the reference. It
+is out of scope for this series, but worth knowing exists: even when
+you cannot read off an answer, you can often read off the growth rate.</p>
+<h3 id="applied-to-our-expression">Applied to our expression</h3>
+<p>For <span class="math">\(\tfrac{z}{(1-z)^3}\)</span> we used step 4 (recognize a standard series)
+and step 6 (multiply by <span class="math">\(z\)</span> shifts the index). Two lines of algebra
+and a closed form falls out. But we could just as easily have typed
+<code>series z/(1-z)^3 to 22 terms</code> into Wolfram Alpha, read off 210 as the
+coefficient of <span class="math">\(z^{20}\)</span>, dropped <span class="math">\(1, 3, 6, 10, 15, 21\)</span> into OEIS, and
+learned that these are triangle numbers with generating function
+<span class="math">\(\tfrac{z}{(1-z)^3}\)</span> and closed form <span class="math">\(\binom{n+1}{2}\)</span> — arriving at the
+same place from the other direction.</p>
+<p>Both directions are legitimate. Which one you use depends on whether
+you want the answer or the understanding. Usually you want both, which
+means using the tools to get the answer fast and then doing the algebra
+to see why.</p>
 <h2 id="sanity-check-on-small-cases">Sanity Check on Small Cases</h2>
 <p>We can verify the closed form by walking through small <span class="math">\(n\)</span>.</p>
 <p><strong><span class="math">\(n = 1\)</span> (one marble):</strong> Only one configuration works - the single red
