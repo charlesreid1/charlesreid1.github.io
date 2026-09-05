@@ -1,6 +1,7 @@
 Title: Fermi Problems Are Chocolate Messes All the Way Down
 Date: 2026-09-03 13:00
 Category: Mathematics
+Status: draft
 Tags: mathematics, fermi problems, chocolate
 
 In a prior post [Fermi Problems are Quadrature Problems]({filename}2026-fermi-quadrature.md) 
