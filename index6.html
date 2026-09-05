@@ -99,195 +99,6 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                SQL Injection UNION Attacks: Turning a Product Listing Into a User Dump
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2023-05-21T17:00:00-07:00" pubdate>Sunday 05/21/2023</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/sql-injection-union-attacks-turning-a-product-listing-into-a-user-dump.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>Part 3 of our
-<a href="working-through-the-portswigger-web-security-academy.html">PortSwigger Web Security Academy series</a>.
-<a href="sql-injection-fundamentals-four-attack-shapes.html">Part 2</a> sketched the
-four SQL injection shapes at a bird's-eye view. This post drills into one
-of them: the UNION attack. It is one of the most useful shapes to
-understand because it converts a small SQLi foothold into an "I can read
-anything in the database" primitive.</p>
-<p>Wiki reference:
-<a href="https://charlesreid1.com/wiki/SQL_Injection/UNION_Attack">SQL Injection/UNION Attack</a>.</p>
-<h2 id="the-idea">The Idea</h2>
-<p>Say a page runs</p>
-<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;Gifts&#39;
-</code></pre></div>
-
-<p>The columns you can see in the response are <code>name</code> and <code>description</code>,
-because that is what the query is selecting. UNION lets you attach a
-second <code>SELECT</code> to the query whose results get returned alongside the
-first. If we inject</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT username, password FROM users--
-</code></pre></div>
-
-<p>the query becomes</p>
-<div class="highlight"><pre><span></span><code>SELECT name, description FROM products WHERE category = &#39;&#39;
-UNION SELECT username, password FROM users--&#39;
-</code></pre></div>
-
-<p>and the page renders product names, product descriptions, usernames,
-and passwords, all in the same result set.</p>
-<p>Simple enough in principle. The devil is in getting the UNION to actually
-be valid SQL.</p>
-<h2 id="two-requirements-for-a-valid-union">Two Requirements for a Valid UNION</h2>
-<p>SQL is picky about UNIONs. The two SELECTs on either side of the UNION
-have to agree on:</p>
-<ol>
-<li><strong>The number of columns.</strong> If the first query returns 2 columns, your
-   injected SELECT also has to return exactly 2 columns.</li>
-<li><strong>The data types of the columns.</strong> In practice, this means "the column
-   you want to display text from has to line up with a column position
-   that the outer query returned as text-compatible."</li>
-</ol>
-<p>Most of the work of pulling off a UNION attack is figuring these two
-things out from the outside.</p>
-<h2 id="finding-the-column-count">Finding the Column Count</h2>
-<p>Two techniques.</p>
-<p><strong>Technique 1: <code>ORDER BY</code> bumping.</strong> Send</p>
-<div class="highlight"><pre><span></span><code>&#39; ORDER BY 1--
-&#39; ORDER BY 2--
-&#39; ORDER BY 3--
-&#39; ORDER BY 4--
-</code></pre></div>
-
-<p>and so on. <code>ORDER BY N</code> tells the database to sort by column N. If N
-exceeds the actual column count, you get a SQL error. So you increment
-until the error appears - the last value that <em>didn't</em> error is the
-column count.</p>
-<p><strong>Technique 2: <code>UNION SELECT NULL</code> bumping.</strong> Send</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT NULL--
-&#39; UNION SELECT NULL, NULL--
-&#39; UNION SELECT NULL, NULL, NULL--
-</code></pre></div>
-
-<p>and so on. NULLs are type-compatible with anything, so the only thing
-that will make the UNION fail is a column count mismatch. When the query
-stops erroring, you have found the column count.</p>
-<p><code>ORDER BY</code> is usually faster because you can binary-search it.
-<code>UNION SELECT NULL</code> is the fallback when the target database is picky
-about <code>ORDER BY</code> in weird ways.</p>
-<h2 id="finding-a-text-compatible-column">Finding a Text-Compatible Column</h2>
-<p>Once you know the column count, you need a column whose position will
-render as text in the response. If the outer query returns 3 columns and
-only one of them shows up in the rendered page, you want to know which
-one.</p>
-<p>Send</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT &#39;a&#39;, NULL, NULL--
-&#39; UNION SELECT NULL, &#39;a&#39;, NULL--
-&#39; UNION SELECT NULL, NULL, &#39;a&#39;--
-</code></pre></div>
-
-<p>Whichever variant makes the letter <code>a</code> show up on the rendered page is
-your target column position. If the database complains about <code>'a'</code> being
-the wrong type for that position, that column is not text-compatible and
-you have to move on to the next one.</p>
-<h2 id="putting-it-together">Putting It Together</h2>
-<p>Now you have a column count and a text-compatible position. Say the count
-is 3 and position 2 is text-compatible. Then</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT NULL, username, NULL FROM users--
-</code></pre></div>
-
-<p>dumps every username, and</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT NULL, password, NULL FROM users--
-</code></pre></div>
-
-<p>dumps every password.</p>
-<p>You can also concatenate multiple values into a single column, which is
-useful when only one column position is text-compatible. Depending on the
-database:</p>
-<ul>
-<li>Oracle: <code>||</code> concatenation - <code>' UNION SELECT NULL, username || '~' || password, NULL FROM users--</code></li>
-<li>MySQL: <code>CONCAT()</code> or space-separated string literals</li>
-<li>Microsoft SQL Server: <code>+</code> concatenation</li>
-</ul>
-<h2 id="finding-interesting-tables">Finding Interesting Tables</h2>
-<p>At this point you probably want to know which tables exist and what
-columns they have. Every major database exposes this through metadata
-tables. On most (Postgres, MySQL, Microsoft SQL Server):</p>
-<div class="highlight"><pre><span></span><code>&#39; UNION SELECT table_name, NULL FROM information_schema.tables--
-&#39; UNION SELECT column_name, NULL FROM information_schema.columns WHERE table_name = &#39;users&#39;--
-</code></pre></div>
-
-<p>Oracle uses <code>all_tables</code> and <code>all_tab_columns</code> instead of
-<code>information_schema</code>, because Oracle is Oracle.</p>
-<h2 id="the-fix">The Fix</h2>
-<p>Same fix as every SQL injection: parameterized queries. The parameters
-never become part of the query syntax, so no <code>UNION</code>, no <code>--</code>, no <code>OR
-1=1</code> is going to change the shape of the query. It becomes data, not
-code.</p>
-<h2 id="references">References</h2>
-<ul>
-<li>Our wiki: <a href="https://charlesreid1.com/wiki/SQL_Injection/UNION_Attack">SQL Injection/UNION Attack</a></li>
-<li><a href="https://portswigger.net/web-security/sql-injection/union-attacks">PortSwigger UNION attacks</a></li>
-<li>Labs 3-6 in the PortSwigger SQL Injection Academy</li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sql-injection.html">sql injection</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/sqli.html">sqli</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/union.html">union</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/portswigger.html">portswigger</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/burp-suite.html">burp suite</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
                 SQL Injection Fundamentals: Four Attack Shapes
             </b></h1>
         
@@ -610,6 +421,188 @@ here is not enough detail, the wiki page is the deep version.</p>
 
 <div class="v200"></div>
   	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Notes on Italo Calvino's Six Memos for the Next Millennium
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2022-12-30T22:00:00-08:00" pubdate>Friday 12/30/2022</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/notes-on-italo-calvinos-six-memos-for-the-next-millennium.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>We spent the tail end of 2022 reading Italo Calvino's <em>Six Memos for the
+Next Millennium</em>, which is a set of Norton Lectures Calvino was preparing
+to give at Harvard in 1985-1986. He died before he could deliver them, and
+only five of the six memos were finished. The published book contains those
+five: Lightness, Quickness, Exactitude, Visibility, and Multiplicity.</p>
+<p>The book is short. It is also incredibly dense. These are lectures about
+what Calvino thought literature needed to carry into the next thousand
+years, and they read less like a set of essays and more like an attempt
+to name and preserve a handful of properties before they slip out of the
+culture.</p>
+<p>This post is a small selection of notes on the first two memos - Lightness
+and Quickness - which are the two that hit hardest for us on this reading.</p>
+<h2 id="lightness">Lightness</h2>
+<p>Lightness, as Calvino uses the word, is not the same as frivolity. He is
+very careful about this. It is closer to what Valéry meant when he wrote
+about being "light like a bird, and not like a feather" - a chosen agility
+of thought, as opposed to weightlessness by default.</p>
+<p>The image Calvino returns to over and over is Perseus and the Gorgon.
+Perseus cannot look directly at Medusa without being turned to stone. He
+has to look at her reflection in his polished shield. Then, once he has
+beheaded her, her blood gives birth to Pegasus - the winged horse. The
+heaviness of stone transforms into flight. Even the winged sandals that
+let Perseus fly came from the world of monsters, from Medusa's sisters the
+Graiae, who shared one tooth and one eye between the three of them.</p>
+<p>The point Calvino is making is that lightness is not the absence of
+weight. It is a response to weight. Perseus does not pretend the monster
+is not there. He looks at it sideways, in a mirror, and finds a way to
+carry it that does not destroy him.</p>
+<p>There is a passage in the Lightness lecture that we have thought about
+often since reading it:</p>
+<blockquote>
+<p>Whenever humanity seems condemned to heaviness, I think I should fly
+like Perseus into a different space. I don't mean escaping into dreams
+or into the irrational. I mean that I have to change my approach, look
+at the world from a different perspective, with a different logic and
+with fresh methods of cognition and verification.</p>
+</blockquote>
+<p>Calvino also has a very unexpected riff on software. Remember, this is
+1985. He writes about the second industrial revolution not producing the
+"crushing images" of rolling mills and molten steel, but bits traveling
+along circuits as electronic impulses:</p>
+<blockquote>
+<p>The iron machines still exist, but they obey the orders of weightless
+bits.</p>
+</blockquote>
+<p>For a set of lectures written in 1985 by an Italian novelist, that reads
+as unsettlingly current. Substitute "large language model" for "bits" and
+it barely changes.</p>
+<p>The lecture ends with a memorable image, which we will just quote:</p>
+<blockquote>
+<p>Were I to choose an auspicious image for the new millennium, I would
+choose that one: the sudden agile leap of the poet-philosopher who
+raises himself above the weight of the world, showing that with all
+his gravity he has the secret of lightness, and that what many
+consider to be the vitality of the times - noisy, aggressive, revving
+and roaring - belongs to the realm of death, like a cemetery for rusty
+old cars.</p>
+</blockquote>
+<h2 id="quickness">Quickness</h2>
+<p>The Quickness lecture is the one that made us laugh out loud a few times.</p>
+<p>Calvino's central paradox in this memo is that quickness in literature is
+often produced by <em>slowing down</em>. He talks about Laurence Sterne's
+<em>Tristram Shandy</em> - a novel that is essentially all digression, and which
+Diderot then took as a model - and argues that digression is one of the
+main techniques literature has developed for slowing time down:</p>
+<blockquote>
+<p>In practical life, time is a form of wealth with which we are stingy.
+In literature, time is a form of wealth to be spent at leisure and with
+detachment. We don't have to be first past a predetermined finish line.
+On the contrary, saving time is a good thing because the more time we
+save, the more we can afford to lose.</p>
+</blockquote>
+<p>He follows this with a wonderful line about digressions as a hiding place:</p>
+<blockquote>
+<p>If a straight line is the shortest distance between two fated and
+inevitable points, digressions will lengthen it; and if these digressions
+become so complex, so tangled and tortuous, so rapid as to hide their
+own tracks, who knows - perhaps death may not find us, perhaps time will
+lose its way, and perhaps we ourselves can remain concealed in our
+shifting hiding places.</p>
+</blockquote>
+<p>And then his personal motto, which is now our personal motto too:</p>
+<blockquote>
+<p>From my youth on, my personal motto has been the old Latin tag,
+<em>festina lente</em>, hurry slowly.</p>
+</blockquote>
+<p>The best story in the Quickness lecture, though, is the one about
+Chuang-tzu and the crab. Here is Calvino's telling in full:</p>
+<blockquote>
+<p>Among Chuang-tzu's many skills, he was an expert draftsman. The king
+asked him to draw a crab. Chuang-tzu replied that he needed five years,
+a country house, and twelve servants. Five years later, the drawing was
+still not begun. "I need another five years," said Chuang-tzu. The king
+granted them. At the end of these ten years, Chuang-tzu took up his
+brush and, in an instant, with a single stroke, he drew a crab, the
+most perfect crab ever seen.</p>
+</blockquote>
+<p>This is the whole book in a paragraph. Quickness is the payoff of an
+enormous investment of slowness. The single stroke exists because of the
+ten years of preparation. Speed is a property that expensive preparation
+lets you buy, and cheap speed is not the same thing at all.</p>
+<h2 id="why-we-wrote-this-down">Why We Wrote This Down</h2>
+<p>Our reason for keeping notes on this book is that Calvino is doing
+something we recognize from our own attempts to build a
+<a href="using-mediawiki-as-a-zettelkasten-or-external-brain.html">zettelkasten</a> -
+he is trying to name properties of thought that are useful, so they can be
+carried forward and returned to.</p>
+<p>Lightness. Quickness. Exactitude. Visibility. Multiplicity. Those are five
+words to keep on the wall.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Calvino, Italo. <em>Six Memos for the Next Millennium.</em> Translated by
+  Patrick Creagh. Harvard University Press, 1988.</li>
+<li>Our wiki notes: <a href="https://charlesreid1.com/wiki/Six_Memos_for_the_Next_Millennium">https://charlesreid1.com/wiki/Six_Memos_for_the_Next_Millennium</a></li>
+</ul></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/calvino.html">calvino</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/literature.html">literature</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/notes.html">notes</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/lightness.html">lightness</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/quickness.html">quickness</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -645,9 +638,6 @@ here is not enough detail, the wiki page is the deep version.</p>
 
             <h2>September 2026</h2>
 
-            <p class="archive">
-            <a href="https://charlesreid1.github.io/fermi-problems-are-chocolate-messes-all-the-way-down.html">Fermi Problems Are Chocolate Messes All the Way Down</a>
-            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/fermi-problems-are-quadrature-problems.html">Fermi Problems Are Quadrature Problems</a>
             </p>

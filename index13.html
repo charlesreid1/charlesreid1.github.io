@@ -99,198 +99,6 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
-                Copying LetsEncrypt Certs Between Machines
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2020-08-11T17:00:00-07:00" pubdate>Tuesday 08/11/2020</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/copying-letsencrypt-certs-between-machines.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#https-ssl-certificates-and-letsencrypt">HTTPS, SSL Certificates, and LetsEncrypt</a></li>
-<li><a href="#create-certificates">Create Certificates</a><ul>
-<li><a href="#certbot-command">Certbot Command</a></li>
-<li><a href="#tar-compress-certs-command">Tar Compress Certs Command</a></li>
-<li><a href="#secure-copy-certs-command">Secure Copy Certs Command</a></li>
-<li><a href="#untar-certs-command">Untar Certs Command</a></li>
-</ul>
-</li>
-<li><a href="#renew-certificates">Renew Certificates</a></li>
-</ul>
-</div>
-<p>A quick post that details a useful operation: copying LetsEncrypt certificates
-from one machine to another.</p>
-<p>(We also cover our use case: setting up certificates for private VPN networks
-that use public DNS entries.)</p>
-<h2 id="https-ssl-certificates-and-letsencrypt">HTTPS, SSL Certificates, and LetsEncrypt</h2>
-<p>As a bit of background, the whole reason this is necessary, the whole reason we are dealing with
-the hassle of setting up SSL certificates, is to enable end-to-end encrypted connections to
-a server.</p>
-<p>For example, we might have a web application that we want to make available over a VPN network.
-The web application would have a private IP address on the VPN network, say <code>10.0.0.101</code>.</p>
-<p>Now, what we want is for clients connected to the VPN to be able to visit a domain, say
-<code>foobar.limo</code>, and be able to make encrypted connections to the web service at <code>10.0.0.101</code>.</p>
-<p>We can do this (assuming we control the foobar.limo domain) by creating a public DNS entry
-for <code>foobar.limo</code> to point to <code>10.0.0.101</code>. Then when visitors type <code>foobar.limo</code> into their
-browser, if they are connected to the VPN they will reach the web service at <code>10.0.0.101</code>.</p>
-<p>To make connections encrypted, however, so that users can type <code>https://foobar.limo</code> and make an
-encrypted connection to the server at <code>10.0.0.101</code>, the server must have an SSL certificate
-for the <code>foobar.limo</code> domain.</p>
-<p>Assuming the web service at <code>10.0.0.101</code> cannot be reached from the outside world,
-it becomes necessary to perform several extra steps to enable SSL on the <code>10.0.0.101</code> server:</p>
-<ul>
-<li>
-<p>First, the DNS entry for <code>foobar.limo</code> must be temporarily updated to point to a server that:</p>
-<ul>
-<li>has a publicly-accessible IP address,</li>
-<li>has LetsEncrypt and certbot installed,</li>
-<li>is connected to or can connect to the VPN or private <code>10.0.0.101</code> server,</li>
-<li>has no services running on port 80</li>
-</ul>
-</li>
-<li>
-<p>Second, the certbot utility must be run on the publicly-accessible server to request a new or renewed
-  certificate <code>foobar.limo</code>. This will put the new or renewed <code>foobar.limo</code> cert files into
-  <code>/etc/letsencrypt/live</code>.</p>
-</li>
-<li>
-<p>Third, the LetsEncrypt certificates are owned by the root user, they must be owned by the root user on the
-  remote machine they are copied to, and SSH/SCP via the root user is (or should be!) prohibited,
-  the certificate files must be compressed using tar, so they can be copied as a non-root user;
-  and on the remote machine, they must be uncompressed to the appropriate location.</p>
-</li>
-</ul>
-<p>(Yes, there is always a <a href="https://xkcd.com/1168/">relevant XKCD</a>.)</p>
-<p>In this post, we cover how this works, and why you might want to do this.</p>
-<h2 id="create-certificates">Create Certificates</h2>
-<p>The first time you create a private VPN certificate on a machine:</p>
-<ul>
-<li>Log into the DNS provider</li>
-<li>Create a DNS record - type A, pointing to the IP address of the public server.</li>
-<li>Run the certbot command to create a certificate on the public server (see below).</li>
-<li>Copy the certificates to the private VPN node using scp (see below).</li>
-<li>Update the DNS record - type A, to point to the private VPN IP address of the private server.</li>
-</ul>
-<h3 id="certbot-command">Certbot Command</h3>
-<p>Command to create a certbot certificate (must be run as sudo):</p>
-<div class="highlight"><pre><span></span><code>#!/bin/bash
-if [ &quot;$(id -u)&quot; != &quot;0&quot; ]; then
-    echo &quot;&quot;
-    echo &quot;&quot;
-    echo &quot;This script should be run as root.&quot;
-    echo &quot;&quot;
-    echo &quot;&quot;
-    exit 1;
-fi
-
-set -x
-
-DOM=&quot;foobar.limo&quot;
-
-certbot certonly \
-    --standalone \
-    --non-interactive \
-    --agree-tos \
-    --email test@example.com \
-    -d ${DOM}
-</code></pre></div>
-
-<p>This command requires port 80 be available (the <code>--standalone</code> flag starts a standalone web server
-that binds to port 80). If port 80 is being used this command will fail to run and the cert will not be created.</p>
-<h3 id="tar-compress-certs-command">Tar Compress Certs Command</h3>
-<p>Archive on the public server:</p>
-<div class="highlight"><pre><span></span><code>DOM=&quot;foobar.limo&quot;
-sudo tar -chvzf foobar_certs.tar.gz \
-    /etc/letsencrypt/archive/${DOM} \
-    /etc/letsencrypt/renewal/${DOM}.conf \
-    /etc/letsencrypt/live/${DOM}
-</code></pre></div>
-
-<h3 id="secure-copy-certs-command">Secure Copy Certs Command</h3>
-<p>Use scp to copy certs to private remote machine:</p>
-<div class="highlight"><pre><span></span><code>scp foobar_certs.tar.gz user@10.0.0.101:~/
-</code></pre></div>
-
-<h3 id="untar-certs-command">Untar Certs Command</h3>
-<p>On the private remote machine, untar the certs file copied over:</p>
-<div class="highlight"><pre><span></span><code>cd /
-sudo tar -xvf ~/foobar_certs.tar.gz
-</code></pre></div>
-
-<p>Last, fix permissions for cert directories:</p>
-<div class="highlight"><pre><span></span><code>sudo chmod 700 /etc/letsencrypt/archive
-sudo chmod -R 755 /etc/letsencrypt/archive/*
-sudo chmod 700 /etc/letsencrypt/live
-sudo chmod -R 755 /etc/letsencrypt/live/*
-sudo chmod 700 /etc/letsencrypt/archive
-</code></pre></div>
-
-<h2 id="renew-certificates">Renew Certificates</h2>
-<p>When you renew a private VPN certificate on a machine:</p>
-<ul>
-<li>Log into the DNS provider</li>
-<li>Update the DNS record to a type A, pointing to the IP adress of the public server.</li>
-<li>Run the certbot command to renew a certificate on the public server (see above).</li>
-<li>Copy the certificates to the private VPN node (see above).</li>
-<li>Untar the certificates into place on the private VPN node (see above).</li>
-<li>Restore the DNS record - type A, to point to the private VPN IP address of private server again.</li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/letsencrypt.html">letsencrypt</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ssl.html">ssl</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/https.html">https</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/certificates.html">certificates</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
                 Applied Gitflow
             </b></h1>
         
@@ -958,6 +766,228 @@ Stay tuned!</p></div>
 
 <div class="v200"></div>
   	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Using Mock API Servers
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2020-03-09T19:00:00-07:00" pubdate>Monday 03/09/2020</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/using-mock-api-servers.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#the-mockapiserver-class">The MockAPIServer Class</a></li>
+<li><a href="#a-basic-unit-test-with-mockapiserver">A Basic Unit Test with MockAPIServer</a></li>
+</ul>
+</div>
+<h1 id="summary">Summary</h1>
+<p>In a prior post, we covered how to write a mock API server that stored a thread
+as a class attribute and used it to run the server in the background by starting
+a thread.</p>
+<p>However, we neglected to cover how to actually <em>use</em> the mock API server. So here
+we include some examples of how you can use the mock API server to write better
+tests for components that require interacting with APIs.</p>
+<h1 id="the-mockapiserver-class">The MockAPIServer Class</h1>
+<p>Let's start with a recap of the mock API server class. Major features included:</p>
+<ul>
+<li>
+<p>Inheriting from the base HTTP server class in Python, to take advantage of
+  the methods available through it</p>
+</li>
+<li>
+<p>Using a singleton design pattern to start and stop the fake API server</p>
+</li>
+</ul>
+<p>Basically we create the server, call <code>start_serving()</code>, and that starts the
+server on a thread in the background.</p>
+<p>Here is the source code:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
+    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
+        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
+        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># Get the bind address and port</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
+
+        <span class="c1"># Create an HTTP server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
+
+        <span class="c1"># Create a thread to run the server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
+
+        <span class="c1"># Start the server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># Shut down the server</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+
+        <span class="c1"># Let the thread rejoin the worker pool</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
+        <span class="c1"># Enforce rule: JSON only</span>
+        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="c1"># Convert received JSON to dict</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
+
+        <span class="c1"># Process the json</span>
+
+        <span class="c1"># Send a response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+</code></pre></div>
+
+<h1 id="a-basic-unit-test-with-mockapiserver">A Basic Unit Test with MockAPIServer</h1>
+<p>Let's make a basic test that uses the <code>MockAPIServer</code> class. We'll use
+<code>unittest</code> for simplicity, other testing frameworks offer similar
+functionality.</p>
+<p>Before testing our code, we'll need to make sure the API URL is configurable,
+sicne we will need to get the mock API server's bind address and port and use
+those to instruct our code where to find the API server.</p>
+<p>Here is a short example function that we'll test:</p>
+<p><strong><code>foobar.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">urllib.parse</span>
+
+<span class="k">def</span> <span class="nf">make_api_call</span><span class="p">(</span><span class="n">api_url</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A simple function that gets an API endpoint</span>
+<span class="sd">    and returns if no problems raised.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Assemble our API call</span>
+    <span class="n">endpoint</span> <span class="o">=</span> <span class="s1">&#39;/hello/world&#39;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urljoin</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s1">&#39;hello world&#39;</span><span class="p">)</span>
+
+    <span class="c1"># The basic mock server will just echo our request back</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+    <span class="k">return</span>
+</code></pre></div>
+
+<p>Now we write a short test for our foobar script:</p>
+<p><strong><code>test_foobar.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">foobar</span> <span class="kn">import</span> <span class="n">make_api_call</span>
+<span class="kn">import</span> <span class="nn">unittest</span>
+
+<span class="k">class</span> <span class="nc">TestAPICalls</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">setUpClass</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span> <span class="o">=</span> <span class="n">MockAPIServer</span><span class="p">()</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">start_serving</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">test_api_call</span><span class="p">():</span>
+        <span class="n">addr</span><span class="p">,</span> <span class="n">port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urljoin</span><span class="p">(</span>
+            <span class="s1">&#39;http://&#39;</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
+        <span class="p">)</span>
+        <span class="n">make_api_cal</span><span class="p">(</span><span class="n">api_url</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">tearDownClass</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">stop_serving</span><span class="p">()</span>
+</code></pre></div>
+
+<p>We can run the test like so:</p>
+<div class="highlight"><pre><span></span><code>python test_foobar.py
+</code></pre></div>
+
+<p>Here's what happens when we run the test:</p>
+<ul>
+<li>The <code>setUpClass()</code> method is called, which creates a mock API server that starts on
+  localhost on port 9876 and runs the server on a thread.</li>
+<li>The <code>test_api_call()</code> method is run, which makes the API call to the mock API server.
+  (Nothing interesting is happening on either end, right now, but stay tuned for more
+  examples.)</li>
+<li>The <code>tearDownClass()</code> method is called, which stops the mock API server and returns
+  the thread worker to the pool of workers.</li>
+</ul>
+<p>Stay tuned for more complicated examples in the future - we are currently working on
+extending this mock API server to mock calls to the Github API.</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/http.html">http</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/server.html">server</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/api.html">api</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/flask.html">flask</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/web-server.html">web server</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -993,9 +1023,6 @@ Stay tuned!</p></div>
 
             <h2>September 2026</h2>
 
-            <p class="archive">
-            <a href="https://charlesreid1.github.io/fermi-problems-are-chocolate-messes-all-the-way-down.html">Fermi Problems Are Chocolate Messes All the Way Down</a>
-            </p>
             <p class="archive">
             <a href="https://charlesreid1.github.io/fermi-problems-are-quadrature-problems.html">Fermi Problems Are Quadrature Problems</a>
             </p>
