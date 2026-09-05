@@ -159,9 +159,57 @@ polynomial than $1 + x$.
 
 ## The Answer
 
-Expand $g(x)^{13}$ (a degree-52 polynomial, 53 coefficients) and sum
-with alternating $(52-k)!/52!$ weights. The exact value is a rational
-number with a lot of digits; the decimal value is
+Before turning the crank, notice what the final formula is really
+gluing together. The problem mixes two different combinatorial pieces:
+
+* $g(x)^{13}$ enumerates *how* $k$ matches can be distributed across
+  the 13 ranks (with each rank contributing between 0 and 4 matches).
+* $(52 - k)! / 52!$ is the probability that any *particular* set of
+  $k$ matches all happen simultaneously.
+
+Inclusion-exclusion is what stitches them together with the
+alternating sign. The generating function collapses the first piece
+from a nested 13-tuple sum into "expand a polynomial and read off a
+coefficient." The second piece is a scalar weight applied per degree.
+So unlike the Polya *change for a dollar* setup, there is no single
+generating function whose coefficient is the answer. There is a
+polynomial to expand and then a 53-term weighted sum to take. That
+sum is the last unavoidable step.
+
+Concretely: expand $g(x)^{13}$ into its 53 coefficients $c_0, c_1,
+\dots, c_{52}$, then compute
+
+$$
+P(\text{win}) = \sum_{k=0}^{52} (-1)^k \frac{(52-k)!}{52!}\, c_k.
+$$
+
+Wolfram Alpha is not much help here. It happily expands the
+polynomial if you ask for
+
+```
+expand (1 + 16 x + 72 x^2 + 96 x^3 + 24 x^4)^13
+```
+
+and gives you all 53 coefficients, but its free interface will not
+evaluate the surrounding sum: `SeriesCoefficient` and `Coefficient`
+are Wolfram Language functions, and the natural-language front-end
+refuses to run them inside a `sum[...]`.
+
+Five lines of Python with `sympy` does the whole thing:
+
+```python
+from math import factorial
+from sympy import symbols, expand, Poly
+
+x = symbols('x')
+g = 1 + 16*x + 72*x**2 + 96*x**3 + 24*x**4
+coeffs = Poly(expand(g**13), x).all_coeffs()[::-1]  # c_0, ..., c_52
+p = sum((-1)**k * factorial(52 - k) * c for k, c in enumerate(coeffs)) / factorial(52)
+print(float(p))  # 0.016232838...
+```
+
+Either route gives an exact rational with a lot of digits; the decimal
+value is
 
 $$
 P(\text{win}) \approx 0.01623,
