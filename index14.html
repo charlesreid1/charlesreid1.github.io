@@ -99,6 +99,538 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                A Singleton Configuration Class in Python
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2020-04-28T16:00:00-07:00" pubdate>Tuesday 04/28/2020</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/a-singleton-configuration-class-in-python.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#the-singleton-pattern">The Singleton Pattern</a></li>
+<li><a href="#get-variable-functions">Get Variable Functions</a></li>
+<li><a href="#config-functions">Config Functions</a></li>
+<li><a href="#reset-method">Reset method</a></li>
+<li><a href="#creating-a-configuration-context-manager">Creating a configuration context manager</a></li>
+<li><a href="#next-steps">Next steps</a></li>
+</ul>
+</div>
+<h1 id="overview">Overview</h1>
+<p>In this post we cover a strategy for managing configurations for programs using
+a Singleton pattern to create a static <code>Config</code> class.</p>
+<p>This allows the user to create an instance of the <code>Config</code> class, pointing it
+to a specific config file, which it loads into memory.</p>
+<p>The <code>Config</code> class provides several static methods for accessing configuration
+options from the config file. Here's an example of its usage:</p>
+<div class="highlight"><pre><span></span><code>Config(&#39;/path/to/config.json&#39;)
+
+if Config.get_foo() == &quot;bar&quot;:
+    do_stuff()
+</code></pre></div>
+
+<p>The principle is to <strong>define one configuration file location, and be done with it.</strong>
+The configuration file is JSON formatted, but the pattern can be adapted to use
+any format.</p>
+<p>The <code>Config</code> class can also be used to wrap and process both variables in the configuration
+file <em>and</em> environment variables.</p>
+<p>The <code>Config</code> class implements a <strong>separation of concerns</strong> by only processing top-level
+configuration variable options, and leaving more detailed configuration file parsing
+to the classes that need it. This allows for more flexible config files.</p>
+<h1 id="the-singleton-pattern">The Singleton Pattern</h1>
+<p>The Singleton pattern involves the use of instance variables, which the variables
+<code>_CONFIG_FILE</code> and <code>_CONFIG</code> are. These are shared across all instances of class
+<code>Config</code> and can be accessed via <code>Config._CONFIG_FILE</code>, etc.</p>
+<p>The location of the config file can be set in the constructor,
+or can be provided via the <code>CONFIG_FILE</code> environment variable.
+The config class also provides a method for accessing environment
+variables that are required by the Config class, and raising a
+custom exception if it is not present.</p>
+<p>The constructor starts by checking that the configuration file exists, then loads
+the configuration file into memory (at <code>Config._CONFIG</code> as a dictionary):</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="c1">#########################</span>
+    <span class="c1"># Begin Singleton Section</span>
+    <span class="c1">#########################</span>
+
+    <span class="n">_CONFIG_FILE</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_CONFIG</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">config_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">config_file</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_env_var</span><span class="p">(</span><span class="s2">&quot;CONFIG_FILE&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check that specified config file exists</span>
+        <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
+
+        <span class="c1"># Use singleton pattern to store config file location/load config once</span>
+        <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG_FILE</span> <span class="o">=</span> <span class="n">config_file</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_config_file</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG_FILE</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_required_env_var</span><span class="p">(</span><span class="n">envvar</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">envvar</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ConfigException</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Please set the </span><span class="si">{</span><span class="n">envvar</span><span class="si">}</span><span class="s2"> environment variable&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">envvar</span><span class="p">]</span>
+</code></pre></div>
+
+<p>Aside from the constructor, every method in the <code>Config</code> class is a
+<code>@staticmethod</code> or a <code>@classmethod</code>.</p>
+<h1 id="get-variable-functions">Get Variable Functions</h1>
+<p>We add two additional methods to get configuration variables: one to get variables
+from the config file, one to get environment variables. Here they are:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="o">...</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_required_env_var</span><span class="p">(</span><span class="n">envvar</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">envvar</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Please set the </span><span class="si">{envvar}</span><span class="s2"> environment variable&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">envvar</span><span class="p">]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_required_config_var</span><span class="p">(</span><span class="n">configvar</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span>
+        <span class="k">if</span> <span class="n">configvar</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Please set the </span><span class="si">{</span><span class="n">configvar</span><span class="si">}</span><span class="s2"> variable in the config file </span><span class="si">{</span><span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG_FILE</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Config</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">[</span><span class="n">configvar</span><span class="p">]</span>
+</code></pre></div>
+
+<p>We saw the get_required_env_var()<code>function in action in the constructor.
+The</code>get_required_config_var()` can be useful for config variables that
+are dependent on other config variables.</p>
+<h1 id="config-functions">Config Functions</h1>
+<p>Continuing with the <code>Config</code> class defined above,
+we now define methods that implement logic for specific 
+configuration variables.</p>
+<p>Here are two example config variables.</p>
+<p>The variable <code>foo</code> is set using the configuration file.
+The configuration file is a dictionary, meaning it consists
+of key-value pairs, so the variable <code>foo</code> is set by the value
+corresponding to the <code>foo</code> key in the config file.</p>
+<p>For example, using the following simple configuration file:</p>
+<div class="highlight"><pre><span></span><code>{
+    &quot;foo&quot;: &quot;hello world&quot;
+}
+</code></pre></div>
+
+<p>if the <code>Config</code> class is initialized with that configuration file,
+<code>Config.get_foo_var()</code>  will return the string <code>hello world</code>.</p>
+<p>Similarly, the <code>bar</code>variable is set using the environment variable <code>BAR</code>.
+If the <code>BAR</code> variable is not set, the program will raise an exception
+when <code>Config.get_bar_var()</code> is called.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="o">...</span><span class="n">see</span> <span class="n">singleton</span> <span class="n">section</span> <span class="n">above</span><span class="o">...</span>
+
+    <span class="c1">#############################</span>
+    <span class="c1"># Begin Configuration Section</span>
+    <span class="c1">#############################</span>
+
+    <span class="n">_FOO</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_BAR</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_foo_var</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Example variable that is set in the config file (preferred)&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_FOO</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_FOO</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_config_var</span><span class="p">(</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_FOO</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_bar_var</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Example variable that is set via env var (not preferred)&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_BAR</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_BAR</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_env_var</span><span class="p">(</span><span class="s1">&#39;BAR&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_BAR</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_wuz</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;wuz&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_env_var</span><span class="p">(</span><span class="s1">&#39;WUZ&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_CONFIG</span><span class="p">[</span><span class="s1">&#39;wuz&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: Path </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span><span class="si">}</span><span class="s2"> is not a directory&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_WUZ</span>
+</code></pre></div>
+
+<p>The <code>wuz</code> variable, in this example, is a variable that can be set with a config
+file variable, or (if it is not present in the config file) with an environment
+variable. The <code>wuz</code> variable msut also be a path, so there is logic for checking
+whether the path exists.</p>
+<h1 id="reset-method">Reset method</h1>
+<p>It can be useful to clear out an existing config file in order to
+load a new config file - specifically, when testing. Here we define a <code>reset()</code>
+method that clears out variable values. We will show an example of how to
+use the <code>reset()</code> method below.</p>
+<div class="highlight"><pre><span></span><code>    @classmethod
+    def reset(cls) -&gt; None:
+        cls._CONFIG_FILE = None
+        cls._CONFIG = None
+        cls._FOO = None
+        cls._BAR = None
+        cls._WUZ = None
+</code></pre></div>
+
+<p>This could be done more gracefully by iterating over each attribute of the Config class
+and only nullifying those attributes whose variable name matches the given pattern (start
+with an underscore, only contain capital letters and underscores) using a regular expression.</p>
+<h1 id="creating-a-configuration-context-manager">Creating a configuration context manager</h1>
+<p>To make tests more convenient, we define a context manager that takes
+a dictionary as an input. The context manager creates a temporary file
+with the contents of that dictionary, and resets the Config class using
+the temporary file as the new config file. This allows tests to be written
+using different configurations on the fly, very useful when testing
+different configuration options:</p>
+<div class="highlight"><pre><span></span><code><span class="n">cfg</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;peanut_butter&quot;</span><span class="p">:</span> <span class="s2">&quot;jelly&quot;</span><span class="p">}</span>
+<span class="k">with</span> <span class="n">TempConfig</span><span class="p">(</span><span class="n">cfg</span><span class="p">)</span> <span class="k">as</span> <span class="n">config_file</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Temporary configuration file is at </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">val</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get_required_config_var</span><span class="p">(</span><span class="s2">&quot;peanut_butter&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">val</span><span class="o">==</span><span class="s2">&quot;jelly&quot;</span>
+</code></pre></div>
+
+<p>Here is the context manager class to temporarily replace the configuration
+wrapped by the <code>Config</code> class:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">TempConfig</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Temporarily patch the Config class to use the config</span>
+<span class="sd">    dictionary specified in the constructor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_dict</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;This is the step that&#39;s run when object constructed&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># This is the temp configuration the user specified</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_dict</span> <span class="o">=</span> <span class="n">config_dict</span>
+        <span class="c1"># Make a temp dir for our temp config file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+        <span class="c1"># Make a temp config file</span>
+        <span class="n">_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.json&quot;</span><span class="p">,</span> <span class="nb">dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span><span class="p">)</span>
+        <span class="c1"># Set the wuz variable to the temporary directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;wuz&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span>
+
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;This is what&#39;s returned to the &quot;as X&quot; portion of the context manager&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span><span class="p">,</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_dict</span><span class="p">))</span>
+        <span class="c1"># Re-init Config with new config file</span>
+        <span class="n">Config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close the context and clean up; the *args are needed in case there is</span>
+<span class="sd">        an exception (we don&#39;t deal with those here)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Delete temp file</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_json</span><span class="p">)</span>
+        <span class="c1"># Delete temp dir</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span><span class="p">)</span>
+        <span class="c1"># Reset all config variables</span>
+        <span class="n">Config</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_write_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">contents</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Utility method: write string contents to config file&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span>
+</code></pre></div>
+
+<h1 id="next-steps">Next steps</h1>
+<p>That's it for now. This singleton configuration class is being written into a
+new version of <a href="https://charlesreid1.github.io/centillion-a-document-search-engine.html">centillion</a>,
+which will be <a href="https://github.com/chmreid/centillion/pull/3">centillion version 2.0</a>.
+This is still a pull request in a centillion fork, though, so it's a work in progress.
+Stay tuned!</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/patterns.html">patterns</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/design-patterns.html">design patterns</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/registry.html">registry</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Using Mock API Servers
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2020-03-09T19:00:00-07:00" pubdate>Monday 03/09/2020</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/using-mock-api-servers.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#the-mockapiserver-class">The MockAPIServer Class</a></li>
+<li><a href="#a-basic-unit-test-with-mockapiserver">A Basic Unit Test with MockAPIServer</a></li>
+</ul>
+</div>
+<h1 id="summary">Summary</h1>
+<p>In a prior post, we covered how to write a mock API server that stored a thread
+as a class attribute and used it to run the server in the background by starting
+a thread.</p>
+<p>However, we neglected to cover how to actually <em>use</em> the mock API server. So here
+we include some examples of how you can use the mock API server to write better
+tests for components that require interacting with APIs.</p>
+<h1 id="the-mockapiserver-class">The MockAPIServer Class</h1>
+<p>Let's start with a recap of the mock API server class. Major features included:</p>
+<ul>
+<li>
+<p>Inheriting from the base HTTP server class in Python, to take advantage of
+  the methods available through it</p>
+</li>
+<li>
+<p>Using a singleton design pattern to start and stop the fake API server</p>
+</li>
+</ul>
+<p>Basically we create the server, call <code>start_serving()</code>, and that starts the
+server on a thread in the background.</p>
+<p>Here is the source code:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">MockAPIServer</span><span class="p">(</span><span class="n">BaseHTTPRequestHandler</span><span class="p">):</span>
+    <span class="n">_server</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_thread</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_addr_port</span><span class="p">():</span>
+        <span class="n">addr</span> <span class="o">=</span> <span class="s2">&quot;127.0.0.1&quot;</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="s2">&quot;9876&quot;</span>
+        <span class="k">return</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">start_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># Get the bind address and port</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_addr_port</span><span class="p">()</span>
+
+        <span class="c1"># Create an HTTP server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="o">=</span> <span class="n">HTTPServer</span><span class="p">((</span><span class="bp">cls</span><span class="o">.</span><span class="n">_addr</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_port</span><span class="p">),</span> <span class="bp">cls</span><span class="p">)</span>
+
+        <span class="c1"># Create a thread to run the server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">)</span>
+
+        <span class="c1"># Start the server</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">stop_serving</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="c1"># Shut down the server</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_server</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+
+        <span class="c1"># Let the thread rejoin the worker pool</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_thread</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">do_POST</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ctype</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-type&quot;</span><span class="p">))</span>
+        <span class="c1"># Enforce rule: JSON only</span>
+        <span class="k">if</span> <span class="n">ctype</span> <span class="o">!=</span> <span class="s2">&quot;application/json&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="c1"># Convert received JSON to dict</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content-length&quot;</span><span class="p">))</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">length</span><span class="p">))</span>
+
+        <span class="c1"># Process the json</span>
+
+        <span class="c1"># Send a response</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="s2">&quot;utf8&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_headers</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_response</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_header</span><span class="p">(</span><span class="s2">&quot;Content-type&quot;</span><span class="p">,</span> <span class="s2">&quot;application/json&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_headers</span><span class="p">()</span>
+</code></pre></div>
+
+<h1 id="a-basic-unit-test-with-mockapiserver">A Basic Unit Test with MockAPIServer</h1>
+<p>Let's make a basic test that uses the <code>MockAPIServer</code> class. We'll use
+<code>unittest</code> for simplicity, other testing frameworks offer similar
+functionality.</p>
+<p>Before testing our code, we'll need to make sure the API URL is configurable,
+sicne we will need to get the mock API server's bind address and port and use
+those to instruct our code where to find the API server.</p>
+<p>Here is a short example function that we'll test:</p>
+<p><strong><code>foobar.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">urllib.parse</span>
+
+<span class="k">def</span> <span class="nf">make_api_call</span><span class="p">(</span><span class="n">api_url</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A simple function that gets an API endpoint</span>
+<span class="sd">    and returns if no problems raised.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Assemble our API call</span>
+    <span class="n">endpoint</span> <span class="o">=</span> <span class="s1">&#39;/hello/world&#39;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urljoin</span><span class="p">(</span><span class="n">api_url</span><span class="p">,</span> <span class="n">endpoint</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s1">&#39;hello world&#39;</span><span class="p">)</span>
+
+    <span class="c1"># The basic mock server will just echo our request back</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+    <span class="k">return</span>
+</code></pre></div>
+
+<p>Now we write a short test for our foobar script:</p>
+<p><strong><code>test_foobar.py</code></strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">foobar</span> <span class="kn">import</span> <span class="n">make_api_call</span>
+<span class="kn">import</span> <span class="nn">unittest</span>
+
+<span class="k">class</span> <span class="nc">TestAPICalls</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">setUpClass</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span> <span class="o">=</span> <span class="n">MockAPIServer</span><span class="p">()</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">start_serving</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">test_api_call</span><span class="p">():</span>
+        <span class="n">addr</span><span class="p">,</span> <span class="n">port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span>
+        <span class="n">api_url</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urljoin</span><span class="p">(</span>
+            <span class="s1">&#39;http://&#39;</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">port</span>
+        <span class="p">)</span>
+        <span class="n">make_api_cal</span><span class="p">(</span><span class="n">api_url</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">tearDownClass</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">stop_serving</span><span class="p">()</span>
+</code></pre></div>
+
+<p>We can run the test like so:</p>
+<div class="highlight"><pre><span></span><code>python test_foobar.py
+</code></pre></div>
+
+<p>Here's what happens when we run the test:</p>
+<ul>
+<li>The <code>setUpClass()</code> method is called, which creates a mock API server that starts on
+  localhost on port 9876 and runs the server on a thread.</li>
+<li>The <code>test_api_call()</code> method is run, which makes the API call to the mock API server.
+  (Nothing interesting is happening on either end, right now, but stay tuned for more
+  examples.)</li>
+<li>The <code>tearDownClass()</code> method is called, which stops the mock API server and returns
+  the thread worker to the pool of workers.</li>
+</ul>
+<p>Stay tuned for more complicated examples in the future - we are currently working on
+extending this mock API server to mock calls to the Github API.</p></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/http.html">http</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/server.html">server</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mock.html">mock</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/mocking.html">mocking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/api.html">api</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/flask.html">flask</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/web-server.html">web server</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Creating Mock API Servers
             </b></h1>
         
@@ -379,465 +911,6 @@ to the HTTP server base class we are using.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Python: From Args to Kwargs
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2020-02-25T16:00:00-08:00" pubdate>Tuesday 02/25/2020</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/python-from-args-to-kwargs.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#overview">Overview</a></li>
-<li><a href="#the-easy-way-locals">The Easy Way: locals()</a></li>
-<li><a href="#when-locals-wont-work-getting-a-method-signature-programmatically">When locals() Won't Work: Getting a Method Signature Programmatically</a></li>
-<li><a href="#args-to-kwargs-parameter-extraction-from-decorator">Args to Kwargs: Parameter Extraction from Decorator</a></li>
-</ul>
-</div>
-<h2 id="overview">Overview</h2>
-<p>In this short blog post, we talk about how and when you can take a method signature
-that defines input positional arguments by name, like this:</p>
-<div class="highlight"><pre><span></span><code>def foo(arg1, arg2, arg3):
-    pass
-</code></pre></div>
-
-<p>and write code that will return a dictionary containing a keyword arguments-like structure:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; foo(&#39;red&#39;, &#39;blue&#39;, &#39;green&#39;)
-{
-    &#39;arg1&#39;: &#39;red&#39;,
-    &#39;arg2&#39;: &#39;blue&#39;,
-    &#39;arg3&#39;: &#39;green&#39;
-}
-</code></pre></div>
-
-<p>We will cover an example of writing a decorator that utilizes input arguments from both
-the decorator and from the function it wraps, and how to keep all of that information
-straight.</p>
-<h2 id="the-easy-way-locals">The Easy Way: <code>locals()</code></h2>
-<p>We'll start with the easiest possible wyay to turn args into kwargs: <code>locals()</code>. The <code>locals()</code>
-function is one of the built-in methods provided by Python:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print(help(locals))
-
-Help on built-in function locals in module builtins:
-
-locals()
-    Return a dictionary containing the current scope&#39;s local variables.
-
-    NOTE: Whether or not updates to this dictionary will affect name lookups in
-    the local scope and vice-versa is *implementation dependent* and not
-    covered by any backwards compatibility guarantees.
-</code></pre></div>
-
-<p>This is a straightforward way to get a dictionary of input argument names mapping to
-the values provided by the user:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; def foo(arg1, arg2, arg3):
-...     print(locals())
-...
-&gt;&gt;&gt; foo(&#39;asdf&#39;, &#39;qwerty&#39;, &#39;oioioioi&#39;)
-{&#39;arg3&#39;: &#39;oioioioi&#39;, &#39;arg2&#39;: &#39;qwerty&#39;, &#39;arg1&#39;: &#39;asdf&#39;}
-</code></pre></div>
-
-<h2 id="when-locals-wont-work-getting-a-method-signature-programmatically">When <code>locals()</code> Won't Work: Getting a Method Signature Programmatically</h2>
-<p>Sometimes, <code>locals()</code> won't get you what you need - like when you're decorating a function,
-and you don't have the original method signature.</p>
-<p>In that case, you can still use a function handle and get the original positional argument
-names from the function signature.</p>
-<p>In Python, the signature of a method can be obtained using the <code>inspect</code> module's
-<code>signature()</code> method, which can be passed a function:</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; import inspect
-&gt;&gt;&gt; def foo(arg1, arg2, arg3):
-...      pass
-...
-&gt;&gt;&gt; print(inspect.signature(foo))
-(arg1, arg2, arg3)
-</code></pre></div>
-
-<p>The <code>_parameters</code> attribute of the signature will yield an ordered list of parameters in the
-method signature, which is equivalent to the variable names that are used in the method
-definition (<code>arg1</code>, <code>arg2</code>, and <code>arg3</code> in the example <code>foo()</code> function above):</p>
-<div class="highlight"><pre><span></span><code>&gt;&gt;&gt; print(list(inspect.signature(foo)._parameters))
-[&#39;arg1&#39;, &#39;arg2&#39;, &#39;arg3&#39;]
-</code></pre></div>
-
-<h2 id="args-to-kwargs-parameter-extraction-from-decorator">Args to Kwargs: Parameter Extraction from Decorator</h2>
-<p>We can use this to get the original variable names from a function handle, even if we don't
-have its original method signature (i.e., if we're a decorator and are just passed the function).</p>
-<p>Here is an example of a decorator that extracts positional arguments from the function it
-decorates (and prints them out!):</p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">inspect</span>
-
-<span class="k">def</span> <span class="nf">real_decorator</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
-    <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
-    <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-
-        <span class="c1"># This is where the interesting stuff starts!</span>
-        <span class="c1"># We have a handle to a function that we&#39;re</span>
-        <span class="c1"># decorating, but we don&#39;t have its original</span>
-        <span class="c1"># method signature.</span>
-        <span class="c1"># No sweat. Turn positional args into augmented</span>
-        <span class="c1"># kwargs!</span>
-        <span class="n">func_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">sig</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">wrapper</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">sig</span><span class="o">.</span><span class="n">_parameters</span><span class="p">)):</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">func_kwargs</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
-                <span class="c1"># Unspecified positional argument</span>
-                <span class="c1"># (using default value)</span>
-                <span class="k">pass</span>
-
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;wrapper extracted the following params: </span><span class="si">{</span><span class="n">func_kwargs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">wrapper</span>
-
-<span class="c1"># don&#39;t forget to top it off</span>
-<span class="c1"># by decorating a simple function</span>
-<span class="c1"># and calling it if script is run</span>
-<span class="nd">@real_decorator</span>
-<span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="p">,</span> <span class="n">arg3</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;hello world!&quot;</span><span class="p">)</span>
-
-<span class="k">if</span>  <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="n">foo</span><span class="p">(</span><span class="s1">&#39;asdf&#39;</span><span class="p">,</span> <span class="s1">&#39;qwerty&#39;</span><span class="p">,</span> <span class="s1">&#39;wioioioio&#39;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>And when run, the result is:</p>
-<div class="highlight"><pre><span></span><code>$ py five.py
-wrapper extracted the following params: {&#39;arg1&#39;: &#39;asdf&#39;, &#39;arg2&#39;: &#39;qwerty&#39;, &#39;arg3&#39;: &#39;wioioioio&#39;}
-hello world!
-</code></pre></div></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/programming.html">programming</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/arguments.html">arguments</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/functions.html">functions</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/methods.html">methods</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/parameters.html">parameters</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Confuse-A-Constructor: When Class A's Constructor Returns Objects of Type B
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2020-02-22T13:00:00-08:00" pubdate>Saturday 02/22/2020</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/python.html">Python</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/confuse-a-constructor-when-class-as-constructor-returns-objects-of-type-b.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><div class="toc"><span class="toctitle">Table of Contents</span><ul>
-<li><a href="#confuse-a-constructor">Confuse-A-Constructor</a></li>
-<li><a href="#what-is-the-constructor">What is the constructor?</a></li>
-<li><a href="#rewiring-the-constructor-to-do-weird-stuff">Rewiring the constructor to do... weird stuff</a></li>
-<li><a href="#a-simple-example-class">A simple example class</a></li>
-<li><a href="#adding-a-__new__-method">Adding a __new__ method</a></li>
-<li><a href="#when-__new__-returns-objects-not-classes">When __new__ returns objects, not classes</a></li>
-<li><a href="#moving-beyond-argparse">Moving beyond argparse</a></li>
-<li><a href="#using-__new__-in-your-patterns">Using __new__ in your patterns</a></li>
-</ul>
-</div>
-<h2 id="confuse-a-constructor">Confuse-A-Constructor</h2>
-<p>Today, we are going to confuse a constructor.</p>
-<iframe allowFullScreen="allowFullScreen" src="https://www.youtube.com/embed/1tsIxNci_dE?ecver=1&amp;iv_load_policy=1&amp;rel=0&amp;yt:stretch=16:9&amp;autohide=1&amp;color=red&amp;width=560&amp;width=560" width="560" height="315" allowtransparency="true" frameborder="0">
-    <script type="text/javascript">function execute_YTvideo(){return youtube.query({ids:"channel==MINE",startDate:"2019-01-01",endDate:"2019-12-31",metrics:"views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained",dimensions:"day",sort:"day"}).then(function(e){},function(e){console.error("Execute error",e)})}</script>
-</iframe>
-
-<h2 id="what-is-the-constructor">What is the constructor?</h2>
-<p>One of the first concepts encountered in object-oriented programming
-is that of the <em>constructor</em>, the method that is run immediately after
-an object is instantiated that configures and initializes the object.</p>
-<p>In Python, a constructor is defined by the <code>__init__</code> function.
-The constructor is not permitted to return a value, because
-constructing a new instance of class A should result in an object
-of type A. Returning something would just be confusing things.</p>
-<p>But does it ever make sense for a constructor of class A to return
-an object of type B? And if it does make sense, how do we go about
-doing it?</p>
-<h2 id="rewiring-the-constructor-to-do-weird-stuff">Rewiring the constructor to do... weird stuff</h2>
-<p>The answer lies in Python's <code>__new__</code> method, which is a method called
-when a class is defined (not instantiated). The <code>__new__</code> method is
-different from the <code>__init__</code> method, and does not do the same thing.</p>
-<p>The <code>__new__</code> method for class A should only return the type of class A.
-If <code>__new__</code> returns anything else, Python will not run the <code>__init__</code>
-method for class A.</p>
-<p>For example, suppose we want a wrapper class that transparently constructs
-different kinds of objects conditionally - based on a configuration file,
-or the state of a file, or some other condition. We want to construct an
-object of type A and get back an object of type B, C, or D. How to do that?</p>
-<p>First, let's look at how the <code>__new__</code> method works.</p>
-<h2 id="a-simple-example-class">A simple example class</h2>
-<p>Start with a simple example class:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instance of class A created&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Executing this gives:</p>
-<div class="highlight"><pre><span></span><code>In [3]: my_object = A()
-Instance of class A created
-
-In [4]: my_object.hello()
-Hello world
-</code></pre></div>
-
-<h2 id="adding-a-__new__-method">Adding a <code>__new__</code> method</h2>
-<p>Now let's look at a class A where we define the <code>__new__</code> method. This method
-controls how the instantiation of objects of type A work, so we can do something
-like limiting the creation of objects of type A to when a certain condition is
-met:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">random</span>
-
-<span class="k">def</span> <span class="nf">tossCoin</span><span class="p">():</span>
-    <span class="k">if</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">True</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">False</span>
-
-<span class="k">class</span> <span class="nc">A5050</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">tossCoin</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Count not create instance&quot;</span><span class="p">)</span>
-        <span class="n">instance</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">A5050</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">instance</span>
-
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instance of class A5050 created&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Now we can run this block of code:</p>
-<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">make_a5050</span><span class="p">():</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">my_object</span> <span class="o">=</span> <span class="n">A5050</span><span class="p">()</span>
-        <span class="n">my_object</span><span class="o">.</span><span class="n">hello</span><span class="p">()</span>
-    <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Better luck next time!&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<p>It takes a few tries:</p>
-<div class="highlight"><pre><span></span><code>In [9]: make_a5050()
-Better luck next time!
-
-In [10]: make_a5050()
-Instance of class A5050 created
-Hello world
-</code></pre></div>
-
-<p>The <code>__new__</code> method for the <code>A5050</code> class raises a runtime error
-with a 50% probability. Otherwise, it calls the <code>__new__</code> method
-of the parent class (<code>object</code>, which returns a class of type <code>object</code>).
-We pass the same arguments and keyword arguments (args/kwargs) on to the
-super class <code>__new__</code>, but we could optionally modify them here (say, add
-a keyword, or check the state of a file, or etc.).</p>
-<p>This is just an example of how the instantiation behavior of a class
-can be modified before its constructor is even called by using the
-<code>__new__</code> method.</p>
-<h2 id="when-__new__-returns-objects-not-classes">When <code>__new__</code> returns objects, not classes</h2>
-<p>In the above example, our <code>__new__</code> method returned the result of
-a call to <code>__new__</code> of a parent class. What happens if <code>__new__</code>
-returns something else?</p>
-<p>First, repeating an important point made above: if <code>__new__</code> for a class
-returns anything <em>other</em> than that class type, then <code>__init__</code> will not 
-be called for that class.</p>
-<p>That means that the <code>__new__</code> method should <em>either</em> return a class (if
-returning the type of its parent class, like a normal <code>__new__</code> method
-does), <em>or</em> it should return an instantiated object.</p>
-<p>Let's imagine that we want to create different instances of different
-classes based on a command line flag passed to the script:</p>
-<div class="highlight"><pre><span></span><code><span class="k">class</span> <span class="nc">BaseClass</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello world from class </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">))</span>
-
-<span class="k">class</span> <span class="nc">B</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">C</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">D</span><span class="p">(</span><span class="n">BaseClass</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-<span class="k">class</span> <span class="nc">A</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">B</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">B</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">C</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">C</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">D</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">D</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Could not create instance&quot;</span><span class="p">)</span>
-
-<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="nn">argparse</span>
-
-    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-B&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type B&#39;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-C&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type C&#39;</span><span class="p">)</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-D&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Return object of type D&#39;</span><span class="p">)</span>
-
-    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
-
-    <span class="n">a</span> <span class="o">=</span> <span class="n">A</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="p">))</span>
-</code></pre></div>
-
-<p>Now if we run this script and pass it different flags, we get
-a variable <code>a</code> with different types:</p>
-<div class="highlight"><pre><span></span><code>$ py wat2.py -h
-usage: wat2.py [-h] [-B] [-C] [-D]
-
-optional arguments:
-  -h, --help  show this help message and exit
-  -B          Return object of type B
-  -C          Return object of type C
-  -D          Return object of type D
-</code></pre></div>
-
-<p>Now try the three flags:</p>
-<div class="highlight"><pre><span></span><code>$ py wat2.py -B
-&lt;class &#39;__main__.B&#39;&gt;
-
-$ py wat2.py -C
-&lt;class &#39;__main__.C&#39;&gt;
-
-$ py wat2.py -D
-&lt;class &#39;__main__.D&#39;&gt;
-</code></pre></div>
-
-<h2 id="moving-beyond-argparse">Moving beyond argparse</h2>
-<p>The example above shows how the constructor can use
-argparse options to determine what kind of object
-to return with <code>__new__</code>, but you can use other
-types of conditions as well:</p>
-<ul>
-<li>using command line options (see argparse example above)</li>
-<li>using configuration file options</li>
-<li>using environment variable values</li>
-<li>checking status of a file or port</li>
-<li>checking whether internet connection is available</li>
-</ul>
-<h2 id="using-__new__-in-your-patterns">Using <code>__new__</code> in your patterns</h2>
-<p>We have already covered the <a href="#">Registry</a>
-pattern in a prior blog post, but the
-<code>__new__</code> method lends itself well to
-all kinds of other patterns, including the
-Singleton pattern and the Factory pattern.</p>
-<p>There are some very useful patterns covered
-in this Github repository: <a href="https://github.com/faif/python-patterns">https://github.com/faif/python-patterns</a></p></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/python.html">python</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/constructor.html">constructor</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/computer-science.html">computer science</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/object-oriented-programming.html">object oriented programming</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -875,6 +948,22 @@ in this Github repository: <a href="https://github.com/faif/python-patterns">htt
 
             <p class="archive">
             <a href="https://charlesreid1.github.io/fermi-problems-are-quadrature-problems.html">Fermi Problems Are Quadrature Problems</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>August 2026</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/enumeration-solitaire-derangements-with-four-copies-of-each-rank.html">Enumeration Solitaire: Derangements with Four Copies of Each Rank</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/baby-poker-the-smallest-interesting-bluffing-game.html">Baby Poker: The Smallest Interesting Bluffing Game</a>
             </p>
 
         </div>

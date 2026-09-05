@@ -99,6 +99,649 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Project Euler 312: Hamiltonian Cycles on Sierpiński Graphs
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2025-04-20T20:00:00-07:00" pubdate>Sunday 04/20/2025</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/project-euler-312-hamiltonian-cycles-on-sierpinski-graphs.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><a href="https://projecteuler.net/problem=312">Project Euler problem 312</a> is one
+of the harder problems we have worked through. It combines graph theory,
+fractal geometry, combinatorial counting, and modular arithmetic, and
+the final answer requires computing <code>C(C(C(10000))) mod 13^8</code> where
+<code>C(n)</code> is the number of Hamiltonian cycles on a Sierpiński graph of
+order <code>n</code>.</p>
+<p>We ended up leaning on OEIS to get the recurrence in closed form, which
+we will confess to below. Full notes:
+<a href="https://charlesreid1.com/wiki/Project_Euler/312">Project Euler/312</a>.</p>
+<h2 id="the-problem">The Problem</h2>
+<p>A <strong>Sierpiński graph</strong> of order 1, denoted <code>S_1</code>, is an equilateral
+triangle - three vertices, three edges.</p>
+<p><code>S_{n+1}</code> is built from three copies of <code>S_n</code> positioned so each pair
+of copies shares one corner vertex.</p>
+<p>Let <code>C(n)</code> be the number of cycles that pass through every vertex of
+<code>S_n</code> exactly once - the number of <strong>Hamiltonian cycles</strong>. The problem
+tells us <code>C(1) = C(2) = 1</code>, and <code>C(5) = 71,328,803,586,048</code>.</p>
+<p>The goal: find <code>C(C(C(10000))) mod 13^8</code>.</p>
+<p>Two things to notice about the goal. First, <code>C(10000)</code> is astronomically
+large - you cannot actually compute it and then feed it to <code>C</code> again.
+Second, <code>mod 13^8</code> is a big hint: the whole calculation is going to
+happen in modular arithmetic, and there is going to be some periodicity
+trick.</p>
+<h2 id="vertices-and-edges">Vertices and Edges</h2>
+<p>Some easy facts to nail down before doing anything clever.</p>
+<p>Number of edges of <code>S_n</code>:</p>
+<div class="math">$$
+e(S_n) = 3^{n+1}
+$$</div>
+<p>Number of vertices of <code>S_n</code>:</p>
+<div class="math">$$
+v(S_n) = \frac{3}{2}\left(3^n + 1\right)
+$$</div>
+<p>So <code>S_10000</code> has on the order of <code>3^10000</code> vertices, which is a number
+with about 4,700 decimal digits. A Hamiltonian cycle visits every
+vertex, so the number of Hamiltonian cycles is going to have on the
+order of <code>3^10000</code> factorial-ish in its combinatorics. There is no
+approach that involves listing anything.</p>
+<h2 id="the-recursive-structure">The Recursive Structure</h2>
+<p>The critical observation is that <code>S_{n+1}</code> is built from three copies of
+<code>S_n</code>. A Hamiltonian cycle on <code>S_{n+1}</code> has to traverse all three
+copies, and the only places it can move between copies are at the
+shared corner vertices. So any Hamiltonian cycle on <code>S_{n+1}</code> consists
+of:</p>
+<ul>
+<li>A Hamiltonian <strong>path</strong> through the first copy of <code>S_n</code>, entering and
+  exiting at two of its three outer corners</li>
+<li>A Hamiltonian path through the second copy, similarly</li>
+<li>A Hamiltonian path through the third copy, similarly</li>
+<li>Plus the three edges that connect the copies together at the shared
+  corners</li>
+</ul>
+<p>So counting Hamiltonian cycles reduces to counting certain kinds of
+Hamiltonian paths on smaller graphs.</p>
+<p>Let</p>
+<ul>
+<li><code>C(n)</code> = number of Hamiltonian cycles on <code>S_n</code></li>
+<li><code>P(n)</code> = number of Hamiltonian paths on <code>S_n</code> where <strong>both</strong>
+  endpoints are outer corners</li>
+<li><code>P̄(n)</code> = number of Hamiltonian paths on <code>S_n</code> where <strong>exactly one</strong>
+  endpoint is an outer corner</li>
+</ul>
+<p>Then</p>
+<div class="math">$$
+C(n) = [P(n-1)]^3
+$$</div>
+<p>(three copies, each contributing a Hamiltonian path with both endpoints
+at outer corners, one path per copy, chosen independently).</p>
+<p>Similarly, by tracking which paths piece together into which combined
+paths, we get</p>
+<div class="math">$$
+P(n) = 2 [P(n-1)]^2 P̄(n-1)
+$$</div>
+<div class="math">$$
+P̄(n) = 2 [P̄(n-1)]^2 P(n-1)
+$$</div>
+<p>These recurrences let us compute <code>P(n)</code>, <code>P̄(n)</code>, and <code>C(n)</code> in
+principle. The values grow explosively - by the time <code>n = 5</code>, <code>C(n)</code> is
+already <code>7.1 × 10^13</code>.</p>
+<h2 id="closed-form-confession-time">Closed Form (Confession Time)</h2>
+<p>At this point we did the thing everyone does: computed <code>C(1)</code> through
+<code>C(5)</code> from the recurrence, dropped the sequence into OEIS, and
+immediately hit
+<a href="https://oeis.org/A246959">A246959</a> - the "number of Hamiltonian cycles
+in the Sierpiński graph."</p>
+<p>The closed form given by OEIS is</p>
+<div class="math">$$
+C(n) = 8 \cdot 12^{(3^{n-2} - 3)/2} \qquad n \geq 3
+$$</div>
+<p>which is very compact. Equivalently, the recurrence</p>
+<div class="math">$$
+C(n) = (3 \cdot C(n-1))^3 \qquad n \geq 4
+$$</div>
+<p>Sanity check against the given value <code>C(5) = 71,328,803,586,048</code>.
+Wolfram Alpha confirms.</p>
+<p>First few values:</p>
+<table>
+<thead>
+<tr>
+<th><code>n</code></th>
+<th><code>C(n)</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>8</td>
+</tr>
+<tr>
+<td>4</td>
+<td>13,824</td>
+</tr>
+<tr>
+<td>5</td>
+<td>71,328,803,586,048</td>
+</tr>
+</tbody>
+</table>
+<p>Note that <code>C(2) = 2</code> above, but the problem states <code>C(1) = C(2) = 1</code>.
+The mismatch is a convention issue about what counts as a Hamiltonian
+cycle on the tiniest graphs (traversal direction, effectively). We
+used the OEIS convention for anything <code>n ≥ 3</code>, which is where the
+counting matters.</p>
+<h2 id="nested-evaluation-under-a-modulus">Nested Evaluation Under a Modulus</h2>
+<p>Now for the actual goal: <code>C(C(C(10000))) mod 13^8</code>.</p>
+<p>The magnitude of <code>C(10000)</code> is not something you can hold in memory.
+By <code>n = 20</code> the exponent in <code>12^((3^(n-2) - 3)/2)</code> is already millions
+of digits long, and we are being asked about <code>n = 10000</code>. So the whole
+calculation has to happen without ever materializing an intermediate
+value in full.</p>
+<p>The trick is that we don't <em>need</em> the intermediate values in full. We
+need <code>C(C(C(10000))) mod 13^8</code>. That means for the outermost <code>C</code>, we
+only need its argument modulo something that makes the outermost <code>C</code>
+computable. And that "something" is much smaller than the argument
+itself.</p>
+<p>Three techniques do the work.</p>
+<h3 id="technique-1-periodicity-of-cn-mod-m">Technique 1: Periodicity of <code>C(n) mod M</code></h3>
+<p>The sequence <code>C(1), C(2), C(3), ...</code> taken modulo any fixed <code>M</code> is
+eventually periodic. It has to be - the state at step <code>n</code> in the
+recurrence <code>C(n) = (3 · C(n-1))^3 mod M</code> is a single residue in
+<code>Z/MZ</code>, and there are only <code>M</code> possible residues, so the sequence must
+eventually enter a cycle.</p>
+<p>Let <code>P</code> be the period. Then</p>
+<div class="math">$$
+C(X) \bmod M = C(((X - X_0) \bmod P) + X_0) \bmod M
+$$</div>
+<p>for <code>X</code> at least as large as the pre-period offset <code>X_0</code>. In practice
+you compute successive <code>C(n) mod M</code> values until you see a repeat, and
+that tells you <code>X_0</code> and <code>P</code>.</p>
+<p>This is the workhorse. It lets you reduce "compute <code>C</code> at an
+astronomically large index" to "compute <code>C</code> at an index in the range
+<code>[X_0, X_0 + P)</code>."</p>
+<h3 id="technique-2-choosing-the-right-modulus-at-each-layer">Technique 2: Choosing the Right Modulus at Each Layer</h3>
+<p>The three <code>C</code> calls need different moduli.</p>
+<p>The <strong>outermost</strong> <code>C</code> operates modulo <code>13^8</code>. That is what the problem
+asks for.</p>
+<p>The <strong>middle</strong> <code>C</code> needs to produce a residue that determines the
+outermost <code>C(x) mod 13^8</code>. By technique 1, the outermost <code>C</code> is
+periodic mod <code>13^8</code> with some period <code>P_out</code>. So the middle <code>C</code> only
+needs to compute its result <strong>modulo <code>P_out</code></strong> (well, modulo the
+pre-period plus period - be careful with the offset).</p>
+<p>The <strong>innermost</strong> <code>C(10000)</code> needs to produce a residue that determines
+the middle <code>C(y) mod P_out</code>. So find the period <code>P_mid</code> of <code>C</code> mod
+<code>P_out</code>, and compute <code>C(10000) mod P_mid</code>.</p>
+<p>So the algorithm is:</p>
+<ol>
+<li>Find the period of <code>C(n) mod 13^8</code>. Call it <code>P_out</code>.</li>
+<li>Find the period of <code>C(n) mod P_out</code>. Call it <code>P_mid</code>.</li>
+<li>Compute <code>C(10000) mod P_mid</code>. Call the result <code>a</code>.</li>
+<li>Compute <code>C(a) mod P_out</code>. Call the result <code>b</code>.</li>
+<li>Compute <code>C(b) mod 13^8</code>.</li>
+</ol>
+<p>Each step uses either the recurrence directly (<code>b = (3·b_prev)^3 mod M</code>)
+or, for the innermost step at <code>n = 10000</code>, the recurrence run 10000
+times mod the appropriate modulus. Ten thousand modular multiplications
+is nothing.</p>
+<h3 id="technique-3-handling-the-cube-under-a-prime-power">Technique 3: Handling the Cube Under a Prime Power</h3>
+<p>The recurrence <code>C(n) = (3 · C(n-1))^3</code> involves a cube, so under a
+prime power modulus you have to be careful about invertibility. Cubing
+is well-defined mod <code>13^8</code> (or mod anything else), so the forward
+recurrence is not a problem - you just cube and multiply. What can go
+wrong is if you try to <em>invert</em> the cubing at some point, which you
+would need if you tried to do matrix exponentiation on the logarithm of
+the recurrence.</p>
+<p>We did not need to invert. The three-layer periodicity approach above
+uses only forward evaluation of the recurrence, so cubing mod <code>13^8</code> is
+fine.</p>
+<h3 id="chinese-remainder-theorem">Chinese Remainder Theorem</h3>
+<p>CRT is worth mentioning for completeness. If the modulus had been
+composite with multiple distinct prime factors, we would compute the
+answer separately modulo each prime power and glue the results
+together with CRT.</p>
+<p>Here the modulus is <code>13^8</code>, a single prime power, so CRT is not
+needed - but if the problem had asked for <code>mod (7^5 · 11^3 · 13^8)</code>,
+the approach would be to solve three separate problems and CRT the
+answers.</p>
+<h2 id="what-we-learned">What We Learned</h2>
+<p>Three things worth carrying forward.</p>
+<p><strong>Recursive structure beats brute force by a lot.</strong> The naive approach
+of enumerating cycles on <code>S_n</code> is impossible for anything <code>n &gt; 4</code> or so.
+The recursive approach reduces the problem to counting paths on
+<code>S_{n-1}</code> with three specific endpoint types, and that recursion
+collapses to a single-variable formula. Every time you can find a
+recursive structure, use it.</p>
+<p><strong>OEIS is not cheating.</strong> Recognizing a sequence and looking up its
+closed form is a legitimate research tool, not shortcut. The people who
+computed and cataloged OEIS A246959 did the work of proving the closed
+form. Standing on their shoulders is what mathematics has always looked
+like. The alternative - re-deriving every known result from scratch - is
+how you never finish anything.</p>
+<p><strong>Nested modular evaluation is a real technique.</strong> When a problem asks
+for <code>f(f(f(n))) mod M</code> with a huge <code>n</code>, you rarely need to compute the
+intermediate values. You work outward-in through periods: the outermost
+period tells you what modulus the middle layer actually needs to
+produce, which tells you what modulus the innermost layer needs to
+produce. Astronomical intermediate values reduce to residues in
+tractable rings. This shape of problem shows up a lot in number theory
+and cryptography, and it is worth having the pattern in your head.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our wiki notes:
+  <a href="https://charlesreid1.com/wiki/Project_Euler/312">Project Euler/312</a></li>
+<li><a href="https://projecteuler.net/problem=312">PE 312 on projecteuler.net</a></li>
+<li><a href="https://oeis.org/A246959">OEIS A246959</a> - Hamiltonian cycles in
+  Sierpiński graphs</li>
+<li>Useful paper: <a href="https://arxiv.org/pdf/0909.5541">https://arxiv.org/pdf/0909.5541</a> (Hamiltonian
+  properties of Sierpiński graphs)</li>
+</ul>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/graph-theory.html">graph theory</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/hamiltonian-cycles.html">hamiltonian cycles</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/sierpinski.html">sierpinski</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/recursion.html">recursion</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/oeis.html">oeis</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Project Euler 227 (The Chase): When Brute Force Costs 80 Days
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2025-04-19T20:00:00-07:00" pubdate>Saturday 04/19/2025</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/project-euler-227-the-chase-when-brute-force-costs-80-days.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p><a href="https://projecteuler.net/problem=227">Project Euler problem 227</a> - "The
+Chase" - is a nice example of a problem where the brute force approach
+is completely reasonable to reach for first, completely infeasible to
+actually finish, and directly points you at the right mathematical
+reformulation.</p>
+<p>This is what we ended up with. Our full working notes are on the wiki at
+<a href="https://charlesreid1.com/wiki/Project_Euler/227">Project Euler/227</a>.</p>
+<h2 id="the-problem">The Problem</h2>
+<p>An even number of players sit around a table. Two players sitting
+directly opposite each other each start with a die. Each round, both
+players roll:</p>
+<ul>
+<li>Roll a 1 → pass the die to your left neighbor</li>
+<li>Roll a 6 → pass the die to your right neighbor</li>
+<li>Anything else → keep the die</li>
+</ul>
+<p>The game ends when one player is holding both dice at the end of a
+round. That player loses.</p>
+<p>The question: with 100 players, what is the expected number of rounds
+before someone loses?</p>
+<h2 id="reaching-for-the-brute-force">Reaching For the Brute Force</h2>
+<p>The first thing we did was write a very small Python simulator. Two
+integer pointers, one per die. Each round, roll two dice, update each
+pointer with <code>+1</code>, <code>-1</code>, or nothing, modulo the number of players. Stop
+when the pointers collide. Average over many trials.</p>
+<p>This works. It gives you an estimate that gets more accurate as you run
+more trials. And then you start measuring how expensive that gets.</p>
+<p>The cost has two knobs:</p>
+<ul>
+<li><strong>Trials.</strong> Linear. Four decimal places of accuracy needs about 1,000
+  trials. Ten decimal places needs billions.</li>
+<li><strong>Players.</strong> Not linear. Playing with 5, 10, 15, 20, and 25 players
+  and measuring, the runtime looked quadratic in the number of players.</li>
+</ul>
+<p>So the total execution time is roughly</p>
+<div class="math">$$
+T(N, S) \approx c \cdot S \cdot N^2
+$$</div>
+<p>Extrapolating our measured constant <code>c</code> from small experiments up to
+<code>N = 100</code> players and <code>S = 9</code> billion trials (to get sufficient accuracy
+on the answer), we got about <strong>7,000,000 seconds</strong>. Call it 80 days.</p>
+<p>Project Euler problems are supposed to have solutions that run in about
+a minute. 80 days is not a minute. Even switching to a compiled language
+and multithreading, we would need a <strong>10,000×</strong> speedup to get into the
+right ballpark. And the loop body is already about as tight as a loop
+body gets - two random integers, two pointer updates, a comparison.
+There is not much to optimize.</p>
+<p>So the brute force is out. What is it about the problem that makes brute
+force so bad, and what does the answer look like if we ask a different
+question?</p>
+<h2 id="reformulating-as-a-markov-chain">Reformulating as a Markov Chain</h2>
+<p>The key observation is that the game has no memory. The next state only
+depends on the current state. That is the definition of a Markov chain.</p>
+<p>The <strong>state</strong> is the pair of positions of the two dice, <code>(i, j)</code>, where
+<code>i</code> and <code>j</code> are player indices in <code>{0, 1, ..., N-1}</code>. For 100 players,
+that's a state space with 10,000 pairs, minus the 100 pairs where <code>i = j</code>
+(dice have collided - game over). So we have 9,900 transient states and
+100 absorbing states.</p>
+<p>Note: <code>(i, j)</code> and <code>(j, i)</code> represent the same physical situation. There
+is a symmetry we could exploit to cut the state count roughly in half,
+but for the initial derivation we ignored it and paid the extra factor.</p>
+<p>Transitions: each die independently keeps, moves left, or moves right,
+with probabilities <code>4/6</code>, <code>1/6</code>, <code>1/6</code>. So the joint transition from
+<code>(i, j)</code> to <code>(i', j')</code> has probability equal to the product of the two
+individual probabilities. Each transient state has at most 9 possible
+next states (3 outcomes per die × 3 outcomes per die).</p>
+<h2 id="the-fundamental-matrix">The Fundamental Matrix</h2>
+<p>The clean way to compute expected time to absorption in a finite Markov
+chain is via the <strong>fundamental matrix</strong>. It works like this.</p>
+<p>Arrange the states so transient states come first and absorbing states
+come second. Then the transition probability matrix has the block form</p>
+<div class="math">$$
+P = \begin{bmatrix} Q &amp; R \\ 0 &amp; I \end{bmatrix}
+$$</div>
+<p>where</p>
+<ul>
+<li><code>Q</code> is <code>t × t</code>, the transition probabilities among transient states</li>
+<li><code>R</code> is <code>t × r</code>, the transitions from transient to absorbing states</li>
+<li><code>0</code> and <code>I</code> in the bottom row represent the fact that absorbing states
+  don't leave themselves</li>
+</ul>
+<p>The <strong>fundamental matrix</strong> is</p>
+<div class="math">$$
+N = (I - Q)^{-1}
+$$</div>
+<p>Entry <code>N[i, j]</code> gives the expected number of visits to transient state
+<code>j</code> before absorption, starting from transient state <code>i</code>. That means the
+expected number of steps until absorption, starting from state <code>i</code>, is
+the sum of row <code>i</code> of <code>N</code>.</p>
+<p>Or equivalently: solve the linear system <code>(I - Q) x = 1</code>, where <code>1</code> is a
+column of ones. Entry <code>x[i]</code> is the expected number of steps starting
+from state <code>i</code>.</p>
+<h2 id="building-q-for-100-players">Building Q for 100 Players</h2>
+<p>For 100 players there are <code>100 × 99 = 9900</code> transient states. <code>Q</code> is
+<code>9900 × 9900</code>. We only need to fill in the roughly nine nonzero entries
+per row, so <code>Q</code> is very sparse.</p>
+<p>Two things to get right when you build it:</p>
+<ol>
+<li><strong>State-to-index mapping.</strong> Some canonical ordering of the <code>(i, j)</code>
+   pairs with <code>i ≠ j</code>. Any consistent bijection between pairs and row
+   indices works.</li>
+<li><strong>Iterating over next states.</strong> For each <code>(i, j)</code>, enumerate the nine
+   <code>(i', j')</code> transitions. For each, check whether <code>i' = j'</code> (in which
+   case that probability mass flows to an absorbing state and doesn't
+   go into <code>Q</code>).</li>
+</ol>
+<p>Then invert <code>I - Q</code>, sum the row of <code>N</code> that corresponds to the starting
+state <code>(0, 50)</code> (opposite sides of the table), and you have your answer.</p>
+<h2 id="the-uncomfortable-confession">The Uncomfortable Confession</h2>
+<p>Ours took <strong>1,687 seconds</strong> to run. Twenty-eight minutes. Better than 80
+days, but not great.</p>
+<p>The slow part is inverting the 9,900 × 9,900 matrix. We tried
+reformulating as a linear solve <code>(I - Q) x = 1</code> and using LU
+decomposition instead of computing the full inverse, on the theory that
+LU should be faster. It was almost twice as slow. That was a surprise
+but probably a story about the specific dense linear algebra library we
+were using rather than a fundamental issue.</p>
+<p>The obvious next moves we did <em>not</em> take:</p>
+<ul>
+<li><strong>Sparse matrix representation.</strong> <code>Q</code> has at most 9 nonzeros per row
+  out of 9,900. Using a proper sparse solver would probably drop us into
+  the seconds.</li>
+<li><strong>Exploit the symmetry.</strong> Treating <code>(i, j)</code> and <code>(j, i)</code> as the same
+  state cuts the matrix size in half. Combined with sparsity, this
+  should be very fast.</li>
+<li><strong>Iterative methods.</strong> The system <code>(I - Q) x = 1</code> is a great candidate
+  for something like BiCGSTAB or GMRES, which don't build the inverse at
+  all.</li>
+</ul>
+<h2 id="the-real-solution-times">The Real Solution Times</h2>
+<p>For fun, we looked at the Project Euler forum posts after we submitted.
+The first person to solve it did it in <strong>0.1 seconds in C++ in 2009</strong>.
+That is 16,000× faster than ours.</p>
+<p>They used a completely different approach, involving grouping the six
+die outcomes into three groups (<code>+1</code>, <code>-1</code>, keep) and using symmetries
+to reduce the state space dramatically. There is a shape of insight that
+turns "big linear algebra problem" into "small closed-form recurrence"
+that we did not find.</p>
+<p>Some of the fun of Project Euler is exactly this: finishing the problem,
+submitting the answer, and then finding out that half the people who
+solved it did it 10,000× faster with a technique you did not think of.
+The correct response is not embarrassment. It is to open the forum, read
+their write-ups, and steal their trick for next time.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our full notes:
+  <a href="https://charlesreid1.com/wiki/Project_Euler/227">Project Euler/227</a></li>
+<li><a href="https://projecteuler.net/problem=227">PE 227 on projecteuler.net</a></li>
+<li>Fundamental matrix: standard reference is Kemeny &amp; Snell, <em>Finite
+  Markov Chains</em> (1960)</li>
+</ul>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/markov-chains.html">markov chains</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/probability.html">probability</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/brute-force.html">brute force</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/fundamental-matrix.html">fundamental matrix</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Project Euler 198 and Continued Fractions: When Is a Rational Ambiguous?
             </b></h1>
         
@@ -348,384 +991,6 @@ easier to work with.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Project Euler 60: Finding Five Primes That Concatenate to Primes
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2025-04-14T20:00:00-07:00" pubdate>Monday 04/14/2025</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/project-euler-60-finding-five-primes-that-concatenate-to-primes.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p><a href="https://projecteuler.net/problem=60">Project Euler problem 60</a> is a
-nice mid-difficulty combinatorial search problem. It has enough
-structure that pure brute force falls over, and enough structure that a
-handful of small observations gives you a very tractable search.</p>
-<p>Our working notes:
-<a href="https://charlesreid1.com/wiki/Project_Euler/60">Project Euler/60</a>.</p>
-<h2 id="the-problem">The Problem</h2>
-<p>The primes 3, 7, 109, and 673 are "quite remarkable" - concatenating any
-two of them in either order gives another prime. So <code>7109</code>, <code>1097</code>,
-<code>3673</code>, <code>6733</code>, <code>109673</code>, <code>673109</code>, and so on, are all prime. That is 12
-concatenations, all prime.</p>
-<p>The sum of these four primes is 792, and the problem states this is the
-smallest such sum for a set of four primes with this property.</p>
-<p>Find the smallest sum for a set of <strong>five</strong> primes with the same
-property.</p>
-<h2 id="the-search-space">The Search Space</h2>
-<p>The naive approach: enumerate all 5-subsets of primes up to some bound
-and check the property. The number of concatenations to check per
-5-subset is</p>
-<div class="math">$$
-\binom{5}{2} \times 2 = 20
-$$</div>
-<p>which is fine. The problem is the number of 5-subsets. If your prime
-bound is 10,000, you have roughly 1,229 primes, and
-<code>C(1229, 5) ≈ 2.3 × 10^13</code> subsets. Not fine.</p>
-<p>So the whole game is: use structural facts about the problem to cut the
-search space down.</p>
-<h2 id="pruning-by-digit-constraints">Pruning by Digit Constraints</h2>
-<p>The first observation is that concatenation preserves the last digit.
-If <code>A</code> and <code>B</code> are primes, and you form <code>AB</code> (concatenation), then the
-last digit of <code>AB</code> is the last digit of <code>B</code>. For <code>AB</code> to be prime, its
-last digit must be 1, 3, 7, or 9 (or 2 or 5, but those only work if the
-resulting number is exactly 2 or 5). So every prime in our set except
-possibly one small one has to end in 1, 3, 7, or 9.</p>
-<p>Similarly, since every prime except 2 has an odd last digit, and
-prepending a number changes the first digit but not the last, both
-primes in a pair have to end in 1, 3, 7, or 9.</p>
-<p>Also: 2 and 5 can be immediately ruled out from consideration - any
-concatenation involving 2 or 5 will produce a number ending in a digit
-other than 1/3/7/9, and therefore composite.</p>
-<p>This is a small pruning at the level of "which primes to include," but
-it eliminates a lot of pointless primality tests later.</p>
-<h2 id="two-pronged-search-strategy">Two-Pronged Search Strategy</h2>
-<p>Here is where things get interesting. The problem hands us the known
-4-prime solution <code>{3, 7, 109, 673}</code>. So we have two very different
-searches available to us:</p>
-<p><strong>Extend-known search.</strong> Take the known 4-prime set and look for a
-single 5th prime <code>p</code> such that <code>p</code> concatenates to a prime with each of
-<code>{3, 7, 109, 673}</code> in both orders. This is 8 primality checks per
-candidate <code>p</code>, and we only need to iterate over primes.</p>
-<p><strong>Fresh-set search.</strong> Look for a completely new set of 5 primes,
-possibly with a smaller total sum than the extension of the known
-4-prime set.</p>
-<p>The extend-known search is much cheaper (linear in the number of
-candidate 5th primes, versus quintic in the fresh-set search). It also
-gives you a solution quickly, which lets you set an upper bound on the
-answer, which lets you prune the fresh-set search dramatically.</p>
-<p>The correct order is:</p>
-<ol>
-<li>Run extend-known first. Get some 5-prime solution and its sum, <code>S*</code>.</li>
-<li>Run fresh-set search but throw out any partial set whose sum already
-   exceeds <code>S*</code>.</li>
-</ol>
-<p>By the time you get to step 2, you have a hard bound on how big any of
-the primes can be, which shrinks the search space by orders of
-magnitude.</p>
-<h2 id="the-structure-of-a-fresh-set-search">The Structure of a Fresh-Set Search</h2>
-<p>Even with the sum bound from step 1, a fresh search benefits from being
-built up incrementally rather than as a nested 5-deep loop:</p>
-<ul>
-<li>Precompute a list of candidate primes up to some bound</li>
-<li>Build a <strong>compatibility graph</strong>: nodes are primes, an edge exists
-  between <code>p</code> and <code>q</code> if both <code>p||q</code> and <code>q||p</code> are prime</li>
-<li>Find 5-cliques in this graph</li>
-</ul>
-<p>Because a valid 5-set has to be a 5-clique in the compatibility graph
-(every pair has to concatenate-to-prime with every other pair), you can
-extend candidate sets incrementally:</p>
-<ul>
-<li>Start with a 2-clique (pair of primes that concatenate-to-prime)</li>
-<li>Extend to a 3-clique by finding a prime that concatenates-to-prime
-  with both</li>
-<li>Extend to 4, then 5</li>
-</ul>
-<p>At each stage, the set of viable extensions shrinks fast. Most 2-cliques
-have no valid extension to a 3-clique. Most 3-cliques don't extend to a
-4-clique. By the time you're looking for a 5-clique, the search is
-narrow.</p>
-<h2 id="primality-testing">Primality Testing</h2>
-<p>For a problem like this, the primality test gets called a lot. Two
-things worth doing:</p>
-<ul>
-<li>Precompute a <strong>prime sieve</strong> for small numbers. The Sieve of
-  Eratosthenes up to some reasonable bound gives you <code>O(1)</code> primality
-  tests for anything in range.</li>
-<li>For the concatenated numbers (which can get large), use a
-  probabilistic test like <strong>Miller-Rabin</strong>. Deterministic for numbers
-  under <code>3.3 × 10^14</code> with the right witness set, so no false positives
-  in the range this problem cares about.</li>
-</ul>
-<h2 id="what-we-learned">What We Learned</h2>
-<p>Two takeaways from this problem, generalizable to other combinatorial
-search puzzles:</p>
-<p><strong>Use the known solution as a bound.</strong> If the problem hands you a
-partial solution, get an answer from extending it first, then use that
-answer's sum/cost as a pruning bound for the fuller search. This is
-almost always faster than starting the fuller search cold.</p>
-<p><strong>Build the compatibility graph explicitly.</strong> For problems where "sets
-of <code>k</code> things all pairwise satisfy some property" is the search shape,
-converting it to "find a <code>k</code>-clique" in a precomputed compatibility
-graph is usually the right structure. Clique-finding is NP-hard in
-general, but for the small <code>k</code> values Project Euler cares about (5 in
-this case), it is fast in practice.</p>
-<h2 id="references">References</h2>
-<ul>
-<li>Our wiki notes:
-  <a href="https://charlesreid1.com/wiki/Project_Euler/60">Project Euler/60</a></li>
-<li><a href="https://projecteuler.net/problem=60">PE 60 on projecteuler.net</a></li>
-<li>Our Java solution:
-  <a href="https://git.charlesreid1.com/cs/euler/src/branch/master/java/Problem060.java">https://git.charlesreid1.com/cs/euler/src/branch/master/java/Problem060.java</a></li>
-</ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/project-euler.html">project euler</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/primes.html">primes</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/combinatorial-search.html">combinatorial search</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/brute-force.html">brute force</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Two Burp Suite Extensions Worth Installing: JWT Editor and Hackvertor
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2023-06-04T20:30:00-07:00" pubdate>Sunday 06/04/2023</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/two-burp-suite-extensions-worth-installing-jwt-editor-and-hackvertor.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>Short post, high signal-to-noise. If you're using
-<a href="https://charlesreid1.com/wiki/Burp_Suite">Burp Suite</a> for web security
-testing, there are two extensions we install on every fresh Burp
-installation before doing anything else. Both are free, both are in the
-official BApp Store, both take about thirty seconds to install, and both
-will save you hours the first time you need them.</p>
-<p>Wiki reference:
-<a href="https://charlesreid1.com/wiki/Burp_Suite/Extensions">Burp Suite/Extensions</a>.</p>
-<h2 id="how-to-install-bapp-store-extensions">How To Install BApp Store Extensions</h2>
-<p>For anyone who hasn't installed a Burp extension before:</p>
-<ol>
-<li>In Burp, go to Extensions → BApp Store</li>
-<li>Search for the extension name</li>
-<li>Click "Install"</li>
-<li>Wait for it to appear in the Installed tab</li>
-</ol>
-<p>You can also install manually from a JAR file: Extensions → BApp Store →
-Manual install at the bottom, pick the file, click Open.</p>
-<h2 id="extension-1-jwt-editor">Extension 1: JWT Editor</h2>
-<p><a href="https://portswigger.net/bappstore/26aaa5ded2f74beea19e2ed8345a93dd">JWT Editor on the BApp Store</a></p>
-<p>JWT Editor lets you view and edit the contents of JSON Web Tokens
-in-flight. If a request contains a JWT in an <code>Authorization: Bearer ...</code>
-header or a cookie, JWT Editor gives you a tab that shows the decoded
-header and payload, lets you edit either one, and re-encodes and re-signs
-the token on the way out.</p>
-<p>Why it matters: JWTs are opaque strings of base64 to the naked eye. If
-you want to test what happens when the <code>role</code> claim in the payload
-changes from <code>user</code> to <code>admin</code>, or what the server does when you swap
-the signing algorithm from <code>RS256</code> to <code>none</code>, JWT Editor is the tool.</p>
-<p>Without it: you're manually base64-decoding, editing JSON in a text
-editor, base64-encoding, and pasting the result back into the request.
-Every time. For every request.</p>
-<p>With it: you edit the JSON in a form, and Burp handles the rest.</p>
-<h2 id="extension-2-hackvertor">Extension 2: Hackvertor</h2>
-<p><a href="https://portswigger.net/bappstore/65033cbd2c344fbabe57ac060b5dd100">Hackvertor on the BApp Store</a></p>
-<p>Hackvertor is a tag-based conversion tool. You write tags in your request
-payloads that get expanded before the request goes out - things like
-URL-encode this, base64-encode that, MD5-hash the other thing, ROT13
-the result, and so on. Tags can be nested and chained.</p>
-<p>The killer feature is bypassing weak Web Application Firewalls. Many WAFs
-look for specific attack patterns - the literal string <code>UNION SELECT</code>,
-for example, or the literal string <code>&lt;script&gt;</code>. Hackvertor lets you write
-your payload once, then wrap it in a chain of encoding tags that produces
-a request the WAF doesn't recognize but the target application still
-parses correctly.</p>
-<p>If you're doing any serious SQL injection or XSS testing against
-real-world targets, Hackvertor turns "the WAF blocked me" into "the WAF
-blocked one shape of my payload."</p>
-<h2 id="other-extensions-worth-knowing-about">Other Extensions Worth Knowing About</h2>
-<p>We won't cover them here, but a few more from the BApp Store that come
-up regularly:</p>
-<ul>
-<li><strong>Autorize</strong> - automated access control testing</li>
-<li><strong>Turbo Intruder</strong> - much faster than the built-in Intruder for
-  high-request-count attacks</li>
-<li><strong>Logger++</strong> - richer request logging than the built-in HTTP history</li>
-</ul>
-<p>Our full list, with notes on when each one matters, is on the
-<a href="https://charlesreid1.com/wiki/Burp_Suite/Extensions">Burp Suite/Extensions</a>
-wiki page.</p>
-<h2 id="references">References</h2>
-<ul>
-<li>Our wiki: <a href="https://charlesreid1.com/wiki/Burp_Suite/Extensions">Burp Suite/Extensions</a></li>
-<li><a href="https://portswigger.net/bappstore">Burp Suite BApp Store</a></li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/burp-suite.html">burp suite</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/extensions.html">extensions</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/jwt.html">jwt</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/encoding.html">encoding</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/portswigger.html">portswigger</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -763,6 +1028,22 @@ wiki page.</p>
 
             <p class="archive">
             <a href="https://charlesreid1.github.io/fermi-problems-are-quadrature-problems.html">Fermi Problems Are Quadrature Problems</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>August 2026</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/enumeration-solitaire-derangements-with-four-copies-of-each-rank.html">Enumeration Solitaire: Derangements with Four Copies of Each Rank</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/baby-poker-the-smallest-interesting-bluffing-game.html">Baby Poker: The Smallest Interesting Bluffing Game</a>
             </p>
 
         </div>

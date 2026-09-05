@@ -99,6 +99,549 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2025-05-30T14:00:00-07:00" pubdate>Friday 05/30/2025</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/nmap-host-discovery-all-the-ways-to-ask-is-anyone-there.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>This is a companion post to
+<a href="building-an-nmap-short-course-from-scratch.html">Building an Nmap Short Course from Scratch</a>.
+Where that post was about the meta - course design, lab
+infrastructure - this one drills into the actual first-lecture
+material: how Nmap decides whether a host is up.</p>
+<p>Full lecture notes:
+<a href="https://charlesreid1.com/wiki/Nmap/Short_Course/Lecture_1">Nmap/Short Course/Lecture 1</a>.</p>
+<h2 id="why-host-discovery-matters">Why Host Discovery Matters</h2>
+<p>Before you can scan ports, identify services, or check for
+vulnerabilities, you have to figure out which IP addresses on the
+target network actually have a machine behind them. Scanning IPs that
+aren't responding is a waste of time, generates a lot of unnecessary
+network noise, and can tip off defenders.</p>
+<p>Think of it as making a map of active settlements before deciding
+which ones to explore in detail.</p>
+<h2 id="ethics-first">Ethics First</h2>
+<p>The obvious but necessary caveat: Nmap must only be used on networks
+where you have explicit, written authorization to scan. Unauthorized
+scanning can be interpreted as an attack, and in many jurisdictions is
+illegal.</p>
+<p>Everything in this post assumes an isolated lab environment - which is
+exactly what we set up in
+<a href="building-an-nmap-short-course-from-scratch.html">the previous post</a>.</p>
+<h2 id="the-default-nmaps-multi-probe-approach">The Default: Nmap's Multi-Probe Approach</h2>
+<p>If you run Nmap as a privileged user (root or <code>sudo</code>) without
+specifying any discovery options, it will fire <em>four</em> probes at each
+target:</p>
+<ol>
+<li>ICMP echo request (a classic ping)</li>
+<li>TCP SYN packet to port 443</li>
+<li>TCP ACK packet to port 80</li>
+<li>ICMP timestamp request</li>
+</ol>
+<p>If any of the four gets a response, Nmap considers the host up.</p>
+<p>The multi-probe approach exists because different firewalls block
+different things. ICMP is commonly blocked at the network edge. Port
+443 might be allowed inbound because there is a web server behind it.
+Port 80 might respond with a TCP RST because there is nothing
+listening. Any one of these signals is enough.</p>
+<p>Unprivileged users can't send raw packets, so Nmap falls back to
+attempting TCP connect() calls to ports 80 and 443. Less accurate,
+but works without root.</p>
+<h2 id="-sn-just-tell-me-whats-alive"><code>-sn</code>: Just Tell Me What's Alive</h2>
+<p>Nmap's default behavior is to do host discovery <em>and then</em> port scan
+whatever comes back alive. If you only want the host discovery step,
+use <code>-sn</code>:</p>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.0/24
+</code></pre></div>
+
+<p><code>-sn</code> means "scan, no port scan." (In older versions it was <code>-sP</code>,
+"scan ping.") It runs the multi-probe discovery and prints just the
+list of live hosts. Very fast, very quiet compared to a full port
+scan, and often the first thing you run.</p>
+<p>Everything else in this post uses <code>-sn</code> unless otherwise noted.</p>
+<h2 id="the-p-family-picking-a-specific-probe">The <code>-P</code> Family: Picking a Specific Probe</h2>
+<p>If you want to control exactly which probe Nmap sends, use one of the
+<code>-P</code> flags.</p>
+<h3 id="-pe-icmp-echo-the-plain-ping"><code>-PE</code>: ICMP Echo (the plain ping)</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PE 192.168.1.100
+</code></pre></div>
+
+<p>The most familiar probe. Sends an ICMP echo request, expects an ICMP
+echo reply. Works when firewalls allow ICMP. Frequently blocked at
+network perimeters.</p>
+<h3 id="-pp-icmp-timestamp"><code>-PP</code>: ICMP Timestamp</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PP 192.168.1.101
+</code></pre></div>
+
+<p>Sends an ICMP timestamp request (type 13), expects a timestamp reply
+(type 14). Useful when echo requests are blocked but timestamp
+requests aren't - some firewall rules block ICMP type 8 (echo) but
+forget about type 13.</p>
+<h3 id="-pm-icmp-address-mask"><code>-PM</code>: ICMP Address Mask</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PM 192.168.1.102
+</code></pre></div>
+
+<p>Sends an ICMP address mask request. Very rarely used legitimately
+these days, which is exactly why it sometimes gets through firewalls
+that block the more common ICMP types.</p>
+<p>The pattern: try the obvious probe, fall back to the less-obvious
+ones if the obvious one fails.</p>
+<h3 id="-psports-tcp-syn-ping"><code>-PS[ports]</code>: TCP SYN Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PS 192.168.1.0/24
+sudo nmap -sn -PS22,80,443 192.168.1.50
+</code></pre></div>
+
+<p>Sends a TCP SYN packet to the given ports (default 80 if you don't
+specify). A response - either SYN/ACK meaning "port open" or RST
+meaning "port closed" - tells Nmap the host is alive.</p>
+<p>This one is the workhorse against firewalled targets. Firewalls
+typically allow inbound traffic to common service ports (80, 443, 22)
+because there are legitimate reasons for outsiders to reach those
+ports. TCP SYN pings ride on that permitted traffic.</p>
+<h3 id="-paports-tcp-ack-ping"><code>-PA[ports]</code>: TCP ACK Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PA 192.168.1.0/24
+sudo nmap -sn -PA21 192.168.1.55
+</code></pre></div>
+
+<p>Sends a TCP packet with the ACK flag set. This is a weird packet -
+an ACK with no prior SYN - so most operating systems respond with a
+TCP RST regardless of whether the port is open. If you see the RST,
+the host is alive.</p>
+<p>Useful against stateful firewalls that block unsolicited SYN packets
+(because they aren't part of any tracked connection) but let ACKs
+through (because ACKs look like the middle of an established
+connection the firewall might have lost track of).</p>
+<h3 id="-puports-udp-ping"><code>-PU[ports]</code>: UDP Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PU 192.168.1.0/24
+sudo nmap -sn -PU53,161 192.168.1.60
+</code></pre></div>
+
+<p>Sends a UDP packet to the given ports (default 40125, chosen because
+it's usually closed). If the port is closed, the host should respond
+with ICMP port unreachable, telling you it's alive. If the port is
+open, you might not get a response at all.</p>
+<p>UDP ping is less reliable for host discovery on its own, but very
+useful when the target runs UDP services (DNS on 53, SNMP on 161) and
+when other probes are all blocked.</p>
+<h3 id="-pr-arp-ping"><code>-PR</code>: ARP Ping</h3>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -PR 192.168.1.0/24
+</code></pre></div>
+
+<p>The gold standard when you are on the same Ethernet segment as your
+targets. ARP is the layer-2 protocol that resolves IP addresses to
+MAC addresses, and hosts <em>cannot</em> refuse to answer ARP - if they did,
+they would be unable to talk to anything on the local network.</p>
+<p>Nmap automatically uses <code>-PR</code> for local-segment targets when run by
+a privileged user, unless you tell it not to (<code>--send-ip</code>). It's
+fast (no round trip past the switch) and 100% reliable for hosts
+that are up.</p>
+<h2 id="target-specification">Target Specification</h2>
+<p>Independent of the probe type, you need to tell Nmap <em>which</em> IPs to
+scan.</p>
+<h3 id="single-addresses">Single addresses</h3>
+<div class="highlight"><pre><span></span><code>nmap 192.168.1.1
+nmap scanme.nmap.org
+</code></pre></div>
+
+<p>Hostnames get resolved via DNS. <code>scanme.nmap.org</code> is a target the
+Nmap project maintains specifically for people to practice against.</p>
+<h3 id="cidr-ranges">CIDR ranges</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.0/24
+nmap -sn 10.0.0.0/8
+</code></pre></div>
+
+<p>Standard CIDR notation. <code>/24</code> is 256 IPs, <code>/8</code> is 16.7 million (be
+careful).</p>
+<h3 id="numeric-ranges-and-lists">Numeric ranges and lists</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.1-100        # .1 through .100
+nmap -sn 192.168.1.1,2,10,50    # specific IPs
+nmap -sn 192.168.1,2,3.1-254    # cross product
+</code></pre></div>
+
+<p>That last one scans <code>.1-.254</code> for each of <code>192.168.1.x</code>,
+<code>192.168.2.x</code>, and <code>192.168.3.x</code>. Useful for scanning a handful of
+adjacent subnets.</p>
+<h3 id="from-a-file">From a file</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn -iL targets.txt
+</code></pre></div>
+
+<p>One target per line in the file. Best option when you have a large
+or irregular list of targets, or when the target list comes from
+another tool.</p>
+<h3 id="excluding-targets">Excluding targets</h3>
+<div class="highlight"><pre><span></span><code>nmap -sn 192.168.1.0/24 --exclude 192.168.1.1,192.168.1.100
+nmap -sn 192.168.1.0/24 --exclude-file dontscan.txt
+</code></pre></div>
+
+<p>Critical for avoiding accidental scans on the CEO's laptop or the
+production database when you're supposed to be scanning a specific
+subnet.</p>
+<h2 id="timing-t0-through-t5">Timing: <code>-T0</code> through <code>-T5</code></h2>
+<p>Nmap has six timing templates that control how aggressively it
+sends packets:</p>
+<ul>
+<li><code>-T0</code> (paranoid): Extremely slow. One probe every few minutes.
+  Used for IDS evasion in serious red-team engagements.</li>
+<li><code>-T1</code> (sneaky): Slow. IDS evasion, but not as extreme.</li>
+<li><code>-T2</code> (polite): Slower than default. Reduces bandwidth and target
+  load. Good for scanning production infrastructure.</li>
+<li><code>-T3</code> (normal): The default. Reasonable timing for most networks.</li>
+<li><code>-T4</code> (aggressive): Faster. Assumes a reliable network. Good
+  balance for lab work.</li>
+<li><code>-T5</code> (insane): Very fast. Sacrifices accuracy for speed. Can
+  overwhelm slow networks or fragile targets.</li>
+</ul>
+<div class="highlight"><pre><span></span><code>sudo nmap -sn -T4 192.168.1.0/24
+</code></pre></div>
+
+<p>For host discovery specifically, <code>-T4</code> is usually the right choice
+in a lab environment. On production, use <code>-T3</code> or <code>-T2</code> and be
+patient.</p>
+<h2 id="reading-the-output">Reading the Output</h2>
+<p>A successful scan looks like this:</p>
+<div class="highlight"><pre><span></span><code>Starting Nmap 7.94 ( https://nmap.org ) at 2025-05-27 14:00 PDT
+Host 192.168.1.1 is up (0.00050s latency).
+MAC Address: AA:BB:CC:DD:EE:FF (Realtek Semiconductor)
+Host 192.168.1.10 is up (0.00080s latency).
+MAC Address: 11:22:33:44:55:66 (VMware)
+Nmap done: 256 IP addresses (2 hosts up) scanned in 2.10 seconds
+</code></pre></div>
+
+<p>The MAC address only shows up when you're on the same Ethernet
+segment. The vendor in parentheses comes from Nmap's built-in OUI
+database - useful for spotting VMs, or figuring out which switch
+port a device is behind.</p>
+<h2 id="when-hosts-dont-appear">When Hosts Don't Appear</h2>
+<p>"Host is down" in Nmap's output really means "Nmap didn't get a
+response from any of the probes it sent." That's not the same as
+"the host is offline." Common reasons a live host doesn't appear:</p>
+<ul>
+<li><strong>Restrictive firewall.</strong> The most common culprit. Dropping all
+  probe types silently is a valid (if aggressive) defensive posture.</li>
+<li><strong>Host-based firewall.</strong> Windows Firewall, iptables, and similar
+  can block probes even when the network firewall is permissive.</li>
+<li><strong>Wrong scan for the environment.</strong> ICMP-only discovery against a
+  target that only accepts TCP-80 - the host won't appear even
+  though a <code>-PS80</code> scan would find it in an instant.</li>
+<li><strong>Unprivileged Nmap.</strong> Non-root Nmap has very limited discovery
+  options. Always run as root (or via <code>sudo</code>) for real scanning.</li>
+<li><strong>Network layer issues.</strong> Routing problems, wrong subnet mask on
+  the scanner, VLAN mismatches - anything that prevents packets
+  from reaching the target.</li>
+</ul>
+<p>The right response to a "no hosts up" result on a network you know
+is alive: try a different discovery method. If ICMP fails, try
+<code>-PS22,80,443</code>. If TCP fails, try <code>-PA</code>. If nothing works, you're
+probably up against a very well-configured firewall.</p>
+<h2 id="from-discovery-to-deeper-scans">From Discovery to Deeper Scans</h2>
+<p>Once you have a list of live hosts, the natural next step is port
+scanning them to see what services are running. The clean way to
+chain this is with grepable output:</p>
+<div class="highlight"><pre><span></span><code>nmap -sn -oG - 192.168.1.0/24 | awk &#39;/Up$/{print $2}&#39; &gt; live_hosts.txt
+nmap -sV -iL live_hosts.txt
+</code></pre></div>
+
+<p>The first command produces a machine-parseable list of live IPs.
+The second feeds that list into a service-detection scan. This
+two-phase approach is efficient (you don't waste time port-scanning
+dead IPs) and organized (you have a saved list of live hosts to
+work from later).</p>
+<p>Service detection, port scanning, NSE scripting - all of that comes
+in later lectures of the course. But it all starts with knowing
+who's home.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Full lecture:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course/Lecture_1">Nmap/Short Course/Lecture 1</a></li>
+<li>The rest of the course:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course">Nmap/Short Course</a></li>
+<li>Nmap documentation: <a href="https://nmap.org/book/man.html">https://nmap.org/book/man.html</a></li>
+</ul></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/nmap.html">nmap</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/host-discovery.html">host discovery</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/ping.html">ping</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/arp.html">arp</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/networking.html">networking</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pentesting.html">pentesting</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
+                Building an Nmap Short Course from Scratch
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2025-05-27T12:00:00-07:00" pubdate>Tuesday 05/27/2025</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/security.html">Security</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/building-an-nmap-short-course-from-scratch.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>We spent a good chunk of late May 2025 building a short course on Nmap
+from scratch - 12 lectures, 12 companion labs, plus the entire virtual
+lab infrastructure the students would use to run the labs. The whole
+thing lives on our wiki under
+<a href="https://charlesreid1.com/wiki/Nmap/Short_Course">Nmap/Short Course</a>.</p>
+<p>This post is not about the Nmap material itself (that comes in the next
+post). It is about the design decisions behind the course - why 12
+lectures, why a fully isolated cloud lab, why Vagrant + Docker +
+Ansible instead of picking one, and what we would do differently if
+we started over.</p>
+<h2 id="course-shape">Course Shape</h2>
+<p>The course is organized into three modules:</p>
+<ul>
+<li><strong>Module 1: Nmap Mastery - Beyond the Basics.</strong> The core Nmap
+  material: host discovery, port scanning, service and OS detection,
+  the scripting engine (NSE), and output formats.</li>
+<li><strong>Module 2: Red Team Nmap - Offensive Recon &amp; Vuln Identification.</strong>
+  Using Nmap for reconnaissance in an authorized engagement:
+  fingerprinting, vulnerability enumeration via NSE, and integrating
+  results into a broader recon workflow.</li>
+<li><strong>Module 3: Blue Team Nmap - Auditing, Defense &amp; Network Monitoring.</strong>
+  The other side: using Nmap for asset inventory, compliance checks,
+  detecting unauthorized services, and pairing Nmap output with IDS
+  rules.</li>
+</ul>
+<p>Twelve lectures split across those three modules. Every lecture has a
+companion lab. The labs share a single virtual environment that gets
+richer over the course - by the time students are in Module 3 they are
+scanning the same infrastructure they attacked in Module 2.</p>
+<h2 id="why-twelve-lectures">Why Twelve Lectures</h2>
+<p>We picked 12 because it maps cleanly to a compressed summer session (a
+lecture + lab per week for a 12-week course, or two per week for a
+6-week intensive). It also gave us enough room to introduce Nmap
+options in the order they build on each other, without cramming.</p>
+<p>Twelve is a round number, each lecture is a coherent unit, and the
+whole thing still fits in a summer course.</p>
+<h2 id="the-lab-environment-the-big-boy">The Lab Environment: The Big Boy</h2>
+<p>The lab infrastructure is the part we spent the most time on. Our
+requirements:</p>
+<ul>
+<li>Students should be able to scan without touching any network they
+  don't have explicit permission to scan</li>
+<li>The lab should have a variety of realistic services and
+  vulnerabilities, not just one target</li>
+<li>Adding a new lab scenario should be a few lines of code, not a
+  reinstall</li>
+<li>The instructor should be able to reset the whole environment to a
+  known-good state before every class</li>
+</ul>
+<p>The design we landed on:</p>
+<p><strong>A single large EC2 instance as the lab host.</strong> We call it "the big
+boy" in our notes. Something like an <code>m5.xlarge</code> if the budget allows.
+Ubuntu Server LTS on the host, because Vagrant/libvirt/KVM has the
+smoothest experience there. Storage is EBS <code>gp3</code>, 80-100 GB.</p>
+<p><strong>Nested virtualization on that host.</strong> The EC2 instance runs KVM
+(via libvirt), which runs full VMs for the more heavyweight targets
+(and one attacker VM per student), plus Docker for lightweight
+containerized services. Vagrant orchestrates the VMs, Docker Compose
+orchestrates the containers, and both live on the same private virtual
+network (<code>192.168.50.0/24</code> in our example).</p>
+<p><strong>Ansible for configuration management.</strong> Every target service, every
+firewall rule, every open port is defined in an Ansible playbook.
+Changing the lab is editing YAML, not clicking around in Docker or
+SSHing into VMs and running commands.</p>
+<p><strong>Students SSH into an attacker VM.</strong> They do not SSH into the EC2
+host directly, and they do not connect via VPN. Each student (or
+shared pair of students) gets a preconfigured attacker VM with Nmap
+and the other course tools installed. That VM sits inside the lab
+network and can reach all the targets.</p>
+<p>The recommendation we did not take: a VPN-based approach where students
+connect to the EC2 host and run Nmap from their own laptops. We ruled
+it out because it puts environment consistency on the student's
+shoulders - their local Nmap version, their local firewall, their
+local OS. The attacker-VM approach guarantees everyone is running the
+same tool from the same place.</p>
+<h2 id="why-this-stack">Why This Stack</h2>
+<p>The "why Vagrant + Docker + Ansible instead of picking one" question
+comes up a lot. Short version:</p>
+<ul>
+<li><strong>Vagrant</strong> is the right tool for full VMs that need to look and
+  behave like real hosts (a Windows target, an outdated Linux with a
+  vulnerable SSH). Vagrant plays well with libvirt/KVM on Linux.</li>
+<li><strong>Docker Compose</strong> is the right tool for lightweight service
+  targets: a vulnerable web app, an FTP server, a Samba share. One
+  container, one service, one IP.</li>
+<li><strong>Ansible</strong> is the right tool for configuration - install this
+  software, open this port, run this service - and it works
+  identically on Vagrant VMs and Docker containers.</li>
+</ul>
+<p>Each tool does waht it is best at. Trying to make
+Docker do full-VM work is possible but painful. Trying to make Vagrant
+manage 30 tiny services is possible but slow. Ansible glues them
+together with the same configuration language.</p>
+<h2 id="cost-model">Cost Model</h2>
+<p>The EC2 instance is the main cost driver. Some things we do to keep
+it reasonable:</p>
+<ul>
+<li><strong>Stop the instance when not in use.</strong> Evenings, weekends, and
+  between class sessions. We only pay for the EBS storage during
+  those times, not the compute.</li>
+<li><strong>Start small on the instance size.</strong> If it is not enough, we
+  upgrade.</li>
+<li><strong>Use Elastic IP or a cheap domain.</strong> Use an easy to remember
+  domain like <code>nmap-lab.our-course.net</code>.</li>
+</ul>
+<p>Spot Instances would save a lot more, but we ruled them out because
+they can be terminated with little notice, and getting evicted 15
+minutes into a lab session is not the experience we want to give
+students.</p>
+<h2 id="notes-for-the-instructor">Notes for the Instructor</h2>
+<p>A few things we would tell anyone building a course like this from
+scratch:</p>
+<p><strong>Version everything.</strong> The whole lab is a Git repo:
+Vagrantfile, <code>docker-compose.yml</code>, Ansible playbooks, and the Ansible
+inventory. Every branch is a different lab scenario. Rolling back is
+<code>git checkout</code>.</p>
+<p><strong>Test the lab reset every time.</strong> Before every session, tear the
+whole environment down (<code>docker-compose down -v &amp;&amp; vagrant destroy
+-f</code>) and bring it back up from scratch. This catches "works on my machine"
+bugs.</p>
+<p><strong>Write the lab handout after you build the lab.</strong> The lab handout is
+the source of truth for what students see and do. If you write the
+handout first and then build the lab to match it, you will end up
+writing two things that don't quite line up.</p>
+<p><strong>Instrument the attacker VM.</strong> We put a shell history file that
+survives resets, plus a script that logs every Nmap command run
+during the session, so students can review what they did. Also
+useful when a student says "I typed the command exactly and it
+didn't work."</p>
+<h2 id="what-this-cost-us">What This Cost Us</h2>
+<p>The course took roughly two solid weeks to build end-to-end - one week
+on the lab infrastructure, one week on the lecture content and lab
+exercises. </p>
+<p>expected to run more than once. If we were doing it as a one-off, we
+would have skipped the Ansible layer and hard-coded the target
+configurations, saving maybe two or three days at the cost of a much
+worse experience if we ever wanted to change anything.</p>
+<p>If you are considering doing this: yes, do it. The single biggest
+teaching lever is being able to show students a live network with
+real services responding to their scans, and this setup does that
+without ever putting them or you in legal jeopardy.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our full course notes:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course">Nmap/Short Course</a></li>
+<li>Lab infrastructure design:
+  <a href="https://charlesreid1.com/wiki/Nmap/Short_Course/Running_the_Labs">Nmap/Short Course/Running the Labs</a></li>
+<li>Nmap itself: <a href="https://nmap.org/">https://nmap.org/</a></li>
+</ul></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/security.html">security</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/nmap.html">nmap</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/teaching.html">teaching</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/curriculum.html">curriculum</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/aws.html">aws</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/vagrant.html">vagrant</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/docker.html">docker</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/ansible.html">ansible</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/pentesting.html">pentesting</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Reading Rick Perlstein's Nixonland
             </b></h1>
         
@@ -328,557 +871,6 @@ but also highly enjoyable and hard to match.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Ken Binmore's Game Theory and Nash Equilibrium in Shadowrun
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2025-05-17T20:00:00-07:00" pubdate>Saturday 05/17/2025</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/ken-binmores-game-theory-and-nash-equilibrium-in-shadowrun.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>We spent part of May 2025 reading Ken Binmore's <em>Game Theory: A Very
-Short Introduction</em> (Oxford, 2007). It is a 176-page book that has no
-business covering as much ground as it does. It is also the book that
-gave us the excuse to work out a Nash equilibrium calculation for a
-Shadowrun run, which we have been wanting to do for a while.</p>
-<p>Full notes on the wiki:
-<a href="https://charlesreid1.com/wiki/Game_Theory_-_A_Very_Short_Introduction">Game Theory - A Very Short Introduction</a>.</p>
-<h2 id="why-this-book">Why This Book</h2>
-<p>Game theory has a reputation for being either trivial (rock-paper-
-scissors and Prisoner's Dilemma) or impenetrable (Von Neumann's
-<em>Theory of Games and Economic Behavior</em> is 700+ pages). Binmore
-threads a needle: real coverage of the mathematical structure of
-Nash equilibrium, mixed strategies, backward induction, mechanism
-design, and evolutionary game theory - all in fewer pages than most
-introductory textbooks devote to a single chapter.</p>
-<p>The 10 chapters:</p>
-<ol>
-<li>The name of the game (Nash equilibrium, utility, revealed preference)</li>
-<li>Chance (mixed strategies, indifference, Von Neumann's minimax)</li>
-<li>Time (backward induction, subgame-perfect equilibrium, common
-   knowledge)</li>
-<li>Conventions (focal points, coordination games, tragedy of the commons)</li>
-<li>Reciprocity (repeated games, folk theorem, TIT-FOR-TAT)</li>
-<li>Information (imperfect information, Harsanyi types, costly signals)</li>
-<li>Auctions (mechanism design, revenue equivalence, winner's curse)</li>
-<li>Evolutionary biology (evolutionarily stable strategies, Hawk-Dove,
-   Hamilton's rule)</li>
-<li>Bargaining and coalitions (Nash bargaining, Rubinstein alternating
-   offers, Shapley value)</li>
-<li>Puzzles and paradoxes (Newcomb, surprise test, common knowledge)</li>
-</ol>
-<p>Any one of those chapters is a legitimate subject for a graduate
-course. Binmore covers each in 15-20 pages by ruthlessly cutting the
-formalism where the intuition suffices, and using clear worked
-examples where the formalism doesn't.</p>
-<h2 id="the-idea-that-kept-us-up">The Idea That Kept Us Up</h2>
-<p>The chapter that stuck with us was Chapter 2: Chance. Specifically,
-the <em>indifference principle</em> for mixed-strategy Nash equilibria.</p>
-<p>The setup: some games (Matching Pennies is the canonical example)
-have no equilibrium in pure strategies. There is no stable choice of
-"always play Heads" or "always play Tails" - whatever you commit to,
-your opponent can exploit. The way out is a mixed strategy: randomize
-between Heads and Tails with some probability.</p>
-<p>The question is: with <em>what</em> probability?</p>
-<p>The answer Binmore gives - and this is a genuinely counterintuitive
-result the first time you see it - is that you pick your randomization
-probabilities to make <em>your opponent</em> indifferent between their pure
-strategies.</p>
-<p>Read that again. You choose your randomization to make your opponent
-indifferent, not to maximize your own payoff directly. Your opponent
-does the same. The equilibrium is the pair of randomizations where
-each player's mix leaves the other player unable to prefer any pure
-strategy over any other.</p>
-<p>The reason this works is that if your opponent had a strictly
-preferred pure strategy against your mix, they would just play that
-pure strategy - and then you would want to deviate from your mix to
-exploit them. The only stable point is where neither of you can
-improve by deviating, which requires both of you to be indifferent.</p>
-<h2 id="applying-it-to-shadowrun">Applying It to Shadowrun</h2>
-<p>Shadowrun is a cyberpunk tabletop RPG where players run "shadowruns" -
-illegal jobs for corporate clients. Teams are usually a mix of
-specialists: a decker who fights in cyberspace, a street samurai who
-solves problems with cybernetically enhanced violence, a mage who
-solves problems with spells, and so on.</p>
-<p>There is a classic Shadowrun tension between the decker's preferred
-approach (subtle, quiet, undetected) and the street samurai's
-preferred approach (loud, fast, overwhelming firepower). Both can
-succeed if the team commits to one plan and executes it. Neither
-works if half the team is trying to be stealthy while the other half
-is blowing walls down.</p>
-<p>We wrote up a specific scenario:</p>
-<p><strong>The setup.</strong> A teammate, "Glitch," has been kidnapped and is
-being held in a Redmond Barrens residential block. The team has two
-lead operators: "Zero" the decker (prefers Ghost Op) and "Raze" the
-street samurai (prefers Hard Target Extraction). They are in
-different parts of the city, prepping their gear, and comms are
-spotty - each has to commit to their approach before knowing what
-the other has committed to.</p>
-<p><strong>The payoffs</strong> (in "Success Points"):</p>
-<table>
-<thead>
-<tr>
-<th></th>
-<th>Raze: Ghost</th>
-<th>Raze: Hard Target</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Zero: Ghost</strong></td>
-<td>Z: 2, R: 1</td>
-<td>Z: 0, R: 0</td>
-</tr>
-<tr>
-<td><strong>Zero: Hard Target</strong></td>
-<td>Z: 0, R: 0</td>
-<td>Z: 1, R: 2</td>
-</tr>
-</tbody>
-</table>
-<p>Miscoordination is disaster (0, 0) - alarms blare, Glitch gets moved
-or killed, the team walks into a meatgrinder. Successful coordination
-succeeds, but each operator strictly prefers their own style.</p>
-<p>This is the pure Battle of the Sexes structure from Binmore's book,
-with the payoffs adjusted for the setting.</p>
-<h2 id="the-math">The Math</h2>
-<p>For Zero to mix, Raze's strategy must make Zero indifferent between
-Ghost and Hard Target:</p>
-<div class="math">$$
-E[U_Z(\text{Ghost})] = q_G \cdot 2 + (1 - q_G) \cdot 0 = 2 q_G
-$$</div>
-<div class="math">$$
-E[U_Z(\text{Hard})] = q_G \cdot 0 + (1 - q_G) \cdot 1 = 1 - q_G
-$$</div>
-<p>Setting these equal: <span class="math">\(2 q_G = 1 - q_G\)</span>, so <span class="math">\(q_G = 1/3\)</span>.</p>
-<p>Raze should choose Ghost with probability 1/3 and Hard Target with
-probability 2/3.</p>
-<p>By symmetric argument, Zero should choose Ghost with probability 2/3
-and Hard Target with probability 1/3.</p>
-<h2 id="what-this-means-at-the-table">What This Means at the Table</h2>
-<p>With those probabilities, the outcomes distribute as:</p>
-<ul>
-<li>Both Ghost: (2/3)(1/3) = 2/9 ≈ 22.2%</li>
-<li>Both Hard Target: (1/3)(2/3) = 2/9 ≈ 22.2%</li>
-<li>Zero Ghost, Raze Hard: (2/3)(2/3) = 4/9 ≈ 44.4%</li>
-<li>Zero Hard, Raze Ghost: (1/3)(1/3) = 1/9 ≈ 11.1%</li>
-</ul>
-<p>Total probability of miscoordination: <strong>5/9 ≈ 55.6%</strong>.</p>
-<p>Expected payoff for each operator: 2/3 SP.</p>
-<p>That is not a good outcome. Both players are worse off in expectation
-than they would be under either pure-strategy coordination (which
-would give at least 1 SP, and possibly 2). But it is the <em>equilibrium</em>
-outcome. Given that they cannot communicate and cannot know what the
-other has committed to, the mixed strategy is the only strategy pair
-where neither player wants to deviate.</p>
-<p>At the table, this maps neatly onto the Shadowrun mechanics. If you
-have a d6:</p>
-<ul>
-<li><strong>Zero</strong> rolls: on 5-6, assist Raze and go Hard Target. On 1-4,
-  hack it alone with Ghost.</li>
-<li><strong>Raze</strong> rolls: on 5-6, assist Zero and go Ghost. On 1-4, go in
-  guns blazing.</li>
-</ul>
-<p>If both rolls "succeed," both plans conflict and the run implodes.
-If both rolls "fail," each does their own thing and the run also
-implodes. The only good outcomes are the mixed cases where one
-assists the other.</p>
-<h2 id="the-deeper-lesson">The Deeper Lesson</h2>
-<p>The reason we like this example is that it makes very concrete a
-lesson that Binmore hammers throughout the book:</p>
-<p><strong>Comms are worth more than combat rolls.</strong></p>
-<p>The mixed equilibrium gives each operator 2/3 SP in expectation.
-Successful pure coordination would give at least 1 SP, and possibly
-2. The gap between 2/3 and 2 is entirely the cost of not being able
-to talk to each other before committing.</p>
-<p>Every Shadowrun campaign should have a moment where the players
-learn this the hard way. If you are a GM, staging a scenario where
-comms are down and the team has to commit independently is one of
-the most effective ways to teach the value of a comm channel your
-players will spend Karma on for the rest of the campaign.</p>
-<h2 id="a-wider-recommendation">A Wider Recommendation</h2>
-<p>The Shadowrun example is a toy application. The real reason to read
-Binmore's book is that it gives you the vocabulary to notice
-strategic structure in situations that don't look like games -
-salary negotiations, whether to attend an optional meeting, whether
-to vote in an election where you know your vote won't be decisive.</p>
-<p>The Chapter 2 material on the Good Samaritan game - where the
-probability of anyone helping decreases as the population increases,
-because rational individuals wait for someone else to help - is the
-kind of thing that changes how you read the news.</p>
-<p>If you are reading one game theory book this year, read this one.
-If you are reading one book on Nash equilibrium ever, still read
-this one.</p>
-<h2 id="references">References</h2>
-<ul>
-<li>Our wiki notes:
-  <a href="https://charlesreid1.com/wiki/Game_Theory_-_A_Very_Short_Introduction">Game Theory - A Very Short Introduction</a></li>
-<li>Binmore, K. (2007). <em>Game Theory: A Very Short Introduction.</em>
-  Oxford University Press.</li>
-<li>Shadowrun: any edition works, but we run 5E.</li>
-</ul>
-<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width < 768) ? "left" : align;
-        indent = (screen.width < 768) ? "0em" : indent;
-        linebreak = (screen.width < 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
-
-    var configscript = document.createElement('script');
-    configscript.type = 'text/x-mathjax-config';
-    configscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        availableFonts: ['STIX', 'TeX']," +
-        "        preferredFont: 'STIX'," +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-</script></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/game-theory.html">game theory</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/binmore.html">binmore</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/nash-equilibrium.html">nash equilibrium</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/shadowrun.html">shadowrun</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/ttrpg.html">ttrpg</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/mathematics.html">mathematics</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Reading Hobbes's Leviathan
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2025-05-01T22:00:00-07:00" pubdate>Thursday 05/01/2025</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/reading-hobbess-leviathan.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>We read (parts of) Thomas Hobbes's <em>Leviathan</em> (1651) in April and early May
-2025. It is one of the founding texts of modern political philosophy,
-and reading it is about as enjoyable as drinking five cement milkshakes in a row.</p>
-<p>Hobbes's arguments have all the subtlety of a boiling pot of water thrown in
-your face. And they're written in 17th-century English prose that seems to
-simultaneously look down its nose at you, treats you like you have the intelligence
-of a toddler, and is trapped in an age when people were much more close-minded and
-ignorant. The organization is not much better - massive 4-part books, with 47 chapters,
-and headers that are long run-on sentences - so the whole thing is a frustrating
-exercise. One might even use the phrase "interminable biblical exegesis," if one were
-reaching for ten dollar words.</p>
-<p>Full notes on the wiki:
-<a href="https://charlesreid1.com/wiki/Leviathan">Leviathan</a>.</p>
-<h2 id="the-argument-in-one-paragraph">The Argument in One Paragraph</h2>
-<p>Hobbes says: if there were no government, life would be a war of
-everyone against everyone else, and would be "solitary, poor, nasty,
-brutish, and short." To escape this, rational individuals agree
-(hypothetically, via a "social contract") to give up nearly all
-their natural rights and submit to an absolute sovereign - a
-person or an assembly - whose job is to keep the peace by force.</p>
-<p>Equally important is Hobbes' proposition that any sovereign, 
-no matter how bad, is preferable to no sovereign at
-all, because anarchy is worse than tyranny.</p>
-<p>That is the whole book. Everything else is Hobbes methodically
-building the argument up from first principles, then defending it
-against every objection he can think of - including all the biblical
-objections that mattered in 1651 England.</p>
-<h2 id="why-this-book-was-written-when-it-was">Why This Book Was Written When It Was</h2>
-<p>Hobbes was writing during and immediately after the English Civil
-War (1642-1651). Charles I had been executed. The country had spent
-almost a decade in a chaotic three-way war between royalists,
-parliamentarians, and various religious factions. Hobbes's family
-had fled to France. When he wrote <em>Leviathan</em>, "war of all against
-all" was not a thought experiment - it was recent memory.</p>
-<p>This context matters because modern readers instinctively resist
-Hobbes's absolutism. Absolute sovereignty sounds like tyranny. But
-Hobbes had watched what happens when there is <em>no</em> sovereign, and
-he thought tyranny was clearly the lesser evil.</p>
-<p>The book is aimed at people who lived through the same collapse he
-did. Reading it in a functioning democracy in 2025 is a very
-different experience than reading it in 1651.</p>
-<h2 id="the-four-parts">The Four Parts</h2>
-<p><em>Leviathan</em> has four parts, roughly:</p>
-<p><strong>Part I: Of Man</strong> (16 chapters). Hobbes builds up an account of
-human nature from mechanistic first principles - all thought comes
-from sensory experience, all action is motion, all motivation is
-appetite or aversion. He argues that humans are roughly equal in
-capability, driven by "a perpetual and restless desire of power
-after power, that ceaseth only in death," and so in the absence of
-a common power, they will inevitably fight each other for
-competition, safety, and glory.</p>
-<p><em>Personal opinion: this is dreadfully boring - it has all the
-action-packed excitement of (insert the most boring Old Testament
-passage imaginable here) - and is cringe-inducing.</em></p>
-<p><strong>Part II: Of Commonwealth</strong> (15 chapters). Given the argument in
-Part I, Hobbes derives the necessity of an absolute sovereign,
-lays out the sovereign's rights (which are essentially unlimited),
-and describes the three types of commonwealth (monarchy,
-aristocracy, democracy). He argues monarchy is best because the
-monarch's private interest is most closely aligned with the public
-interest.</p>
-<p><em>Personal opinion: the only portion of this book actually worth anything.</em></p>
-<p><strong>Part III: Of a Christian Commonwealth</strong> (11 chapters). Hobbes
-argues that religious authority must be subordinate to civil
-authority in a Christian society. This part is a lot of biblical
-interpretation, most of which is only interesting if you care
-about the 17th-century debate over church-state relations.</p>
-<p><em>Personal opinion: worthless, skip.</em></p>
-<p><strong>Part IV: Of the Kingdom of Darkness</strong> (4 chapters). A polemic
-against the Catholic Church and Aristotelian philosophy, both of
-which Hobbes blames for confusing people about the proper
-relationship between religious and civil authority. </p>
-<p><em>Personal opinion: if reading a 17th-century philosopher score
-some hits on the Pope is your idea of "fun" reading, then
-(a) Part IV is definitely for you, and (b) you should check
-yourself into a mental hospital, because you are not okay.</em></p>
-<h2 id="the-passages-worth-underlining">The Passages Worth Underlining</h2>
-<p>A few of the passages that stopped us:</p>
-<p><strong>On the desire for power</strong> (Chapter 11):</p>
-<blockquote>
-<p>So that in the first place, I put for a general inclination of
-all mankind, a perpetual and restless desire of power after
-power, that ceaseth only in death.</p>
-</blockquote>
-<p>This is the anthropological premise of the whole book. Hobbes is
-not saying humans are evil - he is saying humans are driven, and a
-world of driven people without a common referee is a world at war.</p>
-<p><strong>On the state of nature</strong> (Chapter 13):</p>
-<blockquote>
-<p>In such condition there is no place for industry, because the
-fruit thereof is uncertain... no arts; no letters; no society;
-and which is worst of all, continual fear, and danger of violent
-death; and the life of man, solitary, poor, nasty, brutish, and
-short.</p>
-</blockquote>
-<p>The most famous sentence in the book. Worth reading in context -
-the argument is that everything worthwhile in human life (industry,
-arts, letters, society) requires <em>predictability</em>, and
-predictability requires an enforcer.</p>
-<p><strong>On the social contract</strong> (Chapter 17):</p>
-<blockquote>
-<p>This is the generation of that great LEVIATHAN, or rather (to
-speak more reverently) of that mortal god to which we owe, under
-the immortal God, our peace and defence.</p>
-</blockquote>
-<p>The image the whole book takes its name from. The famous frontispiece
-of the 1651 edition shows a giant crowned king whose body is made
-of hundreds of tiny individual people - the sovereign as the
-literal composite of all his subjects.</p>
-<p><strong>On liberty</strong> (Chapter 21):</p>
-<blockquote>
-<p>The liberty of a subject lieth therefore only in those things
-which, in regulating their actions, the sovereign hath
-praetermitted [omitted]: such as is the liberty to buy and sell
-and otherwise contract with one another; to choose their own
-abode, their own diet, their own trade of life, and institute
-their children as they themselves think fit; and the like.</p>
-</blockquote>
-<p>Freedom is whatever the sovereign has not made a law about. This
-is the definition of liberty that makes modern readers most
-uncomfortable, and probably the one that is most philosophically
-distant from what we mean by liberty today.</p>
-<h2 id="the-one-exception-self-preservation">The One Exception: Self-Preservation</h2>
-<p>Hobbes "gives" the sovereign nearly unlimited power. But there is one
-right the sovereign cannot take away, because it is the entire
-reason people submit to the sovereign in the first place - the
-right of self-preservation.</p>
-<p>From Chapter 21:</p>
-<blockquote>
-<p>If the sovereign command a man (though justly condemned) to
-kill, wound, or maim himself; or not to resist those that
-assault him; or to abstain from the use of food, air, medicine,
-or any other thing without which he cannot live, yet hath that
-man the liberty to disobey.</p>
-</blockquote>
-<p>This is the entire modern human-rights tradition in embryo. It is
-also a very narrow exception. You can refuse to kill yourself. You
-cannot refuse to be taxed, censored, drafted, or otherwise
-regulated.</p>
-<h2 id="why-read-this-in-2025">Why Read This In 2025</h2>
-<p>Reading Hobbes today is uncomfortable because his framing is
-almost the exact opposite of modern political intuition. </p>
-<p>We tend to worry about state overreach - the risk that the sovereign 
-will have too much power. Hobbes worried about state collapse - the
-risk that the sovereign will have too little. </p>
-<p>In a country that has been at war with itself, Hobbes's worry 
-is the more urgent one.</p>
-<p>The reason to read the book anyway is that it clarifies what
-liberal democracy is <em>for</em>. Liberal democracy is a very
-particular set of institutions that try to prevent both failure
-modes - both state overreach <em>and</em> state collapse - by dividing
-sovereignty across branches, making the sovereign accountable to
-elections, and constraining the sovereign with a bill of rights.
-When you understand Hobbes, you understand what all those
-institutional constraints are working against. They are working
-against the pull toward either total sovereignty or none.</p>
-<p>You can disagree with Hobbes's conclusions (we do, almost universally) 
-and still find his framing of the problem useful. Political
-institutions have to solve the problem Hobbes identified: how do
-we get out of the state of nature without ending up with a
-tyrant? The modern answer is elaborate and multi-layered, and it
-mostly works. But it is worth remembering that the alternative
-Hobbes was writing about - a country tearing itself apart - is
-not a thought experiment. It happens, in living memory of some
-readers of this blog, in several countries.</p>
-<h2 id="references">References</h2>
-<ul>
-<li>Our wiki notes:
-  <a href="https://charlesreid1.com/wiki/Leviathan">Leviathan</a></li>
-<li>Hobbes, Thomas. <em>Leviathan.</em> 1651. The Penguin Classics edition
-  edited by C. B. Macpherson is our standard recommendation.</li>
-<li>Companion post on political theory:
-  <a href="reading-rick-perlsteins-nixonland.html">Reading Rick Perlstein's <em>Nixonland</em></a></li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/hobbes.html">hobbes</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/leviathan.html">leviathan</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/political-philosophy.html">political philosophy</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/philosophy.html">philosophy</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -916,6 +908,22 @@ readers of this blog, in several countries.</p>
 
             <p class="archive">
             <a href="https://charlesreid1.github.io/fermi-problems-are-quadrature-problems.html">Fermi Problems Are Quadrature Problems</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
+
+
+        <div class="well">
+
+            <h2>August 2026</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/enumeration-solitaire-derangements-with-four-copies-of-each-rank.html">Enumeration Solitaire: Derangements with Four Copies of Each Rank</a>
+            </p>
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/baby-poker-the-smallest-interesting-bluffing-game.html">Baby Poker: The Smallest Interesting Bluffing Game</a>
             </p>
 
         </div>
