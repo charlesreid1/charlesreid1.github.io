@@ -99,6 +99,280 @@
     <div class="col-md-12">
         <div class="headtext" style="text-align: center;">
             <h1><b>
+                Baby Poker: The Smallest Interesting Bluffing Game
+            </b></h1>
+        
+            <p class="lead">
+                Posted 
+                <time datetime="2026-08-25T20:00:00-07:00" pubdate>Tuesday 08/25/2026</time>
+                in 
+                <a href="https://charlesreid1.github.io/category/mathematics.html">Mathematics</a>
+                </p>
+            <p>
+            <span style="font-size: 14px">
+                <a href="https://charlesreid1.github.io/baby-poker-the-smallest-interesting-bluffing-game.html">permalink</a>
+            </span>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+</header>
+
+
+<div class="v50"></div>
+
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="entry-content"><p>Baby Poker is a two-player dice game that fits on a napkin and still
+manages to be a real bluffing game. Each player rolls a single die
+concealed in a cup. There is one round of betting. That is it. And yet
+the optimal strategy involves mixed frequencies, a value range, a
+bluffing range, and a call/fold cutoff. It is the smallest game I know
+of that has all the moving parts of full poker.</p>
+<p>Our working notes: <a href="https://charlesreid1.com/wiki/Baby_Poker">Baby Poker</a>.</p>
+<h2 id="the-problem">The Problem</h2>
+<p>This one comes from the FiveThirtyEight <em>Riddler</em> column (now
+defunct, but happily still on the Wayback Machine):
+<a href="https://web.archive.org/web/20240222120450/https://fivethirtyeight.com/features/can-you-deal-with-these-card-game-puzzles/">Can You Deal With These Card Game Puzzles?</a>.</p>
+<p>The rules:</p>
+<ul>
+<li>Each player antes $1.</li>
+<li>Both roll a single die in a cup and look only at their own die.</li>
+<li>Player A acts first: <strong>call</strong> (both dice shown, higher wins the $2
+  pot) or <strong>raise</strong> (bet another dollar).</li>
+<li>If A raises, Player B chooses <strong>call</strong> (match the dollar, higher wins
+  the $4 pot) or <strong>fold</strong> (A takes the pot, B loses only the ante).</li>
+<li>Ties in a called pot split equally.</li>
+</ul>
+<p>Two questions:</p>
+<ul>
+<li>What is the optimal strategy for each player?</li>
+<li>How much is the game worth to Player A? (Equivalently, how much
+  should A pay B up front to make it fair?)</li>
+</ul>
+<h2 id="setting-up-the-game">Setting Up the Game</h2>
+<p>Let <span class="math">\(x \in \{1,\dots,6\}\)</span> be A's roll and <span class="math">\(y \in \{1,\dots,6\}\)</span> be
+B's. Let <span class="math">\(p_x\)</span> be the probability A raises given <span class="math">\(x\)</span>, and <span class="math">\(q_y\)</span> the
+probability B calls a raise given <span class="math">\(y\)</span>. The strategy for each player is
+a vector of six numbers in <span class="math">\([0,1]\)</span>.</p>
+<p>Because this is a zero-sum game of imperfect information, we are
+looking for a <strong>Nash equilibrium</strong>: a pair of strategies <span class="math">\((p, q)\)</span> such
+that neither player can improve their expected value by deviating,
+holding the other player's strategy fixed. The standard tool is the
+<strong>indifference principle</strong>: at equilibrium, if a player mixes between
+two actions with a given hand, they must be <em>indifferent</em> between
+those actions. Otherwise they would just pick the better one and stop
+mixing.</p>
+<p>That gives us two levers to pull. B's calling frequencies <span class="math">\(q_y\)</span> must
+be tuned so that A is indifferent to bluffing with the worst hand.
+A's raising frequencies <span class="math">\(p_x\)</span> must be tuned so that B is indifferent
+to calling with the marginal hands.</p>
+<h2 id="player-bs-indifference">Player B's Indifference</h2>
+<p>B only has to think when A has raised. Given a raise, folding costs B
+one dollar (the ante). Calling puts B in for two more dollars into a
+four-dollar pot, and the payoff depends on how A's raising range
+<span class="math">\(p_x\)</span> is distributed.</p>
+<p>B's EV of calling with roll <span class="math">\(y\)</span>, conditional on A having raised, is</p>
+<div class="math">$$
+E_B(\text{Call} \mid y) = \frac{1}{\sum_x p_x}
+\left( \sum_{x&lt;y}(+2)p_x + \sum_{x=y}(0)p_x + \sum_{x&gt;y}(-2)p_x \right).
+$$</div>
+<p>Setting this equal to <span class="math">\(-1\)</span> (the EV of folding) and clearing the
+denominator gives B's indifference condition on A's range:</p>
+<div class="math">$$
+3\sum_{x&lt;y} p_x + p_y - \sum_{x&gt;y} p_x = 0.
+$$</div>
+<h2 id="player-as-range-value-and-bluffs">Player A's Range: Value and Bluffs</h2>
+<p>The shape of A's optimal range falls out of two observations.</p>
+<p><strong>Top of the range is trivial.</strong> A should always raise with 5 and 6.
+These are the hands most likely to win at showdown, and if you don't
+raise them you leave money on the table. So <span class="math">\(p_5 = p_6 = 1\)</span>.</p>
+<p><strong>Bluffing balances the range.</strong> If A only ever raised with strong
+hands, B would just always fold and A would never get paid off. So A
+has to raise with some bad hands too, to keep B honest. The cleanest
+choice is to bluff with the <em>worst</em> hand (<span class="math">\(x=1\)</span>). A middling hand
+like 3 has real showdown equity that gets wasted by turning it into a
+bluff, but a 1 has almost none.</p>
+<p>So the trial strategy is: value-bet with 5 and 6, call with 2, 3, 4,
+and bluff some fraction <span class="math">\(p_1\)</span> of the time with 1.</p>
+<p>Plug this into B's indifference formula at the boundary hand <span class="math">\(y=3\)</span>
+(the marginal hand B might call with):</p>
+<div class="math">$$
+3 p_1 + 0 - (p_5 + p_6) = 0
+\;\implies\; 3 p_1 - 2 = 0
+\;\implies\; p_1 = \tfrac{2}{3}.
+$$</div>
+<p>A bluffs with 1 exactly two-thirds of the time.</p>
+<h2 id="player-bs-range">Player B's Range</h2>
+<p>Same trick from the other side. A must be indifferent between calling
+and raising when holding the worst hand. Calling with <span class="math">\(x=1\)</span> has EV</p>
+<div class="math">$$
+E_A(\text{Call} \mid x=1) = \tfrac{1}{6}(0 - 1 - 1 - 1 - 1 - 1) = -\tfrac{5}{6}.
+$$</div>
+<p>Raising with <span class="math">\(x=1\)</span> wins one dollar when B folds and loses two when B
+calls (a 1 loses to anything but a tie, and there is no tie with a
+1). Letting <span class="math">\(S_q = \sum_y q_y\)</span>,</p>
+<div class="math">$$
+E_A(\text{Raise} \mid x=1)
+= \left(1 - \tfrac{S_q}{6}\right)(1) + \tfrac{S_q}{6}(-2)
+= 1 - \tfrac{S_q}{2}.
+$$</div>
+<p>Equating and solving: <span class="math">\(S_q = \tfrac{11}{3}\)</span>.</p>
+<p>B always folds 1 and always calls 5 and 6 (again, the extremes are
+easy), so <span class="math">\(q_2 + q_3 + q_4 = \tfrac{11}{3} - 2 = \tfrac{5}{3}\)</span>. The
+monotone solution is <span class="math">\(q_2 = 0\)</span>, <span class="math">\(q_3 = \tfrac{2}{3}\)</span>, <span class="math">\(q_4 = 1\)</span>.</p>
+<h2 id="the-answer">The Answer</h2>
+<p><strong>Player A.</strong> Always raise with 5 and 6. Always call with 2, 3, 4.
+Raise with 1 exactly <span class="math">\(\tfrac{2}{3}\)</span> of the time.</p>
+<p><strong>Player B (facing a raise).</strong> Always call with 4, 5, 6. Always fold
+with 1 and 2. Call with 3 exactly <span class="math">\(\tfrac{2}{3}\)</span> of the time.</p>
+<p>Averaging A's conditional EV over all six rolls (the arithmetic is on
+<a href="https://charlesreid1.com/wiki/Baby_Poker">the wiki</a>), the value of
+the game is</p>
+<div class="math">$$
+\text{EV}(A) = \tfrac{5}{54} \approx 0.093.
+$$</div>
+<p>Acting first is worth about a dime a hand. A gets to pick the timing
+of the bluffs and force B into a mixing spot. To make the game fair,
+A pays B <span class="math">\(\tfrac{5}{54}\)</span> of a dollar per hand up front.</p>
+<h2 id="what-it-teaches">What It Teaches</h2>
+<p>The real point of Baby Poker is that it is a toy problem for <strong>game
+theory</strong>. It is small enough to solve by hand, and it exercises the
+full machinery: a two-player zero-sum game of imperfect information,
+solved by finding a Nash equilibrium in mixed strategies via the
+indifference principle. That is exactly the same math von Neumann and
+Morgenstern set up in <em>Theory of Games and Economic Behavior</em>, just
+shrunk to a six-sided die.</p>
+<p>Baby Poker is a good teaching game because it has <em>exactly</em> the pieces
+of full poker and nothing else:</p>
+<ul>
+<li>A <strong>value range</strong> (raise with 5, 6): hands you want called.</li>
+<li>A <strong>bluff range</strong> (raise with 1 sometimes): hands you want to fold
+  out better hands.</li>
+<li>A <strong>calling range</strong> (call with 2, 3, 4): hands with showdown equity
+  you don't want to inflate the pot with.</li>
+<li>A <strong>mixed frequency</strong> (<span class="math">\(\tfrac{2}{3}\)</span>) that ties the two players
+  together via indifference.</li>
+<li>A <strong>positional advantage</strong>: acting first is worth real money because
+  you get to define the ranges the second player has to respond to.</li>
+</ul>
+<p>Every one of those concepts is a game-theoretic construct that
+survives all the way up to no-limit Texas hold 'em. Baby Poker just
+strips the game down to the smallest version where the full solution
+concept (Nash equilibrium in mixed strategies) still has all its
+moving parts.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Our wiki notes:
+  <a href="https://charlesreid1.com/wiki/Baby_Poker">Baby Poker</a></li>
+<li><a href="https://web.archive.org/web/20240222120450/https://fivethirtyeight.com/features/can-you-deal-with-these-card-game-puzzles/">Can You Deal With These Card Game Puzzles?</a>,
+  the original FiveThirtyEight Riddler column (archived)</li>
+<li>Related: <a href="https://charlesreid1.com/wiki/Enumeration_Solitaire">Enumeration Solitaire</a>,
+  the other puzzle from the same column</li>
+</ul>
+<script type="text/javascript">if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width < 768) ? "left" : align;
+        indent = (screen.width < 768) ? "0em" : indent;
+        linebreak = (screen.width < 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+</script></div>
+
+    </div>
+</div>
+
+<div class="v20"></div>
+
+<div class="row">
+    <div class="col-md-12" style="text-align: left;">
+
+        <div class="tags">
+            <p>Tags:&nbsp;&nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/game-theory.html">game theory</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/probability.html">probability</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/poker.html">poker</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/nash-equilibrium.html">nash equilibrium</a>
+                    &nbsp;&nbsp;
+                    <a href="https://charlesreid1.github.io/tag/riddler.html">riddler</a>
+                    &nbsp;&nbsp;
+        </div>
+
+    </div>
+</div>
+
+
+<div class="v200"></div>
+  	            	</article>
+  	            	<article>
+<header>
+<div class="row">
+
+
+    <div class="col-md-12">
+        <div class="headtext" style="text-align: center;">
+            <h1><b>
                 Nmap Host Discovery: All the Ways to Ask "Is Anyone There?"
             </b></h1>
         
@@ -634,243 +908,6 @@ without ever putting them or you in legal jeopardy.</p>
 
 <div class="v200"></div>
   	            	</article>
-  	            	<article>
-<header>
-<div class="row">
-
-
-    <div class="col-md-12">
-        <div class="headtext" style="text-align: center;">
-            <h1><b>
-                Reading Rick Perlstein's Nixonland
-            </b></h1>
-        
-            <p class="lead">
-                Posted 
-                <time datetime="2025-05-22T22:00:00-07:00" pubdate>Thursday 05/22/2025</time>
-                in 
-                <a href="https://charlesreid1.github.io/category/reading.html">Reading</a>
-                </p>
-            <p>
-            <span style="font-size: 14px">
-                <a href="https://charlesreid1.github.io/reading-rick-perlsteins-nixonland.html">permalink</a>
-            </span>
-            </p>
-        </div>
-
-    </div>
-
-</div>
-</header>
-
-
-<div class="v50"></div>
-
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="entry-content"><p>We spent April and May 2025 slowly working our way through Rick
-Perlstein's <em>Nixonland: The Rise of a President and the Fracturing
-of America</em> (2008). It is 750 pages of dense political history
-covering roughly 1965 to 1972 - from the Watts riots through Nixon's
-re-election - and it is the second book in Perlstein's four-volume
-history of American conservatism.</p>
-<p>Full notes on the wiki:
-<a href="https://charlesreid1.com/wiki/Nixonland">Nixonland</a>.</p>
-<h2 id="what-the-book-actually-is">What The Book Actually Is</h2>
-<p>The title is misleading. <em>Nixonland</em> is not really a biography of
-Richard Nixon. Nixon is the frame - his loss in 1960, his loss in
-1962, his political resurrection, his 1968 victory, his first term,
-his 1972 landslide - but the book is about the country around him.
-It is about how a nation that voted for Lyndon Johnson in a landslide
-in 1964 voted for Nixon in a landslide in 1972.</p>
-<p>Perlstein's argument, compressed brutally: the disintegration of the
-New Deal Democratic coalition was driven less by policy failure than
-by cultural conflict, and Nixon's genius was recognizing early that
-the resentments of white middle-class voters at what they saw as
-the excesses of the counterculture, the civil rights movement, and
-liberal elites could be organized into a durable political majority.
-Everything Nixon did in office - the Southern Strategy, the silent
-majority speeches, the culture war framing, the paranoid style, the
-enemies list - was in service of that recognition.</p>
-<p>Perlstein clearly sees the Nixon coalition as a tragedy for 
-American politics. But his account of <em>how</em> Nixon built
-it is scrupulously detailed and painfully accurate.</p>
-<h2 id="structure">Structure</h2>
-<p>The book has four Books (parts), each covering roughly two years:</p>
-<ul>
-<li><strong>Book I</strong> (1965-1967): The Watts riots, the rise of Reagan in
-  California, the long hot summers, and the collapse of the LBJ
-  consensus</li>
-<li><strong>Book II</strong> (1967-1968): The 1968 campaign - Tet, LBJ's
-  withdrawal, RFK's assassination, MLK's assassination, the Chicago
-  convention, and Nixon's narrow victory</li>
-<li><strong>Book III</strong> (1969-1970): Nixon's first two years - Vietnam,
-  Cambodia, Kent State, the polarization, the culture war getting
-  organized</li>
-<li><strong>Book IV</strong> (1971-1972): The lead-up to the 1972 landslide -
-  George Wallace, the Democratic primary chaos, McGovern's
-  nomination, the sabotage operations that would become Watergate</li>
-</ul>
-<p>Every chapter is worth reading. The pacing gets faster as the book
-goes on - Book I is a long buildup, Book IV is a chaotic sprint.</p>
-<h2 id="favorite-chapters">Favorite Chapters</h2>
-<p><strong>Chapter 5: Long, Hot Summer.</strong> The 1965 Watts riots, and Perlstein's
-argument that this was the moment the Democratic Party's Northern
-white base started to fracture. The riots were shocking - to
-Californians who thought the racial politics of the South did not
-apply to them, to Northern liberals who thought the Civil Rights Act
-had solved the problem, and to Black Americans who watched their
-neighborhood burn while the National Guard occupied it. Nothing was
-the same after Watts.</p>
-<p><strong>Chapter 15: Wednesday, August 28, 1968.</strong> The night of the Chicago
-police riot at the Democratic National Convention. Perlstein's
-account of that day is journalism at its best - hour-by-hour, with
-enough context that you understand not just what happened but what
-each side thought was happening. The image that the country took
-away - hippies in Grant Park, police clubbing them on live TV, the
-convention nominating Humphrey in the middle of the chaos - was the
-Democratic Party losing its future.</p>
-<p><strong>Chapter 30: The Party of Jefferson, Jackson, and George Wallace.</strong>
-The title juxtaposes the two founding icons of the Democratic Party
-with George Wallace, who was making a serious run at the 1972
-Democratic nomination on a platform that was recognizably a
-throwback to the segregationist South. The chapter is about the
-identity crisis this produced. Wallace had a real constituency -
-white working-class voters, especially in the South and the outer
-suburbs of Northern cities, who felt abandoned by the national
-Democratic Party. The Democratic establishment eventually settled
-on the strategy of clearing the field for McGovern, on the theory
-that McGovern would be the easiest opponent for Nixon to beat.
-They were right about McGovern being easy to beat, and it did not
-help them.</p>
-<p><strong>Chapter 32: Celebrities.</strong> The chapter on the strange
-celebrity-politician overlap of the 1972 campaign - Warren Beatty
-raising money for McGovern, John Wayne stumping for Nixon, the
-music-industry mobilization for both sides. Perlstein uses it to
-make the point that mass media had transformed political campaigns
-into a hybrid of policy fight and cultural performance, and Nixon's
-team understood this better than McGovern's did.</p>
-<h2 id="the-wallace-chapter-is-the-key">The Wallace Chapter Is the Key</h2>
-<p>Chpater 30 gets our vote for the most illuminating chapter of the book.
-The reason is that Wallace exposes the whole logic of the political 
-realignment Perlstein is describing.</p>
-<p>Wallace was not a Republican. He was a lifelong Democrat, running
-in the 1972 Democratic primary. His base was traditional
-Democratic voters - white Southerners, white working-class voters
-in the industrial North, union members. His platform was populist:
-protectionist on trade, hawkish on Vietnam, savagely opposed to
-busing and to the cultural changes of the 1960s.</p>
-<p>When Wallace won primaries in Michigan and Maryland in 1972, it
-was clear that a significant portion of the Democratic base
-wanted what he was selling. But the national Democratic Party had
-committed to a different vision - the McGovern coalition of
-professionals, young voters, minorities, and cultural liberals.
-Those two visions were incompatible. Wallace was shot in Maryland
-in May 1972 and dropped out. The Wallace voters did not just go
-home. Many of them voted for Nixon that November.</p>
-<p>The core Nixon strategy, Perlstein argues, was to keep the
-Wallace voters in the Republican coalition permanently. He
-succeeded. The realignment took another decade or two to fully
-resolve, but the shape of it - the Republican Party becoming the
-party of culturally conservative white working-class voters, the
-Democratic Party becoming the party of cosmopolitan educated
-professionals - was visible by 1972.</p>
-<p>Everything about American politics for the last 50 years has been
-downstream of this realignment. If you want to understand why
-American politics looks the way it does now, <em>Nixonland</em> is where
-that story starts.</p>
-<h2 id="what-this-book-is-not">What This Book Is Not</h2>
-<p><em>Nixonland</em> is not:</p>
-<ul>
-<li>A biography of Nixon (there are better ones - John Farrell's
-  <em>Richard Nixon: The Life</em> is the current standard)</li>
-<li>A history of Watergate (Perlstein covers it briefly at the end,
-  but the whole scandal properly belongs to Perlstein's next
-  volume, <em>The Invisible Bridge</em>)</li>
-<li>A neutral academic history (Perlstein has a clear point of view)</li>
-<li>Short (it is 750 pages, and it takes as long as it needs)</li>
-</ul>
-<p>What it is: the definitive book on the political and cultural
-disintegration of the 1960s, and the definitive book on how the
-Nixon coalition was built. Both of those things are worth
-understanding.</p>
-<h2 id="reading-order">Reading Order</h2>
-<p>Perlstein's four-volume history:</p>
-<ol>
-<li><em>Before the Storm: Barry Goldwater and the Unmaking of the
-   American Consensus</em> (2001) - covers 1960-1964</li>
-<li><em>Nixonland</em> (2008) - covers 1965-1972</li>
-<li><em>The Invisible Bridge: The Fall of Nixon and the Rise of
-   Reagan</em> (2014) - covers 1973-1976</li>
-<li><em>Reaganland: America's Right Turn 1976-1980</em> (2020) - covers
-   1976-1980</li>
-</ol>
-<p>Total page count for all four: over 3,000 pages. This is a
-commitment. But it is one of the best accounts of American
-politics (with a 10,000 foot view) from 1960 to 1980 that
-we have found. Perlstein's voice is sharp and opinionated
-but also highly enjoyable and hard to match.</p>
-<h2 id="companion-reading">Companion Reading</h2>
-<p>Other reading in a similar vein:</p>
-<ul>
-<li><strong>Robert Caro, <em>The Years of Lyndon Johnson</em> (5 vols.).</strong> Covers
-  the same period from a very different angle - LBJ's biography.
-  Volume 4, <em>The Passage of Power</em>, and the not-yet-published
-  Volume 5 cover the years Perlstein covers.</li>
-</ul>
-<h2 id="references">References</h2>
-<p>Wiki:</p>
-<ul>
-<li>Our wiki notes on <em>Nixonland</em>:
-  <a href="https://charlesreid1.com/wiki/Nixonland">Nixonland</a></li>
-<li>Our wiki notes on the sequel, <em>The Invisible Bridge</em>:
-  <a href="https://charlesreid1.com/wiki/The_Invisible_Bridge">Nixonland</a></li>
-</ul>
-<p>Blog posts:</p>
-<ul>
-<li>Companion post on political theory:
-  <a href="reading-hobbess-leviathan.html">Reading Hobbes's <em>Leviathan</em></a></li>
-</ul>
-<p>Books:</p>
-<ul>
-<li>Perlstein, Rick. <em>Nixonland: The Rise of a President and the
-  Fracturing of America.</em> Scribner, 2008.</li>
-</ul></div>
-
-    </div>
-</div>
-
-<div class="v20"></div>
-
-<div class="row">
-    <div class="col-md-12" style="text-align: left;">
-
-        <div class="tags">
-            <p>Tags:&nbsp;&nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/reading.html">reading</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/history.html">history</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/nixon.html">nixon</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/perlstein.html">perlstein</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/american-politics.html">american politics</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/1960s.html">1960s</a>
-                    &nbsp;&nbsp;
-                    <a href="https://charlesreid1.github.io/tag/1970s.html">1970s</a>
-                    &nbsp;&nbsp;
-        </div>
-
-    </div>
-</div>
-
-
-<div class="v200"></div>
-  	            	</article>
 
 <div class="row">
     <div class="col-md-4 col-centered" style="text-align: center;">
@@ -900,6 +937,19 @@ but also highly enjoyable and hard to match.</p>
 
         <div class="col-md-4" style="text-align: center;">
 <a name="a_archive"></a>
+
+
+        <div class="well">
+
+            <h2>November 2026</h2>
+
+            <p class="archive">
+            <a href="https://charlesreid1.github.io/baby-mac-crypto.html">Baby Mac Crypto</a>
+            </p>
+
+        </div>
+
+        <div class="v20"></div>
 
 
         <div class="well">
