@@ -1,5 +1,5 @@
 Title: Baby Mac Crypto
-Date: 2026-11-02 20:00
+Date: 2026-11-05 11:00
 Category: Mathematics
 Tags: probability, coupon collector, size bias, inclusion exclusion, format preserving encryption, insurance
 
